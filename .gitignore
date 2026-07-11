@@ -1,0 +1,46 @@
+# Secrets — NEVER commit real credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+ENV/
+*.egg-info/
+dist/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Node / React
+node_modules/
+/build
+/dist
+/.next/
+npm-debug.log*
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Security scan outputs (generated, not source)
+bandit-report.json
+trivy-report.json
+zap-report.html
+sbom.json
