@@ -72,5 +72,5 @@ docker compose down -v   # stop, delete data (fresh start)
 
 ---
 
-## Instructor Access
+## Faculty Access
 `rejwanahmed007` has been added as Read collaborator for evaluation.
