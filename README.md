@@ -9,7 +9,7 @@
 
 | Name | Student ID | GitHub | Role |
 |------|-----------|--------|------|
-| [Member 1] | [ID] | [@username](https://github.com/username) | [e.g. Backend Developer] |
+| Faysal Ahemd Fahim | 0112330717 | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
 | [Member 2] | [ID] | [@username](https://github.com/username) | [e.g. Frontend Developer] |
 
 ## Project Description
@@ -21,9 +21,9 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | [Django / Laravel / Spring Boot / Express / FastAPI] |
-| Frontend | [React / Vue / Angular] |
-| Database | [PostgreSQL / MySQL / MongoDB] |
+| Backend | Express |
+| Frontend | React |
+| Database | MongoDB |
 | Container | Docker + Docker Compose |
 | CI/CD | GitHub Actions |
 
@@ -38,8 +38,8 @@
 ### Steps
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/YOUR-REPO.git
-cd YOUR-REPO
+git clone https://github.com/0xFaysal/se-lab-wake-up-to-reality.git
+cd se-lab-wake-up-to-reality
 cp .env.example .env        # copy env file then fill in your values
 docker compose up --build   # start everything
 ```
