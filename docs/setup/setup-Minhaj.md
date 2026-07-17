@@ -36,7 +36,11 @@ $ echo "5. Node:    $(node --version 2>/dev/null || echo 'NOT INSTALLED')"
 
 HP@HP-ProBook-450-G9 MINGW64 /c/Projects/SE Lab Project/se-lab-wake-up-to-reality (feature/Minhaj)
 $ docker run --rm hello-world 2>&1 | grep -q "Hello from Docker" && echo "6. Docker: WORKING" || echo "6. Docker: FAILED"
-6. Docker: FAILED
+6. Docker: WORKING
 
 ## Notes
-I got stuck while running docker. I installed docker desktop and enabled WSL2. It still showing "Virtualization support not detected" while running docker. I will try to fix it later.
+Issue: (i) Though node is installed it is showing as NOT INSTALLED in bash. 
+(ii) I got stuck while running docker. I installed docker desktop and enabled WSL2. It still showing "Virtualization support not detected" while running docker. I will try to fix it later.
+
+Solution: (i) Though I fixed the environment variables path of node. It is still showing as NOT INSTALLED in bash. 
+(ii) I fixed the issue by enabling virtualization in BIOS. After that, I restarted my computer and ran docker again. It worked fine.
