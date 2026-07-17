@@ -39,4 +39,4 @@ Open a GitHub Issue with label `blocked` and tag `@rejwanahmed007`
 |------|--------|------|
 | Faysal Ahemd Fahim | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
 | Md. Minhajul Islam | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
-| Marjia Islam | [MarjiaIslam](https://github.com/MarjiaIslam) | QA analyst |
+| Marjia Islam | [MarjiaIslam](https://github.com/MarjiaIslam) | QA Analyst |
