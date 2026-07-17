@@ -12,7 +12,7 @@ UIU SE Lab — Setup Verification
 5. Node:    v24.11.1
 6. Docker: WORKING
 
-## output of [setup-check.sh](week-01/demo/setup-check.sh) file
+## Output of setup-check.sh file
 
   UIU SE Lab — Development Environment Check
 
