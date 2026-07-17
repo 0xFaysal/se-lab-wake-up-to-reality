@@ -1,4 +1,4 @@
-# Contributing Guide
+# Contributing Guide - Wake Up to Reality
 
 ## Branching Strategy (GitFlow)
 - `main` → always deployable, branch-protected
@@ -33,3 +33,9 @@
 
 ## Getting Help
 Open a GitHub Issue with label `blocked` and tag `@rejwanahmed007`
+
+## Team Members
+| Name | GitHub | Role |
+|------|--------|------|
+| Faysal Ahemd Fahim | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
+| Md. Minhajul Islam | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
