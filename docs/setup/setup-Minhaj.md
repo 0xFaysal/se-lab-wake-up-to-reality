@@ -39,4 +39,4 @@ $ docker run --rm hello-world 2>&1 | grep -q "Hello from Docker" && echo "6. Doc
 6. Docker: FAILED
 
 ## Notes
-I got stuck while running docker. I installed docker desktop and enabled WSL2. It still showing "Virtualization support not detected" while running docker.
+I got stuck while running docker. I installed docker desktop and enabled WSL2. It still showing "Virtualization support not detected" while running docker. I will try to fix it later.
