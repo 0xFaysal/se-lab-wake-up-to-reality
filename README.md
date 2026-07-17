@@ -10,7 +10,7 @@
 | Name | Student ID | GitHub | Role |
 |------|-----------|--------|------|
 | Faysal Ahemd Fahim | 0112330717 | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
-| [Member 2] | [ID] | [@username](https://github.com/username) | [e.g. Frontend Developer] |
+| Md. Minhajul Islam | 0112330718 | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
 
 ## Project Description
 [2–3 sentences: what problem does this solve and for whom?]
