@@ -37,6 +37,7 @@ Open a GitHub Issue with label `blocked` and tag `@rejwanahmed007`
 ## Team Members
 | Name | GitHub | Role |
 |------|--------|------|
-| Faysal Ahemd Fahim | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
+| Faysal Ahmed Fahim | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
 | Md. Minhajul Islam | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
+| Anisa Akter Mahi |  [0xAnisa](https://github.com/0xAnisa) | Project Coordinator |
 | Marjia Islam | [MarjiaIslam](https://github.com/MarjiaIslam) | QA Analyst |
