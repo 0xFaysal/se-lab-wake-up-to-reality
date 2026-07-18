@@ -6,13 +6,12 @@
 ---
 
 ## Team Members
-
-| Name | Student ID | GitHub | Role |
-|------|-----------|--------|------|
-| Faysal Ahemd Fahim | 0112330717 | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
-| Md. Minhajul Islam | 0112330718 | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
+| Name | GitHub | Role |
+|------|--------|------|
+| Faysal Ahemd Fahim | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
+| Md. Minhajul Islam | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
+| Anisa Akter Mahi |  [0xAnisa](https://github.com/0xAnisa) | Project Coordinator |
 | Marjia Islam | 0112230958 | [MarjiaIslam](https://github.com/MarjiaIslam) | QA Analyst |
-| Anisa Akter Mahi | 0112330189 |  |  |
 
 ## Project Description
 [2–3 sentences: what problem does this solve and for whom?]
