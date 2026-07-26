@@ -16,6 +16,18 @@ InnerLoop will be a privacy-first, voice-assisted personal pattern intelligence 
 * Privacy-conscious users who prefer personal data and AI processing to remain on their own device.
 * Users who find repetitive manual data entry difficult and prefer Bangla or Banglish voice input.
 
+## Core Features (Prioritized)
+
+1. **Guided Bangla and Banglish Voice Entry** — Users will choose Expense, Time, or Mood mode and describe the information through a short voice command. The browser-based speech-recognition model will convert the recording into text, after which the user can confirm or correct the extracted information before it is saved.
+
+2. **Intelligent Structured Data Extraction** — InnerLoop will identify expense amounts and categories, activity durations, mood labels, and possible emotional triggers from voice transcripts or typed sentences. A hybrid approach combining a custom lightweight classifier, deterministic number parsing, dictionaries, and validation rules will improve accuracy and reduce unreliable AI-generated outputs.
+
+3. **Personal Baseline and Anomaly Detection** — The system will learn the user’s normal spending, study time, distraction time, sleep-related input, and mood range from historical records. It will identify meaningful deviations, such as unusually high food expenses, a sudden reduction in study time, or several consecutive low-mood entries, without comparing the user to a generic population standard.
+
+4. **Cross-Domain Pattern and Life Loop Discovery** — InnerLoop will analyze repeated sequences involving money, time, and mood. For example, it may identify that late sleep is repeatedly followed by low energy, unfinished work, guilt, increased social-media use, and further delay; all insights will include the number of observations and will be presented as associations rather than proven causes.
+
+5. **Personal Experiment Lab** — Users will be able to create short experiments such as reducing social-media use, sleeping earlier, or limiting unplanned food expenses for seven days. The application will compare the experiment period with the user’s previous baseline and report measurable changes in spending, productive time, and self-reported mood.
+
 ## Technology Stack
 
 | Layer                | Technology                                     | Justification                                                                                                                                                                                                                                                                           |
@@ -29,18 +41,6 @@ InnerLoop will be a privacy-first, voice-assisted personal pattern intelligence 
 | Visualization        | Recharts                                       | Provides responsive charts for expenses, time allocation, mood trends, baseline comparisons, and behavioural-loop visualization.                                                                                                                                                        |
 | Container            | Docker                                         | Consistent environments                                                                                                                                                                                                                                                                 |
 | Version Control      | Git + GitHub                                   | CI/CD, Faculty access                                                                                                                                                                                                                                                                   |
-
-## Core Features (Prioritized)
-
-1. **Guided Bangla and Banglish Voice Entry** — Users will choose Expense, Time, or Mood mode and describe the information through a short voice command. The browser-based speech-recognition model will convert the recording into text, after which the user can confirm or correct the extracted information before it is saved.
-
-2. **Intelligent Structured Data Extraction** — InnerLoop will identify expense amounts and categories, activity durations, mood labels, and possible emotional triggers from voice transcripts or typed sentences. A hybrid approach combining a custom lightweight classifier, deterministic number parsing, dictionaries, and validation rules will improve accuracy and reduce unreliable AI-generated outputs.
-
-3. **Personal Baseline and Anomaly Detection** — The system will learn the user’s normal spending, study time, distraction time, sleep-related input, and mood range from historical records. It will identify meaningful deviations, such as unusually high food expenses, a sudden reduction in study time, or several consecutive low-mood entries, without comparing the user to a generic population standard.
-
-4. **Cross-Domain Pattern and Life Loop Discovery** — InnerLoop will analyze repeated sequences involving money, time, and mood. For example, it may identify that late sleep is repeatedly followed by low energy, unfinished work, guilt, increased social-media use, and further delay; all insights will include the number of observations and will be presented as associations rather than proven causes.
-
-5. **Personal Experiment Lab** — Users will be able to create short experiments such as reducing social-media use, sleeping earlier, or limiting unplanned food expenses for seven days. The application will compare the experiment period with the user’s previous baseline and report measurable changes in spending, productive time, and self-reported mood.
 
 ## Out of Scope This Semester
 
