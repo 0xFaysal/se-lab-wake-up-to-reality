@@ -1,4 +1,4 @@
-# Project Proposal — ParkShare BD
+# Project Proposal — ParkEase BD
 
 ## Problem Statement
 
@@ -6,7 +6,7 @@ Dhaka faces severe traffic congestion, partly because many drivers park vehicles
 
 ## Proposed Solution
 
-ParkShare BD will be a location-based shared parking platform that allows residential property owners and building managers to rent out unused parking spaces on an hourly basis. Drivers will be able to search for available parking near their destination, compare rates and facilities, and reserve a time slot before arrival. The system will manage booking conflicts, entry and exit verification, overtime charges, cancellations, and owner earnings. By converting unused private parking spaces into bookable daytime parking, the platform aims to reduce illegal roadside parking and improve parking accessibility in congested areas of Dhaka.
+ParkEase BD will be a location-based shared parking platform that allows residential property owners and building managers to rent out unused parking spaces on an hourly basis. Drivers will be able to search for available parking near their destination, compare rates and facilities, and reserve a time slot before arrival. The system will manage booking conflicts, entry and exit verification, overtime charges, cancellations, and owner earnings. By converting unused private parking spaces into bookable daytime parking, the platform aims to reduce illegal roadside parking and improve parking accessibility in congested areas of Dhaka.
 
 ## Target Users
 
@@ -15,6 +15,33 @@ ParkShare BD will be a location-based shared parking platform that allows reside
 * Private-car and motorcycle drivers visiting hospitals, offices, shopping malls, universities, and commercial zones.
 * Security guards or parking attendants responsible for verifying vehicle entry and exit.
 * Small businesses and organizations that need temporary parking facilities for visitors or employees.
+
+## Who Gets Benefited?
+
+ParkEase BD offers a practical way to turn unused parking spaces into a useful resource while helping reduce one of Dhaka’s major urban problems—traffic congestion caused by roadside parking.
+
+### Key Beneficiaries
+
+* **Property Owners & Managers:** Earn extra income from parking spaces that often stay unused during the day.
+* **Vehicle Owners & Drivers:** Get secure, reserved parking near their destination without wasting time searching.
+* **Security Guards & Building Personnel:** Handle added responsibility and may justify better pay or incentives.
+* **General Public & The Nation:** Benefit from less roadside parking, reduced congestion, and smoother movement in the city.
+
+### Overall Impact
+
+This is more than a parking platform—it is a smart solution to a national urban issue. By improving parking management and reducing illegal roadside parking, ParkEase BD can help make cities more organized, efficient, and livable.
+
+## Core Features (Prioritized)
+
+1. **Time-Slot-Based Parking Listing** — Property owners and building managers will be able to list parking spaces with location, photographs, vehicle-size support, hourly price, operating hours, and available time slots. They can temporarily disable a space or update availability when it is required for personal use.
+
+2. **Nearby Parking Discovery and Reservation** — Drivers will search by current location, destination, area, vehicle type, price, and availability. The system will display nearby parking options on a map and prevent two drivers from booking the same parking space during overlapping time slots.
+
+3. **Secure Entry and Exit Verification** — After a booking is confirmed, the system will generate a temporary QR code or one-time verification code. A security guard or parking attendant will verify the code during entry and exit, ensuring that only the authorized vehicle can use the reserved parking space.
+
+4. **Overstay, Cancellation, and No-Show Management** — The system will calculate additional charges when a vehicle remains beyond the booked period and will notify both the driver and property owner before the reservation expires. Configurable cancellation, grace-period, refund, and no-show rules will help prevent booking misuse and protect future reservations.
+
+5. **Owner Earnings and Platform Settlement** — Property owners will receive a dashboard showing completed bookings, total occupied hours, earnings, penalties, refunds, and platform commission. The system will maintain a transparent transaction ledger and generate weekly or monthly earning summaries.
 
 ## Technology Stack
 
@@ -30,17 +57,6 @@ ParkShare BD will be a location-based shared parking platform that allows reside
 | Container                   | Docker                                                     | Consistent environments                                                                                                                                                                                    |
 | Version Control             | Git + GitHub                                               | CI/CD, Faculty access                                                                                                                                                                                      |
 
-## Core Features (Prioritized)
-
-1. **Time-Slot-Based Parking Listing** — Property owners and building managers will be able to list parking spaces with location, photographs, vehicle-size support, hourly price, operating hours, and available time slots. They can temporarily disable a space or update availability when it is required for personal use.
-
-2. **Nearby Parking Discovery and Reservation** — Drivers will search by current location, destination, area, vehicle type, price, and availability. The system will display nearby parking options on a map and prevent two drivers from booking the same parking space during overlapping time slots.
-
-3. **Secure Entry and Exit Verification** — After a booking is confirmed, the system will generate a temporary QR code or one-time verification code. A security guard or parking attendant will verify the code during entry and exit, ensuring that only the authorized vehicle can use the reserved parking space.
-
-4. **Overstay, Cancellation, and No-Show Management** — The system will calculate additional charges when a vehicle remains beyond the booked period and will notify both the driver and property owner before the reservation expires. Configurable cancellation, grace-period, refund, and no-show rules will help prevent booking misuse and protect future reservations.
-
-5. **Owner Earnings and Platform Settlement** — Property owners will receive a dashboard showing completed bookings, total occupied hours, earnings, penalties, refunds, and platform commission. The system will maintain a transparent transaction ledger and generate weekly or monthly earning summaries.
 
 ## Out of Scope This Semester
 
@@ -50,6 +66,6 @@ ParkShare BD will be a location-based shared parking platform that allows reside
 
 ## Similar Products
 
-**ParkHopper** and **JustPark** allow drivers to reserve private or commercial parking spaces in selected international markets. However, ParkShare BD will focus specifically on the daytime use of vacant residential parking in Dhaka, including local operational requirements such as building-manager approval, security-guard verification, hourly residential availability, vehicle-specific capacity, and overstay handling.
+**ParkHopper** and **JustPark** allow drivers to reserve private or commercial parking spaces in selected international markets. However, ParkEase BD will focus specifically on the daytime use of vacant residential parking in Dhaka, including local operational requirements such as building-manager approval, security-guard verification, hourly residential availability, vehicle-specific capacity, and overstay handling.
 
-Traditional parking-management systems are generally designed for shopping malls, offices, or dedicated parking facilities. ParkShare BD differs by applying a shared-economy model that turns temporarily unused residential parking spaces into a distributed urban parking network.
+Traditional parking-management systems are generally designed for shopping malls, offices, or dedicated parking facilities. ParkEase BD differs by applying a shared-economy model that turns temporarily unused residential parking spaces into a distributed urban parking network.
