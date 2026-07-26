@@ -10,7 +10,7 @@
 |------|--------|------|
 | Faysal Ahemd Fahim | [0xFaysal](https://github.com/0xFaysal) | Backend Developer |
 | Md. Minhajul Islam | [Minhajh20](https://github.com/Minhajh20) | Frontend Developer |
-| Anisa Akter Mahi | [0xAnisa](https://github.com/0xAnisa) | Project Coordinator |
+| Anisa Akter Mahi | [0xAnisa](https://github.com/0xAnisa) | Project Coordinator & UI/UX Design |
 | Marjia Islam | [MarjiaIslam](https://github.com/MarjiaIslam) | STQA & System Analyst |
 
 ## Project Description
