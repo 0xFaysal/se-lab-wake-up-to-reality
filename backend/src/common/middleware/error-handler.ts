@@ -3,7 +3,7 @@ import { AppError } from "../errors/app-error.js";
 import { logger } from "../../config/logger.js";
 
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
-    
+
   const appError =
     error instanceof AppError
       ? error
@@ -13,6 +13,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
           message: "An unexpected error occurred",
           isOperational: false,
         });
+        
   const payload = {
     requestId: req.requestId,
     method: req.method,
@@ -21,6 +22,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     code: appError.code,
     error,
   };
+  
   appError.statusCode >= 500
     ? logger.error(payload, "Request failed")
     : logger.warn(payload, "Request rejected");

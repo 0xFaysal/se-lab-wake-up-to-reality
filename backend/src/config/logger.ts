@@ -1,9 +1,39 @@
 import pino from "pino";
 import { env } from "./env.js";
 
+const prettyTransport =
+  env.NODE_ENV === "development"
+    ? {
+        transport: {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            colorizeObjects: true,
+            levelFirst: true,
+            translateTime: "SYS:HH:MM:ss.l",
+            ignore: "pid,hostname,service,env,req,res,responseTime,requestId",
+            singleLine: false,
+            messageFormat: "{if requestId}[req:{requestId}] {end}{msg}",
+          },
+        },
+      }
+    : {};
+
 export const logger = pino({
-  name: env.APP_NAME,
+  base: {
+    service: env.APP_NAME,
+    env: env.NODE_ENV,
+  },
   level: env.LOG_LEVEL,
+  timestamp: pino.stdTimeFunctions.isoTime,
+  formatters: {
+    level(label) {
+      return { level: label };
+    },
+  },
+  serializers: {
+    error: pino.stdSerializers.err,
+  },
   redact: {
     paths: [
       "req.headers.authorization",
@@ -15,4 +45,5 @@ export const logger = pino({
     ],
     censor: "[REDACTED]",
   },
+  ...prettyTransport,
 });

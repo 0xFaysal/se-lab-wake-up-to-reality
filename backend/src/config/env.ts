@@ -13,7 +13,7 @@ const schema = z.object({
     .default("info"),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
-  CORS_ORIGIN: z.string().url(),
+  CORS_ORIGIN: z.url(),
 });
 
 
@@ -22,7 +22,7 @@ const result = schema.safeParse(process.env);
 if (!result.success) {
   console.error(
     "Invalid environment variables",
-    result.error.flatten().fieldErrors,
+    z.flattenError(result.error).fieldErrors,
   );
   process.exit(1);
 }
