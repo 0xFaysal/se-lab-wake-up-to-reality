@@ -9,7 +9,7 @@ Our cancellation and refund policies are designed to protect both the Driver's t
 ## 2. No-Show Policy
 * **Policy:** ParkEase BD is not responsible for missed bookings. If a Driver is a No-Show, no refunds will be issued. 
 
-## 3. Grace Period (NEW)
+## 3. Grace Period
 * **Traffic Buffer:** Acknowledging the unpredictability of city traffic, Drivers are granted a **15-minute grace period** after their booking expires to exit the premises before overstay penalties are triggered. 
 * **Late Arrival:** Drivers can arrive late to their booked slot, but the booking will still end at the originally scheduled time.
 
