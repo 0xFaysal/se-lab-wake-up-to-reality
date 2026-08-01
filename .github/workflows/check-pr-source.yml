@@ -1,0 +1,19 @@
+name: Check PR Source Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify PR is from develop branch
+        if: github.head_ref != 'develop'
+        run: |
+          echo "ERROR: Pull Requests targeting 'main' are only allowed from the 'develop' branch."
+          echo "Your PR head branch is '${{ github.head_ref }}'."
+          echo "Please close this PR and submit a PR to the 'develop' branch first."
+          exit 1
