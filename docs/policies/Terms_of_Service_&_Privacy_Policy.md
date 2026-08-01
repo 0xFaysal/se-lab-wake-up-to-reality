@@ -16,7 +16,7 @@ ParkEase BD operates exclusively as a digital intermediary connecting individual
 * **Mandatory Consent:** A tenant (Renter) may only list a parking space if they have explicit, written consent from the property owner (Landlord) or the Flat Owners' Association.
 * **Conflict Resolution:** If a Driver is denied entry by the Landlord (due to an unauthorized listing by a Renter), the Driver receives a full refund, and the Host's (Renter's) account will be temporarily blocked pending verification.
 
-## 4. Vehicle Condition & Prohibited Items (NEW)
+## 4. Vehicle Condition & Prohibited Items
 * **Clean & Safe Vehicles:** Drivers must ensure their vehicles are not leaking fluids (oil, coolant) that could damage the Host's property. Hosts reserve the right to deny entry to heavily damaged or leaking vehicles.
 * **Hazardous Materials:** It is strictly prohibited to store illegal items, flammable materials, or hazardous chemicals in parked vehicles.
 
