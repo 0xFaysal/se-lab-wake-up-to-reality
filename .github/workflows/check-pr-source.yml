@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify PR source branch
-        if: github.event.pull_request.head.repo.full_name != github.repository || (github.head_ref != 'develop' && !startsWith(github.head_ref, 'feature/') && !startsWith(github.head_ref, 'hotfix/'))
+        if: github.event.pull_request.head.repo.full_name != github.repository || (github.head_ref != 'develop')
         run: |
           echo "ERROR: Pull Requests targeting 'main' are only allowed from this repository and from 'develop', 'feature/*', or 'hotfix/*' branches."
           echo "Your PR head is '${{ github.event.pull_request.head.repo.full_name }}:${{ github.head_ref }}'."
