@@ -1,6 +1,6 @@
 # ParkEase BD: Cancellation & Refund Policy
 
-Our cancellation and refund policies are designed to protect both the Driver's time and the Host's earning potential. 
+Our cancellation and refund policies are designed to protect both the Drivers' time and the Host's earning potential.
 
 ## 1. Driver Cancellations
 * **Advance Cancellation:** If a Driver cancels a booking at least 1 hour before the scheduled start time, they are eligible for a full refund.
