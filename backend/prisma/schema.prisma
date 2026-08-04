@@ -7,9 +7,272 @@ datasource db {
   provider = "postgresql"
 }
 
-model SystemCheck {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  @@map("system_checks")
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+enum UserRoleType {
+  DRIVER
+  PARKING_OWNER
+  GUARD
+  ADMIN
+}
+
+enum VerificationStatus {
+  DRAFT
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum PropertyStatus {
+  ACTIVE
+  TEMPORARILY_CLOSED
+  INACTIVE
+}
+
+enum ParkingSpotStatus {
+  ACTIVE
+  BLOCKED
+  MAINTENANCE
+  INACTIVE
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  SEDAN
+  HATCHBACK
+  SUV
+  MICROBUS
+}
+
+enum GuardAssignmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AvailabilityExceptionType {
+  BLOCKED
+  SPECIAL_AVAILABLE
+}
+
+model User {
+  id              String      @id @default(uuid()) @db.Uuid
+  fullName        String      @map("full_name") @db.VarChar(120)
+  email           String      @unique @db.Citext
+  phone           String      @unique @db.VarChar(20)
+  passwordHash    String      @map("password_hash")
+  status          UserStatus  @default(PENDING)
+  emailVerifiedAt DateTime?   @map("email_verified_at") @db.Timestamptz(6)
+  phoneVerifiedAt DateTime?   @map("phone_verified_at") @db.Timestamptz(6)
+  lastLoginAt     DateTime?   @map("last_login_at") @db.Timestamptz(6)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  roles             UserRole[]
+  refreshSessions   RefreshSession[]
+  vehicles          Vehicle[]                 @relation("VehicleOwner")
+  ownedProperties   Property[]                @relation("PropertyOwner")
+  verifiedProperties Property[]               @relation("PropertyVerifier")
+  guardAssignments  PropertyGuardAssignment[] @relation("AssignedGuard")
+  createdExceptions AvailabilityException[]   @relation("ExceptionCreator")
+
+  @@index([status])
+  @@map("users")
+}
+
+model UserRole {
+  userId    String       @map("user_id") @db.Uuid
+  role      UserRoleType
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([userId, role])
+  @@index([role])
+  @@map("user_roles")
+}
+
+model RefreshSession {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  tokenHash           String    @unique @map("token_hash")
+  userAgent           String?   @map("user_agent")
+  ipHash              String?   @map("ip_hash")
+  expiresAt           DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt           DateTime? @map("revoked_at") @db.Timestamptz(6)
+  replacedBySessionId String?   @unique @map("replaced_by_session_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy  RefreshSession? @relation("RefreshRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
+  replacedOld RefreshSession? @relation("RefreshRotation")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("refresh_sessions")
+}
+
+model Vehicle {
+  id                           String             @id @default(uuid()) @db.Uuid
+  ownerUserId                  String             @map("owner_user_id") @db.Uuid
+  vehicleType                  VehicleType        @map("vehicle_type")
+  registrationNumber           String             @map("registration_number") @db.VarChar(50)
+  normalizedRegistrationNumber String             @unique @map("normalized_registration_number") @db.VarChar(50)
+  brand                        String?            @db.VarChar(80)
+  model                        String?            @db.VarChar(80)
+  color                        String?            @db.VarChar(40)
+  verificationStatus           VerificationStatus @default(PENDING) @map("verification_status")
+  createdAt                    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                    DateTime?          @map("deleted_at") @db.Timestamptz(6)
+  owner                        User               @relation("VehicleOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+
+  @@index([ownerUserId])
+  @@map("vehicles")
+}
+
+model Property {
+  id                           String             @id @default(uuid()) @db.Uuid
+  ownerUserId                  String             @map("owner_user_id") @db.Uuid
+  name                         String             @db.VarChar(150)
+  description                  String?
+  publicArea                   String             @map("public_area") @db.VarChar(120)
+  approximateAddress           String             @map("approximate_address") @db.VarChar(255)
+  exactAddressCiphertext       String             @map("exact_address_ciphertext")
+  latitude                     Decimal            @db.Decimal(9, 6)
+  longitude                    Decimal            @db.Decimal(9, 6)
+  accessInstructionsCiphertext String?            @map("access_instructions_ciphertext")
+  verificationStatus           VerificationStatus @default(DRAFT) @map("verification_status")
+  status                       PropertyStatus     @default(INACTIVE)
+  verifiedByAdminId            String?            @map("verified_by_admin_id") @db.Uuid
+  verifiedAt                   DateTime?          @map("verified_at") @db.Timestamptz(6)
+  rejectionReason              String?            @map("rejection_reason")
+  createdAt                    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                    DateTime?          @map("deleted_at") @db.Timestamptz(6)
+
+  owner            User                      @relation("PropertyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  verifiedByAdmin  User?                     @relation("PropertyVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  images           PropertyImage[]
+  guardAssignments PropertyGuardAssignment[]
+  parkingSpots     ParkingSpot[]
+
+  @@index([ownerUserId])
+  @@index([verificationStatus, status, publicArea])
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  storageKey String   @unique @map("storage_key")
+  imageType  String   @map("image_type") @db.VarChar(30)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+  @@map("property_images")
+}
+
+model PropertyGuardAssignment {
+  id          String                @id @default(uuid()) @db.Uuid
+  propertyId  String                @map("property_id") @db.Uuid
+  guardUserId String                @map("guard_user_id") @db.Uuid
+  status      GuardAssignmentStatus @default(ACTIVE)
+  assignedAt  DateTime              @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  endedAt     DateTime?             @map("ended_at") @db.Timestamptz(6)
+  property    Property              @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  guard       User                  @relation("AssignedGuard", fields: [guardUserId], references: [id], onDelete: Restrict)
+
+  @@unique([propertyId, guardUserId, status])
+  @@index([guardUserId, status])
+  @@map("property_guard_assignments")
+}
+
+model ParkingSpot {
+  id                            String            @id @default(uuid()) @db.Uuid
+  propertyId                    String            @map("property_id") @db.Uuid
+  spotCode                      String            @map("spot_code") @db.VarChar(30)
+  supportedVehicleType          VehicleType       @map("supported_vehicle_type")
+  hourlyRatePaisa               BigInt            @map("hourly_rate_paisa")
+  minimumBookingMinutes         Int               @default(60) @map("minimum_booking_minutes")
+  maximumBookingMinutes         Int               @default(720) @map("maximum_booking_minutes")
+  bookingBufferMinutes          Int               @default(0) @map("booking_buffer_minutes")
+  gracePeriodMinutes            Int               @default(15) @map("grace_period_minutes")
+  overtimeMultiplierBasisPoints Int               @default(15000) @map("overtime_multiplier_basis_points")
+  minimumDepositPaisa           BigInt            @default(10000) @map("minimum_deposit_paisa")
+  status                        ParkingSpotStatus @default(INACTIVE)
+  isCovered                     Boolean           @default(false) @map("is_covered")
+  hasCctv                       Boolean           @default(false) @map("has_cctv")
+  hasGuard                      Boolean           @default(false) @map("has_guard")
+  createdAt                     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                     DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  property               Property                @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  facilities             ParkingSpotFacility[]
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+
+  @@unique([propertyId, spotCode])
+  @@index([propertyId])
+  @@index([status, supportedVehicleType, hourlyRatePaisa])
+  @@map("parking_spots")
+}
+
+model ParkingFacility {
+  id           Int                   @id @default(autoincrement()) @db.SmallInt
+  code         String                @unique @db.VarChar(40)
+  displayName  String                @map("display_name") @db.VarChar(80)
+  parkingSpots ParkingSpotFacility[]
+
+  @@map("parking_facilities")
+}
+
+model ParkingSpotFacility {
+  parkingSpotId String          @map("parking_spot_id") @db.Uuid
+  facilityId    Int             @map("facility_id") @db.SmallInt
+  parkingSpot   ParkingSpot     @relation(fields: [parkingSpotId], references: [id], onDelete: Cascade)
+  facility      ParkingFacility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@id([parkingSpotId, facilityId])
+  @@map("parking_spot_facilities")
+}
+
+model AvailabilityRule {
+  id             String    @id @default(uuid()) @db.Uuid
+  parkingSpotId  String    @map("parking_spot_id") @db.Uuid
+  dayOfWeek      Int       @map("day_of_week") @db.SmallInt
+  startLocalTime DateTime  @map("start_local_time") @db.Time(6)
+  endLocalTime   DateTime  @map("end_local_time") @db.Time(6)
+  validFrom      DateTime  @map("valid_from") @db.Date
+  validUntil     DateTime? @map("valid_until") @db.Date
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  parkingSpot    ParkingSpot @relation(fields: [parkingSpotId], references: [id], onDelete: Cascade)
+
+  @@index([parkingSpotId, dayOfWeek, validFrom, validUntil])
+  @@map("availability_rules")
+}
+
+model AvailabilityException {
+  id              String                    @id @default(uuid()) @db.Uuid
+  parkingSpotId   String                    @map("parking_spot_id") @db.Uuid
+  startsAt        DateTime                  @map("starts_at") @db.Timestamptz(6)
+  endsAt          DateTime                  @map("ends_at") @db.Timestamptz(6)
+  exceptionType   AvailabilityExceptionType @map("exception_type")
+  reason          String?                   @db.VarChar(255)
+  createdByUserId String                    @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  parkingSpot     ParkingSpot               @relation(fields: [parkingSpotId], references: [id], onDelete: Cascade)
+  createdBy       User                      @relation("ExceptionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([parkingSpotId, startsAt, endsAt])
+  @@map("availability_exceptions")
 }
