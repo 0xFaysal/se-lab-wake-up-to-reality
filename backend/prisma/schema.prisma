@@ -65,7 +65,6 @@ enum VehicleType {
   SEDAN
   SUV
   MICROBUS
-
   @@map("vehicle_type")
 }
 
@@ -85,6 +84,7 @@ enum AvailabilityExceptionType {
 
   @@map("availability_exception_type")
 }
+
 
 enum LegalDocumentType {
   TERMS_OF_SERVICE
@@ -131,21 +131,21 @@ enum ReconciliationStatus {
 }
 
 model User {
-  id                 String        @id @default(uuid()) @db.Uuid
-  fullName           String        @map("full_name") @db.VarChar(120)
-  email              String        @unique @db.Citext
-  phone              String        @unique @db.VarChar(20)
-  passwordHash       String        @map("password_hash")
-  status             UserStatus    @default(PENDING)
-  mustChangePassword Boolean       @default(false) @map("must_change_password")
-  accountOrigin      AccountOrigin @default(SELF_REGISTERED) @map("account_origin")
-  createdByUserId    String?       @map("created_by_user_id") @db.Uuid
-  emailVerifiedAt    DateTime?     @map("email_verified_at") @db.Timestamptz(6)
-  phoneVerifiedAt    DateTime?     @map("phone_verified_at") @db.Timestamptz(6)
-  lastLoginAt        DateTime?     @map("last_login_at") @db.Timestamptz(6)
-  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  id                  String        @id @default(uuid()) @db.Uuid
+  fullName            String        @map("full_name") @db.VarChar(120)
+  email               String        @unique @db.Citext
+  phone               String        @unique @db.VarChar(20)
+  passwordHash        String        @map("password_hash")
+  status              UserStatus    @default(PENDING)
+  mustChangePassword  Boolean       @default(false) @map("must_change_password")
+  accountOrigin       AccountOrigin @default(SELF_REGISTERED) @map("account_origin")
+  createdByUserId     String?       @map("created_by_user_id") @db.Uuid
+  emailVerifiedAt     DateTime?     @map("email_verified_at") @db.Timestamptz(6)
+  phoneVerifiedAt     DateTime?     @map("phone_verified_at") @db.Timestamptz(6)
+  lastLoginAt         DateTime?     @map("last_login_at") @db.Timestamptz(6)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
   creator                 User?                     @relation("UserCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   createdUsers            User[]                    @relation("UserCreator")
@@ -206,7 +206,6 @@ model LegalDocument {
   type        LegalDocumentType
   version     String            @db.VarChar(30)
   title       String            @db.VarChar(150)
-  contentHash String            @map("content_hash") @db.VarChar(128)
   effectiveAt DateTime          @map("effective_at") @db.Timestamptz(6)
   isActive    Boolean           @default(true) @map("is_active")
   createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -219,14 +218,13 @@ model LegalDocument {
 }
 
 model UserLegalAcceptance {
-  id               String                @id @default(uuid()) @db.Uuid
-  userId           String                @map("user_id") @db.Uuid
-  legalDocumentId  String                @map("legal_document_id") @db.Uuid
-  acceptanceSource LegalAcceptanceSource @map("acceptance_source")
-  acceptedAt       DateTime              @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  legalDocumentId String   @map("legal_document_id") @db.Uuid
+  acceptedAt      DateTime @default(now()) @map("accepted_at") @db.Timestamptz(6)
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
-  legalDocument LegalDocument @relation(fields: [legalDocumentId], references: [id], onDelete: Restrict)
+  user User @relation( fields: [userId],references: [id], onDelete: Restrict)
+  legalDocument LegalDocument @relation(fields: [legalDocumentId], references: [id],onDelete: Restrict)
 
   @@unique([userId, legalDocumentId])
   @@index([userId])
@@ -235,21 +233,21 @@ model UserLegalAcceptance {
 }
 
 model Vehicle {
-  id                           String             @id @default(uuid()) @db.Uuid
-  ownerUserId                  String             @map("owner_user_id") @db.Uuid
-  vehicleType                  VehicleType        @map("vehicle_type")
-  registrationNumber           String             @map("registration_number") @db.VarChar(50)
-  normalizedRegistrationNumber String             @unique @map("normalized_registration_number") @db.VarChar(50)
-  brand                        String?            @db.VarChar(80)
-  model                        String?            @db.VarChar(80)
-  color                        String?            @db.VarChar(40)
-  heightCm                     Int?               @map("height_cm")
-  widthCm                      Int?               @map("width_cm")
-  lengthCm                     Int?               @map("length_cm")
+  id                           String              @id @default(uuid()) @db.Uuid
+  ownerUserId                  String              @map("owner_user_id") @db.Uuid
+  vehicleType                  VehicleType         @map("vehicle_type")
+  registrationNumber           String              @map("registration_number") @db.VarChar(50)
+  normalizedRegistrationNumber String              @unique @map("normalized_registration_number") @db.VarChar(50)
+  brand                        String?             @db.VarChar(80)
+  model                        String?             @db.VarChar(80)
+  color                        String?             @db.VarChar(40)
+  heightCm                     Int?                @map("height_cm")
+  widthCm                      Int?                @map("width_cm")
+  lengthCm                     Int?                @map("length_cm")
   verificationStatus           VerificationStatus @default(PENDING) @map("verification_status")
-  createdAt                    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt                    DateTime?          @map("deleted_at") @db.Timestamptz(6)
+  createdAt                    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                    DateTime?           @map("deleted_at") @db.Timestamptz(6)
 
   owner User @relation("VehicleOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
 
@@ -259,26 +257,26 @@ model Vehicle {
 }
 
 model Property {
-  id                           String             @id @default(uuid()) @db.Uuid
-  ownerUserId                  String             @map("owner_user_id") @db.Uuid
-  name                         String             @db.VarChar(150)
+  id                           String              @id @default(uuid()) @db.Uuid
+  ownerUserId                  String              @map("owner_user_id") @db.Uuid
+  name                         String              @db.VarChar(150)
   description                  String?
-  publicArea                   String             @map("public_area") @db.VarChar(120)
-  approximateAddress           String             @map("approximate_address") @db.VarChar(255)
-  exactAddressCiphertext       String             @map("exact_address_ciphertext")
-  latitude                     Decimal            @db.Decimal(9, 6)
-  longitude                    Decimal            @db.Decimal(9, 6)
-  entranceLatitude             Decimal?           @map("entrance_latitude") @db.Decimal(9, 6)
-  entranceLongitude            Decimal?           @map("entrance_longitude") @db.Decimal(9, 6)
-  accessInstructionsCiphertext String?            @map("access_instructions_ciphertext")
+  publicArea                   String              @map("public_area") @db.VarChar(120)
+  approximateAddress           String              @map("approximate_address") @db.VarChar(255)
+  exactAddressCiphertext       String              @map("exact_address_ciphertext")
+  latitude                     Decimal             @db.Decimal(9, 6)
+  longitude                    Decimal             @db.Decimal(9, 6)
+  entranceLatitude             Decimal?            @map("entrance_latitude") @db.Decimal(9, 6)
+  entranceLongitude            Decimal?            @map("entrance_longitude") @db.Decimal(9, 6)
+  accessInstructionsCiphertext String?             @map("access_instructions_ciphertext")
   verificationStatus           VerificationStatus @default(DRAFT) @map("verification_status")
-  status                       PropertyStatus     @default(INACTIVE)
-  verifiedByAdminId            String?            @map("verified_by_admin_id") @db.Uuid
-  verifiedAt                   DateTime?          @map("verified_at") @db.Timestamptz(6)
-  rejectionReason              String?            @map("rejection_reason")
-  createdAt                    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt                    DateTime?          @map("deleted_at") @db.Timestamptz(6)
+  status                       PropertyStatus      @default(INACTIVE)
+  verifiedByAdminId            String?             @map("verified_by_admin_id") @db.Uuid
+  verifiedAt                   DateTime?           @map("verified_at") @db.Timestamptz(6)
+  rejectionReason              String?             @map("rejection_reason")
+  createdAt                    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                    DateTime?           @map("deleted_at") @db.Timestamptz(6)
 
   owner            User                      @relation("PropertyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   verifiedByAdmin  User?                     @relation("PropertyVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
@@ -380,7 +378,7 @@ model ParkingSpotFacility {
   facilityId    Int    @map("facility_id") @db.SmallInt
 
   parkingSpot ParkingSpot     @relation(fields: [parkingSpotId], references: [id], onDelete: Cascade)
-  facility    ParkingFacility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  facility   ParkingFacility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
 
   @@id([parkingSpotId, facilityId])
   @@map("parking_spot_facilities")
