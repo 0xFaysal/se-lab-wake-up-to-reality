@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
 
-
 const schema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -14,8 +13,12 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   CORS_ORIGIN: z.url(),
-});
+  JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z.string().min(32),
+  JWT_ACCESS_EXPIRES_MINUTES: z.coerce.number().int().positive().default(15),
 
+  JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
+});
 
 const result = schema.safeParse(process.env);
 

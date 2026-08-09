@@ -1,0 +1,202 @@
+@baseUrl = http://localhost:4000/api/v1
+@driverEmail = driver{{$timestamp}}@test.com
+@driverPhone = 017{{$randomInt 10000000 99999999}}
+@ownerEmail = owner{{$timestamp}}@test.com
+@ownerPhone = 018{{$randomInt 10000000 99999999}}
+@password = Password123!
+@newGuardPassword = GuardPermanent123!
+
+### Health ready
+GET {{baseUrl}}/health
+
+### Register driver
+# @name registerDriver
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Driver Test",
+  "email": "{{driverEmail}}",
+  "phone": "{{driverPhone}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Register parking owner
+# @name registerOwner
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Owner Test",
+  "email": "{{ownerEmail}}",
+  "phone": "{{ownerPhone}}",
+  "password": "{{password}}",
+  "role": "PARKING_OWNER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Invalid public guard registration - should fail with 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Guard Test",
+  "email": "guard-public{{$timestamp}}@test.com",
+  "phone": "019{{$randomInt 10000000 99999999}}",
+  "password": "{{password}}",
+  "role": "GUARD",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Invalid admin registration - should fail with 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Admin Test",
+  "email": "admin-public{{$timestamp}}@test.com",
+  "phone": "013{{$randomInt 10000000 99999999}}",
+  "password": "{{password}}",
+  "role": "ADMIN",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Invalid Bangladesh phone - should fail with 400 VALIDATION_ERROR
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Bad Phone",
+  "email": "bad-phone{{$timestamp}}@test.com",
+  "phone": "12345",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Invalid password - should fail because no uppercase or special character
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Bad Password",
+  "email": "bad-password{{$timestamp}}@test.com",
+  "phone": "016{{$randomInt 10000000 99999999}}",
+  "password": "password123",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Duplicate email or phone - run after Register driver, should fail with 409
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Duplicate Driver",
+  "email": "{{driverEmail}}",
+  "phone": "{{driverPhone}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Login driver with email
+# @name loginDriverEmail
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}",
+  "password": "{{password}}",
+  "rememberDevice": true
+}
+
+### Login driver with phone
+# @name loginDriverPhone
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverPhone}}",
+  "password": "{{password}}",
+  "rememberDevice": true
+}
+
+### Wrong password - should fail with 401 AUTH_INVALID_CREDENTIALS
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}",
+  "password": "WrongPassword123!",
+  "rememberDevice": false
+}
+
+### Current user
+# Run Login first. REST Client should automatically keep cookies.
+GET {{baseUrl}}/auth/me
+
+### Refresh auth session
+# Run Login first. This rotates refresh_token cookie.
+POST {{baseUrl}}/auth/refresh
+
+### Logout
+POST {{baseUrl}}/auth/logout
+
+### Current user after logout - should fail with 401
+GET {{baseUrl}}/auth/me
+
+### Login seeded admin with email
+# @name loginAdminEmail
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "admin@parkease.local",
+  "password": "Pass1234#",
+  "rememberDevice": true
+}
+
+### Login seeded admin with phone
+# @name loginAdminPhone
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "01768621165",
+  "password": "Pass1234#",
+  "rememberDevice": true
+}
+
+### Login demo guard
+# This works only if you add/seed the demo guard account.
+# Expected nextAction: CHANGE_INITIAL_PASSWORD
+# @name loginGuard
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "guard@parkease.local",
+  "password": "TempGuard123!",
+  "rememberDevice": false
+}
+
+### Change guard initial password
+# Run Login demo guard first so cookies are set.
+POST {{baseUrl}}/auth/change-initial-password
+Content-Type: application/json
+
+{
+  "currentPassword": "TempGuard123!",
+  "newPassword": "{{newGuardPassword}}"
+}
+

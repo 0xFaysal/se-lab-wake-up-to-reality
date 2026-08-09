@@ -1,7 +1,7 @@
 import "dotenv/config";
 import argon2 from "argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, UserRoleType, UserStatus } from "../generated/prisma/client.js";
+import { LegalDocumentType, PrismaClient, UserRoleType, UserStatus } from "../generated/prisma/client.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is missing");
@@ -42,6 +42,42 @@ async function main(): Promise<void> {
     update: {},
     create: { userId: admin.id, role: UserRoleType.ADMIN }
   });
+
+  const legalDocuments = [
+    {
+      type: LegalDocumentType.TERMS_OF_SERVICE,
+      version: "1.0",
+      title: "ParkEase BD Terms of Service",
+      contentHash: "development-terms-v1",
+      effectiveAt: new Date(),
+      isActive: true
+    },
+    {
+      type: LegalDocumentType.PRIVACY_POLICY,
+      version: "1.0",
+      title: "ParkEase BD Privacy Policy",
+      contentHash: "development-privacy-v1",
+      effectiveAt: new Date(),
+      isActive: true
+    }
+  ];
+
+  for (const document of legalDocuments) {
+    await prisma.legalDocument.upsert({
+      where: {
+        type_version: {
+          type: document.type,
+          version: document.version
+        }
+      },
+      update: {
+        title: document.title,
+        contentHash: document.contentHash,
+        isActive: true
+      },
+      create: document
+    });
+  }
 
   for (const facility of [
     { code: "CCTV", displayName: "CCTV" },
