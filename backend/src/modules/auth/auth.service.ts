@@ -2,6 +2,7 @@ import {
   AccountOrigin,
   LegalAcceptanceSource,
   LegalDocumentType,
+  type Prisma,
   UserRoleType,
   UserStatus,
 } from "../../../generated/prisma/client.js";
@@ -24,6 +25,8 @@ export type RegisterInput = {
   phone: string;
   password: string;
   role: "DRIVER" | "PARKING_OWNER";
+  userAgent?: string | undefined;
+  ipAddress?: string | undefined;
 };
 
 export type LoginInput = {
@@ -124,18 +127,21 @@ function getSessionMetadata(input: {
   };
 }
 
-async function createTokenPair(input: {
-  userId: string;
-  roles: string[];
-  userAgent?: string | undefined;
-  ipAddress?: string | undefined;
-}): Promise<{
+async function createTokenPair(
+  input: {
+    userId: string;
+    roles: string[];
+    userAgent?: string | undefined;
+    ipAddress?: string | undefined;
+  },
+  db: Pick<Prisma.TransactionClient, "refreshSession"> = prisma,
+): Promise<{
   accessToken: string;
   refreshToken: string;
   sessionId: string;
 }> {
   const metadata = getSessionMetadata(input);
-  const refreshSession = await prisma.refreshSession.create({
+  const refreshSession = await db.refreshSession.create({
     data: {
       userId: input.userId,
       tokenHash: `pending:${randomUUID()}`,
@@ -156,7 +162,7 @@ async function createTokenPair(input: {
     }),
   ]);
 
-  await prisma.refreshSession.update({
+  await db.refreshSession.update({
     where: {
       id: refreshSession.id,
     },
@@ -172,12 +178,10 @@ async function createTokenPair(input: {
   };
 }
 
-export async function registerUser(input: RegisterInput) {
-
+export async function registerUser(input: RegisterInput): Promise<AuthResult> {
   const passwordHash = await hashPassword(input.password);
 
   return prisma.$transaction(async (tx) => {
-    
     const existing = await tx.user.findFirst({
       where: {
         OR: [{ email: input.email }, { phone: input.phone }],
@@ -228,6 +232,7 @@ export async function registerUser(input: RegisterInput) {
         status: UserStatus.ACTIVE,
         accountOrigin: AccountOrigin.SELF_REGISTERED,
         mustChangePassword: false,
+        lastLoginAt: new Date(),
         roles: {
           create: {
             role:
@@ -267,7 +272,23 @@ export async function registerUser(input: RegisterInput) {
       })),
     });
 
-    return user;
+    const authUser = normalizeUser(user);
+    const tokens = await createTokenPair(
+      {
+        userId: authUser.id,
+        roles: authUser.roles,
+        userAgent: input.userAgent,
+        ipAddress: input.ipAddress,
+      },
+      tx,
+    );
+
+    return {
+      user: authUser,
+      nextAction: null,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   });
 }
 

@@ -206,6 +206,7 @@ model LegalDocument {
   type        LegalDocumentType
   version     String            @db.VarChar(30)
   title       String            @db.VarChar(150)
+  contentHash String            @map("content_hash") @db.VarChar(128)
   effectiveAt DateTime          @map("effective_at") @db.Timestamptz(6)
   isActive    Boolean           @default(true) @map("is_active")
   createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -218,10 +219,11 @@ model LegalDocument {
 }
 
 model UserLegalAcceptance {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @map("user_id") @db.Uuid
-  legalDocumentId String   @map("legal_document_id") @db.Uuid
-  acceptedAt      DateTime @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  id               String                @id @default(uuid()) @db.Uuid
+  userId           String                @map("user_id") @db.Uuid
+  legalDocumentId  String                @map("legal_document_id") @db.Uuid
+  acceptanceSource LegalAcceptanceSource @map("acceptance_source")
+  acceptedAt       DateTime              @default(now()) @map("accepted_at") @db.Timestamptz(6)
 
   user User @relation( fields: [userId],references: [id], onDelete: Restrict)
   legalDocument LegalDocument @relation(fields: [legalDocumentId], references: [id],onDelete: Restrict)

@@ -11,11 +11,7 @@ import {
 } from "./auth.service.js";
 
 function getClientIp(req: Parameters<RequestHandler>[0]): string {
-  return (
-    req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.socket.remoteAddress ||
-    "unknown"
-  );
+  return req.ip || req.socket.remoteAddress || req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
 
 function getUserAgent(req: Parameters<RequestHandler>[0]): string {
@@ -24,12 +20,19 @@ function getUserAgent(req: Parameters<RequestHandler>[0]): string {
 
 export const registerController: RequestHandler = async (req, res, next) => {
   try {
-    const user = await registerUser(req.body);
+    const result = await registerUser({
+      ...req.body,
+      userAgent: getUserAgent(req),
+      ipAddress: getClientIp(req),
+    });
+
+    setAuthCookies(res, result.accessToken, result.refreshToken);
 
     res.status(201).json({
       success: true,
       data: {
-        user,
+        user: result.user,
+        nextAction: result.nextAction,
       },
       meta: {
         requestId: req.requestId,

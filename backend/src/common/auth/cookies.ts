@@ -19,6 +19,7 @@ export function setAuthCookies(
       httpOnly: true,
       secure: isProduction,
       sameSite: "lax",
+      path: "/",
       maxAge:
         env.JWT_ACCESS_EXPIRES_MINUTES *
         60 *
@@ -33,6 +34,7 @@ export function setAuthCookies(
       httpOnly: true,
       secure: isProduction,
       sameSite: "lax",
+      path: "/api/v1/auth",
       maxAge:
         env.JWT_REFRESH_EXPIRES_DAYS *
         24 *
@@ -46,6 +48,16 @@ export function setAuthCookies(
 export function clearAuthCookies(
   res: Response
 ): void {
-  res.clearCookie("access_token");
-  res.clearCookie("refresh_token");
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/"
+  });
+  res.clearCookie("refresh_token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/api/v1/auth"
+  });
 }
