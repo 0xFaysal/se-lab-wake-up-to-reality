@@ -1,0 +1,55 @@
+@startuml context-diagram
+!theme plain
+title ParkEase BD — System Context Diagram (DFD Level 0)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 13
+skinparam rectangle {
+  BackgroundColor #FFF8E1
+  BorderColor #E65100
+  FontStyle bold
+}
+skinparam actor {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+
+left to right direction
+
+actor "Driver" as Driver
+actor "Parking Owner" as Owner
+actor "Security Guard" as Guard
+actor "Administrator" as Admin
+
+rectangle "0.0\nParkEase BD\nShared Parking Platform" as System
+
+rectangle "SSLCOMMERZ\nPayment Gateway (Sandbox)" as SSL #E3F2FD
+rectangle "OpenStreetMap\nTile Service" as OSM #E3F2FD
+
+Driver --> System : Search filters, vehicle data,\nquote/hold/payment requests,\ncheck-in/out actions, reviews, disputes
+System --> Driver : Search results, quotes, booking\nstatus, QR/OTP credential,\npayment & refund status, notifications
+
+Owner --> System : Property & spot data, availability\nrules, guard invitations, payout\naccount & payout requests
+System --> Owner : Verification status, bookings,\nactive sessions, earnings,\npayout status, notifications
+
+Guard --> System : Assignment acceptance, verification\ncredential, check-in/out confirmation,\nincident reports
+System --> Guard : Assigned properties, expected\narrivals, active vehicles
+
+Admin --> System : Verification decisions, dispute\nresolutions, payout approvals,\nsettings changes, job retries
+System --> Admin : Pending reviews, disputes,\nreconciliation data, audit logs
+
+System --> SSL : Payment session request
+SSL --> System : IPN payment validation callback
+
+System --> OSM : Map tile requests
+OSM --> System : Map tile images
+
+note bottom of System
+  The system is the single authority for
+  booking availability, price, payment
+  validation, refunds, owner earnings,
+  and role-based authorization.
+end note
+
+@enduml
