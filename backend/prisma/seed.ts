@@ -2,6 +2,7 @@ import "dotenv/config";
 import argon2 from "argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { LegalDocumentType, PrismaClient, UserRoleType, UserStatus } from "../generated/prisma/client.js";
+import { normalizeBangladeshPhone } from "../src/common/auth/phone.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is missing");
@@ -12,7 +13,9 @@ const prisma = new PrismaClient({
 
 async function main(): Promise<void> {
   const email = process.env.SEED_ADMIN_EMAIL ?? "admin@parkease.local";
-  const phone = process.env.SEED_ADMIN_PHONE ?? "01700000000";
+  const phone = normalizeBangladeshPhone(
+    process.env.SEED_ADMIN_PHONE ?? "+8801700000000"
+  );
   const password = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!";
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
 
@@ -94,8 +97,7 @@ async function main(): Promise<void> {
   }
 
   console.log("Seed completed");
-  console.log(`Admin email: ${email}`);
-  console.log(`Admin password: ${password}`);
+  console.log(`Admin seed created: ${email}`);
 }
 
 main()

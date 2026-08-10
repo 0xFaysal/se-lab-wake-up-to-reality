@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { normalizeBangladeshPhone } from "../../common/auth/phone.js";
 
-const bangladeshPhoneRegex = /^(?:\+8801|8801|01)[3-9]\d{8}$/;
 const uppercaseRegex = /[A-Z]/;
 const specialCharacterRegex = /[^A-Za-z0-9]/;
 
-const strongPasswordSchema = z
+export const strongPasswordSchema = z
   .string()
   .min(8)
   .max(128)
@@ -38,10 +38,17 @@ export const registerSchema = z.object({
       .trim()
       .min(10)
       .max(20)
-      .regex(
-        bangladeshPhoneRegex,
-        "Phone number must be a valid Bangladesh mobile number"
-      ),
+      .transform((value, context) => {
+        try {
+          return normalizeBangladeshPhone(value);
+        } catch {
+          context.addIssue({
+            code: "custom",
+            message: "Phone number must be a valid Bangladesh mobile number",
+          });
+          return z.NEVER;
+        }
+      }),
 
     password: strongPasswordSchema,
 
@@ -82,4 +89,23 @@ export const changeInitialPasswordSchema = z.object({
 
     newPassword: strongPasswordSchema
   })
+});
+
+export const requestPasswordResetSchema = z.object({
+  body: z.object({
+    identifier: z.string().trim().min(3).max(254),
+  }),
+});
+
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    token: z.string().min(32).max(200),
+    newPassword: strongPasswordSchema,
+  }),
+});
+
+export const confirmVerificationSchema = z.object({
+  body: z.object({
+    code: z.string().regex(/^\d{6}$/, "Verification code must be 6 digits"),
+  }),
 });

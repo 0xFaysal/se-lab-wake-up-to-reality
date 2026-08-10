@@ -1,3 +1,5 @@
+import { normalizeBangladeshPhone } from "./phone.js";
+
 export function normalizeIdentifier(identifier: string): {
   type: "email" | "phone";
   value: string;
@@ -13,6 +15,6 @@ export function normalizeIdentifier(identifier: string): {
 
   return {
     type: "phone",
-    value: value.replace(/\s+/g, ""),
+    value: normalizeBangladeshPhone(value),
   };
 }

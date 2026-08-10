@@ -1,6 +1,8 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../errors/app-error.js";
-import { verifyAccessToken } from "./jwt.js";
+import { UserStatus } from "../../../generated/prisma/client.js";
+import { findAccessSession } from "../../modules/auth/auth.repository.js";
+import { verifyAccessToken } from "../auth/jwt.js";
 
 export const authenticate: RequestHandler = async (req, _res, next) => {
   try {
@@ -16,9 +18,24 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
 
     const payload = await verifyAccessToken(token);
 
-    req.auth = {
+    const session = await findAccessSession({
+      sessionId: payload.sessionId,
       userId: payload.userId,
-      roles: payload.roles,
+    });
+
+    if (!session || session.user.status !== UserStatus.ACTIVE) {
+      throw new AppError({
+        statusCode: 401,
+        code: "AUTH_INVALID_TOKEN",
+        message: "Authentication token is invalid",
+      });
+    }
+
+    req.auth = {
+      userId: session.user.id,
+      sessionId: session.id,
+      roles: session.user.roles.map((role) => role.role),
+      mustChangePassword: session.user.mustChangePassword,
     };
 
     next();

@@ -13,11 +13,36 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   CORS_ORIGIN: z.url(),
+  API_PUBLIC_URL: z.url().optional(),
+  ENABLE_API_DOCS: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  JWT_ISSUER: z.string().min(1).default("parkease-api"),
+  JWT_AUDIENCE: z.string().min(1).default("parkease-client"),
   JWT_ACCESS_EXPIRES_MINUTES: z.coerce.number().int().positive().default(15),
-
-  JWT_REFRESH_EXPIRES_DAYS: z.coerce.number().int().positive().default(7),
+  JWT_REFRESH_SHORT_DAYS: z.coerce.number().int().positive().default(1),
+  JWT_REFRESH_LONG_DAYS: z.coerce.number().int().positive().default(30),
+  PASSWORD_RESET_EXPIRES_MINUTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(15),
+  VERIFICATION_CODE_EXPIRES_MINUTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10),
+}).superRefine((value, context) => {
+  if (value.JWT_ACCESS_SECRET === value.JWT_REFRESH_SECRET) {
+    context.addIssue({
+      code: "custom",
+      path: ["JWT_REFRESH_SECRET"],
+      message: "JWT access and refresh secrets must be different",
+    });
+  }
 });
 
 const result = schema.safeParse(process.env);

@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { registerSchema } from "../../../src/modules/auth/auth.schema.js";
+
+const validBody = {
+  fullName: "Test Driver",
+  email: "DRIVER@EXAMPLE.COM",
+  phone: "01712345678",
+  password: "Password123!",
+  role: "DRIVER",
+  acceptTerms: true,
+  acceptPrivacyPolicy: true,
+};
+
+describe("registerSchema", () => {
+  it("normalizes email and phone", () => {
+    const result = registerSchema.parse({ body: validBody });
+    assert.equal(result.body.email, "driver@example.com");
+    assert.equal(result.body.phone, "+8801712345678");
+  });
+
+  it("allows only DRIVER or PARKING_OWNER self-registration", () => {
+    for (const role of ["GUARD", "ADMIN"]) {
+      const result = registerSchema.safeParse({ body: { ...validBody, role } });
+      assert.equal(result.success, false);
+    }
+  });
+
+  it("requires both legal acceptances", () => {
+    assert.equal(
+      registerSchema.safeParse({
+        body: { ...validBody, acceptTerms: false },
+      }).success,
+      false,
+    );
+    assert.equal(
+      registerSchema.safeParse({
+        body: { ...validBody, acceptPrivacyPolicy: false },
+      }).success,
+      false,
+    );
+  });
+
+  it("requires an uppercase and a special password character", () => {
+    for (const password of ["password123!", "Password123"]) {
+      const result = registerSchema.safeParse({
+        body: { ...validBody, password },
+      });
+      assert.equal(result.success, false);
+    }
+  });
+});

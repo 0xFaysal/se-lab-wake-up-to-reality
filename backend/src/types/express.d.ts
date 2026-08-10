@@ -4,7 +4,9 @@ declare global {
       requestId: string;
       auth?: {
         userId: string;
-        roles: string[];
+        sessionId: string;
+        roles: import("../../generated/prisma/client.js").UserRoleType[];
+        mustChangePassword: boolean;
       };
     }
   }

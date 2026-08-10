@@ -1,15 +1,22 @@
-@baseUrl = http://localhost:4000/api/v1
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+@driverSuffix = {{$randomInt 10000000 99999999}}
 @driverEmail = driver{{$timestamp}}@test.com
-@driverPhone = 017{{$randomInt 10000000 99999999}}
+@driverPhoneLocal = 017{{driverSuffix}}
+@driverPhoneCountryCode = 88017{{driverSuffix}}
+@driverPhoneInternational = +88017{{driverSuffix}}
 @ownerEmail = owner{{$timestamp}}@test.com
 @ownerPhone = 018{{$randomInt 10000000 99999999}}
 @password = Password123!
-@newGuardPassword = GuardPermanent123!
+@changedPassword = ChangedPassword123!
+
+### Health live
+GET {{rootUrl}}/health/live
 
 ### Health ready
-GET {{baseUrl}}/health
+GET {{rootUrl}}/health/ready
 
-### Register driver
+### Register driver and authenticate immediately
 # @name registerDriver
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
@@ -17,7 +24,24 @@ Content-Type: application/json
 {
   "fullName": "Driver Test",
   "email": "{{driverEmail}}",
-  "phone": "{{driverPhone}}",
+  "phone": "{{driverPhoneLocal}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Current user immediately after registration - no login required
+GET {{baseUrl}}/auth/me
+
+### Duplicate normalized phone - should return 409
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Duplicate Phone",
+  "email": "duplicate-phone{{$timestamp}}@test.com",
+  "phone": "{{driverPhoneInternational}}",
   "password": "{{password}}",
   "role": "DRIVER",
   "acceptTerms": true,
@@ -25,7 +49,6 @@ Content-Type: application/json
 }
 
 ### Register parking owner
-# @name registerOwner
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -39,7 +62,7 @@ Content-Type: application/json
   "acceptPrivacyPolicy": true
 }
 
-### Invalid public guard registration - should fail with 400 VALIDATION_ERROR
+### Invalid public GUARD registration - should return 400
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -53,41 +76,13 @@ Content-Type: application/json
   "acceptPrivacyPolicy": true
 }
 
-### Invalid admin registration - should fail with 400 VALIDATION_ERROR
+### Invalid password - should return 400
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "fullName": "Admin Test",
-  "email": "admin-public{{$timestamp}}@test.com",
-  "phone": "013{{$randomInt 10000000 99999999}}",
-  "password": "{{password}}",
-  "role": "ADMIN",
-  "acceptTerms": true,
-  "acceptPrivacyPolicy": true
-}
-
-### Invalid Bangladesh phone - should fail with 400 VALIDATION_ERROR
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "fullName": "Bad Phone",
-  "email": "bad-phone{{$timestamp}}@test.com",
-  "phone": "12345",
-  "password": "{{password}}",
-  "role": "DRIVER",
-  "acceptTerms": true,
-  "acceptPrivacyPolicy": true
-}
-
-### Invalid password - should fail because no uppercase or special character
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "fullName": "Bad Password",
-  "email": "bad-password{{$timestamp}}@test.com",
+  "fullName": "Weak Password",
+  "email": "weak{{$timestamp}}@test.com",
   "phone": "016{{$randomInt 10000000 99999999}}",
   "password": "password123",
   "role": "DRIVER",
@@ -95,43 +90,27 @@ Content-Type: application/json
   "acceptPrivacyPolicy": true
 }
 
-### Duplicate email or phone - run after Register driver, should fail with 409
-POST {{baseUrl}}/auth/register
-Content-Type: application/json
-
-{
-  "fullName": "Duplicate Driver",
-  "email": "{{driverEmail}}",
-  "phone": "{{driverPhone}}",
-  "password": "{{password}}",
-  "role": "DRIVER",
-  "acceptTerms": true,
-  "acceptPrivacyPolicy": true
-}
-
-### Login driver with email
-# @name loginDriverEmail
+### Login driver with email and short session
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
   "identifier": "{{driverEmail}}",
   "password": "{{password}}",
-  "rememberDevice": true
+  "rememberDevice": false
 }
 
-### Login driver with phone
-# @name loginDriverPhone
+### Login driver with 880 phone format and remembered session
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "identifier": "{{driverPhone}}",
+  "identifier": "{{driverPhoneCountryCode}}",
   "password": "{{password}}",
   "rememberDevice": true
 }
 
-### Wrong password - should fail with 401 AUTH_INVALID_CREDENTIALS
+### Wrong password - should return 401
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -141,62 +120,83 @@ Content-Type: application/json
   "rememberDevice": false
 }
 
-### Current user
-# Run Login first. REST Client should automatically keep cookies.
-GET {{baseUrl}}/auth/me
-
 ### Refresh auth session
-# Run Login first. This rotates refresh_token cookie.
 POST {{baseUrl}}/auth/refresh
 
-### Logout
-POST {{baseUrl}}/auth/logout
+### List active sessions
+# @name listSessions
+GET {{baseUrl}}/users/me/sessions
 
-### Current user after logout - should fail with 401
-GET {{baseUrl}}/auth/me
+### Change password and revoke all previous sessions
+POST {{baseUrl}}/users/me/change-password
+Content-Type: application/json
 
-### Login seeded admin with email
-# @name loginAdminEmail
+{
+  "currentPassword": "{{password}}",
+  "newPassword": "{{changedPassword}}"
+}
+
+### Request email verification (development response contains code)
+# @name requestEmailVerification
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm email verification
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{requestEmailVerification.response.body.$.data.developmentCode}}"
+}
+
+### Request phone verification (development response contains code)
+# @name requestPhoneVerification
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Confirm phone verification
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{requestPhoneVerification.response.body.$.data.developmentCode}}"
+}
+
+### Request password reset (always returns a generic message)
+# @name requestPasswordReset
+POST {{baseUrl}}/auth/request-password-reset
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}"
+}
+
+### Reset password using development token
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{requestPasswordReset.response.body.$.data.developmentResetToken}}",
+  "newPassword": "ResetPassword123!"
+}
+
+### Login seeded admin using default development credentials
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
   "identifier": "admin@parkease.local",
-  "password": "Pass1234#",
+  "password": "ChangeMe123!",
   "rememberDevice": true
 }
 
-### Login seeded admin with phone
-# @name loginAdminPhone
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
+### Revoke the first listed session belonging to the authenticated user
+# Run List active sessions immediately before this request.
+DELETE {{baseUrl}}/users/me/sessions/{{listSessions.response.body.$.data.sessions[0].id}}
 
-{
-  "identifier": "01768621165",
-  "password": "Pass1234#",
-  "rememberDevice": true
-}
+### Logout current refresh session
+POST {{baseUrl}}/auth/logout
 
-### Login demo guard
-# This works only if you add/seed the demo guard account.
-# Expected nextAction: CHANGE_INITIAL_PASSWORD
-# @name loginGuard
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
+### Logout all sessions (login again first)
+POST {{baseUrl}}/auth/logout-all
 
-{
-  "identifier": "guard@parkease.local",
-  "password": "TempGuard123!",
-  "rememberDevice": false
-}
-
-### Change guard initial password
-# Run Login demo guard first so cookies are set.
-POST {{baseUrl}}/auth/change-initial-password
-Content-Type: application/json
-
-{
-  "currentPassword": "TempGuard123!",
-  "newPassword": "{{newGuardPassword}}"
-}
-
+### Current user after logout-all - should return 401
+GET {{baseUrl}}/auth/me

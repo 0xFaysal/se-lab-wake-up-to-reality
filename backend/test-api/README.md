@@ -1,35 +1,27 @@
 # REST Client API Tests
 
-Use this folder with the VS Code **REST Client** extension.
+Use `auth.http` with the VS Code REST Client extension. Start PostgreSQL,
+Redis, migrations, seed, and the API yourself before sending requests.
 
-Before testing, start the backend yourself:
-
-```powershell
-cd backend
-npm.cmd run db:up
-npx.cmd prisma migrate dev
-npx.cmd prisma db seed
-npm.cmd run dev
-```
-
-Open `auth.http`, then click **Send Request** above each request.
-
-REST Client should keep auth cookies from `/auth/login` automatically. If `/auth/me` returns `401` after login, enable this VS Code setting:
+Enable cookie persistence in VS Code settings:
 
 ```json
 "rest-client.rememberCookiesForSubsequentRequests": true
 ```
 
-Recommended test order:
+Recommended order:
 
-1. `Health ready`
-2. `Register driver`
-3. `Register parking owner`
-4. Invalid registration tests
-5. `Login driver with email`
-6. `Current user`
-7. `Refresh auth session`
-8. `Logout`
-9. `Current user after logout`
-10. Admin login tests
+1. Health live and ready
+2. Register driver
+3. Current user without a second login
+4. Duplicate normalized phone
+5. Login with email and each supported phone format
+6. Refresh and old-token reuse checks
+7. Session list and revoke
+8. Change password
+9. Email and phone verification
+10. Password reset
+11. Logout and logout-all
 
+Development-only reset tokens and verification codes are returned by the API.
+Production requires an email/SMS delivery provider.

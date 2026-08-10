@@ -29,6 +29,9 @@ export function validate(schema: z.ZodType<RequestParts>): RequestHandler {
     }
 
     if (result.data.body !== undefined) req.body = result.data.body;
+    if (result.data.params !== undefined) {
+      req.params = result.data.params as typeof req.params;
+    }
     next();
   };
 }

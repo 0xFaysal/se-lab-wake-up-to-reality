@@ -15,6 +15,7 @@ const refreshSecret = new TextEncoder().encode(
 
 export type AccessTokenPayload = {
   userId: string;
+  sessionId: string;
   roles: string[];
 };
 
@@ -27,12 +28,16 @@ export async function signAccessToken(
   payload: AccessTokenPayload
 ): Promise<string> {
   return new SignJWT({
-    roles: payload.roles
+    roles: payload.roles,
+    sessionId: payload.sessionId,
+    tokenType: "access",
   })
     .setProtectedHeader({
       alg: "HS256"
     })
     .setSubject(payload.userId)
+    .setIssuer(env.JWT_ISSUER)
+    .setAudience(env.JWT_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime(
       `${env.JWT_ACCESS_EXPIRES_MINUTES}m`
@@ -45,29 +50,47 @@ export async function verifyAccessToken(
 ): Promise<AccessTokenPayload> {
   const result = await jwtVerify(
     token,
-    accessSecret
+    accessSecret,
+    {
+      algorithms: ["HS256"],
+      issuer: env.JWT_ISSUER,
+      audience: env.JWT_AUDIENCE,
+    },
   );
 
+  if (
+    result.payload.tokenType !== "access" ||
+    typeof result.payload.sub !== "string" ||
+    typeof result.payload.sessionId !== "string" ||
+    !Array.isArray(result.payload.roles) ||
+    !result.payload.roles.every((role) => typeof role === "string")
+  ) {
+    throw new Error("INVALID_ACCESS_TOKEN_PAYLOAD");
+  }
+
   return {
-    userId: result.payload.sub!,
-    roles: result.payload.roles as string[]
+    userId: result.payload.sub,
+    sessionId: result.payload.sessionId,
+    roles: result.payload.roles,
   };
 }
 
 export async function signRefreshToken(
-  payload: RefreshTokenPayload
+  payload: RefreshTokenPayload,
+  expiresAt: Date,
 ): Promise<string> {
   return new SignJWT({
-    sessionId: payload.sessionId
+    sessionId: payload.sessionId,
+    tokenType: "refresh",
   })
     .setProtectedHeader({
       alg: "HS256"
     })
     .setSubject(payload.userId)
+    .setIssuer(env.JWT_ISSUER)
+    .setAudience(env.JWT_AUDIENCE)
     .setIssuedAt()
-    .setExpirationTime(
-      `${env.JWT_REFRESH_EXPIRES_DAYS}d`
-    )
+    .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
     .sign(refreshSecret);
 }
 
@@ -76,11 +99,24 @@ export async function verifyRefreshToken(
 ): Promise<RefreshTokenPayload> {
   const result = await jwtVerify(
     token,
-    refreshSecret
+    refreshSecret,
+    {
+      algorithms: ["HS256"],
+      issuer: env.JWT_ISSUER,
+      audience: env.JWT_AUDIENCE,
+    },
   );
 
+  if (
+    result.payload.tokenType !== "refresh" ||
+    typeof result.payload.sub !== "string" ||
+    typeof result.payload.sessionId !== "string"
+  ) {
+    throw new Error("INVALID_REFRESH_TOKEN_PAYLOAD");
+  }
+
   return {
-    userId: result.payload.sub!,
-    sessionId: result.payload.sessionId as string
+    userId: result.payload.sub,
+    sessionId: result.payload.sessionId,
   };
 }

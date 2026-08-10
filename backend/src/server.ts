@@ -15,12 +15,20 @@ async function bootstrap() {
 
   logger.info("Redis connected");
 
-  const server = app.listen(env.PORT, () =>
+  const server = app.listen(env.PORT, () => {
     logger.info(
       { port: env.PORT, environment: env.NODE_ENV },
       `${env.APP_NAME} started`,
-    ),
-  );
+    );
+
+    if (env.ENABLE_API_DOCS) {
+      const publicUrl = env.API_PUBLIC_URL ?? `http://localhost:${env.PORT}`;
+      logger.info(
+        { url: `${publicUrl}/api-docs` },
+        "Swagger documentation available",
+      );
+    }
+  });
 
   let shuttingDown = false;
 

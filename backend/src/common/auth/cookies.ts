@@ -10,7 +10,8 @@ const isProduction =
 export function setAuthCookies(
   res: Response,
   accessToken: string,
-  refreshToken: string
+  refreshToken: string,
+  refreshExpiresAt: Date,
 ): void {
   res.cookie(
     "access_token",
@@ -36,11 +37,7 @@ export function setAuthCookies(
       sameSite: "lax",
       path: "/api/v1/auth",
       maxAge:
-        env.JWT_REFRESH_EXPIRES_DAYS *
-        24 *
-        60 *
-        60 *
-        1000
+        Math.max(0, refreshExpiresAt.getTime() - Date.now()),
     }
   );
 }
