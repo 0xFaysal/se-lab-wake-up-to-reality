@@ -43,15 +43,28 @@ authentication-flow testing in VS Code REST Client.
 
 ## Required environment
 
-Set different secrets of at least 32 characters for `JWT_ACCESS_SECRET` and
-`JWT_REFRESH_SECRET`. `JWT_REFRESH_SHORT_DAYS` controls normal sessions and
+Set unique secrets of at least 32 characters for `JWT_ACCESS_SECRET`,
+`JWT_REFRESH_SECRET`, `VERIFICATION_CODE_SECRET`, and
+`AUTH_METADATA_HASH_SECRET`. `JWT_REFRESH_SHORT_DAYS` controls normal sessions and
 `JWT_REFRESH_LONG_DAYS` controls sessions created with `rememberDevice: true`.
 See `.env.example` for the complete configuration.
+
+Generate each secret independently; do not reuse output between variables:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
+```
 
 Email verification uses Gmail SMTP through Nodemailer. Configure `EMAIL_HOST`,
 `EMAIL_PORT`, `EMAIL_USERNAME`, and `EMAIL_PASSWORD`. For Gmail, use a dedicated
 Google App Password; the account must have 2-Step Verification enabled. Do not
 use the account's normal password.
+
+Phone verification uses Twilio Programmable Messaging. Configure
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`. Keep
+`EXPOSE_DEVELOPMENT_AUTH_CODES=false` outside local or automated testing; the
+application rejects enabling it in production. Set `TRUST_PROXY_HOPS` only to
+the exact number of trusted reverse proxies in front of Express.
 
 ## Health endpoints
 
@@ -76,6 +89,7 @@ use the account's normal password.
 
 ## Account endpoints
 
+- `POST /api/v1/users/guards` (verified Parking Owner or Admin)
 - `POST /api/v1/users/me/change-password`
 - `GET /api/v1/users/me/sessions`
 - `DELETE /api/v1/users/me/sessions/:sessionId`
@@ -83,10 +97,19 @@ use the account's normal password.
 Authentication uses `httpOnly` cookies. Browser clients must send requests with
 `credentials: "include"`.
 
-Email verification is delivered through Gmail. Password-reset delivery and SMS
-delivery are foundations only. Development responses expose reset tokens and
-verification codes; production responses never expose them. Connect dedicated
-transactional email and SMS providers before a higher-volume production launch.
+Registration creates a `PENDING` account and an authenticated session, so the
+user does not log in again. The response `nextAction` moves through
+`VERIFY_EMAIL`, then `VERIFY_PHONE`, then `null`. Operational routes can use the
+account-readiness middleware to require an active, fully verified account.
+
+Email verification, password reset, and Guard invitations are delivered through
+SMTP. Phone verification is delivered through Twilio. Only HMACs of OTP codes
+and hashes of reset and refresh tokens are stored. Refresh tokens rotate on every
+use; detected replay revokes the user's active session family.
+
+Browser state-changing requests are protected by same-origin checks in addition
+to `SameSite=Lax` HTTP-only cookies. Redis-backed rate limits are shared between
+API instances and fail closed if Redis is unavailable.
 
 ## Seed
 

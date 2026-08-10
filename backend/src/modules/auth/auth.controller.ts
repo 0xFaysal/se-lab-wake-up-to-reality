@@ -305,7 +305,7 @@ export const requestEmailVerificationController =
 
 export const confirmEmailVerificationController =
   confirmVerificationController("email");
-  
+
 export const requestPhoneVerificationController =
   requestVerificationController("phone");
 export const confirmPhoneVerificationController =

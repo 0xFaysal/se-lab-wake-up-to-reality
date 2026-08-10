@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { NextFunction, Request, Response } from "express";
-import { UserRoleType } from "../../../generated/prisma/client.js";
+import { UserRoleType, UserStatus } from "../../../generated/prisma/client.js";
+import { requireAccountReady } from "../../../src/common/middleware/require-account-ready.js";
 import { requirePasswordChangeComplete } from "../../../src/common/middleware/require-password-change-complete.js";
 import { requireRole } from "../../../src/common/middleware/require-role.js";
 import { AppError } from "../../../src/common/errors/app-error.js";
@@ -14,7 +15,10 @@ function requestWithAuth(overrides: Partial<AuthContext> = {}) {
       userId: "user-id",
       sessionId: "session-id",
       roles: [UserRoleType.DRIVER],
+      status: UserStatus.ACTIVE,
       mustChangePassword: false,
+      emailVerified: true,
+      phoneVerified: true,
       ...overrides,
     },
   } as Request;
@@ -58,5 +62,39 @@ describe("authorization middleware", () => {
       (result as AppError).code,
       "AUTH_INITIAL_PASSWORD_CHANGE_REQUIRED",
     );
+  });
+
+  it("allows operational work only after all account checks pass", () => {
+    assert.equal(
+      runMiddleware(requireAccountReady, requestWithAuth()),
+      undefined,
+    );
+  });
+
+  it("requires email verification before operational work", () => {
+    const result = runMiddleware(
+      requireAccountReady,
+      requestWithAuth({ emailVerified: false }),
+    );
+    assert.ok(result instanceof AppError);
+    assert.equal((result as AppError).code, "AUTH_EMAIL_VERIFICATION_REQUIRED");
+  });
+
+  it("requires phone verification before operational work", () => {
+    const result = runMiddleware(
+      requireAccountReady,
+      requestWithAuth({ phoneVerified: false }),
+    );
+    assert.ok(result instanceof AppError);
+    assert.equal((result as AppError).code, "AUTH_PHONE_VERIFICATION_REQUIRED");
+  });
+
+  it("does not treat a non-active account as operationally ready", () => {
+    const result = runMiddleware(
+      requireAccountReady,
+      requestWithAuth({ status: UserStatus.PENDING }),
+    );
+    assert.ok(result instanceof AppError);
+    assert.equal((result as AppError).code, "AUTH_ACCOUNT_NOT_ACTIVE");
   });
 });

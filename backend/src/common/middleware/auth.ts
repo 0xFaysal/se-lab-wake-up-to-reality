@@ -23,7 +23,11 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
       userId: payload.userId,
     });
 
-    if (!session || session.user.status !== UserStatus.ACTIVE) {
+    if (
+      !session ||
+      (session.user.status !== UserStatus.ACTIVE &&
+        session.user.status !== UserStatus.PENDING)
+    ) {
       throw new AppError({
         statusCode: 401,
         code: "AUTH_INVALID_TOKEN",
@@ -35,7 +39,10 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
       userId: session.user.id,
       sessionId: session.id,
       roles: session.user.roles.map((role) => role.role),
+      status: session.user.status,
       mustChangePassword: session.user.mustChangePassword,
+      emailVerified: session.user.emailVerifiedAt !== null,
+      phoneVerified: session.user.phoneVerifiedAt !== null,
     };
 
     next();

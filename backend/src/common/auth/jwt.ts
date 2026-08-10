@@ -1,17 +1,10 @@
-import {
-  SignJWT,
-  jwtVerify
-} from "jose";
+import { SignJWT, jwtVerify } from "jose";
 
 import { env } from "../../config/env.js";
 
-const accessSecret = new TextEncoder().encode(
-  env.JWT_ACCESS_SECRET
-);
+const accessSecret = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 
-const refreshSecret = new TextEncoder().encode(
-  env.JWT_REFRESH_SECRET
-);
+const refreshSecret = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
 
 export type AccessTokenPayload = {
   userId: string;
@@ -25,7 +18,7 @@ export type RefreshTokenPayload = {
 };
 
 export async function signAccessToken(
-  payload: AccessTokenPayload
+  payload: AccessTokenPayload,
 ): Promise<string> {
   return new SignJWT({
     roles: payload.roles,
@@ -33,30 +26,24 @@ export async function signAccessToken(
     tokenType: "access",
   })
     .setProtectedHeader({
-      alg: "HS256"
+      alg: "HS256",
     })
     .setSubject(payload.userId)
     .setIssuer(env.JWT_ISSUER)
     .setAudience(env.JWT_AUDIENCE)
     .setIssuedAt()
-    .setExpirationTime(
-      `${env.JWT_ACCESS_EXPIRES_MINUTES}m`
-    )
+    .setExpirationTime(`${env.JWT_ACCESS_EXPIRES_MINUTES}m`)
     .sign(accessSecret);
 }
 
 export async function verifyAccessToken(
-  token: string
+  token: string,
 ): Promise<AccessTokenPayload> {
-  const result = await jwtVerify(
-    token,
-    accessSecret,
-    {
-      algorithms: ["HS256"],
-      issuer: env.JWT_ISSUER,
-      audience: env.JWT_AUDIENCE,
-    },
-  );
+  const result = await jwtVerify(token, accessSecret, {
+    algorithms: ["HS256"],
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
+  });
 
   if (
     result.payload.tokenType !== "access" ||
@@ -84,7 +71,7 @@ export async function signRefreshToken(
     tokenType: "refresh",
   })
     .setProtectedHeader({
-      alg: "HS256"
+      alg: "HS256",
     })
     .setSubject(payload.userId)
     .setIssuer(env.JWT_ISSUER)
@@ -95,17 +82,13 @@ export async function signRefreshToken(
 }
 
 export async function verifyRefreshToken(
-  token: string
+  token: string,
 ): Promise<RefreshTokenPayload> {
-  const result = await jwtVerify(
-    token,
-    refreshSecret,
-    {
-      algorithms: ["HS256"],
-      issuer: env.JWT_ISSUER,
-      audience: env.JWT_AUDIENCE,
-    },
-  );
+  const result = await jwtVerify(token, refreshSecret, {
+    algorithms: ["HS256"],
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
+  });
 
   if (
     result.payload.tokenType !== "refresh" ||

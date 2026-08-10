@@ -1,66 +1,117 @@
 import type { Request, RequestHandler } from "express";
+import { hashToken } from "../auth/token-hash.js";
 import { AppError } from "../errors/app-error.js";
+import { redis } from "../../config/redis.js";
 
 type RateLimitOptions = {
   windowMs: number;
   limit: number;
   keyPrefix: string;
-  keyGenerator?: ((req: Request) => string) | undefined;
+  identities?:
+    ((req: Request) => Array<{ value: string; limit: number }>) | undefined;
 };
 
-type RateLimitEntry = {
-  count: number;
-  resetAt: number;
-};
+const incrementScript = `
+  local blocked = 0
+  local lowest_remaining = 2147483647
+  local limiting_limit = 0
+  local longest_ttl = 0
+
+  for index, key in ipairs(KEYS) do
+    local limit = tonumber(ARGV[index + 1])
+    local count = redis.call("INCR", key)
+    if count == 1 then
+      redis.call("PEXPIRE", key, ARGV[1])
+    end
+
+    local ttl = redis.call("PTTL", key)
+    local remaining = limit - count
+    if remaining < 0 then
+      remaining = 0
+    end
+    if remaining < lowest_remaining then
+      lowest_remaining = remaining
+      limiting_limit = limit
+    end
+    if count > limit then
+      blocked = 1
+    end
+    if ttl > longest_ttl then
+      longest_ttl = ttl
+    end
+  end
+
+  return { blocked, limiting_limit, lowest_remaining, longest_ttl }
+`;
 
 function createRateLimit(options: RateLimitOptions): RequestHandler {
-  const entries = new Map<string, RateLimitEntry>();
+  return async (req, res, next) => {
+    try {
+      const identities = options.identities?.(req) ?? [
+        { value: `ip:${req.ip ?? "unknown"}`, limit: options.limit },
+      ];
+      const keys = identities.map(
+        (identity) =>
+          `rate-limit:${options.keyPrefix}:${hashToken(identity.value)}`,
+      );
+      const reply = (await redis.eval(incrementScript, {
+        keys,
+        arguments: [
+          String(options.windowMs),
+          ...identities.map((identity) => String(identity.limit)),
+        ],
+      })) as unknown as [number, number, number, number];
+      const blocked = Number(reply[0]) === 1;
+      const limitingLimit = Number(reply[1]);
+      const remaining = Number(reply[2]);
+      const ttlMs = Math.max(1, Number(reply[3]));
+      const resetSeconds = Math.max(1, Math.ceil(ttlMs / 1000));
 
-  return (req, res, next) => {
-    const now = Date.now();
-    const identity = options.keyGenerator?.(req) ?? req.ip ?? "unknown";
-    const key = `${options.keyPrefix}:${identity}`;
-    const existing = entries.get(key);
-    const entry =
-      !existing || existing.resetAt <= now
-        ? { count: 0, resetAt: now + options.windowMs }
-        : existing;
+      res.setHeader("RateLimit-Limit", limitingLimit);
+      res.setHeader("RateLimit-Remaining", remaining);
+      res.setHeader("RateLimit-Reset", resetSeconds);
 
-    entry.count += 1;
-    entries.set(key, entry);
+      if (blocked) {
+        res.setHeader("Retry-After", resetSeconds);
+        next(
+          new AppError({
+            statusCode: 429,
+            code: "RATE_LIMIT_EXCEEDED",
+            message: "Too many requests. Please try again later",
+            details: { retryAfterSeconds: resetSeconds },
+          }),
+        );
+        return;
+      }
 
-    const remaining = Math.max(0, options.limit - entry.count);
-    const resetSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
-
-    res.setHeader("RateLimit-Limit", options.limit);
-    res.setHeader("RateLimit-Remaining", remaining);
-    res.setHeader("RateLimit-Reset", resetSeconds);
-
-    if (entry.count > options.limit) {
-      res.setHeader("Retry-After", resetSeconds);
+      next();
+    } catch {
       next(
         new AppError({
-          statusCode: 429,
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many requests. Please try again later",
-          details: { retryAfterSeconds: resetSeconds },
+          statusCode: 503,
+          code: "RATE_LIMIT_SERVICE_UNAVAILABLE",
+          message: "Request protection is temporarily unavailable",
         }),
       );
-      return;
     }
-
-    if (entries.size > 10_000) {
-      for (const [entryKey, candidate] of entries) {
-        if (candidate.resetAt <= now) entries.delete(entryKey);
-      }
-    }
-
-    next();
   };
 }
 
-const accountAndIpKey = (req: Request) =>
-  `${req.auth?.userId ?? "anonymous"}:${req.ip ?? "unknown"}`;
+const accountAndIpLimits = (req: Request) => [
+  { value: `account:${req.auth?.userId ?? "anonymous"}`, limit: 5 },
+  { value: `ip:${req.ip ?? "unknown"}`, limit: 30 },
+];
+
+const identifierAndIpLimits = (req: Request) => {
+  const identifier =
+    typeof req.body?.identifier === "string"
+      ? req.body.identifier.trim().toLowerCase()
+      : "invalid";
+  return [
+    { value: `identifier:${identifier}`, limit: 5 },
+    { value: `ip:${req.ip ?? "unknown"}`, limit: 50 },
+  ];
+};
 
 export const registerRateLimit = createRateLimit({
   windowMs: 60 * 60 * 1000,
@@ -72,6 +123,7 @@ export const loginRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   keyPrefix: "login",
+  identities: identifierAndIpLimits,
 });
 
 export const refreshRateLimit = createRateLimit({
@@ -84,18 +136,38 @@ export const sensitiveAccountRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   keyPrefix: "sensitive-account",
-  keyGenerator: accountAndIpKey,
+  identities: accountAndIpLimits,
 });
 
 export const passwordResetRateLimit = createRateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 3,
   keyPrefix: "password-reset",
+  identities: (req) =>
+    identifierAndIpLimits(req).map((identity, index) => ({
+      ...identity,
+      limit: index === 0 ? 3 : 20,
+    })),
 });
 
-export const verificationRateLimit = createRateLimit({
+export const verificationRequestRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
-  keyPrefix: "verification",
-  keyGenerator: accountAndIpKey,
+  limit: 6,
+  keyPrefix: "verification-request",
+  identities: (req) =>
+    accountAndIpLimits(req).map((identity, index) => ({
+      ...identity,
+      limit: index === 0 ? 6 : 30,
+    })),
+});
+
+export const verificationConfirmRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  keyPrefix: "verification-confirm",
+  identities: (req) =>
+    accountAndIpLimits(req).map((identity, index) => ({
+      ...identity,
+      limit: index === 0 ? 10 : 50,
+    })),
 });

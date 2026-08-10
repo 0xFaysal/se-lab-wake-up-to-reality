@@ -41,8 +41,15 @@ describe("registerSchema", () => {
     );
   });
 
-  it("requires an uppercase and a special password character", () => {
-    for (const password of ["password123!", "Password123"]) {
+  it("requires a strong 12-character password", () => {
+    for (const password of [
+      "password123!",
+      "Password123",
+      "PASSWORD123!",
+      "PasswordOnly!",
+      "Short1!",
+      "Password 123!",
+    ]) {
       const result = registerSchema.safeParse({
         body: { ...validBody, password },
       });

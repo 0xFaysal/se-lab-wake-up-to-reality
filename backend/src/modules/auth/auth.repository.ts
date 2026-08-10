@@ -8,6 +8,8 @@ export const authUserSelect = {
   phone: true,
   status: true,
   mustChangePassword: true,
+  emailVerifiedAt: true,
+  phoneVerifiedAt: true,
   roles: {
     select: {
       role: true,

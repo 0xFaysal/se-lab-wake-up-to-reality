@@ -46,6 +46,8 @@ export const openApiSchemas = {
       },
       status: { $ref: "#/components/schemas/UserStatus" },
       mustChangePassword: { type: "boolean" },
+      emailVerified: { type: "boolean" },
+      phoneVerified: { type: "boolean" },
     },
     required: [
       "id",
@@ -55,6 +57,8 @@ export const openApiSchemas = {
       "roles",
       "status",
       "mustChangePassword",
+      "emailVerified",
+      "phoneVerified",
     ],
   },
   AuthResponse: {
@@ -68,7 +72,12 @@ export const openApiSchemas = {
           nextAction: {
             type: "string",
             nullable: true,
-            enum: ["CHANGE_INITIAL_PASSWORD", null],
+            enum: [
+              "CHANGE_INITIAL_PASSWORD",
+              "VERIFY_EMAIL",
+              "VERIFY_PHONE",
+              null,
+            ],
           },
         },
         required: ["user", "nextAction"],
@@ -80,9 +89,9 @@ export const openApiSchemas = {
   StrongPassword: {
     type: "string",
     format: "password",
-    minLength: 8,
+    minLength: 12,
     maxLength: 128,
-    pattern: "^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,128}$",
+    pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{12,128}$",
     example: "StrongPassword123!",
     writeOnly: true,
   },
@@ -146,6 +155,48 @@ export const openApiSchemas = {
       newPassword: { $ref: "#/components/schemas/StrongPassword" },
     },
     required: ["currentPassword", "newPassword"],
+  },
+  CreateGuardRequest: {
+    type: "object",
+    properties: {
+      fullName: {
+        type: "string",
+        minLength: 2,
+        maxLength: 120,
+        example: "Parking Guard",
+      },
+      email: {
+        type: "string",
+        format: "email",
+        example: "guard@example.com",
+      },
+      phone: {
+        type: "string",
+        description: "Bangladesh mobile number.",
+        example: "01812345678",
+      },
+    },
+    required: ["fullName", "email", "phone"],
+  },
+  GuardInvitationResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          user: { $ref: "#/components/schemas/AuthUser" },
+          developmentSetupToken: {
+            type: "string",
+            description:
+              "Returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.",
+          },
+        },
+        required: ["user"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
   },
   PasswordResetRequest: {
     type: "object",
@@ -227,7 +278,8 @@ export const openApiSchemas = {
           message: { type: "string" },
           developmentResetToken: {
             type: "string",
-            description: "Present only outside production.",
+            description:
+              "Returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.",
           },
         },
         required: ["message"],
@@ -247,7 +299,8 @@ export const openApiSchemas = {
           developmentCode: {
             type: "string",
             pattern: "^[0-9]{6}$",
-            description: "Present only outside production.",
+            description:
+              "Returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.",
           },
         },
         required: ["alreadyVerified"],

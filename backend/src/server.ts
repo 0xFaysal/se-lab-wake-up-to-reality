@@ -4,9 +4,7 @@ import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 import { connectRedis, redis } from "./config/redis.js";
 
-
 async function bootstrap() {
-
   await prisma.$connect();
 
   logger.info("PostgreSQL connected");
@@ -32,7 +30,6 @@ async function bootstrap() {
 
   let shuttingDown = false;
 
-
   async function shutdown(signal: string) {
     if (shuttingDown) return;
     shuttingDown = true;
@@ -51,18 +48,15 @@ async function bootstrap() {
       logger.fatal("Forced shutdown");
       process.exit(1);
     }, 10000).unref();
-
   }
 
   process.on("SIGINT", () => void shutdown("SIGINT"));
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-
-
 bootstrap().catch(async (error) => {
   logger.fatal({ error }, "Application startup failed");
-  
+
   await Promise.allSettled([
     prisma.$disconnect(),
     redis.isOpen ? redis.quit() : Promise.resolve(),

@@ -15,20 +15,34 @@ import {
 } from "node:crypto";
 import { normalizeIdentifier } from "../../common/auth/identifier.js";
 import { normalizeBangladeshPhone } from "../../common/auth/phone.js";
+import { hashSensitiveMetadata } from "../../common/auth/metadata-hash.js";
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
 } from "../../common/auth/jwt.js";
-import { hashPassword, verifyPassword } from "../../common/auth/password.js";
+import {
+  hashPassword,
+  passwordHashNeedsRehash,
+  verifyPassword,
+} from "../../common/auth/password.js";
 import { hashToken } from "../../common/auth/token-hash.js";
-import { sendEmailVerificationCode } from "../../common/email/email.service.js";
+import {
+  sendEmailVerificationCode,
+  sendPasswordResetEmail,
+} from "../../common/email/email.service.js";
 import { AppError } from "../../common/errors/app-error.js";
+import { sendPhoneVerificationCode } from "../../common/sms/sms.service.js";
 import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 import { prisma } from "../../config/prisma.js";
 import { redis } from "../../config/redis.js";
 import { authErrors } from "./auth.errors.js";
-import { findCurrentAuthUser, findUserForLogin } from "./auth.repository.js";
+import {
+  authUserSelect,
+  findCurrentAuthUser,
+  findUserForLogin,
+} from "./auth.repository.js";
 import type {
   AuthResult,
   AuthUser,
@@ -39,6 +53,7 @@ import type {
 } from "./auth.types.js";
 
 const dayInMilliseconds = 24 * 60 * 60 * 1000;
+const dummyPasswordHash = hashPassword(randomBytes(32).toString("base64url"));
 
 function getRefreshSessionDurationMs(rememberDevice: boolean): number {
   const days = rememberDevice
@@ -55,6 +70,8 @@ function normalizeUser(user: {
   phone: string;
   status: UserStatus;
   mustChangePassword: boolean;
+  emailVerifiedAt: Date | null;
+  phoneVerifiedAt: Date | null;
   roles: { role: UserRoleType }[];
 }): AuthUser {
   return {
@@ -64,14 +81,22 @@ function normalizeUser(user: {
     phone: user.phone,
     status: user.status,
     mustChangePassword: user.mustChangePassword,
+    emailVerified: user.emailVerifiedAt !== null,
+    phoneVerified: user.phoneVerifiedAt !== null,
     roles: user.roles.map((role) => role.role),
   };
 }
 
-function getNextAction(user: Pick<AuthUser, "mustChangePassword" | "roles">) {
-  return user.mustChangePassword && user.roles.includes(UserRoleType.GUARD)
-    ? "CHANGE_INITIAL_PASSWORD"
-    : null;
+function getNextAction(
+  user: Pick<
+    AuthUser,
+    "mustChangePassword" | "emailVerified" | "phoneVerified"
+  >,
+) {
+  if (user.mustChangePassword) return "CHANGE_INITIAL_PASSWORD";
+  if (!user.emailVerified) return "VERIFY_EMAIL";
+  if (!user.phoneVerified) return "VERIFY_PHONE";
+  return null;
 }
 
 function assertUserCanLogin(user: Pick<AuthUser, "status">): void {
@@ -91,7 +116,7 @@ function assertUserCanLogin(user: Pick<AuthUser, "status">): void {
     });
   }
 
-  if (user.status !== UserStatus.ACTIVE) {
+  if (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.PENDING) {
     throw new AppError({
       statusCode: 403,
       code: "AUTH_ACCOUNT_NOT_ACTIVE",
@@ -106,7 +131,7 @@ function getSessionMetadata(input: {
 }) {
   return {
     userAgent: input.userAgent ?? null,
-    ipHash: input.ipAddress ? hashToken(input.ipAddress) : null,
+    ipHash: input.ipAddress ? hashSensitiveMetadata(input.ipAddress) : null,
   };
 }
 
@@ -147,10 +172,13 @@ async function createTokenPair(
       sessionId: refreshSession.id,
       roles: input.roles,
     }),
-    signRefreshToken({
-      userId: input.userId,
-      sessionId: refreshSession.id,
-    }, refreshExpiresAt),
+    signRefreshToken(
+      {
+        userId: input.userId,
+        sessionId: refreshSession.id,
+      },
+      refreshExpiresAt,
+    ),
   ]);
 
   await db.refreshSession.update({
@@ -176,128 +204,118 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
 
   try {
     return await prisma.$transaction(async (tx) => {
-    const existing = await tx.user.findFirst({
-      where: {
-        OR: [{ email: input.email }, { phone: normalizedPhone }],
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (existing) {
-      throw new AppError({
-        statusCode: 409,
-        code: "EMAIL_OR_PHONE_ALREADY_REGISTERED",
-        message: "Email or phone is already registered",
+      const existing = await tx.user.findFirst({
+        where: {
+          OR: [{ email: input.email }, { phone: normalizedPhone }],
+        },
+        select: {
+          id: true,
+        },
       });
-    }
 
-    const legalDocuments = await tx.legalDocument.findMany({
-      where: {
-        isActive: true,
-        type: {
-          in: [
-            LegalDocumentType.TERMS_OF_SERVICE,
-            LegalDocumentType.PRIVACY_POLICY,
-          ],
+      if (existing) {
+        throw new AppError({
+          statusCode: 409,
+          code: "EMAIL_OR_PHONE_ALREADY_REGISTERED",
+          message: "Email or phone is already registered",
+        });
+      }
+
+      const legalDocuments = await tx.legalDocument.findMany({
+        where: {
+          isActive: true,
+          type: {
+            in: [
+              LegalDocumentType.TERMS_OF_SERVICE,
+              LegalDocumentType.PRIVACY_POLICY,
+            ],
+          },
         },
-      },
-      select: {
-        id: true,
-        type: true,
-      },
-      orderBy: {
-        effectiveAt: "desc",
-      },
-    });
-
-    const termsDocument = legalDocuments.find(
-      (document) => document.type === LegalDocumentType.TERMS_OF_SERVICE,
-    );
-    const privacyDocument = legalDocuments.find(
-      (document) => document.type === LegalDocumentType.PRIVACY_POLICY,
-    );
-
-    if (!termsDocument || !privacyDocument) {
-      throw new AppError({
-        statusCode: 500,
-        code: "REQUIRED_LEGAL_DOCUMENTS_NOT_CONFIGURED",
-        message: "Required legal documents are not configured",
-        isOperational: false,
+        select: {
+          id: true,
+          type: true,
+        },
+        orderBy: {
+          effectiveAt: "desc",
+        },
       });
-    }
 
-    const requiredLegalDocuments = [termsDocument, privacyDocument];
+      const termsDocument = legalDocuments.find(
+        (document) => document.type === LegalDocumentType.TERMS_OF_SERVICE,
+      );
+      const privacyDocument = legalDocuments.find(
+        (document) => document.type === LegalDocumentType.PRIVACY_POLICY,
+      );
 
-    const user = await tx.user.create({
-      data: {
-        fullName: input.fullName,
-        email: input.email,
-        phone: normalizedPhone,
-        passwordHash,
-        status: UserStatus.ACTIVE,
-        accountOrigin: AccountOrigin.SELF_REGISTERED,
-        mustChangePassword: false,
-        lastLoginAt: new Date(),
-        roles: {
-          create: {
-            role:
-              input.role === "DRIVER"
-                ? UserRoleType.DRIVER
-                : UserRoleType.PARKING_OWNER,
+      if (!termsDocument || !privacyDocument) {
+        throw new AppError({
+          statusCode: 500,
+          code: "REQUIRED_LEGAL_DOCUMENTS_NOT_CONFIGURED",
+          message: "Required legal documents are not configured",
+          isOperational: false,
+        });
+      }
+
+      const requiredLegalDocuments = [termsDocument, privacyDocument];
+
+      const user = await tx.user.create({
+        data: {
+          fullName: input.fullName,
+          email: input.email,
+          phone: normalizedPhone,
+          passwordHash,
+          status: UserStatus.PENDING,
+          accountOrigin: AccountOrigin.SELF_REGISTERED,
+          mustChangePassword: false,
+          lastLoginAt: new Date(),
+          roles: {
+            create: {
+              role:
+                input.role === "DRIVER"
+                  ? UserRoleType.DRIVER
+                  : UserRoleType.PARKING_OWNER,
+            },
+          },
+          walletAccounts: {
+            create: {
+              currency: "BDT",
+            },
           },
         },
-        walletAccounts: {
-          create: {
-            currency: "BDT",
-          },
+        select: {
+          ...authUserSelect,
+          accountOrigin: true,
+          createdAt: true,
         },
-      },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        phone: true,
-        status: true,
-        accountOrigin: true,
-        mustChangePassword: true,
-        createdAt: true,
-        roles: {
-          select: {
-            role: true,
-          },
+      });
+
+      await tx.userLegalAcceptance.createMany({
+        data: requiredLegalDocuments.map((document) => ({
+          userId: user.id,
+          legalDocumentId: document.id,
+          acceptanceSource: LegalAcceptanceSource.REGISTRATION,
+        })),
+      });
+
+      const authUser = normalizeUser(user);
+      const tokens = await createTokenPair(
+        {
+          userId: authUser.id,
+          roles: authUser.roles,
+          rememberDevice: false,
+          userAgent: input.userAgent,
+          ipAddress: input.ipAddress,
         },
-      },
-    });
+        tx,
+      );
 
-    await tx.userLegalAcceptance.createMany({
-      data: requiredLegalDocuments.map((document) => ({
-        userId: user.id,
-        legalDocumentId: document.id,
-        acceptanceSource: LegalAcceptanceSource.REGISTRATION,
-      })),
-    });
-
-    const authUser = normalizeUser(user);
-    const tokens = await createTokenPair(
-      {
-        userId: authUser.id,
-        roles: authUser.roles,
-        rememberDevice: false,
-        userAgent: input.userAgent,
-        ipAddress: input.ipAddress,
-      },
-      tx,
-    );
-
-    return {
-      user: authUser,
-      nextAction: null,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      refreshExpiresAt: tokens.refreshExpiresAt,
-    };
+      return {
+        user: authUser,
+        nextAction: getNextAction(authUser),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        refreshExpiresAt: tokens.refreshExpiresAt,
+      };
     });
   } catch (error) {
     if (
@@ -325,29 +343,40 @@ export async function loginUser(input: LoginInput): Promise<AuthResult> {
   }
 
   const user = await findUserForLogin(identifier);
+  const passwordValid = await verifyPassword(
+    user?.passwordHash ?? (await dummyPasswordHash),
+    input.password,
+  );
 
-  if (!user || !(await verifyPassword(user.passwordHash, input.password))) {
+  if (!user || !passwordValid) {
     throw authErrors.invalidCredentials();
   }
 
   const authUser = normalizeUser(user);
   assertUserCanLogin(authUser);
+  const upgradedPasswordHash = passwordHashNeedsRehash(user.passwordHash)
+    ? await hashPassword(input.password)
+    : undefined;
 
-  const tokens = await createTokenPair({
-    userId: user.id,
-    roles: authUser.roles,
-    rememberDevice: input.rememberDevice,
-    userAgent: input.userAgent,
-    ipAddress: input.ipAddress,
-  });
-
-  await prisma.user.update({
-    where: {
-      id: user.id,
-    },
-    data: {
-      lastLoginAt: new Date(),
-    },
+  const tokens = await prisma.$transaction(async (tx) => {
+    const tokenPair = await createTokenPair(
+      {
+        userId: user.id,
+        roles: authUser.roles,
+        rememberDevice: input.rememberDevice,
+        userAgent: input.userAgent,
+        ipAddress: input.ipAddress,
+      },
+      tx,
+    );
+    await tx.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        ...(upgradedPasswordHash ? { passwordHash: upgradedPasswordHash } : {}),
+      },
+    });
+    return tokenPair;
   });
 
   return {
@@ -388,96 +417,101 @@ export async function refreshAuthSession(input: {
     throw authErrors.invalidRefreshToken();
   }
 
-  return prisma.$transaction(async (tx) => {
-    const currentSession = await tx.refreshSession.findFirst({
-      where: {
-        id: payload.sessionId,
-        userId: payload.userId,
-        user: {
-          deletedAt: null,
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            phone: true,
-            status: true,
-            mustChangePassword: true,
-            roles: {
-              select: {
-                role: true,
-              },
-            },
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const currentSession = await tx.refreshSession.findFirst({
+        where: {
+          id: payload.sessionId,
+          userId: payload.userId,
+          user: {
+            deletedAt: null,
           },
         },
-      },
-    });
-
-    if (
-      !currentSession ||
-      currentSession.expiresAt <= new Date() ||
-      currentSession.tokenHash !== hashToken(input.refreshToken)
-    ) {
-      throw authErrors.invalidRefreshToken();
-    }
-
-    if (currentSession.revokedAt) {
-      throw authErrors.refreshTokenReused();
-    }
-
-    const authUser = normalizeUser(currentSession.user);
-    assertUserCanLogin(authUser);
-
-    const revoked = await tx.refreshSession.updateMany({
-      where: {
-        id: currentSession.id,
-        userId: payload.userId,
-        tokenHash: hashToken(input.refreshToken),
-        revokedAt: null,
-        expiresAt: {
-          gt: new Date(),
+        include: {
+          user: {
+            select: authUserSelect,
+          },
         },
-      },
-      data: {
-        revokedAt: new Date(),
-      },
-    });
+      });
 
-    if (revoked.count !== 1) {
-      throw authErrors.refreshTokenReused();
+      if (
+        !currentSession ||
+        currentSession.expiresAt <= new Date() ||
+        currentSession.tokenHash !== hashToken(input.refreshToken)
+      ) {
+        throw authErrors.invalidRefreshToken();
+      }
+
+      if (currentSession.revokedAt) {
+        throw authErrors.refreshTokenReused();
+      }
+
+      const authUser = normalizeUser(currentSession.user);
+      assertUserCanLogin(authUser);
+
+      const revoked = await tx.refreshSession.updateMany({
+        where: {
+          id: currentSession.id,
+          userId: payload.userId,
+          tokenHash: hashToken(input.refreshToken),
+          revokedAt: null,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      if (revoked.count !== 1) {
+        throw authErrors.refreshTokenReused();
+      }
+
+      const tokens = await createTokenPair(
+        {
+          userId: authUser.id,
+          roles: authUser.roles,
+          rememberDevice: currentSession.rememberDevice,
+          userAgent: input.userAgent,
+          ipAddress: input.ipAddress,
+        },
+        tx,
+      );
+
+      await tx.refreshSession.update({
+        where: {
+          id: currentSession.id,
+        },
+        data: {
+          replacedBySessionId: tokens.sessionId,
+        },
+      });
+
+      return {
+        user: authUser,
+        nextAction: getNextAction(authUser),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        refreshExpiresAt: tokens.refreshExpiresAt,
+      };
+    });
+  } catch (error) {
+    if (
+      error instanceof AppError &&
+      error.code === "AUTH_REFRESH_TOKEN_REUSED"
+    ) {
+      await prisma.refreshSession.updateMany({
+        where: { userId: payload.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      logger.warn(
+        { userId: payload.userId, sessionId: payload.sessionId },
+        "Refresh token replay detected; active sessions revoked",
+      );
     }
-
-    const tokens = await createTokenPair(
-      {
-        userId: authUser.id,
-        roles: authUser.roles,
-        rememberDevice: currentSession.rememberDevice,
-        userAgent: input.userAgent,
-        ipAddress: input.ipAddress,
-      },
-      tx,
-    );
-
-    await tx.refreshSession.update({
-      where: {
-        id: currentSession.id,
-      },
-      data: {
-        replacedBySessionId: tokens.sessionId,
-      },
-    });
-
-    return {
-      user: authUser,
-      nextAction: getNextAction(authUser),
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      refreshExpiresAt: tokens.refreshExpiresAt,
-    };
-  });
+    throw error;
+  }
 }
 
 export async function logoutUser(refreshToken?: string): Promise<void> {
@@ -576,22 +610,15 @@ export async function changePassword(
       deletedAt: null,
     },
     select: {
-      id: true,
-      fullName: true,
-      email: true,
-      phone: true,
+      ...authUserSelect,
       passwordHash: true,
-      status: true,
-      mustChangePassword: true,
-      roles: {
-        select: {
-          role: true,
-        },
-      },
     },
   });
 
-  if (!user || !(await verifyPassword(user.passwordHash, input.currentPassword))) {
+  if (
+    !user ||
+    !(await verifyPassword(user.passwordHash, input.currentPassword))
+  ) {
     throw authErrors.invalidCredentials();
   }
 
@@ -652,7 +679,7 @@ export async function changePassword(
 
     return {
       user: updatedUser,
-      nextAction: null,
+      nextAction: getNextAction(updatedUser),
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       refreshExpiresAt: tokens.refreshExpiresAt,
@@ -679,25 +706,47 @@ export async function requestPasswordReset(
     Date.now() + env.PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000,
   );
 
-  await prisma.$transaction(async (tx) => {
+  const resetToken = await prisma.$transaction(async (tx) => {
     await tx.passwordResetToken.deleteMany({
       where: {
         userId: user.id,
       },
     });
 
-    await tx.passwordResetToken.create({
+    return tx.passwordResetToken.create({
       data: {
         userId: user.id,
         tokenHash: hashToken(token),
         expiresAt,
       },
+      select: { id: true },
     });
   });
 
-  return env.NODE_ENV === "production"
-    ? {}
-    : { developmentResetToken: token };
+  const resetUrl = new URL(
+    env.PASSWORD_RESET_URL ?? "/reset-password",
+    env.CORS_ORIGIN,
+  );
+  resetUrl.searchParams.set("token", token);
+
+  try {
+    await sendPasswordResetEmail({
+      to: user.email,
+      fullName: user.fullName,
+      resetUrl: resetUrl.toString(),
+      expiresInMinutes: env.PASSWORD_RESET_EXPIRES_MINUTES,
+    });
+  } catch (error) {
+    await prisma.passwordResetToken.deleteMany({
+      where: { id: resetToken.id, tokenHash: hashToken(token), usedAt: null },
+    });
+    logger.error({ error }, "Password reset request could not be delivered");
+    return {};
+  }
+
+  return env.EXPOSE_DEVELOPMENT_AUTH_CODES
+    ? { developmentResetToken: token }
+    : {};
 }
 
 export async function resetPassword(input: {
@@ -718,6 +767,8 @@ export async function resetPassword(input: {
       user: {
         select: {
           passwordHash: true,
+          status: true,
+          emailVerifiedAt: true,
         },
       },
     },
@@ -766,6 +817,11 @@ export async function resetPassword(input: {
       data: {
         passwordHash,
         mustChangePassword: false,
+        emailVerifiedAt: resetToken.user.emailVerifiedAt ?? new Date(),
+        status:
+          resetToken.user.status === UserStatus.PENDING
+            ? UserStatus.ACTIVE
+            : resetToken.user.status,
       },
     });
 
@@ -803,8 +859,8 @@ async function deleteVerificationCodeIfCurrent(
   key: string,
   attemptsKey: string,
   expectedHash: string,
-): Promise<void> {
-  await redis.eval(
+): Promise<boolean> {
+  const deleted = await redis.eval(
     `
       if redis.call("GET", KEYS[1]) == ARGV[1] then
         redis.call("DEL", KEYS[1])
@@ -818,6 +874,7 @@ async function deleteVerificationCodeIfCurrent(
       arguments: [expectedHash],
     },
   );
+  return Number(deleted) === 1;
 }
 
 function hashVerificationCode(
@@ -825,7 +882,7 @@ function hashVerificationCode(
   userId: string,
   code: string,
 ): string {
-  return createHmac("sha256", env.JWT_REFRESH_SECRET)
+  return createHmac("sha256", env.VERIFICATION_CODE_SECRET)
     .update(`${channel}:${userId}:${code}`)
     .digest("hex");
 }
@@ -834,12 +891,12 @@ export async function requestVerificationCode(
   userId: string,
   channel: VerificationChannel,
 ): Promise<{ alreadyVerified: boolean; developmentCode?: string }> {
-  
   const user = await prisma.user.findFirst({
     where: { id: userId, deletedAt: null },
     select: {
       fullName: true,
       email: true,
+      phone: true,
       emailVerifiedAt: true,
       phoneVerifiedAt: true,
     },
@@ -871,25 +928,31 @@ export async function requestVerificationCode(
     redis.del(attemptsKey),
   ]);
 
-  if (channel === "email") {
-    try {
+  try {
+    if (channel === "email") {
       await sendEmailVerificationCode({
         to: user.email,
         fullName: user.fullName,
         code,
         expiresInMinutes: env.VERIFICATION_CODE_EXPIRES_MINUTES,
       });
-    } catch (error) {
-      await Promise.allSettled([
-        deleteVerificationCodeIfCurrent(key, attemptsKey, codeHash),
-      ]);
-      throw error;
+    } else {
+      await sendPhoneVerificationCode({
+        to: user.phone,
+        code,
+        expiresInMinutes: env.VERIFICATION_CODE_EXPIRES_MINUTES,
+      });
     }
+  } catch (error) {
+    await Promise.allSettled([
+      deleteVerificationCodeIfCurrent(key, attemptsKey, codeHash),
+    ]);
+    throw error;
   }
 
-  return env.NODE_ENV === "production"
-    ? { alreadyVerified: false }
-    : { alreadyVerified: false, developmentCode: code };
+  return env.EXPOSE_DEVELOPMENT_AUTH_CODES
+    ? { alreadyVerified: false, developmentCode: code }
+    : { alreadyVerified: false };
 }
 
 export async function confirmVerificationCode(
@@ -905,10 +968,7 @@ export async function confirmVerificationCode(
   ]);
 
   if (attempts === 1) {
-    await redis.expire(
-      attemptsKey,
-      env.VERIFICATION_CODE_EXPIRES_MINUTES * 60,
-    );
+    await redis.expire(attemptsKey, env.VERIFICATION_CODE_EXPIRES_MINUTES * 60);
   }
 
   if (attempts > 5) {
@@ -924,7 +984,10 @@ export async function confirmVerificationCode(
   const valid =
     storedHash !== null &&
     storedHash.length === candidateHash.length &&
-    timingSafeEqual(Buffer.from(storedHash, "hex"), Buffer.from(candidateHash, "hex"));
+    timingSafeEqual(
+      Buffer.from(storedHash, "hex"),
+      Buffer.from(candidateHash, "hex"),
+    );
 
   if (!valid) {
     throw new AppError({
@@ -934,16 +997,40 @@ export async function confirmVerificationCode(
     });
   }
 
-  const verifiedAt = new Date();
-  await prisma.user.updateMany({
+  const consumed = await deleteVerificationCodeIfCurrent(
+    key,
+    attemptsKey,
+    candidateHash,
+  );
+  if (!consumed) {
+    throw new AppError({
+      statusCode: 400,
+      code: "AUTH_VERIFICATION_CODE_INVALID",
+      message: "Verification code is invalid or expired",
+    });
+  }
+
+  const user = await prisma.user.findFirst({
     where: { id: userId, deletedAt: null },
+    select: { status: true },
+  });
+  if (
+    !user ||
+    (user.status !== UserStatus.PENDING && user.status !== UserStatus.ACTIVE)
+  ) {
+    throw authErrors.authenticationRequired();
+  }
+
+  const verifiedAt = new Date();
+  const updated = await prisma.user.updateMany({
+    where: { id: userId, status: user.status, deletedAt: null },
     data:
       channel === "email"
-        ? { emailVerifiedAt: verifiedAt }
+        ? { emailVerifiedAt: verifiedAt, status: UserStatus.ACTIVE }
         : { phoneVerifiedAt: verifiedAt },
   });
 
-  await Promise.all([redis.del(key), redis.del(attemptsKey)]);
+  if (updated.count !== 1) throw authErrors.authenticationRequired();
 }
 
 export async function changeInitialPassword(
@@ -955,18 +1042,8 @@ export async function changeInitialPassword(
       deletedAt: null,
     },
     select: {
-      id: true,
-      fullName: true,
-      email: true,
-      phone: true,
+      ...authUserSelect,
       passwordHash: true,
-      status: true,
-      mustChangePassword: true,
-      roles: {
-        select: {
-          role: true,
-        },
-      },
     },
   });
 
@@ -980,6 +1057,13 @@ export async function changeInitialPassword(
 
   const authUser = normalizeUser(user);
   assertUserCanLogin(authUser);
+
+  if (
+    !authUser.roles.includes(UserRoleType.GUARD) &&
+    !authUser.roles.includes(UserRoleType.ADMIN)
+  ) {
+    throw authErrors.forbidden();
+  }
 
   if (!authUser.mustChangePassword) {
     throw new AppError({
@@ -1046,7 +1130,7 @@ export async function changeInitialPassword(
 
     return {
       user: updatedUser,
-      nextAction: null,
+      nextAction: getNextAction(updatedUser),
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       refreshExpiresAt: tokens.refreshExpiresAt,

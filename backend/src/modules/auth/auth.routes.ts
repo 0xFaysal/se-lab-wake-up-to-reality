@@ -22,7 +22,8 @@ import {
   registerRateLimit,
   sensitiveAccountRateLimit,
   passwordResetRateLimit,
-  verificationRateLimit,
+  verificationConfirmRateLimit,
+  verificationRequestRateLimit,
 } from "../../common/middleware/rate-limit.js";
 import {
   changeInitialPasswordSchema,
@@ -35,6 +36,11 @@ import {
 
 export const authRouter = Router();
 
+authRouter.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 /**
  * @openapi
  * /api/v1/auth/register:
@@ -46,7 +52,9 @@ export const authRouter = Router();
  *       Creates a self-registered ParkEase account. Public registration allows
  *       only DRIVER and PARKING_OWNER roles. Successful registration creates the
  *       role, BDT wallet, required legal acceptances, and an authenticated session.
- *       Access and refresh tokens are issued as HttpOnly cookies.
+ *       Access and refresh tokens are issued as HttpOnly cookies. The account is
+ *       PENDING until email verification and nextAction guides the client through
+ *       email and phone verification without requiring another login.
  *     requestBody:
  *       required: true
  *       content:
@@ -93,8 +101,8 @@ authRouter.post(
  *     description: |
  *       Authenticates any ParkEase role using an email address or Bangladesh
  *       mobile number. Successful login issues HttpOnly access and refresh
- *       cookies. Guards with a temporary password receive
- *       CHANGE_INITIAL_PASSWORD as their next action.
+ *       cookies. PENDING users may log in only to finish verification. The
+ *       nextAction field guides initial-password, email, and phone requirements.
  *     requestBody:
  *       required: true
  *       content:
@@ -117,7 +125,12 @@ authRouter.post(
  *       429:
  *         $ref: '#/components/responses/RateLimited'
  */
-authRouter.post("/login", loginRateLimit, validate(loginSchema), loginController);
+authRouter.post(
+  "/login",
+  loginRateLimit,
+  validate(loginSchema),
+  loginController,
+);
 
 /**
  * @openapi
@@ -214,7 +227,7 @@ authRouter.get("/me", authenticate, meController);
  * /api/v1/auth/change-initial-password:
  *   post:
  *     tags: [Authentication]
- *     summary: Replace a Guard temporary password
+ *     summary: Replace an Admin or Guard initial password
  *     operationId: changeInitialPassword
  *     description: Used by controlled Guard accounts during first login when mustChangePassword is true. Previous sessions are revoked and a new authenticated session is issued.
  *     security:
@@ -254,7 +267,7 @@ authRouter.post(
  *     tags: [Authentication]
  *     summary: Request a password reset
  *     operationId: requestPasswordReset
- *     description: Always returns a generic response to prevent account enumeration. Development responses include developmentResetToken; production requires an external delivery provider.
+ *     description: Always returns a generic response to prevent account enumeration. Reset instructions are emailed through the configured SMTP provider. The token is returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.
  *     requestBody:
  *       required: true
  *       content:
@@ -320,7 +333,7 @@ authRouter.post(
  *     tags: [Authentication]
  *     summary: Request an email verification code
  *     operationId: requestEmailVerification
- *     description: Generates a six-digit code, stores only its HMAC in Redis, and sends the code to the authenticated user's registered email through Gmail. Development responses also include developmentCode.
+ *     description: Generates a six-digit code, stores only its HMAC in Redis, and sends the code to the authenticated user's registered email through SMTP. The code is returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.
  *     security:
  *       - accessCookie: []
  *     responses:
@@ -344,7 +357,7 @@ authRouter.post(
 authRouter.post(
   "/email-verification/request",
   authenticate,
-  verificationRateLimit,
+  verificationRequestRateLimit,
   requestEmailVerificationController,
 );
 
@@ -380,7 +393,7 @@ authRouter.post(
 authRouter.post(
   "/email-verification/confirm",
   authenticate,
-  verificationRateLimit,
+  verificationConfirmRateLimit,
   validate(confirmVerificationSchema),
   confirmEmailVerificationController,
 );
@@ -392,7 +405,7 @@ authRouter.post(
  *     tags: [Authentication]
  *     summary: Request a phone verification code
  *     operationId: requestPhoneVerification
- *     description: Stores only an HMAC of the six-digit code in Redis. Development responses include developmentCode; production requires an SMS provider.
+ *     description: Stores only an HMAC of the six-digit code in Redis and sends it through Twilio Programmable Messaging. The code is returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.
  *     security:
  *       - accessCookie: []
  *     responses:
@@ -410,7 +423,7 @@ authRouter.post(
 authRouter.post(
   "/phone-verification/request",
   authenticate,
-  verificationRateLimit,
+  verificationRequestRateLimit,
   requestPhoneVerificationController,
 );
 
@@ -446,7 +459,7 @@ authRouter.post(
 authRouter.post(
   "/phone-verification/confirm",
   authenticate,
-  verificationRateLimit,
+  verificationConfirmRateLimit,
   validate(confirmVerificationSchema),
   confirmPhoneVerificationController,
 );

@@ -1,17 +1,86 @@
 import { Router } from "express";
 import { authenticate } from "../../common/middleware/auth.js";
+import { requireAccountReady } from "../../common/middleware/require-account-ready.js";
+import { requirePasswordChangeComplete } from "../../common/middleware/require-password-change-complete.js";
+import { requireRole } from "../../common/middleware/require-role.js";
 import { sensitiveAccountRateLimit } from "../../common/middleware/rate-limit.js";
 import { validate } from "../../common/middleware/validate.js";
 import {
   changePasswordController,
+  createGuardController,
   listSessionsController,
   revokeSessionController,
 } from "./users.controller.js";
-import { changePasswordSchema, revokeSessionSchema } from "./users.schema.js";
+import {
+  changePasswordSchema,
+  createGuardSchema,
+  revokeSessionSchema,
+} from "./users.schema.js";
+import { UserRoleType } from "../../../generated/prisma/client.js";
 
 export const usersRouter = Router();
 
+usersRouter.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 usersRouter.use(authenticate);
+
+/**
+ * @openapi
+ * /api/v1/users/guards:
+ *   post:
+ *     tags: [User Account]
+ *     summary: Invite a Guard
+ *     operationId: createGuard
+ *     description: |
+ *       Creates a controlled Guard account and emails a single-use password
+ *       setup link. Only a fully verified Parking Owner or Admin can use this
+ *       endpoint. A plaintext temporary password is never created or returned.
+ *     security:
+ *       - accessCookie: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateGuardRequest'
+ *     responses:
+ *       201:
+ *         description: Guard account created and invitation accepted for delivery.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GuardInvitationResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       409:
+ *         description: Email or normalized phone is already registered.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         $ref: '#/components/responses/RateLimited'
+ *       503:
+ *         description: Invitation email delivery is unavailable.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+usersRouter.post(
+  "/guards",
+  requireAccountReady,
+  requireRole(UserRoleType.PARKING_OWNER, UserRoleType.ADMIN),
+  sensitiveAccountRateLimit,
+  validate(createGuardSchema),
+  createGuardController,
+);
 
 /**
  * @openapi
@@ -45,6 +114,7 @@ usersRouter.use(authenticate);
  */
 usersRouter.post(
   "/me/change-password",
+  requirePasswordChangeComplete,
   sensitiveAccountRateLimit,
   validate(changePasswordSchema),
   changePasswordController,

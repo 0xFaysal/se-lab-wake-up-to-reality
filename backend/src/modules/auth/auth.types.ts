@@ -1,4 +1,7 @@
-import type { UserRoleType, UserStatus } from "../../../generated/prisma/client.js";
+import type {
+  UserRoleType,
+  UserStatus,
+} from "../../../generated/prisma/client.js";
 
 export type RequestMetadata = {
   userAgent?: string | undefined;
@@ -38,12 +41,15 @@ export type AuthUser = {
   phone: string;
   status: UserStatus;
   mustChangePassword: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
   roles: UserRoleType[];
 };
 
 export type AuthResult = {
   user: AuthUser;
-  nextAction: "CHANGE_INITIAL_PASSWORD" | null;
+  nextAction:
+    "CHANGE_INITIAL_PASSWORD" | "VERIFY_EMAIL" | "VERIFY_PHONE" | null;
   accessToken: string;
   refreshToken: string;
   refreshExpiresAt: Date;

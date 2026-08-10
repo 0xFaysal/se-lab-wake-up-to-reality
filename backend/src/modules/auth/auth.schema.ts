@@ -2,20 +2,24 @@ import { z } from "zod";
 import { normalizeBangladeshPhone } from "../../common/auth/phone.js";
 
 const uppercaseRegex = /[A-Z]/;
-const specialCharacterRegex = /[^A-Za-z0-9]/;
+const lowercaseRegex = /[a-z]/;
+const digitRegex = /\d/;
+const specialCharacterRegex = /[^A-Za-z0-9\s]/;
+const noWhitespaceRegex = /^\S+$/;
+const noControlCharactersRegex = /^[^\x00-\x1F\x7F]+$/;
 
 export const strongPasswordSchema = z
   .string()
-  .min(8)
+  .min(12)
   .max(128)
-  .regex(
-    uppercaseRegex,
-    "Password must contain at least one uppercase letter"
-  )
+  .regex(uppercaseRegex, "Password must contain at least one uppercase letter")
+  .regex(lowercaseRegex, "Password must contain at least one lowercase letter")
+  .regex(digitRegex, "Password must contain at least one number")
   .regex(
     specialCharacterRegex,
-    "Password must contain at least one special character"
-  );
+    "Password must contain at least one special character",
+  )
+  .regex(noWhitespaceRegex, "Password must not contain whitespace");
 
 export const registerSchema = z.object({
   body: z.object({
@@ -23,15 +27,18 @@ export const registerSchema = z.object({
       .string()
       .trim()
       .min(2)
-      .max(120),
+      .max(120)
+      .regex(
+        noControlCharactersRegex,
+        "Full name must not contain control characters",
+      ),
 
     email: z
       .string()
       .trim()
+      .max(254)
       .email()
-      .transform((value) =>
-        value.toLowerCase()
-      ),
+      .transform((value) => value.toLowerCase()),
 
     phone: z
       .string()
@@ -52,43 +59,31 @@ export const registerSchema = z.object({
 
     password: strongPasswordSchema,
 
-    role: z.enum([
-      "DRIVER",
-      "PARKING_OWNER"
-    ], {
-      error: "Role must be either DRIVER or PARKING_OWNER"
+    role: z.enum(["DRIVER", "PARKING_OWNER"], {
+      error: "Role must be either DRIVER or PARKING_OWNER",
     }),
 
     acceptTerms: z.literal(true),
-    acceptPrivacyPolicy: z.literal(true)
-  })
+    acceptPrivacyPolicy: z.literal(true),
+  }),
 });
 
 export const loginSchema = z.object({
   body: z.object({
-    identifier: z
-      .string()
-      .trim()
-      .min(3),
+    identifier: z.string().trim().min(3).max(254),
 
-    password: z
-      .string()
-      .min(1),
+    password: z.string().min(1).max(128),
 
-    rememberDevice: z
-      .boolean()
-      .default(false)
-  })
+    rememberDevice: z.boolean().default(false),
+  }),
 });
 
 export const changeInitialPasswordSchema = z.object({
   body: z.object({
-    currentPassword: z
-      .string()
-      .min(1),
+    currentPassword: z.string().min(1).max(128),
 
-    newPassword: strongPasswordSchema
-  })
+    newPassword: strongPasswordSchema,
+  }),
 });
 
 export const requestPasswordResetSchema = z.object({
