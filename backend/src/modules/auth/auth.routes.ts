@@ -320,7 +320,7 @@ authRouter.post(
  *     tags: [Authentication]
  *     summary: Request an email verification code
  *     operationId: requestEmailVerification
- *     description: Stores only an HMAC of the six-digit code in Redis. Development responses include developmentCode; production requires an email provider.
+ *     description: Generates a six-digit code, stores only its HMAC in Redis, and sends the code to the authenticated user's registered email through Gmail. Development responses also include developmentCode.
  *     security:
  *       - accessCookie: []
  *     responses:
@@ -334,6 +334,12 @@ authRouter.post(
  *         $ref: '#/components/responses/Unauthorized'
  *       429:
  *         $ref: '#/components/responses/RateLimited'
+ *       503:
+ *         description: SMTP email delivery is unavailable or not configured.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 authRouter.post(
   "/email-verification/request",

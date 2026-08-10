@@ -22,6 +22,7 @@ import {
 } from "../../common/auth/jwt.js";
 import { hashPassword, verifyPassword } from "../../common/auth/password.js";
 import { hashToken } from "../../common/auth/token-hash.js";
+import { sendEmailVerificationCode } from "../../common/email/email.service.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
@@ -798,6 +799,27 @@ function verificationAttemptsKey(channel: VerificationChannel, userId: string) {
   return `verify:${channel}:${userId}:attempts`;
 }
 
+async function deleteVerificationCodeIfCurrent(
+  key: string,
+  attemptsKey: string,
+  expectedHash: string,
+): Promise<void> {
+  await redis.eval(
+    `
+      if redis.call("GET", KEYS[1]) == ARGV[1] then
+        redis.call("DEL", KEYS[1])
+        redis.call("DEL", KEYS[2])
+        return 1
+      end
+      return 0
+    `,
+    {
+      keys: [key, attemptsKey],
+      arguments: [expectedHash],
+    },
+  );
+}
+
 function hashVerificationCode(
   channel: VerificationChannel,
   userId: string,
@@ -815,7 +837,12 @@ export async function requestVerificationCode(
   
   const user = await prisma.user.findFirst({
     where: { id: userId, deletedAt: null },
-    select: { emailVerifiedAt: true, phoneVerifiedAt: true },
+    select: {
+      fullName: true,
+      email: true,
+      emailVerifiedAt: true,
+      phoneVerifiedAt: true,
+    },
   });
 
   if (!user) {
@@ -835,15 +862,30 @@ export async function requestVerificationCode(
 
   const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
   const ttlSeconds = env.VERIFICATION_CODE_EXPIRES_MINUTES * 60;
+  const key = verificationKey(channel, userId);
+  const attemptsKey = verificationAttemptsKey(channel, userId);
+  const codeHash = hashVerificationCode(channel, userId, code);
 
   await Promise.all([
-    redis.set(
-      verificationKey(channel, userId),
-      hashVerificationCode(channel, userId, code),
-      { EX: ttlSeconds },
-    ),
-    redis.del(verificationAttemptsKey(channel, userId)),
+    redis.set(key, codeHash, { EX: ttlSeconds }),
+    redis.del(attemptsKey),
   ]);
+
+  if (channel === "email") {
+    try {
+      await sendEmailVerificationCode({
+        to: user.email,
+        fullName: user.fullName,
+        code,
+        expiresInMinutes: env.VERIFICATION_CODE_EXPIRES_MINUTES,
+      });
+    } catch (error) {
+      await Promise.allSettled([
+        deleteVerificationCodeIfCurrent(key, attemptsKey, codeHash),
+      ]);
+      throw error;
+    }
+  }
 
   return env.NODE_ENV === "production"
     ? { alreadyVerified: false }

@@ -48,6 +48,11 @@ Set different secrets of at least 32 characters for `JWT_ACCESS_SECRET` and
 `JWT_REFRESH_LONG_DAYS` controls sessions created with `rememberDevice: true`.
 See `.env.example` for the complete configuration.
 
+Email verification uses Gmail SMTP through Nodemailer. Configure `EMAIL_HOST`,
+`EMAIL_PORT`, `EMAIL_USERNAME`, and `EMAIL_PASSWORD`. For Gmail, use a dedicated
+Google App Password; the account must have 2-Step Verification enabled. Do not
+use the account's normal password.
+
 ## Health endpoints
 
 - `GET /health/live`
@@ -78,10 +83,10 @@ See `.env.example` for the complete configuration.
 Authentication uses `httpOnly` cookies. Browser clients must send requests with
 `credentials: "include"`.
 
-Password reset delivery and email/SMS delivery are foundations only. In
-development, reset tokens and verification codes are returned in the response.
-Production responses never expose them; connect an email/SMS provider before
-production deployment.
+Email verification is delivered through Gmail. Password-reset delivery and SMS
+delivery are foundations only. Development responses expose reset tokens and
+verification codes; production responses never expose them. Connect dedicated
+transactional email and SMS providers before a higher-volume production launch.
 
 ## Seed
 

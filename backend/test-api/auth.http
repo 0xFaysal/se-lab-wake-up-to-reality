@@ -136,7 +136,7 @@ Content-Type: application/json
   "newPassword": "{{changedPassword}}"
 }
 
-### Request email verification (development response contains code)
+### Request email verification (sends Gmail; development response also contains code)
 # @name requestEmailVerification
 POST {{baseUrl}}/auth/email-verification/request
 

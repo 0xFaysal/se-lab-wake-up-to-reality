@@ -23,5 +23,6 @@ Recommended order:
 10. Password reset
 11. Logout and logout-all
 
-Development-only reset tokens and verification codes are returned by the API.
-Production requires an email/SMS delivery provider.
+Email verification codes are sent to the registered address through Gmail.
+Development responses also expose the code for local testing. Phone verification
+still requires an SMS delivery provider for production.
