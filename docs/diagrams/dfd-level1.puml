@@ -1,0 +1,104 @@
+@startuml dfd-level1
+!theme plain
+title ParkEase BD — Data Flow Diagram (Level 1)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam usecase {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam database {
+  BackgroundColor #E1F5FE
+  BorderColor #01579B
+}
+skinparam rectangle {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+
+actor "Driver" as Driver
+actor "Parking\nOwner" as Owner
+actor "Security\nGuard" as Guard
+actor "Administrator" as Admin
+rectangle "SSLCOMMERZ\nGateway" as SSL
+
+usecase "1.0\nManage Accounts,\nAuthentication\n& Roles" as P1
+usecase "2.0\nManage Properties,\nSpots & Availability" as P2
+usecase "3.0\nSearch & Discover\nParking" as P3
+usecase "4.0\nGenerate Quote &\nBooking Hold" as P4
+usecase "5.0\nProcess Payments\n& Refunds" as P5
+usecase "6.0\nVerify Entry/Exit\n& Manage Sessions" as P6
+usecase "7.0\nManage Owner\nEarnings & Payouts" as P7
+usecase "8.0\nManage Reviews,\nDisputes & Incidents" as P8
+usecase "9.0\nAdmin Oversight,\nSettings & Audit" as P9
+
+database "D1  Users, Roles,\nSessions" as D1
+database "D2  Vehicles" as D2
+database "D3  Properties, Spots,\nAvailability, Guard\nAssignments" as D3
+database "D4  Quotes, Bookings,\nStatus History" as D4
+database "D5  Payments, Refunds,\nLedger" as D5
+database "D6  Owner Earnings,\nPayout Accounts,\nPayout Requests" as D6
+database "D7  Reviews, Disputes,\nIncidents, Notifications" as D7
+database "D8  Audit Logs,\nPlatform Settings" as D8
+
+' --- Process 1: Accounts & Auth ---
+Driver <--> P1 : credentials / session
+Owner <--> P1 : credentials / session
+Guard <--> P1 : credentials / session
+Admin <--> P1 : credentials / session
+P1 <--> D1
+
+' --- Process 2: Properties & Spots ---
+Owner <--> P2 : property, spot,\navailability data
+Guard <--> P2 : assignment acceptance
+P2 <--> D3
+P2 --> P9 : submit for verification
+P9 --> P2 : verification decision
+
+' --- Process 3: Search ---
+Driver --> P3 : location, time,\nvehicle filters
+P3 --> Driver : ranked results
+P3 --> D3 : read availability
+
+' --- Process 4: Quote & Hold ---
+Driver <--> P4 : quote / hold request
+P4 --> D2 : validate vehicle
+P4 <--> D3 : revalidate availability
+P4 <--> D4
+P4 --> P5 : payment-session request
+
+' --- Process 5: Payments & Refunds ---
+P5 <--> D5
+P5 <--> SSL : session + IPN validation
+P5 --> D4 : confirm booking
+P5 --> P7 : booking completed (earning)
+P5 --> Driver : payment status
+
+' --- Process 6: Entry/Exit ---
+Driver --> P6 : checkout request
+Guard <--> P6 : resolve credential,\nconfirm check-in/out
+P6 <--> D4 : booking/session state
+P6 --> P5 : overtime / outstanding amount
+P6 --> Owner : session updates
+
+' --- Process 7: Earnings & Payouts ---
+Owner <--> P7 : payout account,\npayout request
+P7 <--> D6
+P7 --> P9 : payout awaiting approval
+P9 --> P7 : approval / rejection
+
+' --- Process 8: Reviews & Disputes ---
+Driver --> P8 : review / dispute
+Owner <--> P8 : dispute response
+Guard --> P8 : incident report
+P8 <--> D7
+P8 --> P9 : escalate dispute
+P9 --> P8 : resolution
+
+' --- Process 9: Admin Oversight ---
+Admin <--> P9
+P9 <--> D8
+
+@enduml
