@@ -94,6 +94,22 @@ the exact number of trusted reverse proxies in front of Express.
 - `GET /api/v1/users/me/sessions`
 - `DELETE /api/v1/users/me/sessions/:sessionId`
 
+## Vehicle endpoints
+
+All Vehicle endpoints require an authenticated, fully verified `DRIVER`:
+
+- `POST /api/v1/vehicles`
+- `GET /api/v1/vehicles`
+- `GET /api/v1/vehicles/:vehicleId`
+- `PATCH /api/v1/vehicles/:vehicleId`
+- `PATCH /api/v1/vehicles/:vehicleId/default`
+- `DELETE /api/v1/vehicles/:vehicleId`
+
+The project schema uses `MOTORCYCLE`, `SEDAN`, `SUV`, and `MICROBUS`, with
+optional dimensions in centimeters. Registration numbers are globally unique
+after case, whitespace, and dash normalization. The first active vehicle is the
+default; deleting a default promotes the newest remaining active vehicle.
+
 Authentication uses `httpOnly` cookies. Browser clients must send requests with
 `credentials: "include"`.
 
@@ -126,9 +142,9 @@ npm run build
 npm run format:check
 ```
 
-The integration suite requires a separate, migrated PostgreSQL database in
-`TEST_DATABASE_URL` plus Redis. It creates and removes only its own random test
-user:
+The integration suites require a separate, migrated PostgreSQL database in
+`TEST_DATABASE_URL` plus Redis. They create and remove only their own random
+test records:
 
 ```powershell
 npm run test:integration
