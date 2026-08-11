@@ -4,9 +4,7 @@ import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 import { connectRedis, redis } from "./config/redis.js";
 
-
 async function bootstrap() {
-
   await prisma.$connect();
 
   logger.info("PostgreSQL connected");
@@ -15,15 +13,22 @@ async function bootstrap() {
 
   logger.info("Redis connected");
 
-  const server = app.listen(env.PORT, () =>
+  const server = app.listen(env.PORT, () => {
     logger.info(
       { port: env.PORT, environment: env.NODE_ENV },
       `${env.APP_NAME} started`,
-    ),
-  );
+    );
+
+    if (env.ENABLE_API_DOCS) {
+      const publicUrl = env.API_PUBLIC_URL ?? `http://localhost:${env.PORT}`;
+      logger.info(
+        { url: `${publicUrl}/api-docs` },
+        "Swagger documentation available",
+      );
+    }
+  });
 
   let shuttingDown = false;
-
 
   async function shutdown(signal: string) {
     if (shuttingDown) return;
@@ -43,18 +48,15 @@ async function bootstrap() {
       logger.fatal("Forced shutdown");
       process.exit(1);
     }, 10000).unref();
-
   }
 
   process.on("SIGINT", () => void shutdown("SIGINT"));
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-
-
 bootstrap().catch(async (error) => {
   logger.fatal({ error }, "Application startup failed");
-  
+
   await Promise.allSettled([
     prisma.$disconnect(),
     redis.isOpen ? redis.quit() : Promise.resolve(),

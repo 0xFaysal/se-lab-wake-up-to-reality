@@ -1,0 +1,258 @@
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+@driverSuffix = {{$randomInt 10000000 99999999}}
+@driverEmail = driver{{$timestamp}}@test.com
+@driverPhoneLocal = 017{{driverSuffix}}
+@driverPhoneCountryCode = 88017{{driverSuffix}}
+@driverPhoneInternational = +88017{{driverSuffix}}
+@ownerEmail = owner{{$timestamp}}@test.com
+@ownerPhone = 018{{$randomInt 10000000 99999999}}
+@guardEmail = guard{{$timestamp}}@test.com
+@guardPhone = 019{{$randomInt 10000000 99999999}}
+@password = Password123!
+@changedPassword = ChangedPassword123!
+
+### Health live
+GET {{rootUrl}}/health/live
+
+### Health ready
+GET {{rootUrl}}/health/ready
+
+### Register driver and authenticate immediately
+# @name registerDriver
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Driver Test",
+  "email": "{{driverEmail}}",
+  "phone": "{{driverPhoneLocal}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Current user immediately after registration - no login required
+GET {{baseUrl}}/auth/me
+
+### Duplicate normalized phone - should return 409
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Duplicate Phone",
+  "email": "duplicate-phone{{$timestamp}}@test.com",
+  "phone": "{{driverPhoneInternational}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Register parking owner
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Owner Test",
+  "email": "{{ownerEmail}}",
+  "phone": "{{ownerPhone}}",
+  "password": "{{password}}",
+  "role": "PARKING_OWNER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Invalid public GUARD registration - should return 400
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Guard Test",
+  "email": "guard-public{{$timestamp}}@test.com",
+  "phone": "019{{$randomInt 10000000 99999999}}",
+  "password": "{{password}}",
+  "role": "GUARD",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Invalid password - should return 400
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Weak Password",
+  "email": "weak{{$timestamp}}@test.com",
+  "phone": "016{{$randomInt 10000000 99999999}}",
+  "password": "password123",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Login driver with email and short session
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}",
+  "password": "{{password}}",
+  "rememberDevice": false
+}
+
+### Login driver with 880 phone format and remembered session
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverPhoneCountryCode}}",
+  "password": "{{password}}",
+  "rememberDevice": true
+}
+
+### Wrong password - should return 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}",
+  "password": "WrongPassword123!",
+  "rememberDevice": false
+}
+
+### Refresh auth session
+POST {{baseUrl}}/auth/refresh
+
+### List active sessions
+# @name listSessions
+GET {{baseUrl}}/users/me/sessions
+
+### Change password and revoke all previous sessions
+POST {{baseUrl}}/users/me/change-password
+Content-Type: application/json
+
+{
+  "currentPassword": "{{password}}",
+  "newPassword": "{{changedPassword}}"
+}
+
+### Request email verification (development code requires EXPOSE_DEVELOPMENT_AUTH_CODES=true)
+# @name requestEmailVerification
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm email verification
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{requestEmailVerification.response.body.$.data.developmentCode}}"
+}
+
+### Request phone verification (Twilio; development code requires EXPOSE_DEVELOPMENT_AUTH_CODES=true)
+# @name requestPhoneVerification
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Confirm phone verification
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{requestPhoneVerification.response.body.$.data.developmentCode}}"
+}
+
+### Login parking owner before the controlled Guard flow
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{ownerEmail}}",
+  "password": "{{password}}",
+  "rememberDevice": false
+}
+
+### Request owner email verification
+# @name requestOwnerEmailVerification
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm owner email verification
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{requestOwnerEmailVerification.response.body.$.data.developmentCode}}"
+}
+
+### Request owner phone verification
+# @name requestOwnerPhoneVerification
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Confirm owner phone verification
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{requestOwnerPhoneVerification.response.body.$.data.developmentCode}}"
+}
+
+### Invite Guard as the verified parking owner
+# @name inviteGuard
+POST {{baseUrl}}/users/guards
+Content-Type: application/json
+
+{
+  "fullName": "Guard Test",
+  "email": "{{guardEmail}}",
+  "phone": "{{guardPhone}}"
+}
+
+### Complete Guard password setup (development token requires explicit flag)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{inviteGuard.response.body.$.data.developmentSetupToken}}",
+  "newPassword": "GuardPassword123!"
+}
+
+### Request password reset (always returns a generic message)
+# @name requestPasswordReset
+POST {{baseUrl}}/auth/request-password-reset
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}"
+}
+
+### Reset password using development token
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "{{requestPasswordReset.response.body.$.data.developmentResetToken}}",
+  "newPassword": "ResetPassword123!"
+}
+
+### Login seeded admin (values must match SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{$dotenv SEED_ADMIN_EMAIL}}",
+  "password": "{{$dotenv SEED_ADMIN_PASSWORD}}",
+  "rememberDevice": true
+}
+
+### Revoke the first listed session belonging to the authenticated user
+# Run List active sessions immediately before this request.
+DELETE {{baseUrl}}/users/me/sessions/{{listSessions.response.body.$.data.sessions[0].id}}
+
+### Logout current refresh session
+POST {{baseUrl}}/auth/logout
+
+### Logout all sessions (login again first)
+POST {{baseUrl}}/auth/logout-all
+
+### Current user after logout-all - should return 401
+GET {{baseUrl}}/auth/me

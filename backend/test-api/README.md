@@ -1,0 +1,28 @@
+# REST Client API Tests
+
+Use `auth.http` with the VS Code REST Client extension. Start PostgreSQL,
+Redis, migrations, seed, and the API yourself before sending requests.
+
+Enable cookie persistence in VS Code settings:
+
+```json
+"rest-client.rememberCookiesForSubsequentRequests": true
+```
+
+Recommended order:
+
+1. Health live and ready
+2. Register driver
+3. Current user without a second login
+4. Duplicate normalized phone
+5. Login with email and each supported phone format
+6. Refresh and old-token reuse checks
+7. Session list and revoke
+8. Change password
+9. Email and phone verification
+10. Password reset
+11. Logout and logout-all
+
+Email verification codes are sent to the registered address through Gmail.
+Development responses also expose the code for local testing. Phone verification
+still requires an SMS delivery provider for production.

@@ -1,65 +1,130 @@
 import "dotenv/config";
-import argon2 from "argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, UserRoleType, UserStatus } from "../generated/prisma/client.js";
+import {
+  LegalDocumentType,
+  PrismaClient,
+  UserRoleType,
+  UserStatus,
+} from "../generated/prisma/client.js";
+import { normalizeBangladeshPhone } from "../src/common/auth/phone.js";
+import { hashPassword } from "../src/common/auth/password.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is missing");
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: databaseUrl })
+  adapter: new PrismaPg({ connectionString: databaseUrl }),
 });
 
+function requireEnvironmentVariable(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for database seeding`);
+  return value;
+}
+
 async function main(): Promise<void> {
-  const email = process.env.SEED_ADMIN_EMAIL ?? "admin@parkease.local";
-  const phone = process.env.SEED_ADMIN_PHONE ?? "01700000000";
-  const password = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!";
-  const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+  const email = requireEnvironmentVariable("SEED_ADMIN_EMAIL").toLowerCase();
+  const phone = normalizeBangladeshPhone(
+    requireEnvironmentVariable("SEED_ADMIN_PHONE"),
+  );
+  const password = requireEnvironmentVariable("SEED_ADMIN_PASSWORD");
 
-  const admin = await prisma.user.upsert({
+  if (
+    password.length < 12 ||
+    !/[A-Z]/.test(password) ||
+    !/[a-z]/.test(password) ||
+    !/\d/.test(password) ||
+    !/[^A-Za-z0-9\s]/.test(password) ||
+    /\s/.test(password)
+  ) {
+    throw new Error(
+      "SEED_ADMIN_PASSWORD must be 12+ characters with uppercase, lowercase, number, and special characters, without whitespace",
+    );
+  }
+
+  const existingAdmin = await prisma.user.findUnique({
     where: { email },
-    update: {
-      fullName: "ParkEase Admin",
-      phone,
-      passwordHash,
-      status: UserStatus.ACTIVE,
-      emailVerifiedAt: new Date(),
-      phoneVerifiedAt: new Date()
-    },
-    create: {
-      fullName: "ParkEase Admin",
-      email,
-      phone,
-      passwordHash,
-      status: UserStatus.ACTIVE,
-      emailVerifiedAt: new Date(),
-      phoneVerifiedAt: new Date()
-    }
+    include: { roles: { select: { role: true } } },
   });
 
-  await prisma.userRole.upsert({
-    where: { userId_role: { userId: admin.id, role: UserRoleType.ADMIN } },
-    update: {},
-    create: { userId: admin.id, role: UserRoleType.ADMIN }
-  });
+  let admin = existingAdmin;
+  if (existingAdmin) {
+    if (!existingAdmin.roles.some((role) => role.role === UserRoleType.ADMIN)) {
+      throw new Error(
+        "SEED_ADMIN_EMAIL already belongs to a non-admin account; refusing privilege escalation",
+      );
+    }
+  } else {
+    const passwordHash = await hashPassword(password);
+    admin = await prisma.user.create({
+      data: {
+        fullName: "ParkEase Admin",
+        email,
+        phone,
+        passwordHash,
+        status: UserStatus.ACTIVE,
+        mustChangePassword: true,
+        emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
+        roles: { create: { role: UserRoleType.ADMIN } },
+      },
+      include: { roles: { select: { role: true } } },
+    });
+  }
+
+  const legalDocuments = [
+    {
+      type: LegalDocumentType.TERMS_OF_SERVICE,
+      version: "1.0",
+      title: "ParkEase BD Terms of Service",
+      contentHash: "development-terms-v1",
+      effectiveAt: new Date(),
+      isActive: true,
+    },
+    {
+      type: LegalDocumentType.PRIVACY_POLICY,
+      version: "1.0",
+      title: "ParkEase BD Privacy Policy",
+      contentHash: "development-privacy-v1",
+      effectiveAt: new Date(),
+      isActive: true,
+    },
+  ];
+
+  for (const document of legalDocuments) {
+    await prisma.legalDocument.upsert({
+      where: {
+        type_version: {
+          type: document.type,
+          version: document.version,
+        },
+      },
+      update: {
+        title: document.title,
+        contentHash: document.contentHash,
+        isActive: true,
+      },
+      create: document,
+    });
+  }
 
   for (const facility of [
     { code: "CCTV", displayName: "CCTV" },
     { code: "GUARD", displayName: "Security Guard" },
     { code: "COVERED", displayName: "Covered Parking" },
     { code: "EV_CHARGING", displayName: "EV Charging" },
-    { code: "WHEELCHAIR_ACCESS", displayName: "Wheelchair Access" }
+    { code: "WHEELCHAIR_ACCESS", displayName: "Wheelchair Access" },
   ]) {
     await prisma.parkingFacility.upsert({
       where: { code: facility.code },
       update: { displayName: facility.displayName },
-      create: facility
+      create: facility,
     });
   }
 
+  if (!admin) throw new Error("Admin seed could not be resolved");
   console.log("Seed completed");
-  console.log(`Admin email: ${email}`);
-  console.log(`Admin password: ${password}`);
+  console.log(`Admin seed ensured: ${admin.email}`);
 }
 
 main()
