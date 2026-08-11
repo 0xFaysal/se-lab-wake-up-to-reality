@@ -14,6 +14,7 @@ import { errorHandler } from "./common/middleware/error-handler.js";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
+import { vehicleRouter } from "./modules/vehicles/vehicle.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -128,6 +129,7 @@ app.get("/", (req, res) =>
 app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/vehicles", vehicleRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

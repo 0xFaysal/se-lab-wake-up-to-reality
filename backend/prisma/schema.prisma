@@ -263,6 +263,7 @@ model Vehicle {
   widthCm                      Int?                @map("width_cm")
   lengthCm                     Int?                @map("length_cm")
   verificationStatus           VerificationStatus @default(PENDING) @map("verification_status")
+  isDefault                    Boolean             @default(false) @map("is_default")
   createdAt                    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt                    DateTime?           @map("deleted_at") @db.Timestamptz(6)

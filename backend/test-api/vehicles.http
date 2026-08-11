@@ -1,0 +1,214 @@
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+@password = VehiclePassword123!
+@suffix = {{$randomInt 10000000 99999999}}
+@driverEmail = vehicle-driver-{{$timestamp}}@test.com
+@driverPhone = 017{{suffix}}
+@secondDriverEmail = vehicle-driver-b-{{$timestamp}}@test.com
+@secondDriverPhone = 018{{$randomInt 10000000 99999999}}
+@ownerEmail = vehicle-owner-{{$timestamp}}@test.com
+@ownerPhone = 019{{$randomInt 10000000 99999999}}
+
+# OTP response variables below require EXPOSE_DEVELOPMENT_AUTH_CODES=true.
+
+### Register Driver A
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Vehicle Driver A",
+  "email": "{{driverEmail}}",
+  "phone": "{{driverPhone}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Request Driver A email OTP
+# @name driverAEmailOtp
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm Driver A email OTP
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{driverAEmailOtp.response.body.$.data.developmentCode}}"
+}
+
+### Request Driver A phone OTP
+# @name driverAPhoneOtp
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Confirm Driver A phone OTP
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{driverAPhoneOtp.response.body.$.data.developmentCode}}"
+}
+
+### Create first vehicle - automatically default
+# @name createFirstVehicle
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "vehicleType": "SEDAN",
+  "registrationNumber": "DHAKA METRO GA 12-{{suffix}}",
+  "brand": "Toyota",
+  "model": "Axio",
+  "color": "White",
+  "heightCm": 145,
+  "widthCm": 177,
+  "lengthCm": 440
+}
+
+### Create second vehicle
+# @name createSecondVehicle
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "vehicleType": "SUV",
+  "registrationNumber": "DHAKA METRO KHA 98-{{suffix}}",
+  "brand": "Honda",
+  "model": "Vezel",
+  "color": "Black"
+}
+
+### List own vehicles - default first
+GET {{baseUrl}}/vehicles
+
+### Get first vehicle
+GET {{baseUrl}}/vehicles/{{createFirstVehicle.response.body.$.data.vehicle.id}}
+
+### Update first vehicle
+PATCH {{baseUrl}}/vehicles/{{createFirstVehicle.response.body.$.data.vehicle.id}}
+Content-Type: application/json
+
+{
+  "color": "Silver",
+  "heightCm": null
+}
+
+### Set second vehicle as default
+PATCH {{baseUrl}}/vehicles/{{createSecondVehicle.response.body.$.data.vehicle.id}}/default
+
+### Duplicate normalized registration - should return 409
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "vehicleType": "SEDAN",
+  "registrationNumber": "dhaka-metro-ga-12 {{suffix}}",
+  "brand": "Duplicate",
+  "model": "Duplicate",
+  "color": "Red"
+}
+
+### Delete current default - first vehicle becomes default
+DELETE {{baseUrl}}/vehicles/{{createSecondVehicle.response.body.$.data.vehicle.id}}
+
+### Register Driver B for IDOR checks
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Vehicle Driver B",
+  "email": "{{secondDriverEmail}}",
+  "phone": "{{secondDriverPhone}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Request Driver B email OTP
+# @name driverBEmailOtp
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm Driver B email OTP
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{driverBEmailOtp.response.body.$.data.developmentCode}}"
+}
+
+### Request Driver B phone OTP
+# @name driverBPhoneOtp
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Confirm Driver B phone OTP
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{driverBPhoneOtp.response.body.$.data.developmentCode}}"
+}
+
+### Cross-user GET - should return 404
+GET {{baseUrl}}/vehicles/{{createFirstVehicle.response.body.$.data.vehicle.id}}
+
+### Cross-user PATCH - should return 404
+PATCH {{baseUrl}}/vehicles/{{createFirstVehicle.response.body.$.data.vehicle.id}}
+Content-Type: application/json
+
+{
+  "color": "Red"
+}
+
+### Cross-user DELETE - should return 404
+DELETE {{baseUrl}}/vehicles/{{createFirstVehicle.response.body.$.data.vehicle.id}}
+
+### Register Parking Owner for role check
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Vehicle Owner Test",
+  "email": "{{ownerEmail}}",
+  "phone": "{{ownerPhone}}",
+  "password": "{{password}}",
+  "role": "PARKING_OWNER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Request Owner email OTP
+# @name ownerEmailOtp
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm Owner email OTP
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{ownerEmailOtp.response.body.$.data.developmentCode}}"
+}
+
+### Request Owner phone OTP
+# @name ownerPhoneOtp
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Confirm Owner phone OTP
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{ownerPhoneOtp.response.body.$.data.developmentCode}}"
+}
+
+### Non-Driver create - should return 403 AUTH_FORBIDDEN
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "vehicleType": "MICROBUS",
+  "registrationNumber": "DHAKA METRO CHA 55-{{suffix}}",
+  "brand": "Toyota",
+  "model": "Hiace",
+  "color": "White"
+}

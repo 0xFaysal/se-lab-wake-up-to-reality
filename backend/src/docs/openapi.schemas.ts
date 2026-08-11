@@ -232,6 +232,138 @@ export const openApiSchemas = {
     },
     required: ["id", "rememberDevice", "expiresAt", "createdAt", "current"],
   },
+  VehicleType: {
+    type: "string",
+    enum: ["MOTORCYCLE", "SEDAN", "SUV", "MICROBUS"],
+  },
+  VehicleVerificationStatus: {
+    type: "string",
+    enum: ["DRAFT", "PENDING", "VERIFIED", "REJECTED", "SUSPENDED"],
+  },
+  Vehicle: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      vehicleType: { $ref: "#/components/schemas/VehicleType" },
+      registrationNumber: {
+        type: "string",
+        example: "DHAKA METRO GA 12-3456",
+      },
+      brand: { type: "string", nullable: true, example: "Toyota" },
+      model: { type: "string", nullable: true, example: "Axio" },
+      color: { type: "string", nullable: true, example: "White" },
+      heightCm: { type: "integer", nullable: true, example: 145 },
+      widthCm: { type: "integer", nullable: true, example: 177 },
+      lengthCm: { type: "integer", nullable: true, example: 440 },
+      verificationStatus: {
+        $ref: "#/components/schemas/VehicleVerificationStatus",
+      },
+      isDefault: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+    required: [
+      "id",
+      "vehicleType",
+      "registrationNumber",
+      "brand",
+      "model",
+      "color",
+      "heightCm",
+      "widthCm",
+      "lengthCm",
+      "verificationStatus",
+      "isDefault",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
+  CreateVehicleRequest: {
+    type: "object",
+    properties: {
+      vehicleType: { $ref: "#/components/schemas/VehicleType" },
+      registrationNumber: {
+        type: "string",
+        minLength: 4,
+        maxLength: 50,
+        example: "DHAKA METRO GA 12-3456",
+      },
+      brand: { type: "string", minLength: 1, maxLength: 80 },
+      model: { type: "string", minLength: 1, maxLength: 80 },
+      color: { type: "string", minLength: 1, maxLength: 40 },
+      heightCm: { type: "integer", minimum: 1, maximum: 10000 },
+      widthCm: { type: "integer", minimum: 1, maximum: 10000 },
+      lengthCm: { type: "integer", minimum: 1, maximum: 10000 },
+      isDefault: { type: "boolean", default: false },
+    },
+    required: [
+      "vehicleType",
+      "registrationNumber",
+      "brand",
+      "model",
+      "color",
+    ],
+  },
+  UpdateVehicleRequest: {
+    type: "object",
+    minProperties: 1,
+    properties: {
+      vehicleType: { $ref: "#/components/schemas/VehicleType" },
+      registrationNumber: { type: "string", minLength: 4, maxLength: 50 },
+      brand: { type: "string", minLength: 1, maxLength: 80 },
+      model: { type: "string", minLength: 1, maxLength: 80 },
+      color: { type: "string", minLength: 1, maxLength: 40 },
+      heightCm: {
+        type: "integer",
+        minimum: 1,
+        maximum: 10000,
+        nullable: true,
+      },
+      widthCm: {
+        type: "integer",
+        minimum: 1,
+        maximum: 10000,
+        nullable: true,
+      },
+      lengthCm: {
+        type: "integer",
+        minimum: 1,
+        maximum: 10000,
+        nullable: true,
+      },
+    },
+  },
+  VehicleResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: { vehicle: { $ref: "#/components/schemas/Vehicle" } },
+        required: ["vehicle"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  VehicleListResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          vehicles: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Vehicle" },
+          },
+        },
+        required: ["vehicles"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
   ReadinessResponse: {
     type: "object",
     properties: {
