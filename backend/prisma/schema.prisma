@@ -317,9 +317,13 @@ model PropertyImage {
   id         String   @id @default(uuid()) @db.Uuid
   propertyId String   @map("property_id") @db.Uuid
   storageKey String   @unique @map("storage_key")
+  url        String
+  provider   String   @default("CLOUDINARY") @db.VarChar(30)
   imageType  String   @map("image_type") @db.VarChar(30)
   sortOrder  Int      @default(0) @map("sort_order")
+  isCover    Boolean  @default(false) @map("is_cover")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 

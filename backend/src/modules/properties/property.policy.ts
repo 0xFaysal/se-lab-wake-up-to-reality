@@ -35,10 +35,12 @@ export function shouldResetVerification(
 }
 
 export function canDeleteProperty(input: {
+  existingPropertyImageCount: number;
   existingParkingSpotCount: number;
   blockingGuardAssignmentCount: number;
 }): boolean {
   return (
+    input.existingPropertyImageCount === 0 &&
     input.existingParkingSpotCount === 0 &&
     input.blockingGuardAssignmentCount === 0
   );

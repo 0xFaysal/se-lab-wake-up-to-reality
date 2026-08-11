@@ -33,8 +33,7 @@ function validateEntrancePair(
 
   if (
     hasLatitude &&
-    ((data.entranceLatitude === null) !==
-      (data.entranceLongitude === null))
+    (data.entranceLatitude === null) !== (data.entranceLongitude === null)
   ) {
     context.addIssue({
       code: "custom",

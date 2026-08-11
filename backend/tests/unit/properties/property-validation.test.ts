@@ -32,10 +32,7 @@ describe("property request validation", () => {
       { ...validProperty, longitude: 180.01 },
       { ...validProperty, longitude: -180.01 },
     ]) {
-      assert.equal(
-        createPropertySchema.safeParse({ body }).success,
-        false,
-      );
+      assert.equal(createPropertySchema.safeParse({ body }).success, false);
     }
   });
 

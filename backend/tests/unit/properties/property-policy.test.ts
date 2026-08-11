@@ -29,16 +29,14 @@ describe("property policy", () => {
       VerificationStatus.REJECTED,
       VerificationStatus.DRAFT,
     ]) {
-      assert.equal(
-        shouldResetVerification(status, new Set(["name"])),
-        true,
-      );
+      assert.equal(shouldResetVerification(status, new Set(["name"])), true);
     }
   });
 
   it("blocks deletion when a business dependency exists", () => {
     assert.equal(
       canDeleteProperty({
+        existingPropertyImageCount: 0,
         existingParkingSpotCount: 0,
         blockingGuardAssignmentCount: 0,
       }),
@@ -46,6 +44,7 @@ describe("property policy", () => {
     );
     assert.equal(
       canDeleteProperty({
+        existingPropertyImageCount: 0,
         existingParkingSpotCount: 1,
         blockingGuardAssignmentCount: 0,
       }),
@@ -53,8 +52,17 @@ describe("property policy", () => {
     );
     assert.equal(
       canDeleteProperty({
+        existingPropertyImageCount: 0,
         existingParkingSpotCount: 0,
         blockingGuardAssignmentCount: 1,
+      }),
+      false,
+    );
+    assert.equal(
+      canDeleteProperty({
+        existingPropertyImageCount: 1,
+        existingParkingSpotCount: 0,
+        blockingGuardAssignmentCount: 0,
       }),
       false,
     );

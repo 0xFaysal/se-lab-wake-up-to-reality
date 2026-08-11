@@ -6,3 +6,5 @@ generated/
 coverage/
 .DS_Store
 .vscode/
+test-api/fixtures/*
+!test-api/fixtures/README.md

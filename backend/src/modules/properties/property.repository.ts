@@ -6,7 +6,7 @@ import { prisma } from "../../config/prisma.js";
 
 type PropertyClient = Pick<
   Prisma.TransactionClient,
-  "property" | "parkingSpot" | "propertyGuardAssignment"
+  "property" | "propertyImage" | "parkingSpot" | "propertyGuardAssignment"
 >;
 
 export const ownerPropertySummarySelect = {
@@ -26,6 +26,15 @@ export const ownerPropertySummarySelect = {
 export type OwnerPropertySummaryRecord = Prisma.PropertyGetPayload<{
   select: typeof ownerPropertySummarySelect;
 }>;
+
+export async function lockPropertyForMutation(
+  propertyId: string,
+  tx: Prisma.TransactionClient,
+): Promise<void> {
+  await tx.$queryRaw`
+    SELECT pg_advisory_xact_lock(hashtextextended(${`property:${propertyId}`}, 0))
+  `;
+}
 
 export function createProperty(
   data: Prisma.PropertyUncheckedCreateInput,
@@ -84,22 +93,30 @@ export async function findPropertyDeleteBlockers(
   propertyId: string,
   db: PropertyClient = prisma,
 ) {
-  const [existingParkingSpotCount, blockingGuardAssignmentCount] =
-    await Promise.all([
-      db.parkingSpot.count({ where: { propertyId, deletedAt: null } }),
-      db.propertyGuardAssignment.count({
-        where: {
-          propertyId,
-          status: {
-            in: [
-              GuardAssignmentStatus.PENDING_ACCEPTANCE,
-              GuardAssignmentStatus.ACTIVE,
-              GuardAssignmentStatus.SUSPENDED,
-            ],
-          },
+  const [
+    existingPropertyImageCount,
+    existingParkingSpotCount,
+    blockingGuardAssignmentCount,
+  ] = await Promise.all([
+    db.propertyImage.count({ where: { propertyId } }),
+    db.parkingSpot.count({ where: { propertyId, deletedAt: null } }),
+    db.propertyGuardAssignment.count({
+      where: {
+        propertyId,
+        status: {
+          in: [
+            GuardAssignmentStatus.PENDING_ACCEPTANCE,
+            GuardAssignmentStatus.ACTIVE,
+            GuardAssignmentStatus.SUSPENDED,
+          ],
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
-  return { existingParkingSpotCount, blockingGuardAssignmentCount };
+  return {
+    existingPropertyImageCount,
+    existingParkingSpotCount,
+    blockingGuardAssignmentCount,
+  };
 }

@@ -16,6 +16,14 @@ export const openApiTags = [
   { name: "Vehicles", description: "Driver vehicle management" },
   { name: "Properties", description: "Parking Owner property management" },
   {
+    name: "Property Images",
+    description: "Parking Owner Property image management",
+  },
+  {
+    name: "Admin Properties",
+    description: "Administrative Property verification workflow",
+  },
+  {
     name: "Parking",
     description: "Parking spot and availability operations",
   },

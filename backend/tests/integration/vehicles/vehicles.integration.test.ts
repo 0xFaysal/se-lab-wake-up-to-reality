@@ -37,12 +37,9 @@ integration("vehicle management integration", () => {
     ready: boolean;
   }) {
     const generated = await import("../../../generated/prisma/client.js");
-    const { hashPassword } = await import(
-      "../../../src/common/auth/password.js"
-    );
-    const { signAccessToken } = await import(
-      "../../../src/common/auth/jwt.js"
-    );
+    const { hashPassword } =
+      await import("../../../src/common/auth/password.js");
+    const { signAccessToken } = await import("../../../src/common/auth/jwt.js");
     const passwordHash = await hashPassword("VehicleIntegrationPassword123!");
     const verifiedAt = input.ready ? new Date() : null;
     const user = await prisma.user.create({
@@ -134,7 +131,9 @@ integration("vehicle management integration", () => {
     if (userIds.length > 0) {
       await prisma.$transaction([
         prisma.vehicle.deleteMany({ where: { ownerUserId: { in: userIds } } }),
-        prisma.refreshSession.deleteMany({ where: { userId: { in: userIds } } }),
+        prisma.refreshSession.deleteMany({
+          where: { userId: { in: userIds } },
+        }),
         prisma.userRole.deleteMany({ where: { userId: { in: userIds } } }),
         prisma.user.deleteMany({ where: { id: { in: userIds } } }),
       ]);
@@ -163,7 +162,9 @@ integration("vehicle management integration", () => {
     });
     assert.equal(first.status, 201);
     const firstBody = (await first.json()) as {
-      data: { vehicle: { id: string; isDefault: boolean; verificationStatus: string } };
+      data: {
+        vehicle: { id: string; isDefault: boolean; verificationStatus: string };
+      };
     };
     firstVehicleId = firstBody.data.vehicle.id;
     assert.equal(firstBody.data.vehicle.isDefault, true);

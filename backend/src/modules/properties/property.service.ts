@@ -2,10 +2,8 @@ import {
   Prisma,
   PropertyStatus,
   VerificationStatus,
-  type Property,
 } from "../../../generated/prisma/client.js";
 import {
-  decryptSensitiveText,
   encryptSensitiveText,
   SensitiveDataEncryptionError,
 } from "../../common/security/encryption.js";
@@ -22,19 +20,11 @@ import {
   shouldResetVerification,
 } from "./property.policy.js";
 import * as propertyRepository from "./property.repository.js";
+import { decryptPropertySensitiveData } from "./property-sensitive-data.js";
 import type {
   CreatePropertyInput,
   UpdatePropertyInput,
 } from "./property.types.js";
-
-async function lockProperty(
-  propertyId: string,
-  tx: Prisma.TransactionClient,
-): Promise<void> {
-  await tx.$queryRaw`
-    SELECT pg_advisory_xact_lock(hashtextextended(${`property:${propertyId}`}, 0))
-  `;
-}
 
 function throwEncryptionFailure(error: unknown, propertyId?: string): never {
   if (error instanceof SensitiveDataEncryptionError) {
@@ -48,32 +38,6 @@ function throwEncryptionFailure(error: unknown, propertyId?: string): never {
     throw propertyErrors.encryptionFailed();
   }
   throw error;
-}
-
-function decryptProperty(property: Property) {
-  if (!property.exactAddressIv || !property.exactAddressTag) {
-    throw new SensitiveDataEncryptionError();
-  }
-
-  const exactAddress = decryptSensitiveText(
-    property.exactAddressCiphertext,
-    property.exactAddressIv,
-    property.exactAddressTag,
-  );
-
-  let accessInstructions: string | null = null;
-  if (property.accessInstructionsCiphertext !== null) {
-    if (!property.accessInstructionsIv || !property.accessInstructionsTag) {
-      throw new SensitiveDataEncryptionError();
-    }
-    accessInstructions = decryptSensitiveText(
-      property.accessInstructionsCiphertext,
-      property.accessInstructionsIv,
-      property.accessInstructionsTag,
-    );
-  }
-
-  return { exactAddress, accessInstructions };
 }
 
 export async function createProperty(
@@ -136,7 +100,10 @@ export async function getProperty(ownerUserId: string, propertyId: string) {
   if (!property) throw propertyErrors.notFound();
 
   try {
-    return toOwnerPropertyDetail(property, decryptProperty(property));
+    return toOwnerPropertyDetail(
+      property,
+      decryptPropertySensitiveData(property),
+    );
   } catch (error) {
     throwEncryptionFailure(error, propertyId);
   }
@@ -149,7 +116,7 @@ export async function updateProperty(
 ) {
   try {
     const property = await prisma.$transaction(async (tx) => {
-      await lockProperty(propertyId, tx);
+      await propertyRepository.lockPropertyForMutation(propertyId, tx);
 
       const existing = await propertyRepository.findPropertyByIdForOwner(
         propertyId,
@@ -208,9 +175,7 @@ export async function updateProperty(
       }
 
       const changedFields = new Set(Object.keys(input));
-      if (
-        shouldResetVerification(existing.verificationStatus, changedFields)
-      ) {
+      if (shouldResetVerification(existing.verificationStatus, changedFields)) {
         Object.assign(updateData, {
           verificationStatus: VerificationStatus.PENDING,
           status: PropertyStatus.INACTIVE,
@@ -237,7 +202,10 @@ export async function updateProperty(
       return result;
     });
 
-    return toOwnerPropertyDetail(property, decryptProperty(property));
+    return toOwnerPropertyDetail(
+      property,
+      decryptPropertySensitiveData(property),
+    );
   } catch (error) {
     throwEncryptionFailure(error, propertyId);
   }
@@ -248,7 +216,7 @@ export async function deleteProperty(
   propertyId: string,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    await lockProperty(propertyId, tx);
+    await propertyRepository.lockPropertyForMutation(propertyId, tx);
 
     const existing = await propertyRepository.findPropertyByIdForOwner(
       propertyId,

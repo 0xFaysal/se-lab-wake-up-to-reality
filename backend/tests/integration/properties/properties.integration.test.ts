@@ -35,14 +35,7 @@ integration("parking owner property management integration", () => {
   async function createAuthenticatedUser(input: {
     key: string;
     role: "PARKING_OWNER" | "DRIVER" | "GUARD" | "ADMIN";
-    phonePrefix:
-      | "013"
-      | "014"
-      | "015"
-      | "016"
-      | "017"
-      | "018"
-      | "019";
+    phonePrefix: "013" | "014" | "015" | "016" | "017" | "018" | "019";
     ready: boolean;
     emailVerified?: boolean;
     phoneVerified?: boolean;
@@ -50,16 +43,12 @@ integration("parking owner property management integration", () => {
     passwordHash: string;
   }) {
     const generated = await import("../../../generated/prisma/client.js");
-    const { signAccessToken } = await import(
-      "../../../src/common/auth/jwt.js"
-    );
+    const { signAccessToken } = await import("../../../src/common/auth/jwt.js");
     const verifiedAt = new Date();
-    const emailVerifiedAt = (input.emailVerified ?? input.ready)
-      ? verifiedAt
-      : null;
-    const phoneVerifiedAt = (input.phoneVerified ?? input.ready)
-      ? verifiedAt
-      : null;
+    const emailVerifiedAt =
+      (input.emailVerified ?? input.ready) ? verifiedAt : null;
+    const phoneVerifiedAt =
+      (input.phoneVerified ?? input.ready) ? verifiedAt : null;
     const user = await prisma.user.create({
       data: {
         fullName: `Property ${input.key}`,
@@ -116,9 +105,8 @@ integration("parking owner property management integration", () => {
     const appModule = await import("../../../src/app.js");
     prisma = (await import("../../../src/config/prisma.js")).prisma;
     redis = (await import("../../../src/config/redis.js")).redis;
-    const { hashPassword } = await import(
-      "../../../src/common/auth/password.js"
-    );
+    const { hashPassword } =
+      await import("../../../src/common/auth/password.js");
     const passwordHash = await hashPassword("PropertyIntegrationPassword123!");
 
     await prisma.$connect();
@@ -194,7 +182,9 @@ integration("parking owner property management integration", () => {
     if (userIds.length > 0) {
       await prisma.$transaction([
         prisma.property.deleteMany({ where: { ownerUserId: { in: userIds } } }),
-        prisma.refreshSession.deleteMany({ where: { userId: { in: userIds } } }),
+        prisma.refreshSession.deleteMany({
+          where: { userId: { in: userIds } },
+        }),
         prisma.userRole.deleteMany({ where: { userId: { in: userIds } } }),
         prisma.user.deleteMany({ where: { id: { in: userIds } } }),
       ]);
@@ -264,10 +254,9 @@ integration("parking owner property management integration", () => {
     assert.equal("exactAddress" in listBody.data.properties[0]!, false);
     assert.equal("accessInstructions" in listBody.data.properties[0]!, false);
 
-    const detail = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      { cookie: cookies.get("owner-a") },
-    );
+    const detail = await request(`/api/v1/owner/properties/${propertyId}`, {
+      cookie: cookies.get("owner-a"),
+    });
     assert.equal(detail.status, 200);
     const detailBody = (await detail.json()) as {
       data: {
@@ -347,17 +336,14 @@ integration("parking owner property management integration", () => {
       },
     });
 
-    const response = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      {
-        method: "PATCH",
-        cookie: cookies.get("owner-a"),
-        body: JSON.stringify({
-          name: "Gulshan Secure Parking",
-          accessInstructions: "Use Gate B and call the desk",
-        }),
-      },
-    );
+    const response = await request(`/api/v1/owner/properties/${propertyId}`, {
+      method: "PATCH",
+      cookie: cookies.get("owner-a"),
+      body: JSON.stringify({
+        name: "Gulshan Secure Parking",
+        accessInstructions: "Use Gate B and call the desk",
+      }),
+    });
     assert.equal(response.status, 200);
     const body = (await response.json()) as {
       data: {
@@ -382,14 +368,11 @@ integration("parking owner property management integration", () => {
   });
 
   it("resets verification and uses a fresh IV after a critical edit", async () => {
-    const response = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      {
-        method: "PATCH",
-        cookie: cookies.get("owner-a"),
-        body: JSON.stringify({ exactAddress: updatedExactAddress }),
-      },
-    );
+    const response = await request(`/api/v1/owner/properties/${propertyId}`, {
+      method: "PATCH",
+      cookie: cookies.get("owner-a"),
+      body: JSON.stringify({ exactAddress: updatedExactAddress }),
+    });
     assert.equal(response.status, 200);
     const body = (await response.json()) as {
       data: {
@@ -426,14 +409,11 @@ integration("parking owner property management integration", () => {
       },
     });
 
-    const response = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      {
-        method: "PATCH",
-        cookie: cookies.get("owner-a"),
-        body: JSON.stringify({ approximateAddress: "Beside Gulshan market" }),
-      },
-    );
+    const response = await request(`/api/v1/owner/properties/${propertyId}`, {
+      method: "PATCH",
+      cookie: cookies.get("owner-a"),
+      body: JSON.stringify({ approximateAddress: "Beside Gulshan market" }),
+    });
     assert.equal(response.status, 200);
     const body = (await response.json()) as {
       data: {
@@ -458,10 +438,9 @@ integration("parking owner property management integration", () => {
       data: { exactAddressTag: Buffer.alloc(16, 1).toString("base64") },
     });
 
-    const response = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      { cookie: cookies.get("owner-a") },
-    );
+    const response = await request(`/api/v1/owner/properties/${propertyId}`, {
+      cookie: cookies.get("owner-a"),
+    });
     assert.equal(response.status, 500);
     const body = (await response.json()) as {
       error: { code: string; message: string };
@@ -476,16 +455,15 @@ integration("parking owner property management integration", () => {
   });
 
   it("soft-deletes and hides the property", async () => {
-    const deleted = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      { method: "DELETE", cookie: cookies.get("owner-a") },
-    );
+    const deleted = await request(`/api/v1/owner/properties/${propertyId}`, {
+      method: "DELETE",
+      cookie: cookies.get("owner-a"),
+    });
     assert.equal(deleted.status, 204);
 
-    const detail = await request(
-      `/api/v1/owner/properties/${propertyId}`,
-      { cookie: cookies.get("owner-a") },
-    );
+    const detail = await request(`/api/v1/owner/properties/${propertyId}`, {
+      cookie: cookies.get("owner-a"),
+    });
     assert.equal(detail.status, 404);
 
     const list = await request("/api/v1/owner/properties", {

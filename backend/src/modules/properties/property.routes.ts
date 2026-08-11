@@ -4,6 +4,7 @@ import { authenticate } from "../../common/middleware/auth.js";
 import { requireAccountReady } from "../../common/middleware/require-account-ready.js";
 import { requireRole } from "../../common/middleware/require-role.js";
 import { validate } from "../../common/middleware/validate.js";
+import { propertyImageRouter } from "../property-images/property-image.routes.js";
 import {
   createPropertyController,
   deletePropertyController,
@@ -29,6 +30,8 @@ propertyRouter.use(
   requireAccountReady,
   requireRole(UserRoleType.PARKING_OWNER),
 );
+
+propertyRouter.use(propertyImageRouter);
 
 /**
  * @openapi
@@ -176,7 +179,7 @@ propertyRouter.get("/", listPropertiesController);
  *     tags: [Properties]
  *     summary: Delete an owned property
  *     operationId: deleteOwnerProperty
- *     description: Soft-deletes an owned property when it has no existing parking spots or blocking guard assignments.
+ *     description: Soft-deletes an owned property when it has no images, existing parking spots, or blocking guard assignments.
  *     security:
  *       - accessCookie: []
  *     parameters:

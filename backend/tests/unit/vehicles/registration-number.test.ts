@@ -13,10 +13,7 @@ describe("vehicle registration number normalization", () => {
       "dhaka metro ga 12 3456",
       "DHAKA\u2013METRO\u2013GA\u201312\u20133456",
     ]) {
-      assert.equal(
-        normalizeRegistrationNumber(value),
-        "DHAKAMETROGA123456",
-      );
+      assert.equal(normalizeRegistrationNumber(value), "DHAKAMETROGA123456");
     }
   });
 

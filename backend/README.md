@@ -66,6 +66,13 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 Changing or losing this key makes existing protected Property data impossible
 to decrypt. Keep it in the production secret manager and back it up securely.
 
+Property images are stored through Cloudinary. Configure
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`.
+All three values are required in production and are used only by the backend.
+Uploads accept JPEG, PNG, and WebP files, enforce a 5 MB per-file limit and a
+10-image per-Property limit, verify file signatures, and strip embedded image
+profiles during storage.
+
 Email verification uses Gmail SMTP through Nodemailer. Configure `EMAIL_HOST`,
 `EMAIL_PORT`, `EMAIL_USERNAME`, and `EMAIL_PASSWORD`. For Gmail, use a dedicated
 Google App Password; the account must have 2-Step Verification enabled. Do not
@@ -140,6 +147,37 @@ review, ownership, or operational fields. All reads and writes are owner-scoped,
 soft-deleted properties are hidden, and existing Spot or Guard dependencies can
 block deletion.
 
+## Property image endpoints
+
+These routes use the same ready `PARKING_OWNER` authorization as Property CRUD:
+
+- `POST /api/v1/owner/properties/:propertyId/images`
+- `GET /api/v1/owner/properties/:propertyId/images`
+- `PATCH /api/v1/owner/properties/:propertyId/images/reorder`
+- `DELETE /api/v1/owner/properties/:propertyId/images/:imageId`
+
+The first image becomes the cover. Reordering must include every current image
+exactly once and can select a new cover. Image responses expose the secure URL
+but never the Cloudinary public ID or credentials. Automated tests replace the
+Cloudinary adapter and never call the real service. A Property with images must
+remove them before Property soft deletion. Removing the final image from a
+verified Property returns it to `PENDING/INACTIVE` for review.
+
+## Admin Property verification endpoints
+
+These routes require an authenticated, ready `ADMIN`:
+
+- `GET /api/v1/admin/properties/pending?page=1&limit=20`
+- `GET /api/v1/admin/properties/:propertyId`
+- `PATCH /api/v1/admin/properties/:propertyId/verification`
+
+Admin detail decrypts private Property data server-side. Approval requires a
+ready Parking Owner, valid protected location data and at least one image, then
+transitions `PENDING/INACTIVE` to `VERIFIED/ACTIVE`. Rejection requires a reason
+and transitions to `REJECTED/INACTIVE`. Property-level locks and conditional
+updates prevent concurrent Admin decisions or Owner edits from overwriting one
+another.
+
 Authentication uses `httpOnly` cookies. Browser clients must send requests with
 `credentials: "include"`.
 
@@ -180,5 +218,6 @@ test records:
 npm run test:integration
 ```
 
-Manual API requests are available in `test-api/auth.http` for the VS Code REST
-Client extension.
+Manual API requests are available in `test-api/*.http` for the VS Code REST
+Client extension. Property image multipart examples reference local files under
+`test-api/fixtures/`.
