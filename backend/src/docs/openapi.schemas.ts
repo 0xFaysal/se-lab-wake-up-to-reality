@@ -364,6 +364,162 @@ export const openApiSchemas = {
     },
     required: ["success", "data", "meta"],
   },
+  PropertyStatus: {
+    type: "string",
+    enum: ["ACTIVE", "TEMPORARILY_CLOSED", "INACTIVE"],
+  },
+  PropertyVerificationStatus: {
+    type: "string",
+    enum: ["DRAFT", "PENDING", "VERIFIED", "REJECTED", "SUSPENDED"],
+  },
+  OwnerPropertySummary: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      name: { type: "string" },
+      publicArea: { type: "string" },
+      approximateAddress: { type: "string" },
+      latitude: { type: "number", format: "double" },
+      longitude: { type: "number", format: "double" },
+      verificationStatus: {
+        $ref: "#/components/schemas/PropertyVerificationStatus",
+      },
+      status: { $ref: "#/components/schemas/PropertyStatus" },
+      rejectionReason: { type: "string", nullable: true },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+    required: [
+      "id",
+      "name",
+      "publicArea",
+      "approximateAddress",
+      "latitude",
+      "longitude",
+      "verificationStatus",
+      "status",
+      "rejectionReason",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
+  OwnerPropertyDetail: {
+    allOf: [
+      { $ref: "#/components/schemas/OwnerPropertySummary" },
+      {
+        type: "object",
+        properties: {
+          exactAddress: { type: "string" },
+          entranceLatitude: {
+            type: "number",
+            format: "double",
+            nullable: true,
+          },
+          entranceLongitude: {
+            type: "number",
+            format: "double",
+            nullable: true,
+          },
+          accessInstructions: { type: "string", nullable: true },
+          verifiedAt: { type: "string", format: "date-time", nullable: true },
+        },
+        required: [
+          "exactAddress",
+          "entranceLatitude",
+          "entranceLongitude",
+          "accessInstructions",
+          "verifiedAt",
+        ],
+      },
+    ],
+  },
+  CreatePropertyRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string", minLength: 3, maxLength: 120 },
+      publicArea: { type: "string", minLength: 2, maxLength: 120 },
+      approximateAddress: { type: "string", minLength: 5, maxLength: 255 },
+      exactAddress: { type: "string", minLength: 5, maxLength: 500 },
+      latitude: { type: "number", minimum: -90, maximum: 90 },
+      longitude: { type: "number", minimum: -180, maximum: 180 },
+      entranceLatitude: { type: "number", minimum: -90, maximum: 90 },
+      entranceLongitude: { type: "number", minimum: -180, maximum: 180 },
+      accessInstructions: { type: "string", minLength: 1, maxLength: 1000 },
+    },
+    required: [
+      "name",
+      "publicArea",
+      "approximateAddress",
+      "exactAddress",
+      "latitude",
+      "longitude",
+    ],
+  },
+  UpdatePropertyRequest: {
+    type: "object",
+    additionalProperties: false,
+    minProperties: 1,
+    properties: {
+      name: { type: "string", minLength: 3, maxLength: 120 },
+      publicArea: { type: "string", minLength: 2, maxLength: 120 },
+      approximateAddress: { type: "string", minLength: 5, maxLength: 255 },
+      exactAddress: { type: "string", minLength: 5, maxLength: 500 },
+      latitude: { type: "number", minimum: -90, maximum: 90 },
+      longitude: { type: "number", minimum: -180, maximum: 180 },
+      entranceLatitude: {
+        type: "number",
+        minimum: -90,
+        maximum: 90,
+        nullable: true,
+      },
+      entranceLongitude: {
+        type: "number",
+        minimum: -180,
+        maximum: 180,
+        nullable: true,
+      },
+      accessInstructions: {
+        type: "string",
+        minLength: 1,
+        maxLength: 1000,
+        nullable: true,
+      },
+    },
+  },
+  OwnerPropertyResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          property: { $ref: "#/components/schemas/OwnerPropertyDetail" },
+        },
+        required: ["property"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  OwnerPropertyListResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          properties: {
+            type: "array",
+            items: { $ref: "#/components/schemas/OwnerPropertySummary" },
+          },
+        },
+        required: ["properties"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
   ReadinessResponse: {
     type: "object",
     properties: {

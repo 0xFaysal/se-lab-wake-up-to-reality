@@ -55,6 +55,17 @@ Generate each secret independently; do not reuse output between variables:
 node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
 ```
 
+Property exact addresses and access instructions use AES-256-GCM. Generate the
+required 32-byte encryption key separately and store it as
+`DATA_ENCRYPTION_KEY`:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Changing or losing this key makes existing protected Property data impossible
+to decrypt. Keep it in the production secret manager and back it up securely.
+
 Email verification uses Gmail SMTP through Nodemailer. Configure `EMAIL_HOST`,
 `EMAIL_PORT`, `EMAIL_USERNAME`, and `EMAIL_PASSWORD`. For Gmail, use a dedicated
 Google App Password; the account must have 2-Step Verification enabled. Do not
@@ -109,6 +120,25 @@ The project schema uses `MOTORCYCLE`, `SEDAN`, `SUV`, and `MICROBUS`, with
 optional dimensions in centimeters. Registration numbers are globally unique
 after case, whitespace, and dash normalization. The first active vehicle is the
 default; deleting a default promotes the newest remaining active vehicle.
+
+## Parking Owner property endpoints
+
+All Property endpoints require an authenticated, fully verified
+`PARKING_OWNER`:
+
+- `POST /api/v1/owner/properties`
+- `GET /api/v1/owner/properties`
+- `GET /api/v1/owner/properties/:propertyId`
+- `PATCH /api/v1/owner/properties/:propertyId`
+- `DELETE /api/v1/owner/properties/:propertyId`
+
+New properties start as `PENDING` and `INACTIVE`. Exact addresses and access
+instructions are encrypted at rest. List responses use a summary DTO without
+private fields; owner detail responses decrypt them. Critical location edits
+invalidate a previous verification, while owners cannot submit verification,
+review, ownership, or operational fields. All reads and writes are owner-scoped,
+soft-deleted properties are hidden, and existing Spot or Guard dependencies can
+block deletion.
 
 Authentication uses `httpOnly` cookies. Browser clients must send requests with
 `credentials: "include"`.

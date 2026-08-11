@@ -25,6 +25,7 @@ const schema = z
     JWT_REFRESH_SECRET: z.string().min(32),
     VERIFICATION_CODE_SECRET: z.string().min(32),
     AUTH_METADATA_HASH_SECRET: z.string().min(32),
+    DATA_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
     JWT_ISSUER: z.string().min(1).default("parkease-api"),
     JWT_AUDIENCE: z.string().min(1).default("parkease-client"),
     JWT_ACCESS_EXPIRES_MINUTES: z.coerce.number().int().positive().default(15),
@@ -72,12 +73,13 @@ const schema = z
       value.JWT_REFRESH_SECRET,
       value.VERIFICATION_CODE_SECRET,
       value.AUTH_METADATA_HASH_SECRET,
+      ...(value.DATA_ENCRYPTION_KEY ? [value.DATA_ENCRYPTION_KEY] : []),
     ];
     if (new Set(securitySecrets).size !== securitySecrets.length) {
       context.addIssue({
         code: "custom",
         path: ["VERIFICATION_CODE_SECRET"],
-        message: "Authentication secrets must all be different",
+        message: "Security secrets must all be different",
       });
     }
 
@@ -136,6 +138,14 @@ const schema = z
     }
 
     if (value.NODE_ENV === "production") {
+      if (!value.DATA_ENCRYPTION_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["DATA_ENCRYPTION_KEY"],
+          message: "A 32-byte data encryption key is required in production",
+        });
+      }
+
       emailConfiguration.forEach((entry, index) => {
         if (entry === undefined) {
           context.addIssue({

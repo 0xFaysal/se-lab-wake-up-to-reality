@@ -15,6 +15,7 @@ import { healthRouter } from "./modules/health/health.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
 import { vehicleRouter } from "./modules/vehicles/vehicle.routes.js";
+import { propertyRouter } from "./modules/properties/property.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -130,6 +131,7 @@ app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/vehicles", vehicleRouter);
+app.use("/api/v1/owner/properties", propertyRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
