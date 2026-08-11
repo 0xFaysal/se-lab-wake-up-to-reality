@@ -323,14 +323,11 @@ integration("parking owner property management integration", () => {
       assert.equal(body.error.code, expectedCode);
     }
 
-    const phoneUnverifiedOwner = await request(
-      "/api/v1/owner/properties",
-      {
-        method: "POST",
-        cookie: cookies.get("phone-unverified-owner"),
-        body: payload,
-      },
-    );
+    const phoneUnverifiedOwner = await request("/api/v1/owner/properties", {
+      method: "POST",
+      cookie: cookies.get("phone-unverified-owner"),
+      body: payload,
+    });
     assert.equal(phoneUnverifiedOwner.status, 201);
   });
 

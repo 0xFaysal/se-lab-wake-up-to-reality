@@ -112,13 +112,10 @@ integration("authentication integration", () => {
   });
 
   it("returns a safe client error for malformed JSON", async () => {
-    const response = await request(
-      "/api/v1/auth/email-verification/confirm",
-      {
-        method: "POST",
-        body: '{"code":"959355\n"}',
-      },
-    );
+    const response = await request("/api/v1/auth/email-verification/confirm", {
+      method: "POST",
+      body: '{"code":"959355\n"}',
+    });
 
     assert.equal(response.status, 400);
     const body = (await response.json()) as {
