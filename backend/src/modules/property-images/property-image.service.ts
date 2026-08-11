@@ -126,7 +126,11 @@ export async function uploadPropertyImages(
   } catch (error) {
     await cleanupStoredImages(storage, uploaded);
     if (error instanceof AppError) throw error;
-    throw propertyImageErrors.uploadFailed();
+    logger.error(
+      { error, propertyId },
+      "Failed to persist uploaded Property images",
+    );
+    throw propertyImageErrors.persistenceFailed();
   }
 }
 

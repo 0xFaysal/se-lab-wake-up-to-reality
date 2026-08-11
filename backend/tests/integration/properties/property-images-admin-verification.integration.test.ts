@@ -72,7 +72,7 @@ integration("Property images and Admin verification integration", () => {
         passwordHash,
         status: generated.UserStatus.ACTIVE,
         emailVerifiedAt: verifiedAt,
-        phoneVerifiedAt: verifiedAt,
+        phoneVerifiedAt: key === "owner-a" ? null : verifiedAt,
         roles: { create: { role: generated.UserRoleType[role] } },
       },
     });
@@ -311,7 +311,9 @@ integration("Property images and Admin verification integration", () => {
       },
     );
     duplicateStorageForPropertyId = undefined;
-    assert.equal(response.status, 502);
+    assert.equal(response.status, 500);
+    const body = (await response.json()) as { error: { code: string } };
+    assert.equal(body.error.code, "PROPERTY_IMAGE_PERSISTENCE_FAILED");
     assert.equal(
       await prisma.propertyImage.count({
         where: { propertyId: cleanupPropertyId },
@@ -524,7 +526,7 @@ integration("Property images and Admin verification integration", () => {
     assert.equal(property.rejectionReason, null);
   });
 
-  it("approves a ready Property with an image and rejects repeated approval", async () => {
+  it("approves an email-verified owner's Property without phone verification", async () => {
     const approved = await request(
       `/api/v1/admin/properties/${ownerPropertyId}/verification`,
       {

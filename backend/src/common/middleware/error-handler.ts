@@ -1,18 +1,14 @@
 import type { ErrorRequestHandler } from "express";
-import { AppError } from "../errors/app-error.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
+import {
+  isMalformedJsonError,
+  normalizeRequestError,
+} from "../errors/normalize-request-error.js";
 
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
-  const appError =
-    error instanceof AppError
-      ? error
-      : new AppError({
-          statusCode: 500,
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred",
-          isOperational: false,
-        });
+  const appError = normalizeRequestError(error);
+  const logError = isMalformedJsonError(error) ? appError : error;
 
   const hideInternalError =
     env.NODE_ENV === "production" && !appError.isOperational;
@@ -21,8 +17,8 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     method: req.method,
     path: req.originalUrl,
     statusCode: appError.statusCode,
-    code: appError.code,
-    error,
+    errorCode: appError.code,
+    error: logError,
   };
 
   appError.statusCode >= 500

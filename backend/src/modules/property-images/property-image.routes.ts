@@ -64,6 +64,8 @@ export const propertyImageRouter = Router();
  *         description: An image exceeds 5 MB.
  *       415:
  *         description: A declared or detected image type is unsupported.
+ *       500:
+ *         description: Images were uploaded but could not be persisted; uploaded assets were cleaned up.
  *       502:
  *         description: External image storage failed.
  *   get:

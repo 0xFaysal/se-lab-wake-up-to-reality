@@ -291,7 +291,7 @@ integration("parking owner property management integration", () => {
     );
   });
 
-  it("blocks non-owner roles and every incomplete account state", async () => {
+  it("requires the owner role, email verification, and completed password setup", async () => {
     const payload = JSON.stringify({
       name: "Forbidden Property",
       publicArea: "Banani, Dhaka",
@@ -311,7 +311,6 @@ integration("parking owner property management integration", () => {
 
     for (const [key, expectedCode] of [
       ["unverified-owner", "AUTH_EMAIL_VERIFICATION_REQUIRED"],
-      ["phone-unverified-owner", "AUTH_PHONE_VERIFICATION_REQUIRED"],
       ["must-change-owner", "AUTH_INITIAL_PASSWORD_CHANGE_REQUIRED"],
     ] as const) {
       const response = await request("/api/v1/owner/properties", {
@@ -323,6 +322,16 @@ integration("parking owner property management integration", () => {
       const body = (await response.json()) as { error: { code: string } };
       assert.equal(body.error.code, expectedCode);
     }
+
+    const phoneUnverifiedOwner = await request(
+      "/api/v1/owner/properties",
+      {
+        method: "POST",
+        cookie: cookies.get("phone-unverified-owner"),
+        body: payload,
+      },
+    );
+    assert.equal(phoneUnverifiedOwner.status, 201);
   });
 
   it("keeps verification for minor edits and re-encrypts instructions", async () => {

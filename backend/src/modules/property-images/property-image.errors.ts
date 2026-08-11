@@ -37,6 +37,12 @@ export const propertyImageErrors = {
       code: "PROPERTY_IMAGE_UPLOAD_FAILED",
       message: "Property image storage is temporarily unavailable",
     }),
+  persistenceFailed: () =>
+    new AppError({
+      statusCode: 500,
+      code: "PROPERTY_IMAGE_PERSISTENCE_FAILED",
+      message: "Property images could not be saved",
+    }),
   deleteFailed: () =>
     new AppError({
       statusCode: 502,

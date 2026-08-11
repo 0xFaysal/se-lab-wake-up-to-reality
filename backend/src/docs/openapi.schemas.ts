@@ -47,7 +47,11 @@ export const openApiSchemas = {
       status: { $ref: "#/components/schemas/UserStatus" },
       mustChangePassword: { type: "boolean" },
       emailVerified: { type: "boolean" },
-      phoneVerified: { type: "boolean" },
+      phoneVerified: {
+        type: "boolean",
+        description:
+          "Whether the optional phone verification has been completed.",
+      },
     },
     required: [
       "id",
@@ -72,12 +76,7 @@ export const openApiSchemas = {
           nextAction: {
             type: "string",
             nullable: true,
-            enum: [
-              "CHANGE_INITIAL_PASSWORD",
-              "VERIFY_EMAIL",
-              "VERIFY_PHONE",
-              null,
-            ],
+            enum: ["CHANGE_INITIAL_PASSWORD", "VERIFY_EMAIL", null],
           },
         },
         required: ["user", "nextAction"],

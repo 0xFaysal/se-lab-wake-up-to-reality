@@ -38,11 +38,11 @@ Content-Type: application/json
   "code": "{{ownerAEmailOtp.response.body.$.data.developmentCode}}"
 }
 
-### Request Owner A phone OTP
+### Optional: Request Owner A phone OTP
 # @name ownerAPhoneOtp
 POST {{baseUrl}}/auth/phone-verification/request
 
-### Confirm Owner A phone OTP
+### Optional: Confirm Owner A phone OTP
 POST {{baseUrl}}/auth/phone-verification/confirm
 Content-Type: application/json
 
@@ -153,11 +153,11 @@ Content-Type: application/json
   "code": "{{driverEmailOtp.response.body.$.data.developmentCode}}"
 }
 
-### Request Driver phone OTP
+### Optional: Request Driver phone OTP
 # @name driverPhoneOtp
 POST {{baseUrl}}/auth/phone-verification/request
 
-### Confirm Driver phone OTP
+### Optional: Confirm Driver phone OTP
 POST {{baseUrl}}/auth/phone-verification/confirm
 Content-Type: application/json
 
@@ -204,11 +204,11 @@ Content-Type: application/json
   "code": "{{ownerBEmailOtp.response.body.$.data.developmentCode}}"
 }
 
-### Request Owner B phone OTP
+### Optional: Request Owner B phone OTP
 # @name ownerBPhoneOtp
 POST {{baseUrl}}/auth/phone-verification/request
 
-### Confirm Owner B phone OTP
+### Optional: Confirm Owner B phone OTP
 POST {{baseUrl}}/auth/phone-verification/confirm
 Content-Type: application/json
 

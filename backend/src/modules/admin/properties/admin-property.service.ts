@@ -89,7 +89,6 @@ function propertyMeetsApprovalRequirements(
     property.owner.status === UserStatus.ACTIVE &&
     property.owner.deletedAt === null &&
     property.owner.emailVerifiedAt !== null &&
-    property.owner.phoneVerifiedAt !== null &&
     !property.owner.mustChangePassword &&
     property.owner.roles.some(
       (role) => role.role === UserRoleType.PARKING_OWNER,

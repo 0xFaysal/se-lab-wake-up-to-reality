@@ -31,8 +31,10 @@ export async function lockPropertyForMutation(
   propertyId: string,
   tx: Prisma.TransactionClient,
 ): Promise<void> {
-  await tx.$queryRaw`
-    SELECT pg_advisory_xact_lock(hashtextextended(${`property:${propertyId}`}, 0))
+  await tx.$queryRaw<Array<{ lockResult: string }>>`
+    SELECT pg_advisory_xact_lock(
+      hashtextextended(${`property:${propertyId}`}, 0)
+    )::text AS "lockResult"
   `;
 }
 
