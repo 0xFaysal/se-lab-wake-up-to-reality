@@ -12,6 +12,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
 
   const hideInternalError =
     env.NODE_ENV === "production" && !appError.isOperational;
+
   const payload = {
     requestId: req.requestId,
     method: req.method,

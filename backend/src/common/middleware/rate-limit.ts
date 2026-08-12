@@ -61,6 +61,7 @@ function createRateLimit(options: RateLimitOptions): RequestHandler {
           ...identities.map((identity) => String(identity.limit)),
         ],
       })) as unknown as [number, number, number, number];
+
       const blocked = Number(reply[0]) === 1;
       const limitingLimit = Number(reply[1]);
       const remaining = Number(reply[2]);
@@ -113,34 +114,42 @@ const identifierAndIpLimits = (req: Request) => {
   ];
 };
 
+// Rate limiters for different endpoints
+// Each rate limiter can have different windowMs, limit, and identities
+
+// This rate limiter is for the registration endpoint, allowing 5 requests per hour per IP address
 export const registerRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   limit: 5,
   keyPrefix: "register",
 });
 
+// This rate limiter is for the login endpoint, allowing 5 requests per 15 minutes per identifier and per 30 requests per 15 minutes per IP address
 export const loginRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 5,
   keyPrefix: "login",
   identities: identifierAndIpLimits,
 });
 
+// This rate limiter is for the refresh token endpoint, allowing 30 requests per 15 minutes per IP address
 export const refreshRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 30,
   keyPrefix: "refresh",
 });
 
+// This rate limiter is for sensitive account actions, allowing 5 requests per 15 minutes per account and per 30 requests per 15 minutes per IP address
 export const sensitiveAccountRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 5,
   keyPrefix: "sensitive-account",
   identities: accountAndIpLimits,
 });
 
+// This rate limiter is for password reset requests, allowing 3 requests per hour per identifier and per 20 requests per hour per IP address
 export const passwordResetRateLimit = createRateLimit({
-  windowMs: 60 * 60 * 1000,
+  windowMs: 60 * 60 * 1000, // 1 hour
   limit: 3,
   keyPrefix: "password-reset",
   identities: (req) =>
@@ -150,8 +159,9 @@ export const passwordResetRateLimit = createRateLimit({
     })),
 });
 
+// This rate limiter is for password reset confirmations, allowing 5 requests per hour per identifier and per 30 requests per hour per IP address
 export const verificationRequestRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 6,
   keyPrefix: "verification-request",
   identities: (req) =>
@@ -161,8 +171,9 @@ export const verificationRequestRateLimit = createRateLimit({
     })),
 });
 
+// This rate limiter is for verification confirmations, allowing 10 requests per 15 minutes per account and per 50 requests per 15 minutes per IP address
 export const verificationConfirmRateLimit = createRateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 10,
   keyPrefix: "verification-confirm",
   identities: (req) =>
@@ -170,4 +181,21 @@ export const verificationConfirmRateLimit = createRateLimit({
       ...identity,
       limit: index === 0 ? 10 : 50,
     })),
+});
+
+export const guardInvitationRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  keyPrefix: "guard-invitation",
+  identities: (req) => {
+    const identifier =
+      typeof req.body?.identifier === "string"
+        ? req.body.identifier.trim().toLowerCase()
+        : "invalid";
+    return [
+      { value: `account:${req.auth?.userId ?? "anonymous"}`, limit: 10 },
+      { value: `identifier:${identifier}`, limit: 5 },
+      { value: `ip:${req.ip ?? "unknown"}`, limit: 30 },
+    ];
+  },
 });

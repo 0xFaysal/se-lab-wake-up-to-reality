@@ -114,7 +114,8 @@ the exact number of trusted reverse proxies in front of Express.
 
 ## Vehicle endpoints
 
-All Vehicle endpoints require an authenticated, fully verified `DRIVER`:
+All Vehicle endpoints require an authenticated, ready `DRIVER`. Email
+verification is mandatory and phone verification is optional:
 
 - `POST /api/v1/vehicles`
 - `GET /api/v1/vehicles`
@@ -130,8 +131,8 @@ default; deleting a default promotes the newest remaining active vehicle.
 
 ## Parking Owner property endpoints
 
-All Property endpoints require an authenticated, fully verified
-`PARKING_OWNER`:
+All Property endpoints require an authenticated, ready `PARKING_OWNER`.
+Email verification is mandatory; phone verification is optional:
 
 - `POST /api/v1/owner/properties`
 - `GET /api/v1/owner/properties`
@@ -178,13 +179,40 @@ and transitions to `REJECTED/INACTIVE`. Property-level locks and conditional
 updates prevent concurrent Admin decisions or Owner edits from overwriting one
 another.
 
+## Guard assignment endpoints
+
+Owner routes require a ready `PARKING_OWNER` and expose only assignments for
+Properties owned by that user:
+
+- `POST /api/v1/owner/properties/:propertyId/guard-invitations`
+- `GET /api/v1/owner/guard-assignments`
+- `GET /api/v1/owner/guard-assignments/:assignmentId`
+- `PATCH /api/v1/owner/guard-assignments/:assignmentId`
+- `DELETE /api/v1/owner/guard-assignments/:assignmentId`
+
+Guard routes expose only assignments addressed to the authenticated Guard:
+
+- `GET /api/v1/guard/assignments`
+- `GET /api/v1/guard/assignments/:assignmentId`
+- `POST /api/v1/guard/assignments/:assignmentId/accept`
+- `POST /api/v1/guard/assignments/:assignmentId/reject`
+
+Only verified, active Properties can invite an existing global Guard identity.
+Owner DTOs mask Guard email and phone values. An accepted shift change returns
+the assignment to `PENDING_ACCEPTANCE`; suspend and resume affect only that
+Property assignment and never the global Guard account. Conditional updates and
+the database partial unique index protect state transitions and duplicate
+invitations under concurrency. Cross-Property shift collision detection is
+deferred until date and weekday scheduling is introduced.
+
 Authentication uses `httpOnly` cookies. Browser clients must send requests with
 `credentials: "include"`.
 
 Registration creates a `PENDING` account and an authenticated session, so the
 user does not log in again. The response `nextAction` moves through
-`VERIFY_EMAIL`, then `VERIFY_PHONE`, then `null`. Operational routes can use the
-account-readiness middleware to require an active, fully verified account.
+`VERIFY_EMAIL`, then `null`. Operational routes require an active account with
+mandatory email verification; phone verification remains available as an
+optional account-strengthening step.
 
 Email verification, password reset, and Guard invitations are delivered through
 SMTP. Phone verification is delivered through Twilio. Only HMACs of OTP codes

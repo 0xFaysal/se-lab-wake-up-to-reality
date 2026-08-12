@@ -4,6 +4,11 @@ import { UserStatus } from "../../../generated/prisma/client.js";
 import { findAccessSession } from "../../modules/auth/auth.repository.js";
 import { verifyAccessToken } from "../auth/jwt.js";
 
+/* This middleware authenticates incoming requests by verifying the access token provided in the request's cookies.
+It checks for the presence of the access token, verifies its validity, and retrieves the associated user session from the database.
+If the token is valid and the session is active, it attaches the user's authentication information to the request object for further processing.
+If any of these checks fail, it responds with an appropriate error indicating that authentication is required or that the token is invalid. */
+
 export const authenticate: RequestHandler = async (req, _res, next) => {
   try {
     const token = req.cookies?.access_token;

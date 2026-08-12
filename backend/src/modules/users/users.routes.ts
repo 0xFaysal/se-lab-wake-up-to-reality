@@ -35,7 +35,7 @@ usersRouter.use(authenticate);
  *     operationId: createGuard
  *     description: |
  *       Creates a controlled Guard account and emails a single-use password
- *       setup link. Only a fully verified Parking Owner or Admin can use this
+ *       setup link. Only a ready Parking Owner or Admin can use this
  *       endpoint. A plaintext temporary password is never created or returned.
  *     security:
  *       - accessCookie: []

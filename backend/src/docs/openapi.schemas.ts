@@ -570,6 +570,227 @@ export const openApiSchemas = {
     },
     required: ["imageIds"],
   },
+  GuardAssignmentStatus: {
+    type: "string",
+    enum: ["PENDING_ACCEPTANCE", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED"],
+  },
+  CreateGuardInvitationRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      identifier: {
+        type: "string",
+        minLength: 3,
+        maxLength: 254,
+        description: "Known Guard email address or Bangladesh mobile number.",
+      },
+      shiftStart: {
+        type: "string",
+        pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+        example: "08:00",
+      },
+      shiftEnd: {
+        type: "string",
+        pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+        example: "20:00",
+      },
+    },
+    required: ["identifier", "shiftStart", "shiftEnd"],
+  },
+  UpdateGuardAssignmentRequest: {
+    oneOf: [
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          action: { type: "string", enum: ["UPDATE_SHIFT"] },
+          shiftStart: { type: "string", example: "09:00" },
+          shiftEnd: { type: "string", example: "18:00" },
+        },
+        required: ["action", "shiftStart", "shiftEnd"],
+      },
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: { action: { type: "string", enum: ["SUSPEND"] } },
+        required: ["action"],
+      },
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: { action: { type: "string", enum: ["RESUME"] } },
+        required: ["action"],
+      },
+    ],
+    discriminator: { propertyName: "action" },
+  },
+  RejectGuardAssignmentRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {},
+  },
+  GuardAssignmentTimeline: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      status: { $ref: "#/components/schemas/GuardAssignmentStatus" },
+      shiftStart: { type: "string", nullable: true, example: "08:00" },
+      shiftEnd: { type: "string", nullable: true, example: "20:00" },
+      invitedAt: { type: "string", format: "date-time" },
+      acceptedAt: { type: "string", format: "date-time", nullable: true },
+      assignedAt: { type: "string", format: "date-time", nullable: true },
+      endedAt: { type: "string", format: "date-time", nullable: true },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+    required: [
+      "id",
+      "status",
+      "shiftStart",
+      "shiftEnd",
+      "invitedAt",
+      "acceptedAt",
+      "assignedAt",
+      "endedAt",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
+  OwnerGuardAssignment: {
+    allOf: [
+      { $ref: "#/components/schemas/GuardAssignmentTimeline" },
+      {
+        type: "object",
+        properties: {
+          property: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              name: { type: "string" },
+            },
+            required: ["id", "name"],
+          },
+          guard: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              fullName: { type: "string" },
+              emailMasked: { type: "string", example: "g***@example.com" },
+              phoneMasked: { type: "string", example: "+88017*****678" },
+            },
+            required: ["id", "fullName", "emailMasked", "phoneMasked"],
+          },
+        },
+        required: ["property", "guard"],
+      },
+    ],
+  },
+  GuardAssignment: {
+    allOf: [
+      { $ref: "#/components/schemas/GuardAssignmentTimeline" },
+      {
+        type: "object",
+        properties: {
+          property: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              name: { type: "string" },
+              publicArea: { type: "string" },
+            },
+            required: ["id", "name", "publicArea"],
+          },
+          owner: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              fullName: { type: "string" },
+            },
+            required: ["id", "fullName"],
+          },
+        },
+        required: ["property", "owner"],
+      },
+    ],
+  },
+  AssignmentPagination: {
+    type: "object",
+    properties: {
+      page: { type: "integer", minimum: 1 },
+      limit: { type: "integer", minimum: 1, maximum: 100 },
+      total: { type: "integer", minimum: 0 },
+      totalPages: { type: "integer", minimum: 0 },
+    },
+    required: ["page", "limit", "total", "totalPages"],
+  },
+  OwnerGuardAssignmentResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          assignment: { $ref: "#/components/schemas/OwnerGuardAssignment" },
+        },
+        required: ["assignment"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  GuardAssignmentResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          assignment: { $ref: "#/components/schemas/GuardAssignment" },
+        },
+        required: ["assignment"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  OwnerGuardAssignmentListResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          assignments: {
+            type: "array",
+            items: { $ref: "#/components/schemas/OwnerGuardAssignment" },
+          },
+          pagination: { $ref: "#/components/schemas/AssignmentPagination" },
+        },
+        required: ["assignments", "pagination"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  GuardAssignmentListResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          assignments: {
+            type: "array",
+            items: { $ref: "#/components/schemas/GuardAssignment" },
+          },
+          pagination: { $ref: "#/components/schemas/AssignmentPagination" },
+        },
+        required: ["assignments", "pagination"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
   AdminPropertyOwner: {
     type: "object",
     properties: {

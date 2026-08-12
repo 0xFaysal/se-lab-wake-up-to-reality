@@ -17,12 +17,15 @@ import { usersRouter } from "./modules/users/users.routes.js";
 import { vehicleRouter } from "./modules/vehicles/vehicle.routes.js";
 import { propertyRouter } from "./modules/properties/property.routes.js";
 import { adminPropertyRouter } from "./modules/admin/properties/admin-property.routes.js";
+import { ownerGuardAssignmentRouter } from "./modules/guard-assignments/owner-guard-assignment.routes.js";
+import { guardAssignmentRouter } from "./modules/guard-assignments/guard-assignment.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
 
-app.disable("x-powered-by");
+app.disable("x-powered-by"); // Disable the X-Powered-By header for security reasons
 
+// Set up trust proxy if the app is behind a reverse proxy (e.g., Nginx, Heroku, etc.)
 if (env.TRUST_PROXY_HOPS > 0) {
   app.set("trust proxy", env.TRUST_PROXY_HOPS);
 }
@@ -30,8 +33,9 @@ if (env.TRUST_PROXY_HOPS > 0) {
 const getClientIp = (req: express.Request) =>
   req.ip || req.socket.remoteAddress || "unknown";
 
-app.use(requestId);
+app.use(requestId); // Assign a unique request ID to each incoming request for better traceability
 
+// Set up Pino HTTP logger middleware for logging incoming requests and responses
 app.use(
   pinoHttp({
     logger,
@@ -76,17 +80,17 @@ if (env.ENABLE_API_DOCS) {
   );
 }
 
-app.use(helmet());
+app.use(helmet()); // Set security-related HTTP headers using Helmet
 
-app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+app.use(cors({ origin: env.CORS_ORIGIN, credentials: true })); // Enable Cross-Origin Resource Sharing (CORS) for the specified origin with credentials support
 
-app.use(cookieParser());
+app.use(cookieParser()); // Parse cookies from incoming requests and populate req.cookies
 
-app.use(express.json({ limit: "32kb" }));
+app.use(express.json({ limit: "32kb" })); // Parse incoming JSON requests with a size limit of 32kb and populate req.body
 
-app.use(express.urlencoded({ extended: false, limit: "32kb" }));
+app.use(express.urlencoded({ extended: false, limit: "32kb" })); // Parse incoming URL-encoded requests with a size limit of 32kb and populate req.body
 
-app.use(csrfProtection);
+app.use(csrfProtection); // Apply CSRF protection middleware to prevent Cross-Site Request Forgery attacks
 
 /**
  * @openapi
@@ -133,6 +137,8 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/vehicles", vehicleRouter);
 app.use("/api/v1/owner/properties", propertyRouter);
+app.use("/api/v1/owner", ownerGuardAssignmentRouter);
+app.use("/api/v1/guard", guardAssignmentRouter);
 app.use("/api/v1/admin/properties", adminPropertyRouter);
 
 app.use(notFoundHandler);

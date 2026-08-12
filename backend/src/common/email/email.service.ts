@@ -54,6 +54,7 @@ function getEmailTransporter(): Transporter {
   }
 
   const secure = configuration.port === 465;
+
   emailTransporter = nodemailer.createTransport({
     host: configuration.host,
     port: configuration.port,
