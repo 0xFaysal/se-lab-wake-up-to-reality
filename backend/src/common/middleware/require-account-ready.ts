@@ -42,16 +42,5 @@ export const requireAccountReady: RequestHandler = (req, _res, next) => {
     return;
   }
 
-  if (!req.auth.phoneVerified) {
-    next(
-      new AppError({
-        statusCode: 403,
-        code: "AUTH_PHONE_VERIFICATION_REQUIRED",
-        message: "You must verify your phone before continuing",
-      }),
-    );
-    return;
-  }
-
   next();
 };

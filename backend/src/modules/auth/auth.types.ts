@@ -48,8 +48,7 @@ export type AuthUser = {
 
 export type AuthResult = {
   user: AuthUser;
-  nextAction:
-    "CHANGE_INITIAL_PASSWORD" | "VERIFY_EMAIL" | "VERIFY_PHONE" | null;
+  nextAction: "CHANGE_INITIAL_PASSWORD" | "VERIFY_EMAIL" | null;
   accessToken: string;
   refreshToken: string;
   refreshExpiresAt: Date;

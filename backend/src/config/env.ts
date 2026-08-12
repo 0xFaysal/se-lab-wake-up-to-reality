@@ -1,6 +1,11 @@
 import "dotenv/config";
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const schema = z
   .object({
     NODE_ENV: z
@@ -25,6 +30,10 @@ const schema = z
     JWT_REFRESH_SECRET: z.string().min(32),
     VERIFICATION_CODE_SECRET: z.string().min(32),
     AUTH_METADATA_HASH_SECRET: z.string().min(32),
+    DATA_ENCRYPTION_KEY: z
+      .string()
+      .regex(/^[0-9a-fA-F]{64}$/)
+      .optional(),
     JWT_ISSUER: z.string().min(1).default("parkease-api"),
     JWT_AUDIENCE: z.string().min(1).default("parkease-client"),
     JWT_ACCESS_EXPIRES_MINUTES: z.coerce.number().int().positive().default(15),
@@ -44,6 +53,9 @@ const schema = z
     EMAIL_PORT: z.coerce.number().int().positive().max(65535).optional(),
     EMAIL_USERNAME: z.email().optional(),
     EMAIL_PASSWORD: z.string().min(1).optional(),
+    CLOUDINARY_CLOUD_NAME: optionalNonEmptyString,
+    CLOUDINARY_API_KEY: optionalNonEmptyString,
+    CLOUDINARY_API_SECRET: optionalNonEmptyString,
     TWILIO_ACCOUNT_SID: z
       .string()
       .regex(/^AC[0-9a-fA-F]{32}$/)
@@ -72,12 +84,13 @@ const schema = z
       value.JWT_REFRESH_SECRET,
       value.VERIFICATION_CODE_SECRET,
       value.AUTH_METADATA_HASH_SECRET,
+      ...(value.DATA_ENCRYPTION_KEY ? [value.DATA_ENCRYPTION_KEY] : []),
     ];
     if (new Set(securitySecrets).size !== securitySecrets.length) {
       context.addIssue({
         code: "custom",
         path: ["VERIFICATION_CODE_SECRET"],
-        message: "Authentication secrets must all be different",
+        message: "Security secrets must all be different",
       });
     }
 
@@ -98,6 +111,29 @@ const schema = z
               ]!,
             ],
             message: "Complete SMTP configuration is required",
+          });
+        }
+      });
+    }
+
+    const cloudinaryConfiguration = [
+      value.CLOUDINARY_CLOUD_NAME,
+      value.CLOUDINARY_API_KEY,
+      value.CLOUDINARY_API_SECRET,
+    ];
+    if (cloudinaryConfiguration.some((entry) => entry !== undefined)) {
+      cloudinaryConfiguration.forEach((entry, index) => {
+        if (entry === undefined) {
+          context.addIssue({
+            code: "custom",
+            path: [
+              [
+                "CLOUDINARY_CLOUD_NAME",
+                "CLOUDINARY_API_KEY",
+                "CLOUDINARY_API_SECRET",
+              ][index]!,
+            ],
+            message: "Complete Cloudinary configuration is required",
           });
         }
       });
@@ -136,6 +172,14 @@ const schema = z
     }
 
     if (value.NODE_ENV === "production") {
+      if (!value.DATA_ENCRYPTION_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["DATA_ENCRYPTION_KEY"],
+          message: "A 32-byte data encryption key is required in production",
+        });
+      }
+
       emailConfiguration.forEach((entry, index) => {
         if (entry === undefined) {
           context.addIssue({
@@ -146,6 +190,22 @@ const schema = z
               ]!,
             ],
             message: "SMTP configuration is required in production",
+          });
+        }
+      });
+
+      cloudinaryConfiguration.forEach((entry, index) => {
+        if (entry === undefined) {
+          context.addIssue({
+            code: "custom",
+            path: [
+              [
+                "CLOUDINARY_CLOUD_NAME",
+                "CLOUDINARY_API_KEY",
+                "CLOUDINARY_API_SECRET",
+              ][index]!,
+            ],
+            message: "Cloudinary configuration is required in production",
           });
         }
       });

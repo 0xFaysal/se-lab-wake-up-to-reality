@@ -1,0 +1,43 @@
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+
+### Login seeded Admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{$dotenv SEED_ADMIN_EMAIL}}",
+  "password": "{{$dotenv SEED_ADMIN_PASSWORD}}"
+}
+
+### List pending Properties
+# @name pendingProperties
+GET {{baseUrl}}/admin/properties/pending?page=1&limit=20
+
+### Read the first pending Property with decrypted review data
+GET {{baseUrl}}/admin/properties/{{pendingProperties.response.body.$.data.properties[0].id}}
+
+### Approve the first pending Property (requires at least one image)
+PATCH {{baseUrl}}/admin/properties/{{pendingProperties.response.body.$.data.properties[0].id}}/verification
+Content-Type: application/json
+
+{
+  "decision": "APPROVE"
+}
+
+### Reject a pending Property (refresh the pending request first)
+PATCH {{baseUrl}}/admin/properties/{{pendingProperties.response.body.$.data.properties[0].id}}/verification
+Content-Type: application/json
+
+{
+  "decision": "REJECT",
+  "reason": "Property entrance image and exact address do not match."
+}
+
+### Reject without a reason should return 400
+PATCH {{baseUrl}}/admin/properties/{{pendingProperties.response.body.$.data.properties[0].id}}/verification
+Content-Type: application/json
+
+{
+  "decision": "REJECT"
+}

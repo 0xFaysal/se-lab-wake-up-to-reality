@@ -111,6 +111,22 @@ integration("authentication integration", () => {
     baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
+  it("returns a safe client error for malformed JSON", async () => {
+    const response = await request("/api/v1/auth/email-verification/confirm", {
+      method: "POST",
+      body: '{"code":"959355\n"}',
+    });
+
+    assert.equal(response.status, 400);
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
+    assert.deepEqual(body.error, {
+      code: "INVALID_JSON",
+      message: "Request body contains invalid JSON",
+    });
+  });
+
   after(async () => {
     for (const cleanupEmail of [guardEmail, email]) {
       const user = await prisma.user.findUnique({
@@ -184,7 +200,7 @@ integration("authentication integration", () => {
     assert.equal(response.status, 403);
   });
 
-  it("completes email and phone verification in order", async () => {
+  it("activates the account after email verification while phone remains optional", async () => {
     const emailRequest = await request(
       "/api/v1/auth/email-verification/request",
       { method: "POST", cookies: [ownerAccessCookie] },
@@ -204,6 +220,28 @@ integration("authentication integration", () => {
       },
     );
     assert.equal(emailConfirmation.status, 200);
+
+    const readyUser = await request("/api/v1/auth/me", {
+      cookies: [ownerAccessCookie],
+    });
+    assert.equal(readyUser.status, 200);
+    const readyUserBody = (await readyUser.json()) as {
+      data: {
+        user: {
+          status: string;
+          emailVerified: boolean;
+          phoneVerified: boolean;
+        };
+      };
+    };
+    assert.deepEqual(
+      {
+        status: readyUserBody.data.user.status,
+        emailVerified: readyUserBody.data.user.emailVerified,
+        phoneVerified: readyUserBody.data.user.phoneVerified,
+      },
+      { status: "ACTIVE", emailVerified: true, phoneVerified: false },
+    );
 
     const phoneRequest = await request(
       "/api/v1/auth/phone-verification/request",
@@ -285,9 +323,9 @@ integration("authentication integration", () => {
     });
     assert.equal(guardLogin.status, 200);
     const loginBody = (await guardLogin.json()) as {
-      data: { nextAction: string };
+      data: { nextAction: string | null };
     };
-    assert.equal(loginBody.data.nextAction, "VERIFY_PHONE");
+    assert.equal(loginBody.data.nextAction, null);
   });
 
   it("delivers and consumes a single-use password reset token", async () => {

@@ -150,11 +150,11 @@ Content-Type: application/json
   "code": "{{requestEmailVerification.response.body.$.data.developmentCode}}"
 }
 
-### Request phone verification (Twilio; development code requires EXPOSE_DEVELOPMENT_AUTH_CODES=true)
+### Optional: request phone verification (Twilio; development code requires EXPOSE_DEVELOPMENT_AUTH_CODES=true)
 # @name requestPhoneVerification
 POST {{baseUrl}}/auth/phone-verification/request
 
-### Confirm phone verification
+### Optional: confirm phone verification
 POST {{baseUrl}}/auth/phone-verification/confirm
 Content-Type: application/json
 
@@ -184,11 +184,11 @@ Content-Type: application/json
   "code": "{{requestOwnerEmailVerification.response.body.$.data.developmentCode}}"
 }
 
-### Request owner phone verification
+### Optional: request owner phone verification
 # @name requestOwnerPhoneVerification
 POST {{baseUrl}}/auth/phone-verification/request
 
-### Confirm owner phone verification
+### Optional: confirm owner phone verification
 POST {{baseUrl}}/auth/phone-verification/confirm
 Content-Type: application/json
 

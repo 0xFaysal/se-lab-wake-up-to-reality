@@ -8,6 +8,20 @@ type RequestParts = {
   query?: unknown;
 };
 
+export function formatValidationErrors(
+  error: z.ZodError,
+): Record<string, string[]> {
+  const details: Record<string, string[]> = {};
+
+  for (const issue of error.issues) {
+    const field =
+      issue.path.length > 0 ? issue.path.map(String).join(".") : "request";
+    (details[field] ??= []).push(issue.message);
+  }
+
+  return details;
+}
+
 export function validate(schema: z.ZodType<RequestParts>): RequestHandler {
   return (req, _res, next) => {
     const result = schema.safeParse({
@@ -22,7 +36,7 @@ export function validate(schema: z.ZodType<RequestParts>): RequestHandler {
           statusCode: 400,
           code: "VALIDATION_ERROR",
           message: "Request validation failed",
-          details: z.flattenError(result.error).fieldErrors,
+          details: formatValidationErrors(result.error),
         }),
       );
       return;

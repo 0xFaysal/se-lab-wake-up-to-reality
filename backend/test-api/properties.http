@@ -1,0 +1,246 @@
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+@password = PropertyPassword123!
+@ownerAEmail = property-owner-a-{{$timestamp}}@test.com
+@ownerAPhone = 013{{$randomInt 10000000 99999999}}
+@ownerBEmail = property-owner-b-{{$timestamp}}@test.com
+@ownerBPhone = 014{{$randomInt 10000000 99999999}}
+@driverEmail = property-driver-{{$timestamp}}@test.com
+@driverPhone = 015{{$randomInt 10000000 99999999}}
+@unverifiedOwnerEmail = property-unverified-{{$timestamp}}@test.com
+@unverifiedOwnerPhone = 016{{$randomInt 10000000 99999999}}
+
+# OTP response variables below require EXPOSE_DEVELOPMENT_AUTH_CODES=true.
+
+### Register Owner A
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Property Owner A",
+  "email": "{{ownerAEmail}}",
+  "phone": "{{ownerAPhone}}",
+  "password": "{{password}}",
+  "role": "PARKING_OWNER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Request Owner A email OTP
+# @name ownerAEmailOtp
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm Owner A email OTP
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{ownerAEmailOtp.response.body.$.data.developmentCode}}"
+}
+
+### Optional: Request Owner A phone OTP
+# @name ownerAPhoneOtp
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Optional: Confirm Owner A phone OTP
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{ownerAPhoneOtp.response.body.$.data.developmentCode}}"
+}
+
+### Create property - PENDING and INACTIVE
+# @name createProperty
+POST {{baseUrl}}/owner/properties
+Content-Type: application/json
+
+{
+  "name": "Gulshan Residential Parking",
+  "publicArea": "Gulshan 2, Dhaka",
+  "approximateAddress": "Near Gulshan 2 circle",
+  "exactAddress": "House 12, Road 45, Gulshan 2, Dhaka",
+  "latitude": 23.7949,
+  "longitude": 90.4143,
+  "entranceLatitude": 23.7947,
+  "entranceLongitude": 90.4146,
+  "accessInstructions": "Use the south gate and contact security"
+}
+
+### List own property summaries - no exactAddress/accessInstructions
+GET {{baseUrl}}/owner/properties
+
+### Get owner detail - private fields are decrypted
+GET {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+
+### Minor update
+PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+Content-Type: application/json
+
+{
+  "name": "Gulshan Secure Parking",
+  "accessInstructions": "Use Gate B and call the desk"
+}
+
+### Critical location update - verified properties return to PENDING
+PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+Content-Type: application/json
+
+{
+  "exactAddress": "House 18, Road 51, Gulshan 2, Dhaka",
+  "entranceLatitude": 23.7948,
+  "entranceLongitude": 90.4147
+}
+
+### Protected owner-controlled field - should return 400
+PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+Content-Type: application/json
+
+{
+  "verificationStatus": "VERIFIED"
+}
+
+### Register unverified Owner
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Unverified Property Owner",
+  "email": "{{unverifiedOwnerEmail}}",
+  "phone": "{{unverifiedOwnerPhone}}",
+  "password": "{{password}}",
+  "role": "PARKING_OWNER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Unverified Owner create - should return 403
+POST {{baseUrl}}/owner/properties
+Content-Type: application/json
+
+{
+  "name": "Blocked Property",
+  "publicArea": "Banani, Dhaka",
+  "approximateAddress": "Near Banani field",
+  "exactAddress": "Road 11, Banani, Dhaka",
+  "latitude": 23.7937,
+  "longitude": 90.4066
+}
+
+### Register Driver
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Property Driver",
+  "email": "{{driverEmail}}",
+  "phone": "{{driverPhone}}",
+  "password": "{{password}}",
+  "role": "DRIVER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Request Driver email OTP
+# @name driverEmailOtp
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm Driver email OTP
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{driverEmailOtp.response.body.$.data.developmentCode}}"
+}
+
+### Optional: Request Driver phone OTP
+# @name driverPhoneOtp
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Optional: Confirm Driver phone OTP
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{driverPhoneOtp.response.body.$.data.developmentCode}}"
+}
+
+### Ready Driver create - should return 403 AUTH_FORBIDDEN
+POST {{baseUrl}}/owner/properties
+Content-Type: application/json
+
+{
+  "name": "Driver Property",
+  "publicArea": "Dhanmondi, Dhaka",
+  "approximateAddress": "Near Dhanmondi lake",
+  "exactAddress": "Road 8, Dhanmondi, Dhaka",
+  "latitude": 23.7465,
+  "longitude": 90.3760
+}
+
+### Register Owner B
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Property Owner B",
+  "email": "{{ownerBEmail}}",
+  "phone": "{{ownerBPhone}}",
+  "password": "{{password}}",
+  "role": "PARKING_OWNER",
+  "acceptTerms": true,
+  "acceptPrivacyPolicy": true
+}
+
+### Request Owner B email OTP
+# @name ownerBEmailOtp
+POST {{baseUrl}}/auth/email-verification/request
+
+### Confirm Owner B email OTP
+POST {{baseUrl}}/auth/email-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{ownerBEmailOtp.response.body.$.data.developmentCode}}"
+}
+
+### Optional: Request Owner B phone OTP
+# @name ownerBPhoneOtp
+POST {{baseUrl}}/auth/phone-verification/request
+
+### Optional: Confirm Owner B phone OTP
+POST {{baseUrl}}/auth/phone-verification/confirm
+Content-Type: application/json
+
+{
+  "code": "{{ownerBPhoneOtp.response.body.$.data.developmentCode}}"
+}
+
+### Cross-owner GET - should return 404
+GET {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+
+### Cross-owner PATCH - should return 404
+PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+Content-Type: application/json
+
+{
+  "name": "Stolen Property"
+}
+
+### Cross-owner DELETE - should return 404
+DELETE {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+
+### Login Owner A again before deleting
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{ownerAEmail}}",
+  "password": "{{password}}"
+}
+
+### Soft-delete own property
+DELETE {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+
+### Deleted property detail - should return 404
+GET {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}

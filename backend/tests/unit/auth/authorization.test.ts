@@ -80,13 +80,14 @@ describe("authorization middleware", () => {
     assert.equal((result as AppError).code, "AUTH_EMAIL_VERIFICATION_REQUIRED");
   });
 
-  it("requires phone verification before operational work", () => {
-    const result = runMiddleware(
-      requireAccountReady,
-      requestWithAuth({ phoneVerified: false }),
+  it("allows operational work without optional phone verification", () => {
+    assert.equal(
+      runMiddleware(
+        requireAccountReady,
+        requestWithAuth({ phoneVerified: false }),
+      ),
+      undefined,
     );
-    assert.ok(result instanceof AppError);
-    assert.equal((result as AppError).code, "AUTH_PHONE_VERIFICATION_REQUIRED");
   });
 
   it("does not treat a non-active account as operationally ready", () => {

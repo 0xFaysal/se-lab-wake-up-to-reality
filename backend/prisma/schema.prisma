@@ -283,11 +283,15 @@ model Property {
   publicArea                   String              @map("public_area") @db.VarChar(120)
   approximateAddress           String              @map("approximate_address") @db.VarChar(255)
   exactAddressCiphertext       String              @map("exact_address_ciphertext")
+  exactAddressIv               String?             @map("exact_address_iv") @db.VarChar(32)
+  exactAddressTag              String?             @map("exact_address_tag") @db.VarChar(32)
   latitude                     Decimal             @db.Decimal(9, 6)
   longitude                    Decimal             @db.Decimal(9, 6)
   entranceLatitude             Decimal?            @map("entrance_latitude") @db.Decimal(9, 6)
   entranceLongitude            Decimal?            @map("entrance_longitude") @db.Decimal(9, 6)
   accessInstructionsCiphertext String?             @map("access_instructions_ciphertext")
+  accessInstructionsIv         String?             @map("access_instructions_iv") @db.VarChar(32)
+  accessInstructionsTag        String?             @map("access_instructions_tag") @db.VarChar(32)
   verificationStatus           VerificationStatus @default(DRAFT) @map("verification_status")
   status                       PropertyStatus      @default(INACTIVE)
   verifiedByAdminId            String?             @map("verified_by_admin_id") @db.Uuid
@@ -313,9 +317,13 @@ model PropertyImage {
   id         String   @id @default(uuid()) @db.Uuid
   propertyId String   @map("property_id") @db.Uuid
   storageKey String   @unique @map("storage_key")
+  url        String
+  provider   String   @default("CLOUDINARY") @db.VarChar(30)
   imageType  String   @map("image_type") @db.VarChar(30)
   sortOrder  Int      @default(0) @map("sort_order")
+  isCover    Boolean  @default(false) @map("is_cover")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 

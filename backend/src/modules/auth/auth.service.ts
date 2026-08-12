@@ -88,14 +88,10 @@ function normalizeUser(user: {
 }
 
 function getNextAction(
-  user: Pick<
-    AuthUser,
-    "mustChangePassword" | "emailVerified" | "phoneVerified"
-  >,
+  user: Pick<AuthUser, "mustChangePassword" | "emailVerified">,
 ) {
   if (user.mustChangePassword) return "CHANGE_INITIAL_PASSWORD";
   if (!user.emailVerified) return "VERIFY_EMAIL";
-  if (!user.phoneVerified) return "VERIFY_PHONE";
   return null;
 }
 

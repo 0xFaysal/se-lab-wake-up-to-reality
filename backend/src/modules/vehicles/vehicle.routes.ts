@@ -85,11 +85,7 @@ vehicleRouter.use(
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-vehicleRouter.post(
-  "/",
-  validate(createVehicleSchema),
-  createVehicleController,
-);
+vehicleRouter.post("/", validate(createVehicleSchema), createVehicleController);
 vehicleRouter.get("/", listVehiclesController);
 
 /**

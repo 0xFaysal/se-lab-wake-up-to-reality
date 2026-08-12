@@ -16,8 +16,10 @@ async function lockOwnerVehicles(
   ownerUserId: string,
   tx: Prisma.TransactionClient,
 ): Promise<void> {
-  await tx.$queryRaw`
-    SELECT pg_advisory_xact_lock(hashtextextended(${ownerUserId}, 0))
+  await tx.$queryRaw<Array<{ lockResult: string }>>`
+    SELECT pg_advisory_xact_lock(
+      hashtextextended(${ownerUserId}, 0)
+    )::text AS "lockResult"
   `;
 }
 

@@ -53,8 +53,8 @@ authRouter.use((_req, res, next) => {
  *       only DRIVER and PARKING_OWNER roles. Successful registration creates the
  *       role, BDT wallet, required legal acceptances, and an authenticated session.
  *       Access and refresh tokens are issued as HttpOnly cookies. The account is
- *       PENDING until email verification and nextAction guides the client through
- *       email and phone verification without requiring another login.
+ *       PENDING until mandatory email verification. Phone verification is
+ *       optional and does not block account access.
  *     requestBody:
  *       required: true
  *       content:
@@ -101,8 +101,8 @@ authRouter.post(
  *     description: |
  *       Authenticates any ParkEase role using an email address or Bangladesh
  *       mobile number. Successful login issues HttpOnly access and refresh
- *       cookies. PENDING users may log in only to finish verification. The
- *       nextAction field guides initial-password, email, and phone requirements.
+ *       cookies. PENDING users may log in to finish mandatory email verification.
+ *       The nextAction field guides initial-password and email requirements.
  *     requestBody:
  *       required: true
  *       content:
@@ -405,7 +405,7 @@ authRouter.post(
  *     tags: [Authentication]
  *     summary: Request a phone verification code
  *     operationId: requestPhoneVerification
- *     description: Stores only an HMAC of the six-digit code in Redis and sends it through Twilio Programmable Messaging. The code is returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.
+ *     description: Optional account-strengthening step. It does not block normal account access. Stores only an HMAC of the six-digit code in Redis and sends it through Twilio Programmable Messaging. The code is returned only when EXPOSE_DEVELOPMENT_AUTH_CODES=true.
  *     security:
  *       - accessCookie: []
  *     responses:
@@ -432,7 +432,7 @@ authRouter.post(
  * /api/v1/auth/phone-verification/confirm:
  *   post:
  *     tags: [Authentication]
- *     summary: Confirm the authenticated user's phone code
+ *     summary: Confirm the authenticated user's optional phone code
  *     operationId: confirmPhoneVerification
  *     security:
  *       - accessCookie: []
