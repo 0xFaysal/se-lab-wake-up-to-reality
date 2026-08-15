@@ -38,7 +38,7 @@ vehicleRouter.use(
  *     tags: [Vehicles]
  *     summary: Register a vehicle
  *     operationId: createVehicle
- *     description: Requires a fully verified DRIVER account. The first active vehicle becomes the default automatically. Registration uniqueness is checked after case, whitespace, and dash normalization.
+ *     description: Requires a ready DRIVER account with mandatory email verification; phone verification is optional. The first active vehicle becomes the default automatically. Registration uniqueness is checked after case, whitespace, and dash normalization.
  *     security:
  *       - accessCookie: []
  *     requestBody:
@@ -70,7 +70,7 @@ vehicleRouter.use(
  *     tags: [Vehicles]
  *     summary: List the current Driver's vehicles
  *     operationId: listVehicles
- *     description: Requires a fully verified DRIVER account. Deleted vehicles are excluded; the default vehicle is returned first, followed by newest vehicles.
+ *     description: Requires a ready DRIVER account. Deleted vehicles are excluded; the default vehicle is returned first, followed by newest vehicles.
  *     security:
  *       - accessCookie: []
  *     responses:
@@ -95,7 +95,7 @@ vehicleRouter.get("/", listVehiclesController);
  *     tags: [Vehicles]
  *     summary: Set a vehicle as default
  *     operationId: setDefaultVehicle
- *     description: Requires a fully verified DRIVER account. The operation atomically removes the previous default and assigns this owned, active vehicle.
+ *     description: Requires a ready DRIVER account. The operation atomically removes the previous default and assigns this owned, active vehicle.
  *     security:
  *       - accessCookie: []
  *     parameters:
@@ -138,7 +138,7 @@ vehicleRouter.patch(
  *     tags: [Vehicles]
  *     summary: Get one owned vehicle
  *     operationId: getVehicle
- *     description: Requires a fully verified DRIVER account. A missing, deleted, or another Driver's vehicle returns the same 404 response.
+ *     description: Requires a ready DRIVER account. A missing, deleted, or another Driver's vehicle returns the same 404 response.
  *     security:
  *       - accessCookie: []
  *     parameters:
@@ -171,7 +171,7 @@ vehicleRouter.patch(
  *     tags: [Vehicles]
  *     summary: Update an owned vehicle
  *     operationId: updateVehicle
- *     description: Requires a fully verified DRIVER account. Verification status and default selection cannot be changed through this endpoint.
+ *     description: Requires a ready DRIVER account. Verification status and default selection cannot be changed through this endpoint.
  *     security:
  *       - accessCookie: []
  *     parameters:
@@ -216,7 +216,7 @@ vehicleRouter.patch(
  *     tags: [Vehicles]
  *     summary: Delete an owned vehicle
  *     operationId: deleteVehicle
- *     description: Soft-deletes an active vehicle. If it was the default, the newest remaining active vehicle becomes default. Requires a fully verified DRIVER account.
+ *     description: Soft-deletes an active vehicle. If it was the default, the newest remaining active vehicle becomes default. Requires a ready DRIVER account.
  *     security:
  *       - accessCookie: []
  *     parameters:

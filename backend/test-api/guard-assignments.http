@@ -1,0 +1,179 @@
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+@ownerIdentifier = owner@example.com
+@ownerPassword = Password123!
+@guardIdentifier = guard@example.com
+@guardPassword = Password123!
+@otherOwnerIdentifier = other-owner@example.com
+@otherOwnerPassword = Password123!
+@otherGuardIdentifier = other-guard@example.com
+@otherGuardPassword = Password123!
+@propertyId = replace-with-verified-active-property-uuid
+
+### Prerequisites
+# Use existing email-verified Owner and Guard accounts.
+# The Property must belong to the Owner and be VERIFIED + ACTIVE.
+# REST Client cookie persistence must be enabled.
+
+### Owner login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{ownerIdentifier}}",
+  "password": "{{ownerPassword}}",
+  "rememberDevice": false
+}
+
+### Owner invites a known Guard
+# @name inviteGuard
+POST {{baseUrl}}/owner/properties/{{propertyId}}/guard-invitations
+Content-Type: application/json
+
+{
+  "identifier": "{{guardIdentifier}}",
+  "shiftStart": "08:00",
+  "shiftEnd": "20:00"
+}
+
+### Duplicate invitation should return 409
+POST {{baseUrl}}/owner/properties/{{propertyId}}/guard-invitations
+Content-Type: application/json
+
+{
+  "identifier": "{{guardIdentifier}}",
+  "shiftStart": "08:00",
+  "shiftEnd": "20:00"
+}
+
+### Owner lists assignments with filters
+GET {{baseUrl}}/owner/guard-assignments?propertyId={{propertyId}}&status=PENDING_ACCEPTANCE&page=1&limit=20
+
+### Owner gets the created assignment
+GET {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+
+### Guard login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{guardIdentifier}}",
+  "password": "{{guardPassword}}",
+  "rememberDevice": false
+}
+
+### Guard lists only own assignments
+GET {{baseUrl}}/guard/assignments?page=1&limit=20
+
+### Guard gets own assignment
+GET {{baseUrl}}/guard/assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+
+### Guard accepts the invitation
+POST {{baseUrl}}/guard/assignments/{{inviteGuard.response.body.$.data.assignment.id}}/accept
+
+### Owner login again
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{ownerIdentifier}}",
+  "password": "{{ownerPassword}}",
+  "rememberDevice": false
+}
+
+### Owner changes shift; ACTIVE returns to PENDING_ACCEPTANCE
+PATCH {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{
+  "action": "UPDATE_SHIFT",
+  "shiftStart": "09:00",
+  "shiftEnd": "18:00"
+}
+
+### Owner cannot suspend while re-acceptance is pending; should return 409
+PATCH {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{
+  "action": "SUSPEND"
+}
+
+### Guard login and re-accept changed shift
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{guardIdentifier}}",
+  "password": "{{guardPassword}}",
+  "rememberDevice": false
+}
+
+### Guard re-accepts
+POST {{baseUrl}}/guard/assignments/{{inviteGuard.response.body.$.data.assignment.id}}/accept
+
+### Owner login for management
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{ownerIdentifier}}",
+  "password": "{{ownerPassword}}",
+  "rememberDevice": false
+}
+
+### Owner suspends this Property assignment only
+PATCH {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{
+  "action": "SUSPEND"
+}
+
+### Owner resumes assignment
+PATCH {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{
+  "action": "RESUME"
+}
+
+### Owner ends assignment; history remains and response is 204
+DELETE {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+
+### Terminal assignment cannot be resumed; should return 409
+PATCH {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{
+  "action": "RESUME"
+}
+
+### Other Owner login for IDOR check
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{otherOwnerIdentifier}}",
+  "password": "{{otherOwnerPassword}}",
+  "rememberDevice": false
+}
+
+### Cross-owner detail should return 404
+GET {{baseUrl}}/owner/guard-assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+
+### Other Guard login for IDOR check
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{otherGuardIdentifier}}",
+  "password": "{{otherGuardPassword}}",
+  "rememberDevice": false
+}
+
+### Wrong Guard detail should return 404
+GET {{baseUrl}}/guard/assignments/{{inviteGuard.response.body.$.data.assignment.id}}
+
+### Wrong Guard accept should return 404
+POST {{baseUrl}}/guard/assignments/{{inviteGuard.response.body.$.data.assignment.id}}/accept

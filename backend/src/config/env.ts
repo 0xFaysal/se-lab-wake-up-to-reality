@@ -210,20 +210,6 @@ const schema = z
         }
       });
 
-      twilioConfiguration.forEach((entry, index) => {
-        if (entry === undefined) {
-          context.addIssue({
-            code: "custom",
-            path: [
-              ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"][
-                index
-              ]!,
-            ],
-            message: "Twilio configuration is required in production",
-          });
-        }
-      });
-
       for (const [name, url] of [
         ["CORS_ORIGIN", value.CORS_ORIGIN],
         ["API_PUBLIC_URL", value.API_PUBLIC_URL],

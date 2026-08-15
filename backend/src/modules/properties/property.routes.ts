@@ -4,6 +4,9 @@ import { authenticate } from "../../common/middleware/auth.js";
 import { requireAccountReady } from "../../common/middleware/require-account-ready.js";
 import { requireRole } from "../../common/middleware/require-role.js";
 import { validate } from "../../common/middleware/validate.js";
+import { guardInvitationRateLimit } from "../../common/middleware/rate-limit.js";
+import { inviteGuardController } from "../guard-assignments/guard-assignment.controller.js";
+import { createGuardInvitationSchema } from "../guard-assignments/guard-assignment.schema.js";
 import { propertyImageRouter } from "../property-images/property-image.routes.js";
 import {
   createPropertyController,
@@ -31,6 +34,41 @@ propertyRouter.use(
   requireRole(UserRoleType.PARKING_OWNER),
 );
 
+/**
+ * @openapi
+ * /api/v1/owner/properties/{propertyId}/guard-invitations:
+ *   post:
+ *     tags: [Owner Guard Assignments]
+ *     summary: Invite a known Guard to a verified active Property
+ *     operationId: invitePropertyGuard
+ *     security: [{ accessCookie: [] }]
+ *     parameters:
+ *       - { name: propertyId, in: path, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/CreateGuardInvitationRequest' }
+ *     responses:
+ *       201:
+ *         description: Guard assignment invitation created.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/OwnerGuardAssignmentResponse' }
+ *       400: { $ref: '#/components/responses/BadRequest' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ *       404: { description: Property or eligible Guard was not found. }
+ *       409: { description: Property is ineligible or a non-terminal assignment already exists. }
+ *       429: { $ref: '#/components/responses/RateLimited' }
+ */
+propertyRouter.post(
+  "/:propertyId/guard-invitations",
+  guardInvitationRateLimit,
+  validate(createGuardInvitationSchema),
+  inviteGuardController,
+);
+
 propertyRouter.use(propertyImageRouter);
 
 /**
@@ -40,7 +78,7 @@ propertyRouter.use(propertyImageRouter);
  *     tags: [Properties]
  *     summary: Create a parking property
  *     operationId: createOwnerProperty
- *     description: Requires a fully verified PARKING_OWNER account. Exact address and access instructions are encrypted at rest. New properties start as PENDING and INACTIVE.
+ *     description: Requires a ready PARKING_OWNER account with mandatory email verification; phone verification is optional. Exact address and access instructions are encrypted at rest. New properties start as PENDING and INACTIVE.
  *     security:
  *       - accessCookie: []
  *     requestBody:
@@ -66,7 +104,7 @@ propertyRouter.use(propertyImageRouter);
  *     tags: [Properties]
  *     summary: List the current owner's properties
  *     operationId: listOwnerProperties
- *     description: Requires a fully verified PARKING_OWNER account. Returns newest active records first without decrypting or selecting private address fields.
+ *     description: Requires a ready PARKING_OWNER account. Returns newest active records first without decrypting or selecting private address fields.
  *     security:
  *       - accessCookie: []
  *     responses:

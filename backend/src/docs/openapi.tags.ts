@@ -24,6 +24,14 @@ export const openApiTags = [
     description: "Administrative Property verification workflow",
   },
   {
+    name: "Owner Guard Assignments",
+    description: "Parking Owner Guard invitation and assignment management",
+  },
+  {
+    name: "Guard Assignments",
+    description: "Security Guard assignment consent and assignment views",
+  },
+  {
     name: "Parking",
     description: "Parking spot and availability operations",
   },
