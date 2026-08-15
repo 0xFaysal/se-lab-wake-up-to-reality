@@ -26,7 +26,7 @@ This document specifies the functional and non-functional requirements of **Park
 - the course instructor and faculty evaluator, to assess scope and completeness;
 - future contributors, to understand system behavior without re-reading source code.
 
-This SRS does not describe implementation details such as database column names or internal API payloads — those are defined in [`ARCHITECTURE.md`](./ARCHITECTURE.md) and [`api-design.md`](./api-design.md). This SRS instead defines *observable, testable behavior*: what a Driver, Parking Owner, Security Guard, or Administrator can do, and what the system guarantees in return.
+This SRS instead defines *observable, testable behavior*: what a Driver, Parking Owner, Security Guard, or Administrator can do, and what the system guarantees in return.
 
 ### 1.2 Scope
 
