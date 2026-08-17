@@ -13,28 +13,36 @@ export function AppLogo({
   linkTo = "/",
 }: AppLogoProps) {
   const sizeClasses = {
-    sm: "text-lg",
-    default: "text-xl",
-    lg: "text-2xl",
+    sm: "text-base",
+    default: "text-lg",
+    lg: "text-xl sm:text-2xl",
+  };
+
+  const markSize = {
+    sm: "size-6 text-xs",
+    default: "size-7 text-xs font-bold",
+    lg: "size-8 text-sm font-black",
   };
 
   const logo = (
-    <span
-      className={cn(
-        "font-heading font-bold tracking-tight select-none",
-        sizeClasses[size],
-        className
-      )}
-    >
-      <span className="text-foreground">Park</span>
-      <span className="text-foreground">Ease</span>
-      <span className="text-primary"> BD</span>
-    </span>
+    <div className={cn("inline-flex items-center gap-2 select-none", className)}>
+      <span
+        className={cn(
+          "flex items-center justify-center rounded-lg bg-primary text-white font-mono shadow-xs",
+          markSize[size]
+        )}
+      >
+        P
+      </span>
+      <span className={cn("font-heading font-extrabold tracking-tight text-foreground", sizeClasses[size])}>
+        ParkEase <span className="text-primary">BD</span>
+      </span>
+    </div>
   );
 
   if (linkTo) {
     return (
-      <Link href={linkTo} className="inline-flex items-center gap-1.5">
+      <Link href={linkTo} className="inline-flex items-center group">
         {logo}
       </Link>
     );

@@ -22,22 +22,22 @@ export function MarketingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
+        {/* Brand Logo */}
         <AppLogo size="default" />
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Desktop Navigation Links */}
+        <nav className="hidden items-center gap-2 md:flex">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
+                "rounded-lg px-3.5 py-2 text-sm font-medium tracking-tight transition-colors hover:text-primary",
                 pathname === link.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                  ? "text-primary font-semibold bg-primary/8"
+                  : "text-muted-foreground hover:bg-muted/50"
               )}
             >
               {link.label}
@@ -46,22 +46,28 @@ export function MarketingHeader() {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-3 md:flex">
           <Link
             href="/login"
-            className={buttonVariants({ variant: "ghost", size: "default" })}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "text-sm font-semibold text-foreground hover:text-primary px-3.5 py-2"
+            )}
           >
             Log In
           </Link>
           <Link
             href="/register"
-            className={buttonVariants({ variant: "default", size: "default" })}
+            className={cn(
+              buttonVariants({ size: "sm" }),
+              "bg-primary text-white hover:bg-primary/90 text-sm font-semibold px-4 py-2 rounded-lg shadow-xs"
+            )}
           >
             Get Started
           </Link>
         </div>
 
-        {/* Mobile Actions */}
+        {/* Mobile Hamburger & Actions */}
         <div className="flex items-center gap-2 md:hidden">
           <Link
             href="/parking"
@@ -86,17 +92,20 @@ export function MarketingHeader() {
                 </button>
               }
             />
-            <SheetContent side="right" className="w-72 pt-12">
-              <nav className="flex flex-col gap-1">
+            <SheetContent side="right" className="w-72 pt-12 bg-card">
+              <div className="mb-6 px-4">
+                <AppLogo size="sm" />
+              </div>
+              <nav className="flex flex-col gap-1.5">
                 {NAV_LINKS.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "rounded-lg px-4 py-3 text-base font-medium transition-colors hover:bg-muted",
+                      "rounded-lg px-4 py-2.5 text-base font-medium transition-colors hover:bg-muted",
                       pathname === link.href
-                        ? "text-primary"
+                        ? "text-primary font-semibold bg-primary/8"
                         : "text-foreground"
                     )}
                   >
@@ -117,7 +126,7 @@ export function MarketingHeader() {
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       buttonVariants({ size: "lg" }),
-                      "w-full justify-center"
+                      "w-full justify-center bg-primary text-white font-semibold text-sm"
                     )}
                   >
                     Get Started

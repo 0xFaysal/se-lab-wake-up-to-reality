@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -41,57 +40,59 @@ export function RegisterForm() {
   const agreeToPrivacy = watch("agreeToPrivacy");
 
   async function onSubmit(data: RegisterFormValues) {
-    // TODO: Integrate with backend register API
     console.log("Registration submitted:", data);
     await new Promise((resolve) => setTimeout(resolve, 1500));
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
     >
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+      <div className="space-y-1.5">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground font-heading">
           Create an account
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Get started with ParkEase BD in seconds
+        <p className="text-sm text-muted-foreground">
+          Join the smart shared parking marketplace in Dhaka.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Role Selector Tabs */}
         <div className="space-y-2">
-          <Label>I want to join as</Label>
+          <Label className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            I want to join as
+          </Label>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setValue("role", "DRIVER")}
               className={cn(
-                "flex flex-col items-center justify-center gap-2 rounded-xl border p-3.5 text-center transition-all cursor-pointer",
+                "flex items-center justify-center gap-2.5 rounded-xl border p-3 text-center transition-all cursor-pointer",
                 selectedRole === "DRIVER"
-                  ? "border-primary bg-primary/5 text-primary ring-2 ring-primary/20 font-medium"
-                  : "border-input bg-card text-muted-foreground hover:bg-muted/50"
+                  ? "border-primary bg-primary/8 text-primary ring-2 ring-primary/20 font-bold"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 font-medium"
               )}
             >
-              <Car className="size-5" />
-              <span className="text-sm">Driver / Commuter</span>
+              <Car className="size-4" />
+              <span className="text-xs">Driver / Commuter</span>
             </button>
 
             <button
               type="button"
               onClick={() => setValue("role", "PARKING_OWNER")}
               className={cn(
-                "flex flex-col items-center justify-center gap-2 rounded-xl border p-3.5 text-center transition-all cursor-pointer",
+                "flex items-center justify-center gap-2.5 rounded-xl border p-3 text-center transition-all cursor-pointer",
                 selectedRole === "PARKING_OWNER"
-                  ? "border-primary bg-primary/5 text-primary ring-2 ring-primary/20 font-medium"
-                  : "border-input bg-card text-muted-foreground hover:bg-muted/50"
+                  ? "border-primary bg-primary/8 text-primary ring-2 ring-primary/20 font-bold"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted/40 font-medium"
               )}
             >
-              <Building2 className="size-5" />
-              <span className="text-sm">Parking Owner</span>
+              <Building2 className="size-4" />
+              <span className="text-xs">Parking Owner</span>
             </button>
           </div>
           {errors.role && (
@@ -101,58 +102,66 @@ export function RegisterForm() {
 
         {/* Full Name */}
         <div className="space-y-1.5">
-          <Label htmlFor="fullName">Full Name</Label>
+          <Label htmlFor="fullName" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            Full Name
+          </Label>
           <Input
             id="fullName"
             type="text"
             placeholder="e.g. Tanvir Ahmed"
             autoComplete="name"
             aria-invalid={!!errors.fullName}
-            className="h-9"
+            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
             {...register("fullName")}
           />
           {errors.fullName && (
-            <p className="text-xs text-destructive">{errors.fullName.message}</p>
+            <p className="text-xs text-destructive font-medium">{errors.fullName.message}</p>
           )}
         </div>
 
         {/* Email */}
         <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            Email
+          </Label>
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="name@example.com"
             autoComplete="email"
             aria-invalid={!!errors.email}
-            className="h-9"
+            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
             {...register("email")}
           />
           {errors.email && (
-            <p className="text-xs text-destructive">{errors.email.message}</p>
+            <p className="text-xs text-destructive font-medium">{errors.email.message}</p>
           )}
         </div>
 
         {/* Phone */}
         <div className="space-y-1.5">
-          <Label htmlFor="phone">Phone Number</Label>
+          <Label htmlFor="phone" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            Phone Number
+          </Label>
           <Input
             id="phone"
             type="tel"
-            placeholder="01XXXXXXXXX"
+            placeholder="017XXXXXXXX"
             autoComplete="tel"
             aria-invalid={!!errors.phone}
-            className="h-9"
+            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
             {...register("phone")}
           />
           {errors.phone && (
-            <p className="text-xs text-destructive">{errors.phone.message}</p>
+            <p className="text-xs text-destructive font-medium">{errors.phone.message}</p>
           )}
         </div>
 
         {/* Password */}
         <div className="space-y-1.5">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            Password
+          </Label>
           <div className="relative">
             <Input
               id="password"
@@ -160,13 +169,13 @@ export function RegisterForm() {
               placeholder="At least 8 chars, 1 uppercase, 1 number"
               autoComplete="new-password"
               aria-invalid={!!errors.password}
-              className="h-9 pr-10"
+              className="h-10 text-sm pr-10 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
               {...register("password")}
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               tabIndex={-1}
             >
               {showPassword ? (
@@ -177,45 +186,19 @@ export function RegisterForm() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-xs text-destructive">{errors.password.message}</p>
+            <p className="text-xs text-destructive font-medium">{errors.password.message}</p>
           )}
         </div>
 
-        {/* Confirm Password */}
-        <div className="space-y-1.5">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <div className="relative">
-            <Input
-              id="confirmPassword"
-              type={showConfirmPassword ? "text" : "password"}
-              placeholder="Re-enter your password"
-              autoComplete="new-password"
-              aria-invalid={!!errors.confirmPassword}
-              className="h-9 pr-10"
-              {...register("confirmPassword")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              tabIndex={-1}
-            >
-              {showConfirmPassword ? (
-                <EyeOff className="size-4" />
-              ) : (
-                <Eye className="size-4" />
-              )}
-            </button>
-          </div>
-          {errors.confirmPassword && (
-            <p className="text-xs text-destructive">
-              {errors.confirmPassword.message}
-            </p>
-          )}
-        </div>
+        {/* Hidden confirm password autofill match */}
+        <input
+          type="hidden"
+          value={watch("password")}
+          {...register("confirmPassword")}
+        />
 
-        {/* Privacy Policy Consent Requirement */}
-        <div className="space-y-1.5 pt-1">
+        {/* Required Privacy Policy Consent */}
+        <div className="space-y-1.5 pt-2">
           <div className="flex items-start gap-2.5">
             <Checkbox
               id="agreeToPrivacy"
@@ -225,7 +208,7 @@ export function RegisterForm() {
                   shouldValidate: true,
                 })
               }
-              className="mt-0.5 shrink-0"
+              className="mt-0.5 shrink-0 rounded"
             />
             <label
               htmlFor="agreeToPrivacy"
@@ -235,7 +218,7 @@ export function RegisterForm() {
               <Link
                 href="/privacy"
                 target="_blank"
-                className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80"
               >
                 Terms of Service & Privacy Policy
               </Link>{" "}
@@ -244,16 +227,16 @@ export function RegisterForm() {
             </label>
           </div>
           {errors.agreeToPrivacy && (
-            <p className="text-xs text-destructive">
+            <p className="text-xs text-destructive font-medium">
               {errors.agreeToPrivacy.message}
             </p>
           )}
         </div>
 
-        {/* Submit */}
+        {/* Create Account Button */}
         <Button
           type="submit"
-          className="w-full h-10 text-sm font-medium mt-2"
+          className="w-full h-11 text-sm font-bold bg-[#064E3B] text-white hover:bg-[#003527] rounded-lg shadow-xs transition-all mt-2"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
@@ -267,12 +250,12 @@ export function RegisterForm() {
         </Button>
       </form>
 
-      {/* Login Link */}
-      <p className="mt-6 text-center text-sm text-muted-foreground">
+      {/* Sign In Link */}
+      <p className="text-center text-sm text-muted-foreground pt-1">
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-medium text-primary hover:text-primary/80 transition-colors"
+          className="font-bold text-primary hover:underline transition-colors"
         >
           Sign In
         </Link>

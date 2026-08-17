@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -36,6 +36,18 @@ const createCustomIcon = (isSelected: boolean) =>
     iconAnchor: [16, 16],
   });
 
+function subscribe() {
+  return () => {};
+}
+
+function useIsMounted() {
+  return useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false
+  );
+}
+
 interface ParkingMapProps {
   spots: MockParkingSpot[];
   selectedSpotId?: string;
@@ -47,11 +59,7 @@ export default function ParkingMap({
   selectedSpotId,
   onSpotSelect,
 }: ParkingMapProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsMounted();
 
   if (!mounted) {
     return (
