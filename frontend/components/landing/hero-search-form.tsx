@@ -17,7 +17,7 @@ import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/data/mock-parking";
 
 export function HeroSearchForm() {
   const router = useRouter();
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState("Dhaka");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [time, setTime] = useState("09:00");
   const [vehicleType, setVehicleType] = useState<VehicleType>("SEDAN");
@@ -38,36 +38,36 @@ export function HeroSearchForm() {
       onSubmit={handleSearch}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="w-full rounded-2xl border bg-card p-4 shadow-xl shadow-black/5 ring-1 ring-border sm:p-5"
+      transition={{ duration: 0.4, delay: 0.1 }}
+      className="w-full rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm ring-1 ring-border/50 space-y-5"
     >
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Location Input */}
-        <div className="space-y-1.5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Destination Input */}
+        <div className="space-y-2">
           <label
             htmlFor="hero-location"
-            className="flex items-center gap-1.5 text-xs font-semibold text-foreground uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wider font-heading"
           >
-            <MapPin className="size-3.5 text-primary" />
+            <MapPin className="size-4 text-primary" />
             Destination
           </label>
           <Input
             id="hero-location"
             type="text"
-            placeholder="e.g. Dhanmondi, Gulshan"
+            placeholder="Dhaka (e.g. Dhanmondi, Gulshan)"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="h-10 text-sm"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
 
         {/* Date Input */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label
             htmlFor="hero-date"
-            className="flex items-center gap-1.5 text-xs font-semibold text-foreground uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wider font-heading"
           >
-            <Calendar className="size-3.5 text-primary" />
+            <Calendar className="size-4 text-primary" />
             Date
           </label>
           <Input
@@ -76,17 +76,17 @@ export function HeroSearchForm() {
             value={date}
             min={new Date().toISOString().split("T")[0]}
             onChange={(e) => setDate(e.target.value)}
-            className="h-10 text-sm"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
 
         {/* Time Input */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label
             htmlFor="hero-time"
-            className="flex items-center gap-1.5 text-xs font-semibold text-foreground uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wider font-heading"
           >
-            <Clock className="size-3.5 text-primary" />
+            <Clock className="size-4 text-primary" />
             Start Time
           </label>
           <Input
@@ -94,26 +94,28 @@ export function HeroSearchForm() {
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="h-10 text-sm"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
 
         {/* Vehicle Type Select */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground uppercase tracking-wider">
-            <Car className="size-3.5 text-primary" />
+        <div className="space-y-2">
+          <label className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            <Car className="size-4 text-primary" />
             Vehicle Type
           </label>
           <Select
             value={vehicleType}
-            onValueChange={(val) => setVehicleType(val as VehicleType)}
+            onValueChange={(val) => {
+              if (val) setVehicleType(val as VehicleType);
+            }}
           >
-            <SelectTrigger className="h-10 w-full text-sm">
+            <SelectTrigger className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary">
               <SelectValue placeholder="Select vehicle" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl border-border bg-card">
               {Object.entries(VEHICLE_TYPE_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
+                <SelectItem key={key} value={key} className="text-sm py-2">
                   {label}
                 </SelectItem>
               ))}
@@ -122,11 +124,11 @@ export function HeroSearchForm() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end border-t pt-4">
+      <div className="flex items-center justify-end border-t border-border pt-4">
         <Button
           type="submit"
           size="lg"
-          className="w-full gap-2 text-sm font-medium sm:w-auto px-8"
+          className="w-full sm:w-auto gap-2 text-sm font-bold bg-primary text-white hover:bg-primary/90 px-8 h-12 rounded-xl shadow-xs"
         >
           <Search className="size-4" />
           Find Parking Slots
