@@ -1,98 +1,114 @@
 import type { Metadata } from "next";
-import { Building, Target, Users, Shield } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Sparkles, Search, PlusCircle } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+import { AboutPillars } from "@/components/about/about-pillars";
+import { AboutRoles } from "@/components/about/about-roles";
+import { LifecycleRibbon } from "@/components/landing/lifecycle-ribbon";
+import { AboutLocalApproach } from "@/components/about/about-local-approach";
+import { AboutPrinciples } from "@/components/about/about-principles";
+import { AboutNetworkBanner } from "@/components/about/about-network-banner";
+import { CtaSection } from "@/components/landing/cta-section";
+
+import safetyGarageImg from "@/assets/safety-garage.jpg";
 
 export const metadata: Metadata = {
   title: "About Us",
   description:
-    "Learn about ParkEase BD's mission to alleviate traffic congestion and optimize parking spaces in Dhaka.",
+    "Learn about ParkEase BD's mission to solve Dhaka's parking crisis through shared residential spaces, verified guard access, and transparent technology.",
 };
 
 export default function AboutPage() {
   return (
-    <article className="space-y-8 text-foreground">
-      <header className="border-b pb-6">
-        <span className="text-xs font-semibold tracking-wider text-primary uppercase">
-          Our Story & Mission
-        </span>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-          About ParkEase BD
-        </h1>
-        <p className="mt-3 text-base text-muted-foreground leading-relaxed">
-          Pioneering a shared-economy model to transform unused private residential
-          spaces into a decentralized urban parking network for Dhaka.
-        </p>
-      </header>
+    <div className="flex flex-col">
+      {/* 1. Hero Section */}
+      <section className="relative overflow-hidden bg-background py-14 lg:py-24 border-b border-border/80">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px]" />
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Target className="size-5 text-primary" />
-          The Problem We Are Solving
-        </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Dhaka faces severe traffic congestion, exacerbated by drivers parking
-          vehicles along major roads near shopping malls, hospitals, commercial
-          zones, and educational institutions. At the exact same time, thousands of
-          residential garage and driveway spaces sit empty during the daytime as
-          residents commute to work.
-        </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          ParkEase BD bridges this mismatch. We empower residential property owners
-          and apartment building managers to monetize vacant daytime capacity while
-          providing drivers with guaranteed, hourly-reserved, secure parking.
-        </p>
-      </section>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center">
+            {/* Left: Headline & Story */}
+            <div className="space-y-6 lg:col-span-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-1.5 text-xs font-semibold text-primary">
+                <Sparkles className="size-4 text-primary" />
+                <span>Our Mission</span>
+              </div>
 
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 pt-4">
-        <div className="rounded-xl border bg-muted/20 p-5">
-          <Building className="size-6 text-primary mb-3" />
-          <h3 className="text-base font-semibold">For Property Owners</h3>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Generate steady passive revenue from unused daytime garage slots with
-            full control over operating hours, vehicle size allowances, and
-            automated guard-assisted entry.
-          </p>
-        </div>
+              <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.12] font-heading">
+                Making parking in Dhaka{" "}
+                <span className="text-primary underline decoration-primary/40 decoration-wavy underline-offset-8">
+                  easier to find, manage, and trust.
+                </span>
+              </h1>
 
-        <div className="rounded-xl border bg-muted/20 p-5">
-          <Users className="size-6 text-primary mb-3" />
-          <h3 className="text-base font-semibold">For Drivers & Commuters</h3>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Find nearby parking within seconds, check live hourly prices, reserve a
-            guaranteed slot, and access properties effortlessly via single-use QR or
-            OTP codes.
-          </p>
-        </div>
-      </section>
+              <p className="max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+                A location-based shared parking platform built to transform unused
+                residential space into safe, accessible parking for drivers and
+                reliable income for property owners.
+              </p>
 
-      <section className="space-y-4 pt-4 border-t">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Shield className="size-5 text-primary" />
-          Our Core Values
-        </h2>
-        <div className="space-y-3">
-          <div className="border-l-2 border-primary pl-4">
-            <h4 className="text-sm font-semibold">Trust & Verification</h4>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Every property on ParkEase BD undergoes rigorous verification before
-              becoming searchable.
-            </p>
-          </div>
-          <div className="border-l-2 border-primary pl-4">
-            <h4 className="text-sm font-semibold">Urban Efficiency</h4>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              We leverage existing physical infrastructure rather than requiring new
-              commercial parking mega-structures.
-            </p>
-          </div>
-          <div className="border-l-2 border-primary pl-4">
-            <h4 className="text-sm font-semibold">Fairness & Transparency</h4>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              No surge traps, clear dispute resolution policies, and automated
-              overtime safeguards with a 15-minute traffic grace period.
-            </p>
+              <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                <Link
+                  href="/parking"
+                  className={cn(
+                    buttonVariants({ size: "lg" }),
+                    "bg-primary text-white hover:bg-primary/90 font-bold text-sm gap-2 shadow-xs px-8 py-3 rounded-lg"
+                  )}
+                >
+                  <Search className="size-4" />
+                  Find Parking
+                </Link>
+                <Link
+                  href="/register?role=owner"
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "lg" }),
+                    "border-border font-bold text-sm gap-2 hover:bg-muted/50 px-8 py-3 rounded-lg"
+                  )}
+                >
+                  <PlusCircle className="size-4" />
+                  List Your Space
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: Modern Parking Garage Image */}
+            <div className="relative flex justify-center lg:col-span-6">
+              <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-border bg-card p-2.5 shadow-2xl shadow-black/5 ring-1 ring-border">
+                <Image
+                  src={safetyGarageImg}
+                  alt="Modern residential parking facility in Dhaka"
+                  className="w-full h-auto rounded-2xl object-cover"
+                  priority
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
-    </article>
+
+      {/* 2. Three Pillars */}
+      <AboutPillars />
+
+      {/* 3. Role Cards (For Drivers, For Owners, For Security Guards) */}
+      <AboutRoles />
+
+      {/* 4. Connected Journey Ribbon */}
+      <LifecycleRibbon />
+
+      {/* 5. A Dhaka-First Design & Local Approach */}
+      <AboutLocalApproach />
+
+      {/* 6. Core Principles (Transparency, Control, Fairness, Accountability) */}
+      <AboutPrinciples />
+
+      {/* 7. Organized Network Banner */}
+      <AboutNetworkBanner />
+
+      {/* 8. Call to Action Banner */}
+      <CtaSection />
+    </div>
   );
 }

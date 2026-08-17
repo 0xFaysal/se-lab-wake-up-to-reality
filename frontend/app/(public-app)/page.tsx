@@ -1,117 +1,107 @@
 import type { Metadata } from "next";
-import { ShieldCheck, MapPin, Sparkles, Navigation } from "lucide-react";
+import Image from "next/image";
+import { Sparkles, MapPin } from "lucide-react";
 import { HeroSearchForm } from "@/components/landing/hero-search-form";
 import { TrustStrip } from "@/components/landing/trust-strip";
-import { HowItWorks } from "@/components/landing/how-it-works";
+import { ThreeStepsOverview } from "@/components/landing/three-steps-overview";
+import { DhakaMapSection } from "@/components/landing/dhaka-map-section";
+import { HostShowcaseSection } from "@/components/landing/host-showcase-section";
+import { FeaturedLocationsGrid } from "@/components/landing/featured-locations-grid";
+import { JourneyTimelineBar } from "@/components/landing/journey-timeline-bar";
 import { CtaSection } from "@/components/landing/cta-section";
 
+import heroDevicesImg from "@/assets/hero-devices.jpg";
+import garageEntranceImg from "@/assets/garage-entrance.jpg";
+
 export const metadata: Metadata = {
-  title: "ParkEase BD — Smart Shared Parking Marketplace in Dhaka",
+  title: "ParkEase BD — Smart Shared Parking in Dhaka",
   description:
-    "Find, book, and verify hourly residential parking in Dhaka. Avoid roadside parking hassle in Dhanmondi, Gulshan, Banani, and beyond.",
+    "Find secure, affordable hourly residential parking near your destination in Dhaka. Reserve in Dhanmondi, Gulshan, Banani, Uttara, and beyond.",
 };
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-background py-12 lg:py-24 border-b">
-        {/* Subtle background grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px]" />
+      {/* 1. Hero Section */}
+      <section className="relative overflow-hidden bg-background py-14 lg:py-24 border-b border-border/80">
+        {/* Subtle architectural background grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px]" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-center">
-            {/* Left Content & Quick Search */}
+            {/* Left Column: col-span-7 for comfortable headline line wrapping */}
             <div className="space-y-6 lg:col-span-7">
-              <div className="inline-flex items-center gap-2 rounded-full border bg-muted/60 px-3.5 py-1 text-xs font-semibold text-foreground">
-                <Sparkles className="size-3.5 text-primary" />
-                <span>Transforming Dhaka's Parking Crisis</span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-1.5 text-xs font-semibold text-primary">
+                <Sparkles className="size-4 text-primary" />
+                <span>Transforming Dhaka&apos;s Parking Experience</span>
               </div>
 
-              <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.1]">
+              <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.12] font-heading">
                 Find secure parking{" "}
-                <span className="text-primary underline decoration-primary/30 decoration-wavy underline-offset-8">
+                <span className="whitespace-nowrap text-primary underline decoration-primary/40 decoration-wavy underline-offset-8">
                   near your destination
                 </span>{" "}
                 in Dhaka.
               </h1>
 
-              <p className="max-w-2xl text-base text-muted-foreground sm:text-lg leading-relaxed">
+              <p className="max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
                 Connect with residential property owners renting out vacant daytime
                 parking spaces. Reserve by the hour, enter with QR/OTP, and avoid
                 congested roadside parking.
               </p>
 
-              {/* Quick Search Form */}
+              {/* Wide Quick Search Card */}
               <div className="pt-2">
                 <HeroSearchForm />
               </div>
             </div>
 
-            {/* Right Illustration / Visual Graphic */}
+            {/* Right Column: col-span-5 Overlapping Mockup Composition */}
             <div className="relative flex justify-center lg:col-span-5">
-              <div className="relative w-full max-w-md">
-                {/* Decorative glow */}
-                <div className="absolute -top-6 -left-6 size-48 rounded-full bg-primary/10 blur-3xl" />
-                <div className="absolute -bottom-6 -right-6 size-48 rounded-full bg-primary/10 blur-3xl" />
+              <div className="relative w-full max-w-md lg:max-w-none">
+                {/* Main Hero Devices Image */}
+                <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-2 shadow-2xl shadow-black/5 ring-1 ring-border">
+                  <Image
+                    src={heroDevicesImg}
+                    alt="ParkEase BD Multi-Device Web Application"
+                    className="w-full h-auto rounded-2xl object-cover"
+                    priority
+                  />
 
-                {/* Minimalist Graphic Card Mockup */}
-                <div className="relative rounded-3xl border bg-card p-6 shadow-2xl shadow-black/10 ring-1 ring-border">
-                  <div className="flex items-center justify-between border-b pb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-3 rounded-full bg-destructive/70" />
-                      <div className="size-3 rounded-full bg-amber-400" />
-                      <div className="size-3 rounded-full bg-emerald-500" />
-                    </div>
-                    <span className="text-xs font-mono font-medium text-muted-foreground flex items-center gap-1">
-                      <Navigation className="size-3 text-primary" /> Dhaka Live Grid
-                    </span>
+                  {/* Floating Emerald Parking Marker */}
+                  <div className="absolute top-10 left-12 hidden sm:flex size-9 items-center justify-center rounded-full bg-primary text-white font-bold text-xs shadow-lg border-2 border-white animate-bounce duration-1000">
+                    P
+                  </div>
+                </div>
+
+                {/* Floating Spotlight Card */}
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-[92%] sm:w-[88%] rounded-2xl border border-border bg-card/95 backdrop-blur-md p-4 shadow-2xl shadow-black/10 ring-1 ring-border flex items-center gap-3.5">
+                  <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-border">
+                    <Image
+                      src={garageEntranceImg}
+                      alt="Dhanmondi Residential Parking"
+                      className="size-full object-cover"
+                    />
                   </div>
 
-                  {/* Mock Map Preview Area */}
-                  <div className="mt-4 rounded-2xl bg-muted/40 p-5 border border-dashed flex flex-col gap-3">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="size-4 text-primary" />
-                        <span className="text-xs font-semibold text-foreground">
-                          Dhanmondi Road 27
-                        </span>
-                      </div>
-                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
-                        Available Now
+                      <h4 className="text-sm font-bold text-foreground truncate font-heading">
+                        Dhanmondi Residential Parking
+                      </h4>
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-white text-[10px] font-bold">
+                        P
                       </span>
                     </div>
 
-                    <div className="h-28 rounded-xl bg-gradient-to-tr from-muted to-background border flex items-center justify-center relative overflow-hidden">
-                      <div className="absolute inset-0 bg-[radial-gradient(#eb4925_1px,transparent_1px)] [background-size:16px_16px] opacity-25" />
-                      <div className="z-10 text-center">
-                        <div className="inline-flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-lg">
-                          <ShieldCheck className="size-5" />
-                        </div>
-                        <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">
-                          Guard-Verified Resident Gate
-                        </p>
-                      </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-bold text-primary">৳60/hour</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="size-3.5 text-primary shrink-0" />
+                        Near Dhanmondi 27
+                      </span>
                     </div>
-
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-muted-foreground">Rate: <strong className="text-foreground">৳60/hr</strong></span>
-                      <span className="text-muted-foreground">Distance: <strong className="text-foreground">0.8 km</strong></span>
-                    </div>
-                  </div>
-
-                  {/* Secondary Mock Notification */}
-                  <div className="mt-4 rounded-xl bg-primary/5 border border-primary/20 p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-white font-bold text-xs">
-                        QR
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-foreground">Instant Entry Pass</p>
-                        <p className="text-[10px] text-muted-foreground">Auto-generated upon booking</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-semibold text-primary uppercase">Ready</span>
                   </div>
                 </div>
               </div>
@@ -120,13 +110,25 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Strip */}
+      {/* 2. Trust Strip */}
       <TrustStrip />
 
-      {/* How it Works Section */}
-      <HowItWorks />
+      {/* 3. How It Works: 3 Simple Steps Grid */}
+      <ThreeStepsOverview />
 
-      {/* Call to Action Section */}
+      {/* 4. Interactive Dhaka Map Coverage Section */}
+      <DhakaMapSection />
+
+      {/* 5. Host Showcase Section (Deep Emerald Block) */}
+      <HostShowcaseSection />
+
+      {/* 6. Featured Dhaka Locations (3x2 Grid) */}
+      <FeaturedLocationsGrid />
+
+      {/* 7. Driver Journey Timeline Bar */}
+      <JourneyTimelineBar />
+
+      {/* 8. Call to Action Banner */}
       <CtaSection />
     </div>
   );
