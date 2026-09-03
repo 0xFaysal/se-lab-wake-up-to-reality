@@ -87,11 +87,11 @@ export function ParkingCard({ spot, isSelected, onSelect }: ParkingCardProps) {
         </div>
 
         <Link
-          href={`/register?role=driver&spotId=${spot.id}`}
+          href={`/parking/${spot.id}`}
           onClick={(e) => e.stopPropagation()}
-          className={cn(buttonVariants({ size: "sm" }), "gap-1.5 text-xs")}
+          className={cn(buttonVariants({ size: "sm" }), "gap-1.5 text-xs font-bold")}
         >
-          Reserve Spot
+          View Details
           <ArrowRight className="size-3.5" />
         </Link>
       </div>

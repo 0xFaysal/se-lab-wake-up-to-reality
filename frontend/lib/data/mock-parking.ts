@@ -22,6 +22,21 @@ export interface MockParkingSpot {
 
 export const MOCK_PARKING_SPOTS: MockParkingSpot[] = [
   {
+    id: "gulshan-residential-parking",
+    propertyName: "Gulshan Residential Parking",
+    area: "Gulshan 2, Near Westin Dhaka",
+    latitude: 23.7937,
+    longitude: 90.4132,
+    hourlyRate: 60,
+    vehicleTypes: ["SEDAN", "SUV", "MOTORCYCLE"],
+    facilities: { covered: true, cctv: true, guard: true },
+    rating: 4.9,
+    reviewCount: 128,
+    distance: "0.4 km",
+    available: true,
+    imageUrl: "/assets/parking-hero-bay.jpg",
+  },
+  {
     id: "spot-dhanmondi-01",
     propertyName: "Dhanmondi Lake View Parking",
     area: "Dhanmondi, Road 27",
@@ -34,7 +49,7 @@ export const MOCK_PARKING_SPOTS: MockParkingSpot[] = [
     reviewCount: 28,
     distance: "0.8 km",
     available: true,
-    imageUrl: "/images/placeholders/parking-1.jpg",
+    imageUrl: "/assets/safety-garage.jpg",
   },
   {
     id: "spot-gulshan-01",
