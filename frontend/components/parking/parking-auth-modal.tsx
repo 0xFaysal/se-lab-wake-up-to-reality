@@ -21,8 +21,8 @@ export function ParkingAuthModal({
 }: ParkingAuthModalProps) {
   if (!isOpen) return null;
 
-  const loginRedirect = encodeURIComponent(`/parking/${spotId}?book=true`);
-  const registerRedirect = encodeURIComponent(`/parking/${spotId}?book=true`);
+  const loginRedirect = encodeURIComponent(`/driver/bookings/review?spotId=${spotId}`);
+  const registerRedirect = encodeURIComponent(`/driver/bookings/review?spotId=${spotId}`);
 
   return (
     <div
@@ -90,6 +90,14 @@ export function ParkingAuthModal({
           >
             <UserPlus className="size-4" />
             Create Free Driver Account
+          </Link>
+
+          <Link
+            href={`/driver/bookings/review?spotId=${spotId}`}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-50 text-primary hover:bg-emerald-100 border border-primary/20 font-bold text-xs h-10 transition-colors"
+          >
+            <span>Continue as Anisa (Signed-in Demo)</span>
+            <ArrowRight className="size-3.5" />
           </Link>
 
           <button
