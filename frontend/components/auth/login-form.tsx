@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -32,12 +33,20 @@ export function LoginForm() {
     },
   });
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/driver/bookings";
   const rememberMe = watch("rememberMe");
 
   async function onSubmit(data: LoginFormValues) {
-    // Submit login credentials to backend
-    console.log("Login submitted:", data);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const isPhone = /^(?:\+?880|0)1[3-9]\d{8}$/.test(data.identifier.replace(/\s/g, ""));
+    const verifyType = isPhone ? "phone" : "email";
+    
+    router.push(
+      `/verify-otp?identifier=${encodeURIComponent(
+        data.identifier
+      )}&type=${verifyType}&action=login&redirect=${encodeURIComponent(redirect)}`
+    );
   }
 
   return (
@@ -80,17 +89,9 @@ export function LoginForm() {
 
         {/* Password */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
-              Password
-            </Label>
-            <Link
-              href="/forgot-password"
-              className="text-xs font-semibold text-primary hover:underline transition-colors"
-            >
-              Forgot password?
-            </Link>
-          </div>
+          <Label htmlFor="password" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
+            Password
+          </Label>
           <div className="relative">
             <Input
               id="password"
@@ -124,22 +125,31 @@ export function LoginForm() {
           )}
         </div>
 
-        {/* Remember Me */}
-        <div className="flex items-center gap-2.5 pt-1">
-          <Checkbox
-            id="rememberMe"
-            checked={rememberMe}
-            onCheckedChange={(checked) =>
-              setValue("rememberMe", checked === true)
-            }
-            className="rounded"
-          />
-          <Label
-            htmlFor="rememberMe"
-            className="text-xs font-medium text-muted-foreground cursor-pointer select-none"
+        {/* Remember Me and Forgot Password below the password field */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-2.5">
+            <Checkbox
+              id="rememberMe"
+              checked={rememberMe}
+              onCheckedChange={(checked) =>
+                setValue("rememberMe", checked === true)
+              }
+              className="rounded"
+            />
+            <Label
+              htmlFor="rememberMe"
+              className="text-xs font-medium text-muted-foreground cursor-pointer select-none"
+            >
+              Remember this device
+            </Label>
+          </div>
+
+          <Link
+            href="/forgot-password"
+            className="text-xs font-bold text-primary hover:underline transition-colors"
           >
-            Remember this device
-          </Label>
+            Forgot password?
+          </Link>
         </div>
 
         {/* Sign In Button */}
