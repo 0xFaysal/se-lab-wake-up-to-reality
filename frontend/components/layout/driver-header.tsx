@@ -47,7 +47,9 @@ export function DriverHeader() {
         <nav className="hidden md:flex items-center justify-center gap-1.5 lg:gap-2">
           {NAV_LINKS.map((link) => {
             const isActive =
-              link.href === "/driver/bookings"
+              pathname.includes("/review")
+                ? link.href === "/parking"
+                : link.href === "/driver/bookings"
                 ? pathname.startsWith("/driver/bookings")
                 : pathname === link.href;
 

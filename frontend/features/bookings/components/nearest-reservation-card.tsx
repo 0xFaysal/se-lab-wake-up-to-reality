@@ -46,76 +46,79 @@ export function NearestReservationCard({
             </p>
           </div>
 
-          {/* Date & Time Container Box */}
-          <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/40 p-3.5 border border-border/60">
-            <div>
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Date
-              </span>
-              <p className="text-sm font-bold text-foreground font-heading mt-0.5">
-                {booking.date}
-              </p>
+          {/* Date & Time (Vertical on left) + Access OTP Box (on right) */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-stretch">
+            {/* Left: Date & Time vertically stacked */}
+            <div className="sm:col-span-6 lg:col-span-6 flex flex-col justify-between rounded-xl bg-muted/40 p-3.5 border border-border/60">
+              <div>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-heading">
+                  Date
+                </span>
+                <p className="text-sm font-bold text-foreground font-heading mt-0.5">
+                  {booking.date}
+                </p>
+              </div>
+              <div className="border-t border-border/50 pt-2 mt-2">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-heading">
+                  Time
+                </span>
+                <p className="text-sm font-bold text-foreground font-heading mt-0.5">
+                  {booking.startTime} – {booking.endTime}
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Time
+
+            {/* Right: Access OTP Box */}
+            <div className="sm:col-span-6 lg:col-span-6 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-3.5 flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block font-heading">
+                    Access OTP
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black tracking-widest text-primary font-mono leading-none mt-1 block">
+                    {booking.accessOtp}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenQr}
+                  title="View Digital QR Pass"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white hover:bg-primary/90 shadow-xs transition-colors cursor-pointer"
+                >
+                  <QrCode className="size-5" />
+                </button>
+              </div>
+              <span className="text-[10px] text-muted-foreground mt-2 block">
+                For this booking only
               </span>
-              <p className="text-sm font-bold text-foreground font-heading mt-0.5">
-                {booking.startTime} – {booking.endTime}
-              </p>
             </div>
           </div>
 
-          {/* Action Buttons & Access OTP Container */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
-            <div className="sm:col-span-7 flex flex-col sm:flex-row gap-2.5">
-              <Link
-                href={`/driver/bookings/${booking.id}`}
-                className={cn(
-                  buttonVariants({ size: "default" }),
-                  "w-full bg-primary text-white hover:bg-primary/90 font-bold text-sm rounded-lg shadow-xs py-2.5 px-4"
-                )}
-              >
-                View Booking
-              </Link>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  booking.address
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "default" }),
-                  "w-full border-border text-foreground hover:bg-muted font-bold text-sm rounded-lg py-2.5 px-3 gap-1.5"
-                )}
-              >
-                <Navigation className="size-3.5" />
-                Get Directions
-              </a>
-            </div>
-
-            {/* Access OTP Box */}
-            <div className="sm:col-span-5 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-2.5 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Access OTP
-                </span>
-                <span className="text-lg font-black tracking-widest text-primary font-mono leading-none">
-                  {booking.accessOtp}
-                </span>
-                <span className="text-[9px] text-muted-foreground block mt-0.5">
-                  For this booking only
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenQr}
-                title="View Digital QR Pass"
-                className="flex size-9 items-center justify-center rounded-lg bg-primary text-white hover:bg-primary/90 shadow-xs transition-colors cursor-pointer"
-              >
-                <QrCode className="size-5" />
-              </button>
-            </div>
+          {/* Action Buttons: Full dedicated row, clean 2-column layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            <Link
+              href={`/driver/bookings/${booking.id}`}
+              className={cn(
+                buttonVariants({ size: "default" }),
+                "w-full bg-primary text-white hover:bg-primary/90 font-bold text-sm rounded-lg shadow-xs py-2.5 px-4 flex items-center justify-center font-heading"
+              )}
+            >
+              View Booking
+            </Link>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                booking.address
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "default" }),
+                "w-full border-border text-foreground hover:bg-muted font-bold text-sm rounded-lg py-2.5 px-3 flex items-center justify-center gap-1.5 font-heading"
+              )}
+            >
+              <Navigation className="size-3.5" />
+              Get Directions
+            </a>
           </div>
         </div>
       </div>
