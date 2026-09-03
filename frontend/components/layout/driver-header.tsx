@@ -22,9 +22,10 @@ import { cn } from "@/lib/utils";
 import avatarAnisaImg from "@/assets/avatar-anisa.jpg";
 
 const NAV_LINKS = [
+  { href: "/", label: "Home" },
   { href: "/parking", label: "Find Parking" },
-  { href: "/how-it-works", label: "How It Works" },
   { href: "/driver/bookings", label: "My Bookings" },
+  { href: "/how-it-works", label: "How It Works" },
   { href: "/safety", label: "Safety" },
 ];
 
