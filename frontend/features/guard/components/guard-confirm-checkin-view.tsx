@@ -42,7 +42,7 @@ export function GuardConfirmCheckinView({ bookingId }: GuardConfirmCheckinViewPr
   };
 
   return (
-    <div className="space-y-4 select-none pb-8">
+    <div className="space-y-4 select-none pb-28">
       {/* 1. Status Card: Booking Verified via QR */}
       <section className="flex flex-col items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center shadow-xs">
         {/* Verified Circular Icon */}

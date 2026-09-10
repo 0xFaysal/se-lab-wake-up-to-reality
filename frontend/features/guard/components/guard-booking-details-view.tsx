@@ -33,7 +33,7 @@ export function GuardBookingDetailsView({ bookingId }: GuardBookingDetailsViewPr
   const displayCode = bookingId.startsWith("PE-") ? `#${bookingId}` : `#PE-BK-2051`;
 
   return (
-    <div className="space-y-4 select-none pb-6">
+    <div className="space-y-4 select-none pb-28">
       {/* 1. Status Banner */}
       <div className="pt-1">
         <div className="flex items-center gap-2">
