@@ -15,6 +15,7 @@ import {
   Search,
   CreditCard,
   User,
+  LayoutDashboard,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -122,6 +123,15 @@ export function DriverHeader() {
                     {MOCK_DRIVER_PROFILE.email}
                   </p>
                 </div>
+
+                <Link
+                  href="/driver/dashboard"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground rounded-xl hover:bg-muted transition-colors"
+                >
+                  <LayoutDashboard className="size-4 text-primary" />
+                  Dashboard
+                </Link>
 
                 <Link
                   href="/driver/bookings"
@@ -240,6 +250,13 @@ export function DriverHeader() {
                   );
                 })}
                 <div className="my-3 h-px bg-border" />
+                <Link
+                  href="/driver/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-foreground hover:bg-muted"
+                >
+                  <LayoutDashboard className="size-4 text-primary" /> Dashboard
+                </Link>
                 <Link
                   href="/driver/vehicles"
                   onClick={() => setMobileOpen(false)}
