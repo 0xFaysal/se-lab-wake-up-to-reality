@@ -19,7 +19,8 @@ export function GuardTopBar({
 }: GuardTopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const isSubPage = pathname !== "/guard";
+  const isRootTab = pathname === "/guard" || pathname === "/guard/bookings" || pathname === "/guard/profile";
+  const isSubPage = !isRootTab;
 
   return (
     <header className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b border-[#E5E7EB] bg-white px-3 select-none">
@@ -48,6 +49,9 @@ export function GuardTopBar({
               <span className="text-[#9CA3AF] font-normal">|</span>
               <span className="text-[#1F2937] font-semibold text-xs tracking-normal">Guard Portal</span>
             </div>
+            <span className="text-[10px] text-gray-400 font-normal leading-none">
+              Gulshan Avenue Parking • Gate 2
+            </span>
           </div>
         </Link>
       </div>

@@ -24,7 +24,7 @@ export function GuardBottomNav() {
           <div
             className={`flex items-center justify-center rounded-full transition-all duration-200 ${
               isHome
-                ? "bg-[#064E3B] text-white px-3.5 py-1 shadow-xs"
+                ? "bg-[#a7f3d0] text-[#064E3B] px-3.5 py-1 shadow-xs"
                 : "text-gray-500 hover:text-gray-800"
             }`}
           >
@@ -47,7 +47,7 @@ export function GuardBottomNav() {
           <div
             className={`flex items-center justify-center rounded-full transition-all duration-200 ${
               isBookings
-                ? "bg-[#064E3B] text-white px-3.5 py-1 shadow-xs"
+                ? "bg-[#a7f3d0] text-[#064E3B] px-3.5 py-1 shadow-xs"
                 : "text-gray-500 hover:text-gray-800"
             }`}
           >
@@ -89,7 +89,7 @@ export function GuardBottomNav() {
           <div
             className={`flex items-center justify-center rounded-full transition-all duration-200 ${
               isProfile
-                ? "bg-[#064E3B] text-white px-3.5 py-1 shadow-xs"
+                ? "bg-[#a7f3d0] text-[#064E3B] px-3.5 py-1 shadow-xs"
                 : "text-gray-500 hover:text-gray-800"
             }`}
           >

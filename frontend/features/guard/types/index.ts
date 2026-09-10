@@ -28,6 +28,8 @@ export interface UpcomingArrival {
   driverPhone: string;
 }
 
+export type GuardBookingStatus = "upcoming" | "parked" | "completed";
+
 export interface CurrentlyParkedSession {
   id: string;
   bookingCode: string;
@@ -42,3 +44,20 @@ export interface CurrentlyParkedSession {
   expectedExit: string;
   durationElapsed: string;
 }
+
+export interface GuardBookingListItem {
+  id: string;
+  bookingCode: string;
+  status: GuardBookingStatus;
+  driverName: string;
+  driverPhone: string;
+  vehicleModel: string;
+  vehicleColor: string;
+  vehiclePlateCity: string;
+  vehiclePlateNumber: string;
+  slot: string;
+  timeLabel: string;
+  timeValue: string;
+}
+
+
