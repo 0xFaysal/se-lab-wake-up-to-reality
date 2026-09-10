@@ -13,6 +13,8 @@ import {
   Menu,
   X,
   Search,
+  CreditCard,
+  User,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -140,6 +142,24 @@ export function DriverHeader() {
                 </Link>
 
                 <Link
+                  href="/driver/payment-methods"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground rounded-xl hover:bg-muted transition-colors"
+                >
+                  <CreditCard className="size-4 text-primary" />
+                  Payment Methods
+                </Link>
+
+                <Link
+                  href="/driver/profile"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground rounded-xl hover:bg-muted transition-colors"
+                >
+                  <User className="size-4 text-primary" />
+                  My Profile
+                </Link>
+
+                <Link
                   href="/parking"
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground rounded-xl hover:bg-muted transition-colors"
@@ -226,6 +246,20 @@ export function DriverHeader() {
                   className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-foreground hover:bg-muted"
                 >
                   <Car className="size-4 text-primary" /> Manage Vehicles
+                </Link>
+                <Link
+                  href="/driver/payment-methods"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-foreground hover:bg-muted"
+                >
+                  <CreditCard className="size-4 text-primary" /> Payment Methods
+                </Link>
+                <Link
+                  href="/driver/profile"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-foreground hover:bg-muted"
+                >
+                  <User className="size-4 text-primary" /> My Profile
                 </Link>
                 <Link
                   href="/login"
