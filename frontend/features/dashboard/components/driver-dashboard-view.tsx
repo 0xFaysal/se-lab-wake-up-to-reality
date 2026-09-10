@@ -20,6 +20,7 @@ import {
   Sparkles,
   Repeat,
   Compass,
+  Receipt,
 } from "lucide-react";
 import {
   MOCK_DRIVER_PROFILE,
@@ -403,6 +404,17 @@ export function DriverDashboardView() {
             </h3>
 
             <div className="space-y-2 text-xs">
+              <Link
+                href="/driver/payments"
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-foreground font-medium">
+                  <Receipt className="h-4 w-4 text-emerald-800" />
+                  <span>Payment &amp; Refund Ledger</span>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              </Link>
+
               <Link
                 href="/driver/payment-methods"
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/30 transition-colors"

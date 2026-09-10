@@ -16,6 +16,7 @@ import {
   CreditCard,
   User,
   LayoutDashboard,
+  Receipt,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -161,6 +162,15 @@ export function DriverHeader() {
                 </Link>
 
                 <Link
+                  href="/driver/payments"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground rounded-xl hover:bg-muted transition-colors"
+                >
+                  <Receipt className="size-4 text-primary" />
+                  Payments &amp; Refunds
+                </Link>
+
+                <Link
                   href="/driver/profile"
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground rounded-xl hover:bg-muted transition-colors"
@@ -270,6 +280,13 @@ export function DriverHeader() {
                   className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-foreground hover:bg-muted"
                 >
                   <CreditCard className="size-4 text-primary" /> Payment Methods
+                </Link>
+                <Link
+                  href="/driver/payments"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-foreground hover:bg-muted"
+                >
+                  <Receipt className="size-4 text-primary" /> Payments &amp; Refunds
                 </Link>
                 <Link
                   href="/driver/profile"
