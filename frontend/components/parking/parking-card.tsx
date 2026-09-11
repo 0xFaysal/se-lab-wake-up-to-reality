@@ -14,8 +14,17 @@ interface ParkingCardProps {
 export function ParkingCard({ spot, isSelected, onSelect }: ParkingCardProps) {
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.();
+        }
+      }}
       className={cn(
+
         "group flex flex-col justify-between rounded-2xl border bg-card p-5 transition-all cursor-pointer shadow-sm hover:shadow-md",
         isSelected
           ? "border-primary ring-2 ring-primary/20 bg-primary/[0.02]"
