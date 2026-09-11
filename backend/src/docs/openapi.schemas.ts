@@ -27,7 +27,7 @@ export const openApiSchemas = {
   },
   UserRole: {
     type: "string",
-    enum: ["DRIVER", "PARKING_OWNER", "GUARD", "ADMIN"],
+    enum: ["DRIVER", "PROVIDER", "MANAGER", "GUARD", "ADMIN"],
   },
   UserStatus: {
     type: "string",
@@ -115,7 +115,11 @@ export const openApiSchemas = {
         example: "01712345678",
       },
       password: { $ref: "#/components/schemas/StrongPassword" },
-      role: { type: "string", enum: ["DRIVER", "PARKING_OWNER"] },
+      role: {
+        type: "string",
+        enum: ["DRIVER", "PROVIDER", "PARKING_OWNER"],
+        description: "PARKING_OWNER is a deprecated compatibility alias for PROVIDER.",
+      },
       acceptTerms: { type: "boolean", enum: [true] },
       acceptPrivacyPolicy: { type: "boolean", enum: [true] },
     },
@@ -569,6 +573,51 @@ export const openApiSchemas = {
       coverImageId: { type: "string", format: "uuid" },
     },
     required: ["imageIds"],
+  },
+  PropertyGovernanceMode: {
+    type: "string",
+    enum: ["SINGLE_PROVIDER", "MULTI_PROVIDER"],
+    description: "Derived from the number of active verified Provider memberships.",
+  },
+  PropertyProviderStatus: {
+    type: "string",
+    enum: ["PENDING", "ACTIVE", "SUSPENDED", "ENDED"],
+  },
+  BuildingManagerAssignmentStatus: {
+    type: "string",
+    enum: ["PENDING_APPROVAL", "ACTIVE", "REJECTED", "ENDED", "CANCELLED", "PENDING_RECONFIRMATION"],
+  },
+  ManagerDelegationStatus: {
+    type: "string",
+    enum: ["PENDING_ACCEPTANCE", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED"],
+  },
+  ManagerDelegationPermission: {
+    type: "string",
+    enum: [
+      "RESOURCE_VIEW", "LISTING_VIEW", "LISTING_MANAGE", "PRICE_MANAGE",
+      "AVAILABILITY_MANAGE", "BOOKING_VIEW", "BOOKING_MANAGE", "IMAGE_MANAGE",
+      "GUARD_VIEW", "GUARD_ADD_TO_PROPERTY", "GUARD_ASSIGN", "EARNINGS_VIEW", "REPORTS_VIEW",
+    ],
+  },
+  PropertyGuardMembershipStatus: {
+    type: "string",
+    enum: ["PENDING_ACCEPTANCE", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED"],
+  },
+  ManagerDelegation: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      property: { type: "object", additionalProperties: true },
+      providerMembershipId: { type: "string", format: "uuid" },
+      provider: { type: "object", additionalProperties: true },
+      manager: { type: "object", additionalProperties: true },
+      status: { $ref: "#/components/schemas/ManagerDelegationStatus" },
+      permissions: { type: "array", uniqueItems: true, items: { $ref: "#/components/schemas/ManagerDelegationPermission" } },
+      resourceIds: { type: "array", uniqueItems: true, items: { type: "string", format: "uuid" } },
+      validFrom: { type: "string", format: "date-time", nullable: true },
+      validUntil: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "property", "providerMembershipId", "provider", "manager", "status", "permissions", "resourceIds"],
   },
   GuardAssignmentStatus: {
     type: "string",

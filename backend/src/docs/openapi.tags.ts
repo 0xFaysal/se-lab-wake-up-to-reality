@@ -14,18 +14,26 @@ export const openApiTags = [
       "Authenticated user profile, password, and active session management",
   },
   { name: "Vehicles", description: "Driver vehicle management" },
-  { name: "Properties", description: "Parking Owner property management" },
+  { name: "Properties", description: "Provider Property management and governance" },
   {
     name: "Property Images",
-    description: "Parking Owner Property image management",
+    description: "Shared Property image management",
   },
   {
     name: "Admin Properties",
     description: "Administrative Property verification workflow",
   },
   {
-    name: "Owner Guard Assignments",
-    description: "Parking Owner Guard invitation and assignment management",
+    name: "Property Guards",
+    description: "Shared Property Guard membership management",
+  },
+  {
+    name: "Manager Delegations",
+    description: "Provider-scoped Manager permission delegation",
+  },
+  {
+    name: "Property Governance",
+    description: "Provider membership, Building Manager, voting, and shared changes",
   },
   {
     name: "Guard Assignments",

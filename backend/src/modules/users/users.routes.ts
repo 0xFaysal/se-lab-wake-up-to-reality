@@ -8,12 +8,14 @@ import { validate } from "../../common/middleware/validate.js";
 import {
   changePasswordController,
   createGuardController,
+  createManagerController,
   listSessionsController,
   revokeSessionController,
 } from "./users.controller.js";
 import {
   changePasswordSchema,
   createGuardSchema,
+  createManagerSchema,
   revokeSessionSchema,
 } from "./users.schema.js";
 import { UserRoleType } from "../../../generated/prisma/client.js";
@@ -35,7 +37,7 @@ usersRouter.use(authenticate);
  *     operationId: createGuard
  *     description: |
  *       Creates a controlled Guard account and emails a single-use password
- *       setup link. Only a ready Parking Owner or Admin can use this
+ *       setup link. Only a ready Provider or Admin can use this
  *       endpoint. A plaintext temporary password is never created or returned.
  *     security:
  *       - accessCookie: []
@@ -76,10 +78,19 @@ usersRouter.use(authenticate);
 usersRouter.post(
   "/guards",
   requireAccountReady,
-  requireRole(UserRoleType.PARKING_OWNER, UserRoleType.ADMIN),
+  requireRole(UserRoleType.PROVIDER, UserRoleType.ADMIN),
   sensitiveAccountRateLimit,
   validate(createGuardSchema),
   createGuardController,
+);
+
+usersRouter.post(
+  "/managers",
+  requireAccountReady,
+  requireRole(UserRoleType.PROVIDER, UserRoleType.ADMIN),
+  sensitiveAccountRateLimit,
+  validate(createManagerSchema),
+  createManagerController,
 );
 
 /**

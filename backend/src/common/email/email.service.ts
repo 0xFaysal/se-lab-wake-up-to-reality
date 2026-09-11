@@ -245,3 +245,32 @@ export async function sendGuardInvitationEmail(input: {
     failureMessage: "Unable to send the Guard invitation right now",
   });
 }
+
+export async function sendManagerInvitationEmail(input: {
+  to: string;
+  fullName: string;
+  setupUrl: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const safeUrl = escapeHtml(input.setupUrl);
+  await sendTransactionalEmail({
+    to: input.to,
+    subject: "You have been invited to manage ParkEase BD operations",
+    text: [
+      `Hello ${input.fullName},`,
+      "",
+      "A ParkEase BD Manager account has been created for you.",
+      `Set your password using this link: ${input.setupUrl}`,
+      `This link expires in ${input.expiresInMinutes} minutes.`,
+    ].join("\n"),
+    html: emailLayout({
+      fullName: input.fullName,
+      heading: "Complete your Manager account",
+      content: "A controlled ParkEase BD Manager account has been created for you.",
+      actionHtml: `<a href="${safeUrl}" style="display:inline-block;padding:12px 18px;background:#116466;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700">Set account password</a><p style="margin:16px 0 0;line-height:1.6">This link expires in <strong>${input.expiresInMinutes} minutes</strong>.</p>`,
+      footer: "If you were not expecting this invitation, contact ParkEase BD support.",
+    }),
+    failureCode: "MANAGER_INVITATION_DELIVERY_FAILED",
+    failureMessage: "Unable to send the Manager invitation right now",
+  });
+}

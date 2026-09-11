@@ -19,7 +19,7 @@ describe("registerSchema", () => {
     assert.equal(result.body.phone, "+8801712345678");
   });
 
-  it("allows only DRIVER or PARKING_OWNER self-registration", () => {
+  it("allows DRIVER or PROVIDER and normalizes the legacy Provider alias", () => {
     for (const role of ["GUARD", "ADMIN"]) {
       const result = registerSchema.safeParse({ body: { ...validBody, role } });
       assert.equal(result.success, false);

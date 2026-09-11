@@ -32,7 +32,7 @@ integration("vehicle management integration", () => {
 
   async function createAuthenticatedUser(input: {
     key: string;
-    role: "DRIVER" | "PARKING_OWNER";
+    role: "DRIVER" | "PROVIDER";
     phonePrefix: "013" | "014" | "015" | "016";
     ready: boolean;
   }) {
@@ -87,6 +87,8 @@ integration("vehicle management integration", () => {
       "vehicle-integration-verification-secret-at-least-32-characters";
     process.env.AUTH_METADATA_HASH_SECRET =
       "vehicle-integration-metadata-secret-at-least-32-characters";
+    process.env.PROPERTY_ADDRESS_FINGERPRINT_SECRET =
+      "vehicle-integration-property-secret-at-least-32-characters";
     process.env.ENABLE_API_DOCS = "false";
 
     const appModule = await import("../../../src/app.js");
@@ -109,7 +111,7 @@ integration("vehicle management integration", () => {
     });
     await createAuthenticatedUser({
       key: "owner",
-      role: "PARKING_OWNER",
+      role: "PROVIDER",
       phonePrefix: "015",
       ready: true,
     });

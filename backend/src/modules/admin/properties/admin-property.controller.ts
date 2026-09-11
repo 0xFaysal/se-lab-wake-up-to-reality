@@ -84,3 +84,23 @@ export const verifyAdminPropertyController: RequestHandler = async (
     next(error);
   }
 };
+
+export const mergeAdminPropertiesController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const merge = await adminPropertyService.mergeDuplicateProperties(
+      requireAdminUserId(req),
+      req.body,
+    );
+    res.status(200).json({
+      success: true,
+      data: { merge },
+      meta: responseMeta(req),
+    });
+  } catch (error) {
+    next(error);
+  }
+};

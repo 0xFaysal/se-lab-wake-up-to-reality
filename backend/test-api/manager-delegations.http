@@ -1,0 +1,71 @@
+@baseUrl = http://localhost:4000/api/v1
+@providerEmail = provider@example.com
+@providerPassword = Password123!
+@managerEmail = manager@example.com
+@managerPassword = ManagerPassword123!
+@propertyId = replace-with-verified-property-id
+@managerUserId = replace-with-manager-user-id
+
+### Provider login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Create a controlled Manager account when needed
+POST {{baseUrl}}/users/managers
+Content-Type: application/json
+
+{
+  "fullName": "Operations Manager",
+  "email": "{{managerEmail}}",
+  "phone": "01700000001"
+}
+
+### Invite Manager with least-privilege permissions
+# @name createDelegation
+POST {{baseUrl}}/provider/manager-delegations
+Content-Type: application/json
+
+{
+  "propertyId": "{{propertyId}}",
+  "managerUserId": "{{managerUserId}}",
+  "permissions": ["RESOURCE_VIEW", "IMAGE_MANAGE", "GUARD_VIEW", "GUARD_ASSIGN"],
+  "resourceIds": []
+}
+
+### Provider lists granted delegations
+GET {{baseUrl}}/provider/manager-delegations
+
+### Provider gets one IDOR-scoped delegation
+GET {{baseUrl}}/provider/manager-delegations/{{createDelegation.response.body.$.data.delegation.id}}
+
+### Manager login after completing email verification and password setup
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{managerEmail}}", "password": "{{managerPassword}}" }
+
+### Manager lists invitations
+GET {{baseUrl}}/manager/delegations
+
+### Manager accepts delegation
+POST {{baseUrl}}/manager/delegations/{{createDelegation.response.body.$.data.delegation.id}}/accept
+
+### Provider login before updating permissions
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Replace the permission and resource sets atomically
+PATCH {{baseUrl}}/provider/manager-delegations/{{createDelegation.response.body.$.data.delegation.id}}/permissions
+Content-Type: application/json
+
+{
+  "permissions": ["RESOURCE_VIEW", "IMAGE_MANAGE", "GUARD_VIEW"],
+  "resourceIds": []
+}
+
+### End delegation
+DELETE {{baseUrl}}/provider/manager-delegations/{{createDelegation.response.body.$.data.delegation.id}}

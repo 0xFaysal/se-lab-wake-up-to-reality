@@ -18,7 +18,7 @@ export const adminPropertySummarySelect = {
   rejectionReason: true,
   createdAt: true,
   updatedAt: true,
-  owner: {
+  createdBy: {
     select: {
       id: true,
       fullName: true,
@@ -35,7 +35,7 @@ export type AdminPropertySummaryRecord = Prisma.PropertyGetPayload<{
 }>;
 
 export const adminPropertyDetailInclude = {
-  owner: {
+  createdBy: {
     select: {
       id: true,
       fullName: true,
@@ -47,6 +47,22 @@ export const adminPropertyDetailInclude = {
       phoneVerifiedAt: true,
       deletedAt: true,
       roles: { select: { role: true } },
+    },
+  },
+  providerMemberships: {
+    orderBy: { joinedAt: "asc" as const },
+    include: {
+      provider: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          status: true,
+          emailVerifiedAt: true,
+          phoneVerifiedAt: true,
+        },
+      },
     },
   },
   images: {

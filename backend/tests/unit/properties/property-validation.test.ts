@@ -48,7 +48,7 @@ describe("property request validation", () => {
     assert.equal(
       updatePropertySchema.safeParse({
         params: { propertyId: "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56" },
-        body: { entranceLatitude: null, entranceLongitude: null },
+        body: { version: 1, entranceLatitude: null, entranceLongitude: null },
       }).success,
       true,
     );
@@ -59,6 +59,13 @@ describe("property request validation", () => {
       updatePropertySchema.safeParse({
         params: { propertyId: "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56" },
         body: {},
+      }).success,
+      false,
+    );
+    assert.equal(
+      updatePropertySchema.safeParse({
+        params: { propertyId: "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56" },
+        body: { version: 1 },
       }).success,
       false,
     );

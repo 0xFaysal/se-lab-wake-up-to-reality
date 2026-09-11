@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
+import { UserRoleType } from "../generated/prisma/client.js";
 
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
@@ -11,14 +12,19 @@ import { requestId } from "./common/middleware/request-id.js";
 import { csrfProtection } from "./common/middleware/csrf-protection.js";
 import { notFoundHandler } from "./common/middleware/not-found.js";
 import { errorHandler } from "./common/middleware/error-handler.js";
+import { authenticate } from "./common/middleware/auth.js";
+import { requireAccountReady } from "./common/middleware/require-account-ready.js";
+import { requireRole } from "./common/middleware/require-role.js";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
 import { vehicleRouter } from "./modules/vehicles/vehicle.routes.js";
 import { propertyRouter } from "./modules/properties/property.routes.js";
 import { adminPropertyRouter } from "./modules/admin/properties/admin-property.routes.js";
-import { ownerGuardAssignmentRouter } from "./modules/guard-assignments/owner-guard-assignment.routes.js";
 import { guardAssignmentRouter } from "./modules/guard-assignments/guard-assignment.routes.js";
+import { propertyGovernanceRouter } from "./modules/property-governance/property-governance.routes.js";
+import { managerDelegationRouter } from "./modules/manager-delegations/manager-delegation.routes.js";
+import { propertyImageRouter } from "./modules/property-images/property-image.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -136,10 +142,19 @@ app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/vehicles", vehicleRouter);
+app.use("/api/v1/provider/properties", propertyRouter);
 app.use("/api/v1/owner/properties", propertyRouter);
-app.use("/api/v1/owner", ownerGuardAssignmentRouter);
-app.use("/api/v1/guard", guardAssignmentRouter);
+app.use(
+  "/api/v1/properties",
+  authenticate,
+  requireAccountReady,
+  requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER, UserRoleType.ADMIN),
+  propertyImageRouter,
+);
+app.use("/api/v1", guardAssignmentRouter);
 app.use("/api/v1/admin/properties", adminPropertyRouter);
+app.use("/api/v1", propertyGovernanceRouter);
+app.use("/api/v1", managerDelegationRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

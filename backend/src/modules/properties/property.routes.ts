@@ -11,12 +11,14 @@ import { propertyImageRouter } from "../property-images/property-image.routes.js
 import {
   createPropertyController,
   deletePropertyController,
+  findPossiblePropertyMatchesController,
   getPropertyController,
   listPropertiesController,
   updatePropertyController,
 } from "./property.controller.js";
 import {
   createPropertySchema,
+  propertyDuplicateMatchSchema,
   propertyIdParamSchema,
   updatePropertySchema,
 } from "./property.schema.js";
@@ -31,14 +33,14 @@ propertyRouter.use((_req, res, next) => {
 propertyRouter.use(
   authenticate,
   requireAccountReady,
-  requireRole(UserRoleType.PARKING_OWNER),
+  requireRole(UserRoleType.PROVIDER),
 );
 
 /**
  * @openapi
- * /api/v1/owner/properties/{propertyId}/guard-invitations:
+ * /api/v1/provider/properties/{propertyId}/guard-invitations:
  *   post:
- *     tags: [Owner Guard Assignments]
+ *     tags: [Property Guards]
  *     summary: Invite a known Guard to a verified active Property
  *     operationId: invitePropertyGuard
  *     security: [{ accessCookie: [] }]
@@ -73,12 +75,12 @@ propertyRouter.use(propertyImageRouter);
 
 /**
  * @openapi
- * /api/v1/owner/properties:
+ * /api/v1/provider/properties:
  *   post:
  *     tags: [Properties]
  *     summary: Create a parking property
- *     operationId: createOwnerProperty
- *     description: Requires a ready PARKING_OWNER account with mandatory email verification; phone verification is optional. Exact address and access instructions are encrypted at rest. New properties start as PENDING and INACTIVE.
+ *     operationId: createProviderProperty
+ *     description: Requires a ready PROVIDER account. Exact address and access instructions are encrypted at rest. New properties start as PENDING and INACTIVE.
  *     security:
  *       - accessCookie: []
  *     requestBody:
@@ -102,9 +104,9 @@ propertyRouter.use(propertyImageRouter);
  *         $ref: '#/components/responses/Forbidden'
  *   get:
  *     tags: [Properties]
- *     summary: List the current owner's properties
- *     operationId: listOwnerProperties
- *     description: Requires a ready PARKING_OWNER account. Returns newest active records first without decrypting or selecting private address fields.
+ *     summary: List the current Provider's Property memberships
+ *     operationId: listProviderProperties
+ *     description: Requires a ready PROVIDER account. Returns the Provider's Property memberships without selecting private encrypted fields.
  *     security:
  *       - accessCookie: []
  *     responses:
@@ -120,6 +122,11 @@ propertyRouter.use(propertyImageRouter);
  *         $ref: '#/components/responses/Forbidden'
  */
 propertyRouter.post(
+  "/possible-matches",
+  validate(propertyDuplicateMatchSchema),
+  findPossiblePropertyMatchesController,
+);
+propertyRouter.post(
   "/",
   validate(createPropertySchema),
   createPropertyController,
@@ -128,12 +135,12 @@ propertyRouter.get("/", listPropertiesController);
 
 /**
  * @openapi
- * /api/v1/owner/properties/{propertyId}:
+ * /api/v1/provider/properties/{propertyId}:
  *   get:
  *     tags: [Properties]
  *     summary: Get an owned property
- *     operationId: getOwnerProperty
- *     description: Returns owner-only details with decrypted exact address and access instructions. Missing, deleted, and cross-owner resources all return 404.
+ *     operationId: getProviderProperty
+ *     description: Returns membership-scoped details with decrypted exact address and access instructions. Inaccessible resources return 404.
  *     security:
  *       - accessCookie: []
  *     parameters:
@@ -171,7 +178,7 @@ propertyRouter.get("/", listPropertiesController);
  *   patch:
  *     tags: [Properties]
  *     summary: Update an owned property
- *     operationId: updateOwnerProperty
+ *     operationId: updateProviderProperty
  *     description: Re-encrypts changed private fields with a fresh IV. Critical location changes reset verified properties to PENDING and INACTIVE. Owners cannot submit verification or operational fields.
  *     security:
  *       - accessCookie: []
@@ -216,7 +223,7 @@ propertyRouter.get("/", listPropertiesController);
  *   delete:
  *     tags: [Properties]
  *     summary: Delete an owned property
- *     operationId: deleteOwnerProperty
+ *     operationId: deleteProviderProperty
  *     description: Soft-deletes an owned property when it has no images, existing parking spots, or blocking guard assignments.
  *     security:
  *       - accessCookie: []

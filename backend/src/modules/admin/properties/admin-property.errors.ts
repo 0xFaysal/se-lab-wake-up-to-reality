@@ -19,4 +19,10 @@ export const adminPropertyErrors = {
       code: "PROPERTY_VERIFICATION_REQUIREMENTS_NOT_MET",
       message: "Property does not meet approval requirements",
     }),
+  mergeConflict: (reason: string) =>
+    new AppError({
+      statusCode: 409,
+      code: "PROPERTY_MERGE_CONFLICT",
+      message: reason,
+    }),
 };

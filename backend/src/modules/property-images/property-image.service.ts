@@ -12,6 +12,10 @@ import {
 import { logger } from "../../config/logger.js";
 import { prisma } from "../../config/prisma.js";
 import { propertyErrors } from "../properties/property.errors.js";
+import {
+  canManageSharedPropertyImages,
+  canReadProviderProperty,
+} from "../property-governance/property-governance.policy.js";
 import * as propertyRepository from "../properties/property.repository.js";
 import { propertyImageErrors } from "./property-image.errors.js";
 import { toPropertyImageDto } from "./property-image.mapper.js";
@@ -24,12 +28,23 @@ import * as propertyImageRepository from "./property-image.repository.js";
 import type { ReorderPropertyImagesInput } from "./property-image.types.js";
 import { validatePropertyImageFile } from "./property-image.validation.js";
 
-async function requireOwnedProperty(ownerUserId: string, propertyId: string) {
-  const property = await propertyRepository.findPropertyByIdForOwner(
-    propertyId,
-    ownerUserId,
-  );
+async function requirePropertyImageReadAccess(userId: string, propertyId: string) {
+  const property = await propertyRepository.findPropertyById(propertyId);
+  if (!property || !(await canReadProviderProperty(userId, propertyId))) {
+    throw propertyErrors.notFound();
+  }
+  return property;
+}
+
+async function requirePropertyImageMutationAccess(
+  userId: string,
+  propertyId: string,
+) {
+  const property = await propertyRepository.findPropertyById(propertyId);
   if (!property) throw propertyErrors.notFound();
+  if (!(await canManageSharedPropertyImages(userId, propertyId))) {
+    throw propertyErrors.sharedPropertyOperationForbidden();
+  }
   return property;
 }
 
@@ -57,7 +72,7 @@ export async function uploadPropertyImages(
   files: Express.Multer.File[],
 ) {
   if (files.length === 0) throw propertyImageErrors.required();
-  await requireOwnedProperty(ownerUserId, propertyId);
+  await requirePropertyImageMutationAccess(ownerUserId, propertyId);
 
   const validatedFiles = await Promise.all(
     files.map(validatePropertyImageFile),
@@ -82,12 +97,11 @@ export async function uploadPropertyImages(
   try {
     const saved = await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
-      const property = await propertyRepository.findPropertyByIdForOwner(
-        propertyId,
-        ownerUserId,
-        tx,
-      );
-      if (!property) throw propertyErrors.notFound();
+      const property = await propertyRepository.findPropertyById(propertyId, tx);
+      if (
+        !property ||
+        !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+      ) throw propertyErrors.sharedPropertyOperationForbidden();
 
       const currentCount = await propertyImageRepository.countPropertyImages(
         propertyId,
@@ -138,7 +152,7 @@ export async function listPropertyImages(
   ownerUserId: string,
   propertyId: string,
 ) {
-  await requireOwnedProperty(ownerUserId, propertyId);
+  await requirePropertyImageReadAccess(ownerUserId, propertyId);
   const images = await propertyImageRepository.findPropertyImages(propertyId);
   return images.map(toPropertyImageDto);
 }
@@ -150,12 +164,11 @@ export async function reorderPropertyImages(
 ) {
   const images = await prisma.$transaction(async (tx) => {
     await propertyRepository.lockPropertyForMutation(propertyId, tx);
-    const property = await propertyRepository.findPropertyByIdForOwner(
-      propertyId,
-      ownerUserId,
-      tx,
-    );
-    if (!property) throw propertyErrors.notFound();
+    const property = await propertyRepository.findPropertyById(propertyId, tx);
+    if (
+      !property ||
+      !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+    ) throw propertyErrors.sharedPropertyOperationForbidden();
 
     const currentImages = await propertyImageRepository.findPropertyImages(
       propertyId,
@@ -198,12 +211,11 @@ export async function deletePropertyImage(
 ): Promise<void> {
   const image = await prisma.$transaction(async (tx) => {
     await propertyRepository.lockPropertyForMutation(propertyId, tx);
-    const property = await propertyRepository.findPropertyByIdForOwner(
-      propertyId,
-      ownerUserId,
-      tx,
-    );
-    if (!property) throw propertyErrors.notFound();
+    const property = await propertyRepository.findPropertyById(propertyId, tx);
+    if (
+      !property ||
+      !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+    ) throw propertyErrors.sharedPropertyOperationForbidden();
 
     const existingImage = await propertyImageRepository.findPropertyImage(
       propertyId,
@@ -222,12 +234,11 @@ export async function deletePropertyImage(
 
   await prisma.$transaction(async (tx) => {
     await propertyRepository.lockPropertyForMutation(propertyId, tx);
-    const property = await propertyRepository.findPropertyByIdForOwner(
-      propertyId,
-      ownerUserId,
-      tx,
-    );
-    if (!property) throw propertyErrors.notFound();
+    const property = await propertyRepository.findPropertyById(propertyId, tx);
+    if (
+      !property ||
+      !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+    ) throw propertyErrors.sharedPropertyOperationForbidden();
     const currentImage = await propertyImageRepository.findPropertyImage(
       propertyId,
       imageId,
@@ -248,9 +259,9 @@ export async function deletePropertyImage(
     );
     if (remaining.length === 0) {
       if (property.verificationStatus === VerificationStatus.VERIFIED) {
-        await propertyRepository.updatePropertyByIdForOwner(
+        await propertyRepository.updatePropertyConditionally(
           propertyId,
-          ownerUserId,
+          property.version,
           {
             verificationStatus: VerificationStatus.PENDING,
             status: PropertyStatus.INACTIVE,

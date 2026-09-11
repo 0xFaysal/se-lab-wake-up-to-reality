@@ -1,20 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-
-process.env.NODE_ENV = "test";
-process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
-process.env.REDIS_URL = "redis://localhost:6379";
-process.env.CORS_ORIGIN = "http://localhost:3000";
-process.env.JWT_ACCESS_SECRET =
-  "unit-access-secret-at-least-32-characters-long";
-process.env.JWT_REFRESH_SECRET =
-  "unit-refresh-secret-at-least-32-characters-long";
-process.env.VERIFICATION_CODE_SECRET =
-  "unit-verification-secret-at-least-32-characters";
-process.env.AUTH_METADATA_HASH_SECRET =
-  "unit-metadata-secret-at-least-32-characters";
-process.env.DATA_ENCRYPTION_KEY =
-  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+import "../../helpers/test-env.js";
 
 const {
   decryptSensitiveText,

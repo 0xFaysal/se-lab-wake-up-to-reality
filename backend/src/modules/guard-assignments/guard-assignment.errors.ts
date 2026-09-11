@@ -45,4 +45,34 @@ export const guardAssignmentErrors = {
       code: "GUARD_ASSIGNMENT_INVALID_TRANSITION",
       message: "Requested Guard assignment transition is not allowed",
     }),
+  forbidden: () =>
+    new AppError({
+      statusCode: 403,
+      code: "GUARD_MANAGEMENT_FORBIDDEN",
+      message: "You are not allowed to manage Guards for this Property",
+    }),
+  membershipNotFound: () =>
+    new AppError({
+      statusCode: 404,
+      code: "PROPERTY_GUARD_MEMBERSHIP_NOT_FOUND",
+      message: "Property Guard membership was not found",
+    }),
+  membershipAlreadyExists: () =>
+    new AppError({
+      statusCode: 409,
+      code: "PROPERTY_GUARD_MEMBERSHIP_ALREADY_EXISTS",
+      message: "This Guard already has a current membership at the Property",
+    }),
+  membershipNotActive: () =>
+    new AppError({
+      statusCode: 409,
+      code: "PROPERTY_GUARD_MEMBERSHIP_NOT_ACTIVE",
+      message: "Guard must accept the Property membership before provider assignment",
+    }),
+  membershipRemovalBlocked: () =>
+    new AppError({
+      statusCode: 409,
+      code: "PROPERTY_GUARD_REMOVAL_BLOCKED",
+      message: "End every active Provider Guard assignment before removing this Guard",
+    }),
 };

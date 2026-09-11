@@ -29,7 +29,9 @@ Development responses also expose the code for local testing. Phone verification
 is optional and never blocks account access; using it in production still requires
 an SMS delivery provider.
 
-`guard-assignments.http` covers the Day 7 Owner invitation, Guard consent,
-shift re-acceptance, suspension, resumption, ending, and cross-account IDOR
-checks. Replace its account identifiers and `propertyId` with seeded or locally
-created records before running it.
+`guard-assignments.http` covers shared Property membership, Guard consent,
+and provider-specific assignments. `manager-delegations.http` covers scoped
+Manager permissions, while `property-governance.http` covers memberships,
+Building Manager voting, shared changes, duplicate detection, and Admin merge.
+Replace placeholder identifiers with seeded or locally created records before
+running those requests.

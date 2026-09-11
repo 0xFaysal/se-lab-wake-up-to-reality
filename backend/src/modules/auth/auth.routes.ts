@@ -46,11 +46,12 @@ authRouter.use((_req, res, next) => {
  * /api/v1/auth/register:
  *   post:
  *     tags: [Authentication]
- *     summary: Register a new Driver or Parking Owner
+ *     summary: Register a new Driver or Provider
  *     operationId: registerUser
  *     description: |
  *       Creates a self-registered ParkEase account. Public registration allows
- *       only DRIVER and PARKING_OWNER roles. Successful registration creates the
+ *       only DRIVER and PROVIDER roles. Legacy PARKING_OWNER input is temporarily
+ *       accepted and normalized to PROVIDER. Successful registration creates the
  *       role, BDT wallet, required legal acceptances, and an authenticated session.
  *       Access and refresh tokens are issued as HttpOnly cookies. The account is
  *       PENDING until mandatory email verification. Phone verification is
