@@ -445,3 +445,82 @@ export const MOCK_OWNER_ACTIVITIES: OwnerActivity[] = [
     isImportant: false,
   },
 ];
+
+export interface OwnerGuard {
+  id: string;
+  name: string;
+  initials: string;
+  phone: string;
+  email: string;
+  propertyId: string;
+  propertyTitle: string;
+  gate: string;
+  shiftStart?: string;
+  shiftEnd?: string;
+  shiftWindow?: string;
+  status: "ON_DUTY" | "OFF_DUTY" | "PENDING_ACTIVATION";
+  assignedBy: string;
+  invitationNote?: string;
+}
+
+export const MOCK_OWNER_GUARDS: OwnerGuard[] = [
+  {
+    id: "guard-1",
+    name: "Tariqul Islam",
+    initials: "TI",
+    phone: "+880 17XX XXXXX",
+    email: "tariqul@example.com",
+    propertyId: "prop-gulshan-1",
+    propertyTitle: "Residential Building, Gulshan",
+    gate: "Gate 2",
+    shiftStart: "08:00 AM",
+    shiftEnd: "06:00 PM",
+    shiftWindow: "8:00 AM – 6:00 PM",
+    status: "ON_DUTY",
+    assignedBy: "Rahim Uddin (Property Manager)",
+  },
+  {
+    id: "guard-2",
+    name: "Mahmud Hasan",
+    initials: "MH",
+    phone: "+880 18XX XXXXX",
+    email: "mahmud@example.com",
+    propertyId: "prop-banani-2",
+    propertyTitle: "Office Parking, Banani",
+    gate: "Gate 1",
+    shiftStart: "02:00 PM",
+    shiftEnd: "10:00 PM",
+    shiftWindow: "2:00 PM – 10:00 PM",
+    status: "OFF_DUTY",
+    assignedBy: "Tanvir Chowdhury (Property Owner)",
+  },
+  {
+    id: "guard-3",
+    name: "Nayeem Ahmed",
+    initials: "NA",
+    phone: "+880 19XX XXXXX",
+    email: "nayeem@example.com",
+    propertyId: "prop-gulshan-1",
+    propertyTitle: "Residential Building, Gulshan",
+    gate: "Gate 1",
+    shiftStart: "10:00 AM",
+    shiftEnd: "08:00 PM",
+    shiftWindow: "10:00 AM – 8:00 PM",
+    status: "ON_DUTY",
+    assignedBy: "Rahim Uddin (Property Manager)",
+  },
+  {
+    id: "guard-4",
+    name: "Arif Hossain",
+    initials: "AH",
+    phone: "+880 16XX XXXXX",
+    email: "arif@example.com",
+    propertyId: "prop-banani-2",
+    propertyTitle: "Office Parking, Banani",
+    gate: "Gate 2",
+    status: "PENDING_ACTIVATION",
+    invitationNote: "Sent Today via SMS & Email",
+    assignedBy: "Tanvir Chowdhury (Property Owner)",
+  },
+];
+
