@@ -448,8 +448,10 @@ export const MOCK_OWNER_ACTIVITIES: OwnerActivity[] = [
 
 export interface OwnerGuard {
   id: string;
+  guardCode: string;
   name: string;
   initials: string;
+  avatarUrl?: string;
   phone: string;
   email: string;
   propertyId: string;
@@ -461,29 +463,35 @@ export interface OwnerGuard {
   status: "ON_DUTY" | "OFF_DUTY" | "PENDING_ACTIVATION";
   assignedBy: string;
   invitationNote?: string;
+  recentActivity?: string;
+  recentActivityTime?: string;
 }
 
 export const MOCK_OWNER_GUARDS: OwnerGuard[] = [
   {
     id: "guard-1",
+    guardCode: "GD-4091",
     name: "Tariqul Islam",
     initials: "TI",
-    phone: "+880 17XX XXXXX",
+    phone: "+880 18XX-XXXXXX",
     email: "tariqul@example.com",
     propertyId: "prop-gulshan-1",
-    propertyTitle: "Residential Building, Gulshan",
+    propertyTitle: "Residential Bldg, Gulshan",
     gate: "Gate 2",
     shiftStart: "08:00 AM",
     shiftEnd: "06:00 PM",
     shiftWindow: "8:00 AM – 6:00 PM",
     status: "ON_DUTY",
     assignedBy: "Rahim Uddin (Property Manager)",
+    recentActivity: "Verified booking #PE-BK-2051",
+    recentActivityTime: "12 mins ago",
   },
   {
     id: "guard-2",
+    guardCode: "GD-3822",
     name: "Mahmud Hasan",
     initials: "MH",
-    phone: "+880 18XX XXXXX",
+    phone: "+880 17XX-XXXXXX",
     email: "mahmud@example.com",
     propertyId: "prop-banani-2",
     propertyTitle: "Office Parking, Banani",
@@ -496,12 +504,13 @@ export const MOCK_OWNER_GUARDS: OwnerGuard[] = [
   },
   {
     id: "guard-3",
+    guardCode: "GD-5510",
     name: "Nayeem Ahmed",
     initials: "NA",
-    phone: "+880 19XX XXXXX",
+    phone: "+880 19XX-XXXXXX",
     email: "nayeem@example.com",
     propertyId: "prop-gulshan-1",
-    propertyTitle: "Residential Building, Gulshan",
+    propertyTitle: "Residential Bldg, Gulshan",
     gate: "Gate 1",
     shiftStart: "10:00 AM",
     shiftEnd: "08:00 PM",
@@ -511,16 +520,93 @@ export const MOCK_OWNER_GUARDS: OwnerGuard[] = [
   },
   {
     id: "guard-4",
+    guardCode: "GD-2904",
     name: "Arif Hossain",
     initials: "AH",
-    phone: "+880 16XX XXXXX",
+    phone: "+880 16XX-XXXXXX",
     email: "arif@example.com",
     propertyId: "prop-banani-2",
     propertyTitle: "Office Parking, Banani",
     gate: "Gate 2",
     status: "PENDING_ACTIVATION",
-    invitationNote: "Sent Today via SMS & Email",
+    invitationNote: "Invitation: Sent Today",
     assignedBy: "Tanvir Chowdhury (Property Owner)",
   },
 ];
+
+export interface GuardCoverageItem {
+  propertyTitle: string;
+  totalGuards: number;
+  onDutyCount: number;
+  offDutyCount: number;
+  pendingCount: number;
+  subtext: string;
+}
+
+export const MOCK_GUARD_COVERAGE: GuardCoverageItem[] = [
+  {
+    propertyTitle: "Residential Building, Gulshan",
+    totalGuards: 2,
+    onDutyCount: 2,
+    offDutyCount: 0,
+    pendingCount: 0,
+    subtext: "Gates 1 & 2 staffed",
+  },
+  {
+    propertyTitle: "Office Parking, Banani",
+    totalGuards: 2,
+    onDutyCount: 0,
+    offDutyCount: 1,
+    pendingCount: 1,
+    subtext: "1 Off-Duty • 1 Pending Activation",
+  },
+];
+
+export interface UpcomingShiftItem {
+  id: string;
+  guardName: string;
+  initials: string;
+  propertyTitle: string;
+  gate: string;
+  shiftWindow: string;
+  dayLabel: "Today" | "Tomorrow";
+}
+
+export const MOCK_UPCOMING_SHIFTS: UpcomingShiftItem[] = [
+  {
+    id: "shift-1",
+    guardName: "Mahmud Hasan",
+    initials: "MH",
+    propertyTitle: "Office Parking, Banani",
+    gate: "Gate 1",
+    shiftWindow: "2:00 PM – 10:00 PM",
+    dayLabel: "Today",
+  },
+  {
+    id: "shift-2",
+    guardName: "Tariqul Islam",
+    initials: "TI",
+    propertyTitle: "Residential Bldg, Gulshan",
+    gate: "Gate 2",
+    shiftWindow: "8:00 AM – 6:00 PM",
+    dayLabel: "Tomorrow",
+  },
+];
+
+export const GUARD_ACCESS_SCOPE = {
+  canAccess: [
+    "Assigned property",
+    "Assigned gate",
+    "Assigned bookings",
+    "QR / OTP verification",
+    "Vehicle check-in",
+    "Active parking sessions",
+    "Vehicle check-out",
+  ],
+  cannotAccess: [
+    "Pricing, Earnings & Payouts",
+    "Ownership controls & Manager controls",
+  ],
+};
+
 

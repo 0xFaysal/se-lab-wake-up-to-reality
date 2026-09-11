@@ -9,22 +9,27 @@ interface OwnerHeaderProps {
   title?: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  badge?: React.ReactNode;
 }
 
 export function OwnerHeader({
   title = "Overview",
   subtitle = "Welcome back, here is your property portfolio summary",
   actions,
+  badge,
 }: OwnerHeaderProps) {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   return (
     <header className="h-20 bg-white border-b border-[#E5E7EB] px-6 sm:px-8 lg:px-10 flex items-center justify-between sticky top-0 z-20">
-      {/* Left: Page Title & Subtitle */}
+      {/* Left: Page Title, Badge & Subtitle */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold font-heading text-slate-900 tracking-tight leading-tight">
-          {title}
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl sm:text-2xl font-bold font-heading text-slate-900 tracking-tight leading-tight">
+            {title}
+          </h1>
+          {badge && <div>{badge}</div>}
+        </div>
         {subtitle && (
           <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
             {subtitle}
