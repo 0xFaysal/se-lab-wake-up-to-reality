@@ -70,7 +70,8 @@ export function OwnerSidebar({ onCloseMobile }: OwnerSidebarProps) {
           {NAV_ITEMS.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/owner/dashboard" && pathname.startsWith(item.href));
+              (item.href !== "/owner/dashboard" && pathname.startsWith(item.href)) ||
+              (item.href === "/owner/earnings" && pathname.startsWith("/owner/payouts"));
             const Icon = item.icon;
 
             return (

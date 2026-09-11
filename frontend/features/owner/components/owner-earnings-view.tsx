@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   TrendingUp,
   CreditCard,
@@ -664,13 +665,12 @@ export function OwnerEarningsView() {
                 <h3 className="text-sm font-bold font-heading text-slate-900">
                   Recent Payout Activity
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => alert("Showing full payout audit logs.")}
+                <Link
+                  href="/owner/payouts"
                   className="text-xs font-semibold text-[#064E3B] hover:underline cursor-pointer"
                 >
                   View Payout History
-                </button>
+                </Link>
               </div>
 
               {/* Vertical Timeline */}
