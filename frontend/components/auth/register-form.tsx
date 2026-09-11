@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -16,6 +17,8 @@ import { cn } from "@/lib/utils";
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const {
     register,
@@ -40,8 +43,15 @@ export function RegisterForm() {
   const agreeToPrivacy = watch("agreeToPrivacy");
 
   async function onSubmit(data: RegisterFormValues) {
-    console.log("Registration submitted:", data);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const defaultDest = data.role === "PARKING_OWNER" ? "/owner/dashboard" : "/driver/bookings";
+    const dest = searchParams.get("redirect") || defaultDest;
+    router.push(
+      `/verify-otp?identifier=${encodeURIComponent(
+        data.phone
+      )}&type=phone&altIdentifier=${encodeURIComponent(
+        data.email
+      )}&action=signup&redirect=${encodeURIComponent(dest)}`
+    );
   }
 
   return (

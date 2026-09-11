@@ -215,3 +215,133 @@ export const MOCK_BOOKINGS: Booking[] = [
     ],
   },
 ];
+
+export interface PaymentTransaction {
+  id: string;
+  date: string;
+  purpose: "Initial Booking" | "Session Extension" | "Overstay Fee";
+  bookingId: string;
+  propertyTitle: string;
+  gateway: string;
+  amount: number;
+  status: "Validated" | "Pending" | "Failed";
+  receiptNumber: string;
+}
+
+export interface RefundTransaction {
+  id: string;
+  date: string;
+  reason: "Security Deposit Return" | "Booking Cancellation" | "Overcharge Adjustment";
+  bookingId: string;
+  propertyTitle: string;
+  originalPayment: string;
+  amount: number;
+  status: "Refunded" | "Processing" | "Manual Review";
+  transactionRef: string;
+}
+
+export const MOCK_PAYMENT_TRANSACTIONS: PaymentTransaction[] = [
+  {
+    id: "TXN-2026-1027-01",
+    date: "Oct 27, 2026 • 10:02 AM",
+    purpose: "Initial Booking",
+    bookingId: "PKBD-2026-1027-1842",
+    propertyTitle: "Gulshan Residential Parking",
+    gateway: "SSLCOMMERZ (bKash)",
+    amount: 480,
+    status: "Validated",
+    receiptNumber: "RCP-884102",
+  },
+  {
+    id: "TXN-2026-1026-02",
+    date: "Oct 26, 2026 • 04:42 PM",
+    purpose: "Initial Booking",
+    bookingId: "PKBD-2026-1026-7731",
+    propertyTitle: "Banani Prime Basement",
+    gateway: "SSLCOMMERZ (Visa •••• 4242)",
+    amount: 220,
+    status: "Validated",
+    receiptNumber: "RCP-883921",
+  },
+  {
+    id: "TXN-2026-1022-03",
+    date: "Oct 22, 2026 • 06:15 PM",
+    purpose: "Overstay Fee",
+    bookingId: "PKBD-2026-0922-0914",
+    propertyTitle: "Dhanmondi Lakeview Garage",
+    gateway: "SSLCOMMERZ (bKash)",
+    amount: 120,
+    status: "Pending",
+    receiptNumber: "RCP-882194",
+  },
+  {
+    id: "TXN-2026-1014-04",
+    date: "Oct 14, 2026 • 10:31 AM",
+    purpose: "Initial Booking",
+    bookingId: "PKBD-2026-1014-3200",
+    propertyTitle: "Uttara Sector 3 Covered Bay",
+    gateway: "SSLCOMMERZ (bKash)",
+    amount: 320,
+    status: "Validated",
+    receiptNumber: "RCP-880150",
+  },
+  {
+    id: "TXN-2026-1014-05",
+    date: "Oct 14, 2026 • 02:45 PM",
+    purpose: "Session Extension",
+    bookingId: "PKBD-2026-1014-3200",
+    propertyTitle: "Uttara Sector 3 Covered Bay",
+    gateway: "SSLCOMMERZ (bKash)",
+    amount: 70,
+    status: "Validated",
+    receiptNumber: "RCP-880211",
+  },
+];
+
+export const MOCK_REFUND_TRANSACTIONS: RefundTransaction[] = [
+  {
+    id: "REF-2026-1028-01",
+    date: "Oct 28, 2026 • 04:15 PM",
+    reason: "Security Deposit Return",
+    bookingId: "PKBD-2026-1027-1842",
+    propertyTitle: "Gulshan Residential Parking",
+    originalPayment: "bKash (+880 1712-***678)",
+    amount: 100,
+    status: "Processing",
+    transactionRef: "RF-BK-918231",
+  },
+  {
+    id: "REF-2026-1015-02",
+    date: "Oct 15, 2026 • 11:30 AM",
+    reason: "Security Deposit Return",
+    bookingId: "PKBD-2026-1014-3200",
+    propertyTitle: "Uttara Sector 3 Covered Bay",
+    originalPayment: "bKash (+880 1712-***678)",
+    amount: 100,
+    status: "Refunded",
+    transactionRef: "RF-BK-772914",
+  },
+  {
+    id: "REF-2026-1002-03",
+    date: "Oct 02, 2026 • 09:20 AM",
+    reason: "Booking Cancellation",
+    bookingId: "PKBD-2026-1002-1102",
+    propertyTitle: "Mohakhali Commercial Hub Bay",
+    originalPayment: "Visa (•••• 4242)",
+    amount: 360,
+    status: "Refunded",
+    transactionRef: "RF-VS-441829",
+  },
+  {
+    id: "REF-2026-0925-04",
+    date: "Sep 25, 2026 • 02:10 PM",
+    reason: "Overcharge Adjustment",
+    bookingId: "PKBD-2026-0925-8821",
+    propertyTitle: "Bashundhara Gate 1 Parking",
+    originalPayment: "bKash (+880 1712-***678)",
+    amount: 50,
+    status: "Manual Review",
+    transactionRef: "RF-MR-109284",
+  },
+];
+

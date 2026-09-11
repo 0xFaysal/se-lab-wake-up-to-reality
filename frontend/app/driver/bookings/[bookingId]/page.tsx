@@ -16,6 +16,8 @@ import {
   Calendar,
   Clock,
   MapPin,
+  Star,
+  ShieldAlert,
 } from "lucide-react";
 
 import { DigitalAccessPass } from "@/features/bookings/components/digital-access-pass";
@@ -258,6 +260,14 @@ export default function BookingDetailsPage({ params }: BookingDetailsPageProps) 
                 View Property Details
               </Link>
 
+              <Link
+                href={`/driver/bookings/${booking.id}/review`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200 font-bold text-sm h-11 transition-colors"
+              >
+                <Star className="size-4 text-amber-600 fill-amber-500" />
+                Rate &amp; Review Space
+              </Link>
+
               <button
                 type="button"
                 onClick={() => alert("Receipt downloaded successfully (PDF).")}
@@ -266,6 +276,14 @@ export default function BookingDetailsPage({ params }: BookingDetailsPageProps) 
                 <Download className="size-4" />
                 Download Receipt
               </button>
+
+              <Link
+                href={`/driver/bookings/${booking.id}/dispute`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 text-rose-800 hover:bg-rose-50 font-bold text-sm h-11 transition-colors"
+              >
+                <ShieldAlert className="size-4 text-rose-600" />
+                Report Issue / Dispute
+              </Link>
 
               <Link
                 href="/safety"
