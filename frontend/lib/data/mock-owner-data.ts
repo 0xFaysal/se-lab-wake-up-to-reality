@@ -609,4 +609,186 @@ export const GUARD_ACCESS_SCOPE = {
   ],
 };
 
+// ============================================================================
+// EARNINGS & PAYOUTS MOCK DATA (STEP 2)
+// ============================================================================
+
+export interface DailyEarningPoint {
+  date: string;
+  dayLabel: string;
+  earnings: number;
+  baseline: number;
+  bookings: number;
+}
+
+export const MOCK_DAILY_EARNINGS: DailyEarningPoint[] = [
+  { date: "2026-08-15", dayLabel: "Aug 15", earnings: 620, baseline: 580, bookings: 4 },
+  { date: "2026-08-18", dayLabel: "Aug 18", earnings: 710, baseline: 650, bookings: 5 },
+  { date: "2026-08-21", dayLabel: "Aug 21", earnings: 690, baseline: 620, bookings: 4 },
+  { date: "2026-08-24", dayLabel: "Aug 24", earnings: 820, baseline: 700, bookings: 6 },
+  { date: "2026-08-27", dayLabel: "Aug 27", earnings: 780, baseline: 710, bookings: 5 },
+  { date: "2026-08-30", dayLabel: "Aug 30", earnings: 890, baseline: 750, bookings: 7 },
+  { date: "2026-09-02", dayLabel: "Sep 2", earnings: 920, baseline: 800, bookings: 7 },
+  { date: "2026-09-05", dayLabel: "Sep 5", earnings: 980, baseline: 820, bookings: 8 },
+  { date: "2026-09-08", dayLabel: "Sep 8", earnings: 1050, baseline: 850, bookings: 9 },
+  { date: "2026-09-10", dayLabel: "Today", earnings: 990, baseline: 840, bookings: 8 },
+];
+
+export interface PropertyEarningsSummary {
+  id: string;
+  propertyTitle: string;
+  location: string;
+  code: string;
+  badgeBg: string;
+  badgeText: string;
+  totalBookings: number;
+  grossRevenue: number;
+  platformFeeRate: number;
+  platformFeeAmount: number;
+  netOwnerEarnings: number;
+  payoutRate: number;
+}
+
+export const MOCK_PROPERTY_EARNINGS: PropertyEarningsSummary[] = [
+  {
+    id: "prop-gulshan-1",
+    propertyTitle: "Residential Building, Gulshan",
+    location: "Road 45, Gulshan-2",
+    code: "RG",
+    badgeBg: "bg-emerald-100",
+    badgeText: "text-emerald-800",
+    totalBookings: 84,
+    grossRevenue: 18400,
+    platformFeeRate: 10,
+    platformFeeAmount: 1840,
+    netOwnerEarnings: 16560,
+    payoutRate: 90,
+  },
+  {
+    id: "prop-banani-2",
+    propertyTitle: "Office Parking, Banani",
+    location: "Road 11, Banani",
+    code: "OB",
+    badgeBg: "bg-sky-100",
+    badgeText: "text-sky-800",
+    totalBookings: 52,
+    grossRevenue: 11700,
+    platformFeeRate: 10,
+    platformFeeAmount: 1170,
+    netOwnerEarnings: 10530,
+    payoutRate: 90,
+  },
+  {
+    id: "prop-dhanmondi-3",
+    propertyTitle: "Apartment Parking, Dhanmondi",
+    location: "Road 27, Dhanmondi",
+    code: "AD",
+    badgeBg: "bg-purple-100",
+    badgeText: "text-purple-800",
+    totalBookings: 28,
+    grossRevenue: 6200,
+    platformFeeRate: 10,
+    platformFeeAmount: 620,
+    netOwnerEarnings: 5580,
+    payoutRate: 90,
+  },
+];
+
+export interface EarningsTransaction {
+  id: string;
+  bookingCode: string;
+  dateStr: string;
+  propertyTitle: string;
+  parkingFee: number;
+  platformFee: number;
+  ownerEarnings: number;
+  status: "Settled" | "Pending" | "Refunded";
+  paymentMethod: string;
+  customerName: string;
+}
+
+export const MOCK_EARNINGS_TRANSACTIONS: EarningsTransaction[] = [
+  {
+    id: "tx-1",
+    bookingCode: "#PE-BK-2892",
+    dateStr: "Sep 10, 2026",
+    propertyTitle: "Residential Building, Gulshan",
+    parkingFee: 150,
+    platformFee: 15,
+    ownerEarnings: 135,
+    status: "Settled",
+    paymentMethod: "bKash Online",
+    customerName: "Arif Hossain",
+  },
+  {
+    id: "tx-2",
+    bookingCode: "#PE-BK-2889",
+    dateStr: "Sep 10, 2026",
+    propertyTitle: "Office Parking, Banani",
+    parkingFee: 200,
+    platformFee: 20,
+    ownerEarnings: 180,
+    status: "Settled",
+    paymentMethod: "Nagad Gateway",
+    customerName: "Nusrat Jahan",
+  },
+  {
+    id: "tx-3",
+    bookingCode: "#PE-BK-2884",
+    dateStr: "Sep 9, 2026",
+    propertyTitle: "Residential Building, Gulshan",
+    parkingFee: 180,
+    platformFee: 18,
+    ownerEarnings: 162,
+    status: "Pending",
+    paymentMethod: "Visa Card",
+    customerName: "Kamal Hossain",
+  },
+  {
+    id: "tx-4",
+    bookingCode: "#PE-BK-2879",
+    dateStr: "Sep 9, 2026",
+    propertyTitle: "Apartment Parking, Dhanmondi",
+    parkingFee: 160,
+    platformFee: 16,
+    ownerEarnings: 144,
+    status: "Settled",
+    paymentMethod: "bKash Online",
+    customerName: "Farhan Ahmed",
+  },
+];
+
+export interface PayoutTimelineItem {
+  id: string;
+  title: string;
+  amount: number;
+  subtext: string;
+  status: "UNDER_REVIEW" | "REQUESTED" | "COMPLETED";
+}
+
+export const MOCK_PAYOUT_TIMELINE: PayoutTimelineItem[] = [
+  {
+    id: "payout-1",
+    title: "Payout Under Review",
+    amount: 6250,
+    subtext: "Today • Verification in progress by Admin",
+    status: "UNDER_REVIEW",
+  },
+  {
+    id: "payout-2",
+    title: "Payout Requested",
+    amount: 6250,
+    subtext: "Sep 9, 2026 • Batch #PR-8902",
+    status: "REQUESTED",
+  },
+  {
+    id: "payout-3",
+    title: "Payout Completed",
+    amount: 12000,
+    subtext: "Sep 5, 2026 • Transferred to BRAC •••• 4821",
+    status: "COMPLETED",
+  },
+];
+
+
 
