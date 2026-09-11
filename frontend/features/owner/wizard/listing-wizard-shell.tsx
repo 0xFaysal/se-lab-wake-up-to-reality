@@ -14,6 +14,8 @@ import {
   Sparkles,
   Menu,
   X,
+  Bell,
+  CheckCircle2,
 } from "lucide-react";
 import { MOCK_OWNER_PROFILE } from "@/lib/data/mock-owner-data";
 
@@ -35,6 +37,8 @@ interface ListingWizardShellProps {
   children: React.ReactNode;
   onSaveAndExit?: () => void;
   onNext?: () => void;
+  isSuccessScreen?: boolean;
+  hideDefaultFooter?: boolean;
 }
 
 export function ListingWizardShell({
@@ -48,6 +52,8 @@ export function ListingWizardShell({
   children,
   onSaveAndExit,
   onNext,
+  isSuccessScreen = false,
+  hideDefaultFooter = false,
 }: ListingWizardShellProps) {
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -57,43 +63,43 @@ export function ListingWizardShell({
       stepNumber: 1,
       title: "Property Details",
       path: "/owner/properties/new/step-1",
-      state: currentStep > 1 ? "completed" : currentStep === 1 ? "active" : "pending",
+      state: isSuccessScreen || currentStep > 1 ? "completed" : currentStep === 1 ? "active" : "pending",
     },
     {
       stepNumber: 2,
       title: "Location",
       path: "/owner/properties/new/step-2",
-      state: currentStep > 2 ? "completed" : currentStep === 2 ? "active" : "pending",
+      state: isSuccessScreen || currentStep > 2 ? "completed" : currentStep === 2 ? "active" : "pending",
     },
     {
       stepNumber: 3,
       title: "Parking Spaces",
       path: "/owner/properties/new/step-3",
-      state: currentStep > 3 ? "completed" : currentStep === 3 ? "active" : "pending",
+      state: isSuccessScreen || currentStep > 3 ? "completed" : currentStep === 3 ? "active" : "pending",
     },
     {
       stepNumber: 4,
       title: "Availability & Pricing",
       path: "/owner/properties/new/step-4",
-      state: currentStep > 4 ? "completed" : currentStep === 4 ? "active" : "pending",
+      state: isSuccessScreen || currentStep > 4 ? "completed" : currentStep === 4 ? "active" : "pending",
     },
     {
       stepNumber: 5,
       title: "Amenities & Security",
       path: "/owner/properties/new/step-5",
-      state: currentStep > 5 ? "completed" : currentStep === 5 ? "active" : "pending",
+      state: isSuccessScreen || currentStep > 5 ? "completed" : currentStep === 5 ? "active" : "pending",
     },
     {
       stepNumber: 6,
       title: "Photos",
       path: "/owner/properties/new/step-6",
-      state: currentStep > 6 ? "completed" : currentStep === 6 ? "active" : "pending",
+      state: isSuccessScreen || currentStep > 6 ? "completed" : currentStep === 6 ? "active" : "pending",
     },
     {
       stepNumber: 7,
       title: "Review & Publish",
       path: "/owner/properties/new/step-7",
-      state: currentStep > 7 ? "completed" : currentStep === 7 ? "active" : "pending",
+      state: isSuccessScreen ? "completed" : currentStep === 7 ? "active" : "pending",
     },
   ];
 
@@ -150,13 +156,29 @@ export function ListingWizardShell({
           <span className="font-bold text-slate-900 font-heading truncate max-w-[200px] sm:max-w-none">
             Residential Building, Gulshan
           </span>
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            Step {currentStep} of 7
-          </span>
+          {isSuccessScreen ? (
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-[#064E3B] border border-emerald-300 flex items-center gap-1.5 font-heading">
+              <span className="size-1.5 rounded-full bg-emerald-600" />
+              Completed
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              Step {currentStep} of 7
+            </span>
+          )}
         </div>
 
-        {/* Right: Owner Profile Capsule */}
+        {/* Right: Owner Profile Capsule & Optional Notification Bell */}
         <div className="flex items-center gap-2.5">
+          {isSuccessScreen && (
+            <button
+              type="button"
+              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 cursor-pointer"
+              title="Notifications"
+            >
+              <Bell className="size-4" />
+            </button>
+          )}
           <div className="size-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center font-heading">
             {MOCK_OWNER_PROFILE.initials}
           </div>
@@ -189,7 +211,7 @@ export function ListingWizardShell({
               </span>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-xs font-semibold text-slate-700">
-                  Step {currentStep} of 7 • Listing Onboarding
+                  {isSuccessScreen ? "100% Complete" : `Step ${currentStep} of 7 • Listing Onboarding`}
                 </span>
                 <span className="text-xs font-bold text-[#064E3B] font-heading">
                   {progressPercentage}%
@@ -202,6 +224,14 @@ export function ListingWizardShell({
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
+
+              {/* Success Badge */}
+              {isSuccessScreen && (
+                <div className="mt-3 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[#064E3B] text-[11px] font-bold font-heading flex items-center gap-1.5">
+                  <CheckCircle2 className="size-3.5 text-[#064E3B] shrink-0" />
+                  <span>Published Successfully</span>
+                </div>
+              )}
             </div>
 
             {/* Stepper items */}
@@ -302,44 +332,46 @@ export function ListingWizardShell({
       {/* ==================================================================== */}
       {/* 3. STICKY FOOTER BAR                                                 */}
       {/* ==================================================================== */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-[#E5E7EB] px-4 sm:px-8 py-3.5 shadow-lg">
-        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          {/* Left Buttons */}
-          <div className="flex items-center gap-2.5">
-            <Link
-              href={prevStepPath}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#E5E7EB] hover:bg-slate-50 font-semibold text-slate-700 transition"
-            >
-              <ArrowLeft className="size-3.5" />
-              <span>Back to Property Details</span>
-            </Link>
+      {!hideDefaultFooter && (
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-[#E5E7EB] px-4 sm:px-8 py-3.5 shadow-lg">
+          <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            {/* Left Buttons */}
+            <div className="flex items-center gap-2.5">
+              <Link
+                href={prevStepPath}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#E5E7EB] hover:bg-slate-50 font-semibold text-slate-700 transition"
+              >
+                <ArrowLeft className="size-3.5" />
+                <span>Back to Property Details</span>
+              </Link>
 
-            <button
-              type="button"
-              onClick={handleSaveExit}
-              className="px-3.5 py-2 rounded-lg border border-transparent hover:bg-slate-100 font-semibold text-slate-600 transition cursor-pointer"
-            >
-              Save & Exit
-            </button>
+              <button
+                type="button"
+                onClick={handleSaveExit}
+                className="px-3.5 py-2 rounded-lg border border-transparent hover:bg-slate-100 font-semibold text-slate-600 transition cursor-pointer"
+              >
+                Save & Exit
+              </button>
+            </div>
+
+            {/* Right Button & Indicator */}
+            <div className="flex items-center gap-4 self-end sm:self-auto">
+              <span className="text-slate-500 hidden md:inline">
+                Next: <strong className="text-slate-800">{nextStepTitle} ({currentStep + 1}/7)</strong>
+              </span>
+
+              <button
+                type="button"
+                onClick={handleNextClick}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#064E3B] hover:bg-[#064E3B]/90 text-white font-bold text-xs shadow-2xs transition cursor-pointer active:scale-[0.99]"
+              >
+                <span>Continue to {nextStepTitle}</span>
+                <ArrowRight className="size-3.5" />
+              </button>
+            </div>
           </div>
-
-          {/* Right Button & Indicator */}
-          <div className="flex items-center gap-4 self-end sm:self-auto">
-            <span className="text-slate-500 hidden md:inline">
-              Next: <strong className="text-slate-800">{nextStepTitle} ({currentStep + 1}/7)</strong>
-            </span>
-
-            <button
-              type="button"
-              onClick={handleNextClick}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#064E3B] hover:bg-[#064E3B]/90 text-white font-bold text-xs shadow-2xs transition cursor-pointer active:scale-[0.99]"
-            >
-              <span>Continue to {nextStepTitle}</span>
-              <ArrowRight className="size-3.5" />
-            </button>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
