@@ -22,19 +22,11 @@ const hankenGrotesk = Hanken_Grotesk({
 
 export const metadata: Metadata = {
   title: {
-    default: "ParkEase BD — Smart Shared Parking in Dhaka",
+    default: "ParkEase BD — Property Owner Portal",
     template: "%s | ParkEase BD",
   },
   description:
-    "Find secure, affordable hourly residential parking near your destination in Dhaka. Avoid roadside parking hassle in Dhanmondi, Gulshan, Banani, and beyond.",
-  keywords: [
-    "parking Dhaka",
-    "shared residential parking",
-    "hourly parking Dhaka",
-    "ParkEase BD",
-    "car parking Bangladesh",
-    "garage rental Dhaka",
-  ],
+    "Manage your residential and commercial parking portfolio, track active bookings, monitor assigned guards and managers, and view real-time revenue across Dhaka.",
 };
 
 export default function RootLayout({
