@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import { OwnerSidebar } from "@/components/owner/owner-sidebar";
 import { OwnerFooter } from "@/components/owner/owner-footer";
 import { Menu, X } from "lucide-react";
@@ -11,7 +12,15 @@ export default function OwnerPortalLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // If on listing onboarding wizard routes, allow wizard layout to take over
+  const isWizardRoute = pathname?.startsWith("/owner/properties/new");
+
+  if (isWizardRoute) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-[#f9f9ff] text-slate-800 flex flex-col">
