@@ -29,6 +29,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
+import { RequestPayoutSheet } from "@/app/owner/payouts/components/RequestPayoutSheet";
 import { cn } from "@/lib/utils";
 
 export interface PayoutRecord {
@@ -1149,180 +1150,70 @@ export function OwnerPayoutHistoryView() {
       </div>
 
       {/* ==================================================================== */}
-      {/* 5. REQUEST PAYOUT MODAL / SLIDE-OVER                                 */}
+      {/* 5. REQUEST PAYOUT SLIDE-OVER SHEET                                   */}
       {/* ==================================================================== */}
-      {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-[#E5E7EB] flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-emerald-50 text-[#064E3B] flex items-center justify-center">
-                  <ArrowUpRight className="size-5 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold font-heading text-slate-900">
-                    Request Payout
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Transfer settled parking earnings to your bank account
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRequestModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
+      <RequestPayoutSheet
+        open={isRequestModalOpen}
+        onOpenChange={setIsRequestModalOpen}
+        availableBalance={availableBalance}
+        onSuccess={(payout) => {
+          const newRecord: PayoutRecord = {
+            id: payout.id,
+            requestedAt: "Just now",
+            property: "Residential Building, Gulshan",
+            amount: payout.amount,
+            method: payout.method,
+            methodType: "bank",
+            accountMask: payout.accountMask,
+            accountHolder: "Tanvir Chowdhury",
+            status: "UNDER_REVIEW",
+            settlementPeriod: "Sep 04 – Sep 10, 2026",
+            estimatedArrival: "Within 2 business days (via BEFTN)",
+            grossRevenue: payout.amount * 1.15,
+            platformFee: payout.amount * 0.1,
+            refunds: 0,
+            previousDisbursements: 0,
+            timeline: [
+              {
+                title: "Request Submitted",
+                description: "Initiated via Owner Portal",
+                timestamp: "Just now",
+                status: "completed",
+              },
+              {
+                title: "Eligibility & Fraud Verification",
+                description: "Automated scan queued",
+                timestamp: "In progress",
+                status: "in_progress",
+              },
+              {
+                title: "Admin & Compliance Review",
+                description: "Awaiting Finance Desk authorization",
+                timestamp: "Upcoming",
+                status: "upcoming",
+              },
+              {
+                title: "Bank BEFTN Batch Dispatch",
+                description: "Scheduled next cycle",
+                timestamp: "Upcoming",
+                status: "upcoming",
+              },
+              {
+                title: "Disbursement Completed",
+                description: "Credited to selected account",
+                timestamp: "Upcoming",
+                status: "upcoming",
+              },
+            ],
+          };
 
-            {/* Modal Form */}
-            <form onSubmit={handleSubmitPayout} className="p-6 space-y-5">
-              {/* Balance Summary Capsule */}
-              <div className="p-4 rounded-xl bg-[#f9f9ff] border border-slate-200 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-500 block uppercase tracking-wider">
-                    Available Balance
-                  </span>
-                  <span className="text-2xl font-black font-heading text-slate-900 mt-0.5 block">
-                    ৳{availableBalance.toLocaleString()}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    0% Processing Fee
-                  </span>
-                </div>
-              </div>
-
-              {/* Amount Input */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700">Withdrawal Amount (BDT)</label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-heading font-extrabold text-slate-400 text-sm">
-                    ৳
-                  </span>
-                  <input
-                    type="number"
-                    min={1000}
-                    max={availableBalance}
-                    value={requestAmount}
-                    onChange={(e) => setRequestAmount(e.target.value)}
-                    required
-                    className="w-full pl-8 pr-4 py-2.5 bg-white border border-[#E5E7EB] rounded-lg text-sm font-heading font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#064E3B] transition"
-                  />
-                </div>
-
-                {/* Quick Percentage Presets */}
-                <div className="flex items-center gap-2 pt-1">
-                  {[
-                    { label: "25%", val: Math.round(availableBalance * 0.25) },
-                    { label: "50%", val: Math.round(availableBalance * 0.5) },
-                    { label: "100% (All)", val: availableBalance },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => setRequestAmount(preset.val.toString())}
-                      className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Destination Account Selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700">
-                  Destination Bank Account
-                </label>
-                <div className="space-y-2">
-                  <label
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition",
-                      selectedAccount === "brac-4821"
-                        ? "border-[#064E3B] bg-emerald-50/40"
-                        : "border-slate-200 hover:bg-slate-50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="account"
-                        checked={selectedAccount === "brac-4821"}
-                        onChange={() => setSelectedAccount("brac-4821")}
-                        className="text-[#064E3B] focus:ring-[#064E3B]"
-                      />
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">BRAC Bank Limited</div>
-                        <div className="text-[11px] text-slate-500 font-mono">•••• 4821 (Primary)</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
-                      Verified
-                    </span>
-                  </label>
-
-                  <label
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition",
-                      selectedAccount === "city-1092"
-                        ? "border-[#064E3B] bg-emerald-50/40"
-                        : "border-slate-200 hover:bg-slate-50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="account"
-                        checked={selectedAccount === "city-1092"}
-                        onChange={() => setSelectedAccount("city-1092")}
-                        className="text-[#064E3B] focus:ring-[#064E3B]"
-                      />
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">City Bank Limited</div>
-                        <div className="text-[11px] text-slate-500 font-mono">•••• 1092 (Secondary)</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                      Verified
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Information Note */}
-              <div className="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-start gap-2">
-                <Info className="size-3.5 text-slate-400 shrink-0 mt-0.5" />
-                <span>
-                  Withdrawal requests are processed through BEFTN interbank transfer. Once approved
-                  by compliance, funds usually arrive in 1 to 2 business days.
-                </span>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsRequestModalOpen(false)}
-                  className="px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-lg bg-[#064E3B] hover:bg-[#064E3B]/90 text-white text-xs font-bold shadow-sm transition active:scale-98 cursor-pointer"
-                >
-                  Confirm & Request Payout
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          setPayouts((prev) => [newRecord, ...prev]);
+          setSelectedPayout(newRecord);
+          setAvailableBalance((prev) => prev - payout.amount);
+          setPendingPayout((prev) => prev + payout.amount);
+          showToast(`Payout request of ৳${payout.amount.toLocaleString()} (#${payout.id}) submitted.`);
+        }}
+      />
     </div>
   );
 }
