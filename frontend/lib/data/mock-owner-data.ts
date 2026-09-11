@@ -1017,6 +1017,141 @@ export const MOCK_OWNER_NOTIFICATIONS: OwnerNotificationItem[] = [
   },
 ];
 
+// ============================================================================
+// HELP & SUPPORT MOCK DATA (STEP 5)
+// ============================================================================
+
+export interface SupportTicket {
+  id: string;
+  ticketCode: string;
+  subject: string;
+  category: "Payments & Payouts" | "Guards" | "Bookings" | "Account & Security" | "Properties";
+  status: "Open" | "In Progress" | "Resolved";
+  updatedTime: string;
+  propertyTitle?: string;
+  description?: string;
+}
+
+export const MOCK_SUPPORT_TICKETS: SupportTicket[] = [
+  {
+    id: "ticket-1",
+    ticketCode: "#SUP-1048",
+    subject: "Payout Delay",
+    category: "Payments & Payouts",
+    status: "Open",
+    updatedTime: "20 mins ago",
+    propertyTitle: "Residential Building, Gulshan",
+    description: "Disbursement batch #PR-8902 is currently awaiting admin verification clearance.",
+  },
+  {
+    id: "ticket-2",
+    ticketCode: "#SUP-1037",
+    subject: "Guard Assignment Issue",
+    category: "Guards",
+    status: "In Progress",
+    updatedTime: "Yesterday",
+    propertyTitle: "Office Parking, Banani",
+    description: "Guard Arif Hossain SMS activation link timed out. Requesting manual credential refresh.",
+  },
+  {
+    id: "ticket-3",
+    ticketCode: "#SUP-1009",
+    subject: "Booking Cancellation Question",
+    category: "Bookings",
+    status: "Resolved",
+    updatedTime: "Sep 7, 2026",
+    propertyTitle: "Residential Building, Gulshan",
+    description: "Clarified 2-hour window cancellation tariff policy with host compensation.",
+  },
+];
+
+export interface HelpTopic {
+  id: string;
+  title: string;
+  description: string;
+  iconName: "Parking" | "Bookings" | "Payments" | "Guards" | "Managers" | "Security";
+  articlesCount: number;
+}
+
+export const POPULAR_TOPICS: HelpTopic[] = [
+  {
+    id: "topic-1",
+    title: "Parking Spaces",
+    description: "Learn how to add, edit, and manage parking spaces.",
+    iconName: "Parking",
+    articlesCount: 12,
+  },
+  {
+    id: "topic-2",
+    title: "Bookings",
+    description: "Manage reservations, cancellations, and booking issues.",
+    iconName: "Bookings",
+    articlesCount: 16,
+  },
+  {
+    id: "topic-3",
+    title: "Payments & Payouts",
+    description: "Understand earnings, fees, payouts, and settlement.",
+    iconName: "Payments",
+    articlesCount: 14,
+  },
+  {
+    id: "topic-4",
+    title: "Guards",
+    description: "Manage guard accounts, roles, and duty schedules.",
+    iconName: "Guards",
+    articlesCount: 9,
+  },
+  {
+    id: "topic-5",
+    title: "Managers",
+    description: "Manage delegated property managers and permissions.",
+    iconName: "Managers",
+    articlesCount: 8,
+  },
+  {
+    id: "topic-6",
+    title: "Account & Security",
+    description: "Update profile details, password, and security settings.",
+    iconName: "Security",
+    articlesCount: 11,
+  },
+];
+
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export const MOCK_FAQS: FAQItem[] = [
+  {
+    id: "faq-1",
+    question: "How do I edit parking availability?",
+    answer:
+      "Navigate to My Listings, select your property, and open the Tariff & Availability schedule. You can set recurrent open slots, block temporary hours for resident maintenance, or pause bookings instantly.",
+  },
+  {
+    id: "faq-2",
+    question: "How are owner payouts calculated?",
+    answer:
+      "ParkEase BD deducts a flat 10% platform fee from gross completed parking transactions. The remaining 90% is credited directly to your Available Balance and disbursed automatically every Sunday to your verified bank account.",
+  },
+  {
+    id: "faq-3",
+    question: "How do I assign a Guard?",
+    answer:
+      "Go to the Guards Manager, click '+ Add Guard', assign them to a property and gate, set their shift schedule, and define a temporary password. The guard receives an SMS with their login credentials immediately.",
+  },
+  {
+    id: "faq-4",
+    question: "How do Manager permissions work?",
+    answer:
+      "Property Managers can be invited by the Owner with granular capabilities: 'Manage Guards', 'View Bookings', and 'View Analytics'. Payout bank accounts and root ownership settings can only be altered by the Property Owner.",
+  },
+];
+
+
 
 
 
