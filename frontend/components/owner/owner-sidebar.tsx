@@ -16,6 +16,7 @@ import {
   Settings,
   Plus,
   CheckCircle2,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/owner/dashboard", icon: LayoutGrid },
   { label: "My Listings", href: "/owner/properties", icon: Building2 },
   { label: "Bookings", href: "/owner/bookings", icon: CalendarDays },
+  { label: "Live Sessions", href: "/owner/sessions", icon: Radio, badge: 4 },
   { label: "Guards", href: "/owner/guards", icon: ShieldCheck },
   { label: "Managers", href: "/owner/managers", icon: Users },
   { label: "Earnings", href: "/owner/earnings", icon: Banknote },

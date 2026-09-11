@@ -104,6 +104,31 @@ export function OwnerBookingsView() {
 
       {/* Main Content Area */}
       <div className="p-6 sm:p-8 lg:p-10 max-w-7xl mx-auto w-full space-y-7">
+        {/* Live Active Sessions Telemetry Banner */}
+        <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#064E3B]" />
+            </span>
+            <div>
+              <h4 className="text-xs font-bold text-emerald-950 font-heading">
+                Live Facility Telemetry: 4 Vehicles Currently Parked
+              </h4>
+              <p className="text-[11px] text-emerald-800 mt-0.5">
+                Monitor real-time gate check-ins, elapsed parking duration counters, and overstay alerts in the live monitor.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/owner/sessions"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#064E3B] hover:bg-[#064E3B]/90 text-white text-xs font-bold shadow-xs transition active:scale-95 shrink-0"
+          >
+            <span>Open Live Monitor</span>
+            <ChevronRight className="size-3.5" />
+          </Link>
+        </div>
+
         {/* ==================================================================== */}
         {/* 1. METRICS ROW (4 Cards)                                             */}
         {/* ==================================================================== */}
