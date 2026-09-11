@@ -73,13 +73,13 @@ export function ListingWizardShell({
     },
     {
       stepNumber: 4,
-      title: "Availability & Rates",
+      title: "Availability & Pricing",
       path: "/owner/properties/new/step-4",
       state: currentStep > 4 ? "completed" : currentStep === 4 ? "active" : "pending",
     },
     {
       stepNumber: 5,
-      title: "Amenities & Rules",
+      title: "Amenities & Security",
       path: "/owner/properties/new/step-5",
       state: currentStep > 5 ? "completed" : currentStep === 5 ? "active" : "pending",
     },
