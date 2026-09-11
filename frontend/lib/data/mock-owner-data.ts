@@ -924,6 +924,100 @@ export const MOCK_REVIEW_ACTIVITY: ReviewActivityItem[] = [
   },
 ];
 
+// ============================================================================
+// NOTIFICATIONS MOCK DATA (STEP 4)
+// ============================================================================
+
+export interface OwnerNotificationItem {
+  id: string;
+  type: "booking" | "payment" | "payout" | "guard" | "review" | "system";
+  title: string;
+  timeAgo: string;
+  description: string;
+  meta: string;
+  isUnread: boolean;
+  actionType: "view_booking" | "view_earnings" | "request_payout" | "view_review";
+  actionLabel: string;
+  actionLink?: string;
+  targetId?: string;
+}
+
+export const MOCK_OWNER_NOTIFICATIONS: OwnerNotificationItem[] = [
+  {
+    id: "notif-1",
+    type: "booking",
+    title: "New Booking Received",
+    timeAgo: "10 mins ago",
+    description: "Arif Hossain booked Residential Building, Gulshan — Spot 3.",
+    meta: "Booking #BK-7892 • Today",
+    isUnread: true,
+    actionType: "view_booking",
+    actionLabel: "View Booking",
+    targetId: "#BK-7892",
+  },
+  {
+    id: "notif-2",
+    type: "booking",
+    title: "Booking Confirmed",
+    timeAgo: "2 hours ago",
+    description: "Nusrat Jahan's booking for Residential Building, Gulshan has been confirmed.",
+    meta: "Booking #BK-7888 • Starts 3:00 PM",
+    isUnread: true,
+    actionType: "view_booking",
+    actionLabel: "View Booking",
+    targetId: "#BK-7888",
+  },
+  {
+    id: "notif-3",
+    type: "payment",
+    title: "Payment Completed",
+    timeAgo: "3 hours ago",
+    description: "৳150 added from #BK-7892.",
+    meta: "Net settlement added to Available Balance",
+    isUnread: true,
+    actionType: "view_earnings",
+    actionLabel: "View Earnings",
+    targetId: "/owner/earnings",
+  },
+  {
+    id: "notif-4",
+    type: "payout",
+    title: "Payout Available",
+    timeAgo: "5 hours ago",
+    description: "৳9,250 available for withdrawal.",
+    meta: "BRAC Bank •••• 4821 ready for payout request",
+    isUnread: true,
+    actionType: "request_payout",
+    actionLabel: "Request Payout",
+    targetId: "/owner/earnings",
+  },
+  {
+    id: "notif-5",
+    type: "guard",
+    title: "Guard Check-In",
+    timeAgo: "Yesterday",
+    description: "Tariqul Islam verified booking #PE-BK-2051.",
+    meta: "Gate 2 • Residential Building, Gulshan",
+    isUnread: false,
+    actionType: "view_booking",
+    actionLabel: "View Booking",
+    targetId: "#PE-BK-2051",
+  },
+  {
+    id: "notif-6",
+    type: "review",
+    title: "New Review Received",
+    timeAgo: "Yesterday",
+    description: "Tanvir Ahmed left a 2-star review for Office Parking, Banani.",
+    meta: "Needs response • Rating: 2.0 / 5",
+    isUnread: false,
+    actionType: "view_review",
+    actionLabel: "View Review",
+    targetId: "/owner/reviews",
+  },
+];
+
+
 
 
 
