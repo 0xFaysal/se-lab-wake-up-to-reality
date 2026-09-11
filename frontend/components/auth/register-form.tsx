@@ -190,12 +190,29 @@ export function RegisterForm() {
           )}
         </div>
 
-        {/* Hidden confirm password autofill match */}
-        <input
-          type="hidden"
-          value={watch("password")}
-          {...register("confirmPassword")}
-        />
+        {/* Confirm Password */}
+        <div className="space-y-1.5">
+          <Label
+            htmlFor="confirmPassword"
+            className="text-xs font-bold text-foreground uppercase tracking-wider font-heading"
+          >
+            Confirm Password
+          </Label>
+          <Input
+            id="confirmPassword"
+            type={showPassword ? "text" : "password"}
+            placeholder="Re-enter your password"
+            autoComplete="new-password"
+            aria-invalid={!!errors.confirmPassword}
+            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            {...register("confirmPassword")}
+          />
+          {errors.confirmPassword && (
+            <p className="text-xs text-destructive font-medium">
+              {errors.confirmPassword.message}
+            </p>
+          )}
+        </div>
 
         {/* Required Privacy Policy Consent */}
         <div className="space-y-1.5 pt-2">
