@@ -1,0 +1,119 @@
+@startuml use-case-property
+!theme plain
+title ParkEase BD: Use Case Diagram (b) Property Management & Oversight
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam actor {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+
+left to right direction
+
+actor "Parking Owner" as Owner
+actor "Administrator" as Admin
+actor "Building Manager" as Manager
+
+rectangle "ParkEase BD" {
+
+  usecase "Register / Login" as UC1
+
+  package "Parking Owner Use Cases" {
+    usecase "Manage Properties\n& Images" as UC14
+    usecase "Create / Invite\nManagers" as UC42
+    usecase "Manage Manager Links" as UC43
+    usecase "View Earnings" as UC20
+    usecase "Manage Payout Accounts" as UC21
+    usecase "Request Payout" as UC22
+  }
+
+  package "Property Operations (Owner & Manager)" {
+    usecase "Manage Parking Spots" as UC15
+    usecase "Manage Availability\n& Exceptions" as UC16
+    usecase "Close / Reopen Property" as UC44
+    usecase "Create / Invite Guards" as UC17
+    usecase "Manage Guard\nAssignments" as UC18
+    usecase "View Bookings\n& Active Sessions" as UC19
+    usecase "View Incident Reports" as UC45
+    usecase "Respond to Disputes" as UC23
+  }
+
+  package "Building Manager Use Cases" {
+    usecase "Accept / Reject\nManager Link" as UC46
+    usecase "Approve / Reject\nBuilding Listing" as UC47
+  }
+
+  package "Administrator Use Cases" {
+    usecase "Verify / Reject /\nSuspend Property" as UC32
+    usecase "Waive Building\nApproval" as UC48
+    usecase "Manage Users" as UC33
+    usecase "Manage Guard & Manager\nAccounts and Links" as UC34
+    usecase "Override Booking" as UC35
+    usecase "Resolve Disputes" as UC36
+    usecase "Verify Payout Accounts" as UC37
+    usecase "Approve Payouts" as UC38
+    usecase "Reconcile Payments\n& Wallets" as UC39
+    usecase "View Audit Logs" as UC40
+    usecase "Manage Platform Settings" as UC41
+  }
+}
+
+' --- Parking Owner (left) ---
+Owner -- UC1
+Owner -- UC14
+Owner -- UC42
+Owner -- UC43
+Owner -- UC20
+Owner -- UC21
+Owner -- UC22
+Owner -- UC15
+Owner -- UC16
+Owner -- UC44
+Owner -- UC17
+Owner -- UC18
+Owner -- UC19
+Owner -- UC45
+Owner -- UC23
+
+UC14 ..> UC32 : <<include>>\n(verification)
+
+' --- Administrator (left) ---
+Admin -- UC1
+Admin -- UC32
+Admin -- UC48
+Admin -- UC33
+Admin -- UC34
+Admin -- UC35
+Admin -- UC36
+Admin -- UC37
+Admin -- UC38
+Admin -- UC39
+Admin -- UC40
+Admin -- UC41
+
+UC48 ..> UC14 : <<extend>>\n(no Manager available)
+
+' --- Building Manager (right; no financial use cases) ---
+UC1 -- Manager
+UC46 -- Manager
+UC47 -- Manager
+UC15 -- Manager
+UC16 -- Manager
+UC44 -- Manager
+UC17 -- Manager
+UC18 -- Manager
+UC19 -- Manager
+UC45 -- Manager
+UC23 -- Manager
+
+UC47 ..> UC14 : <<extend>>\n(shared building)
+UC46 ..> UC47 : <<precedes>>
+
+@enduml

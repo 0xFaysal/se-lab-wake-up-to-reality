@@ -1,6 +1,6 @@
 @startuml dfd-level1
 !theme plain
-title ParkEase BD — Data Flow Diagram (Level 1)
+title ParkEase BD: Data Flow Diagram (Level 1)
 
 skinparam backgroundColor white
 skinparam shadowing false
@@ -20,85 +20,102 @@ skinparam rectangle {
 
 actor "Driver" as Driver
 actor "Parking\nOwner" as Owner
+actor "Building\nManager" as Manager
 actor "Security\nGuard" as Guard
 actor "Administrator" as Admin
 rectangle "SSLCOMMERZ\nGateway" as SSL
 
 usecase "1.0\nManage Accounts,\nAuthentication\n& Roles" as P1
 usecase "2.0\nManage Properties,\nSpots & Availability" as P2
-usecase "3.0\nSearch & Discover\nParking" as P3
-usecase "4.0\nGenerate Quote &\nBooking Hold" as P4
-usecase "5.0\nProcess Payments\n& Refunds" as P5
-usecase "6.0\nVerify Entry/Exit\n& Manage Sessions" as P6
-usecase "7.0\nManage Owner\nEarnings & Payouts" as P7
-usecase "8.0\nManage Reviews,\nDisputes & Incidents" as P8
-usecase "9.0\nAdmin Oversight,\nSettings & Audit" as P9
+usecase "3.0\nManage Property Staff\n& Building Approval" as P3
+usecase "4.0\nSearch & Discover\nParking" as P4
+usecase "5.0\nGenerate Quote &\nBooking Hold" as P5
+usecase "6.0\nProcess Payments\n& Refunds" as P6
+usecase "7.0\nVerify Entry/Exit\n& Manage Sessions" as P7
+usecase "8.0\nManage Wallets,\nEarnings & Payouts" as P8
+usecase "9.0\nManage Reviews,\nDisputes & Incidents" as P9
+usecase "10.0\nAdmin Oversight,\nSettings & Audit" as P10
 
-database "D1  Users, Roles,\nSessions" as D1
+database "D1  Users, Roles, Sessions,\nTokens, Legal Acceptances" as D1
 database "D2  Vehicles" as D2
-database "D3  Properties, Spots,\nAvailability, Guard\nAssignments" as D3
-database "D4  Quotes, Bookings,\nStatus History" as D4
-database "D5  Payments, Refunds,\nLedger" as D5
-database "D6  Owner Earnings,\nPayout Accounts,\nPayout Requests" as D6
-database "D7  Reviews, Disputes,\nIncidents, Notifications" as D7
-database "D8  Audit Logs,\nPlatform Settings" as D8
+database "D3  Properties, Images,\nSpots, Availability" as D3
+database "D4  Manager Links,\nGuard Assignments,\nBuilding Approvals" as D4
+database "D5  Quotes, Bookings,\nStatus History" as D5
+database "D6  Payments, Refunds" as D6
+database "D7  Wallets, Ledger,\nEarnings, Payouts" as D7
+database "D8  Reviews, Disputes,\nIncidents, Notifications" as D8
+database "D9  Audit Logs,\nPlatform Settings" as D9
 
 ' --- Process 1: Accounts & Auth ---
 Driver <--> P1 : credentials / session
 Owner <--> P1 : credentials / session
-Guard <--> P1 : credentials / session
+Manager <--> P1 : setup link,\ncredentials / session
+Guard <--> P1 : setup link,\ncredentials / session
 Admin <--> P1 : credentials / session
 P1 <--> D1
 
-' --- Process 2: Properties & Spots ---
-Owner <--> P2 : property, spot,\navailability data
-Guard <--> P2 : assignment acceptance
+' --- Process 2: Properties, Spots & Availability ---
+Owner <--> P2 : property, image, spot,\navailability data
+Manager <--> P2 : spot, availability,\nclose/reopen (linked only)
 P2 <--> D3
-P2 --> P9 : submit for verification
-P9 --> P2 : verification decision
+P2 --> P3 : shared-building property\nneeds building approval
+P2 --> P10 : standalone property\nfor verification
+P10 --> P2 : verification decision
 
-' --- Process 3: Search ---
-Driver --> P3 : location, time,\nvehicle filters
-P3 --> Driver : ranked results
-P3 --> D3 : read availability
+' --- Process 3: Property Staff & Building Approval ---
+Owner --> P3 : create/invite Manager,\ncreate/invite Guard,\nlink & assignment changes
+Manager <--> P3 : link acceptance, approval\ndecision, Guard assignments
+Guard <--> P3 : assignment acceptance
+P3 --> P1 : create controlled account
+P3 <--> D4
+P3 --> P10 : approved property\nfor verification
+P10 --> P3 : approval waiver,\naccount actions
 
-' --- Process 4: Quote & Hold ---
-Driver <--> P4 : quote / hold request
-P4 --> D2 : validate vehicle
-P4 <--> D3 : revalidate availability
-P4 <--> D4
-P4 --> P5 : payment-session request
+' --- Process 4: Search ---
+Driver --> P4 : location, time,\nvehicle filters
+P4 --> Driver : ranked results
+P4 --> D3 : read verified spots\n& availability
 
-' --- Process 5: Payments & Refunds ---
+' --- Process 5: Quote & Hold ---
+Driver <--> P5 : quote / hold request
+P5 --> D2 : validate vehicle
+P5 <--> D3 : revalidate availability
 P5 <--> D5
-P5 <--> SSL : session + IPN validation
-P5 --> D4 : confirm booking
-P5 --> P7 : booking completed (earning)
-P5 --> Driver : payment status
+P5 --> P6 : payment-session request
 
-' --- Process 6: Entry/Exit ---
-Driver --> P6 : checkout request
-Guard <--> P6 : resolve credential,\nconfirm check-in/out
-P6 <--> D4 : booking/session state
-P6 --> P5 : overtime / outstanding amount
-P6 --> Owner : session updates
+' --- Process 6: Payments & Refunds ---
+P6 <--> D6
+P6 <--> SSL : session + IPN validation
+P6 --> D5 : confirm booking
+P6 --> P8 : ledger postings
+P6 --> Driver : payment status
 
-' --- Process 7: Earnings & Payouts ---
-Owner <--> P7 : payout account,\npayout request
-P7 <--> D6
-P7 --> P9 : payout awaiting approval
-P9 --> P7 : approval / rejection
+' --- Process 7: Entry/Exit ---
+Driver --> P7 : checkout request
+Guard <--> P7 : resolve credential,\nconfirm check-in/out
+P7 --> D4 : check active assignment
+P7 <--> D5 : booking/session state
+P7 --> P6 : overtime / outstanding amount
+P7 --> Owner : session updates
+P7 --> Manager : session updates\n(no amounts)
 
-' --- Process 8: Reviews & Disputes ---
-Driver --> P8 : review / dispute
-Owner <--> P8 : dispute response
-Guard --> P8 : incident report
+' --- Process 8: Wallets, Earnings & Payouts (no Manager access) ---
+Owner <--> P8 : payout account,\npayout request
 P8 <--> D7
-P8 --> P9 : escalate dispute
-P9 --> P8 : resolution
+P8 --> P10 : payout awaiting approval
+P10 --> P8 : approval / rejection
 
-' --- Process 9: Admin Oversight ---
-Admin <--> P9
+' --- Process 9: Reviews, Disputes & Incidents ---
+Driver --> P9 : review / dispute
+Owner <--> P9 : dispute, response
+Manager <--> P9 : dispute response,\nincident view
+Guard --> P9 : incident report
 P9 <--> D8
+P9 --> P10 : escalate dispute
+P10 --> P9 : resolution
+
+' --- Process 10: Admin Oversight ---
+Admin <--> P10
+P10 <--> D9
 
 @enduml
