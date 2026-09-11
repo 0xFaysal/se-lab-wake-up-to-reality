@@ -35,6 +35,7 @@ import {
   Cell,
 } from "recharts";
 import { OwnerHeader } from "@/components/owner/owner-header";
+import { RequestPayoutSheet } from "@/app/owner/payouts/components/RequestPayoutSheet";
 import {
   MOCK_DAILY_EARNINGS,
   MOCK_PROPERTY_EARNINGS,
@@ -715,97 +716,21 @@ export function OwnerEarningsView() {
       </div>
 
       {/* ==================================================================== */}
-      {/* MODAL: REQUEST PAYOUT                                                */}
+      {/* SLIDE-OVER: REQUEST PAYOUT SHEET                                     */}
       {/* ==================================================================== */}
-      {isPayoutModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-2xl max-w-md w-full p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-emerald-50 text-[#064E3B] flex items-center justify-center">
-                  <Wallet className="size-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold font-heading text-slate-900">
-                    Request Payout
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Transfer settled earnings to your verified bank
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsPayoutModalOpen(false)}
-                className="size-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRequestPayout} className="space-y-4">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <label className="font-semibold text-slate-700">Withdrawal Amount (BDT)</label>
-                  <span className="text-emerald-700 font-medium">Max: ৳{availableBalance.toLocaleString()}</span>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-500">
-                    ৳
-                  </span>
-                  <input
-                    type="number"
-                    max={availableBalance}
-                    min={500}
-                    value={payoutAmount}
-                    onChange={(e) => setPayoutAmount(e.target.value)}
-                    required
-                    className="w-full h-11 pl-8 pr-4 rounded-xl border border-[#E5E7EB] text-sm font-bold text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B]"
-                  />
-                </div>
-              </div>
-
-              {/* Destination Bank Card */}
-              <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-[11px] text-emerald-800 font-medium block">Destination Account</span>
-                  <strong className="text-slate-900">BRAC Bank Ltd. •••• 4821</strong>
-                </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-[10px]">
-                  Verified
-                </span>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-lg text-[11px] text-slate-600 space-y-1">
-                <div className="flex justify-between">
-                  <span>Transfer Fee:</span>
-                  <span className="font-bold text-emerald-700">Free (Standard)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Processing Time:</span>
-                  <span className="font-medium text-slate-700">Next Business Day</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsPayoutModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-[#E5E7EB] text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-lg bg-[#064E3B] hover:bg-[#064E3B]/90 text-white text-xs font-bold shadow-sm"
-                >
-                  Confirm Withdrawal
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <RequestPayoutSheet
+        open={isPayoutModalOpen}
+        onOpenChange={setIsPayoutModalOpen}
+        availableBalance={availableBalance}
+        onSuccess={(payout) => {
+          setAvailableBalance((prev) => prev - payout.amount);
+          setPendingPayout((prev) => prev + payout.amount);
+          setPayoutSuccessMsg(
+            `Payout request of ৳${payout.amount.toLocaleString()} submitted to ${payout.method} (${payout.accountMask}).`
+          );
+          setTimeout(() => setPayoutSuccessMsg(null), 4000);
+        }}
+      />
 
       {/* ==================================================================== */}
       {/* MODAL: TRANSACTION DETAILS                                           */}
