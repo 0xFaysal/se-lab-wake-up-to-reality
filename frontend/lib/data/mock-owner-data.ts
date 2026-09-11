@@ -790,5 +790,140 @@ export const MOCK_PAYOUT_TIMELINE: PayoutTimelineItem[] = [
   },
 ];
 
+// ============================================================================
+// REVIEWS MOCK DATA (STEP 3)
+// ============================================================================
+
+export interface OwnerReview {
+  id: string;
+  reviewerName: string;
+  reviewerInitials: string;
+  avatarBg: string;
+  avatarText: string;
+  rating: number; // 1 to 5
+  propertyTitle: string;
+  bookingCode: string;
+  dateStr: string;
+  comment: string;
+  status: "Replied" | "Needs Reply";
+  isLowRating?: boolean;
+  ownerReply?: {
+    text: string;
+    dateStr: string;
+  };
+}
+
+export const MOCK_OWNER_REVIEWS: OwnerReview[] = [
+  {
+    id: "rev-1",
+    reviewerName: "Arif Hossain",
+    reviewerInitials: "AH",
+    avatarBg: "bg-emerald-100",
+    avatarText: "text-[#064E3B]",
+    rating: 5,
+    propertyTitle: "Residential Building, Gulshan",
+    bookingCode: "#BK-7892",
+    dateStr: "Today",
+    comment: "The guard was very helpful and the space was clean. Highly recommended.",
+    status: "Replied",
+    ownerReply: {
+      text: "Thank you for the great review. We're glad you had a smooth parking experience.",
+      dateStr: "Today, 2:15 PM",
+    },
+  },
+  {
+    id: "rev-2",
+    reviewerName: "Sadia Rahman",
+    reviewerInitials: "SR",
+    avatarBg: "bg-indigo-100",
+    avatarText: "text-indigo-800",
+    rating: 4,
+    propertyTitle: "Office Parking, Banani",
+    bookingCode: "#BK-7895",
+    dateStr: "Yesterday",
+    comment: "Good spot, but the signage from the main road could be a little clearer.",
+    status: "Needs Reply",
+  },
+  {
+    id: "rev-3",
+    reviewerName: "Tanvir Ahmed",
+    reviewerInitials: "TA",
+    avatarBg: "bg-rose-100",
+    avatarText: "text-rose-800",
+    rating: 2,
+    propertyTitle: "Office Parking, Banani",
+    bookingCode: "#BK-7901",
+    dateStr: "Oct 24, 2026",
+    comment: "The entrance is extremely tight for an SUV. Another car was parked poorly near the ramp, making it very difficult to maneuver.",
+    status: "Needs Reply",
+    isLowRating: true,
+  },
+  {
+    id: "rev-4",
+    reviewerName: "Farhan Kabir",
+    reviewerInitials: "FK",
+    avatarBg: "bg-amber-100",
+    avatarText: "text-amber-800",
+    rating: 5,
+    propertyTitle: "Residential Building, Gulshan",
+    bookingCode: "#BK-7850",
+    dateStr: "Oct 20, 2026",
+    comment: "Super smooth automated barrier check-in with the QR code. Guard Arif was very attentive.",
+    status: "Replied",
+    ownerReply: {
+      text: "Thank you Farhan! We strive to make digital parking effortless for everyone.",
+      dateStr: "Oct 20, 5:40 PM",
+    },
+  },
+];
+
+export const MOCK_RATING_BREAKDOWN = [
+  { stars: 5, count: 98, percentage: 78 },
+  { stars: 4, count: 18, percentage: 14 },
+  { stars: 3, count: 6, percentage: 5 },
+  { stars: 2, count: 3, percentage: 2 },
+  { stars: 1, count: 1, percentage: 1 },
+];
+
+export interface ReviewActivityItem {
+  id: string;
+  type: "new_5_star" | "reply_published" | "low_star" | "reported";
+  title: string;
+  subtext: string;
+  dotColor: string;
+}
+
+export const MOCK_REVIEW_ACTIVITY: ReviewActivityItem[] = [
+  {
+    id: "act-rev-1",
+    type: "new_5_star",
+    title: "New 5–Star Review",
+    subtext: "Arif Hossain • 20 mins ago",
+    dotColor: "bg-emerald-500",
+  },
+  {
+    id: "act-rev-2",
+    type: "reply_published",
+    title: "Owner Reply Published",
+    subtext: "Sadia Rahman • 45 mins ago",
+    dotColor: "bg-blue-500",
+  },
+  {
+    id: "act-rev-3",
+    type: "low_star",
+    title: "2–Star Review Received",
+    subtext: "Tanvir Ahmed • Yesterday",
+    dotColor: "bg-amber-500",
+  },
+  {
+    id: "act-rev-4",
+    type: "reported",
+    title: "Review Reported",
+    subtext: "Booking #BK-7864 • 2 days ago",
+    dotColor: "bg-rose-500",
+  },
+];
+
+
 
 
