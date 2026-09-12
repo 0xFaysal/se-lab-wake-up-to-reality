@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  mergeAdminPropertiesSchema,
+  mergeAdminPropertyByIdSchema,
   pendingAdminPropertiesSchema,
   verifyAdminPropertySchema,
 } from "../../../src/modules/admin/properties/admin-property.schema.js";
 
 const propertyId = "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56";
+const duplicateId = "65bb81d0-90ca-49bb-a918-bb1db912d352";
 
 describe("Admin Property verification validation", () => {
   it("accepts strict approve and valid reject decisions", () => {
@@ -51,6 +54,34 @@ describe("Admin Property verification validation", () => {
     assert.equal(
       pendingAdminPropertiesSchema.safeParse({ query: { limit: "101" } })
         .success,
+      false,
+    );
+  });
+
+  it("validates canonical and compatibility merge requests", () => {
+    const body = {
+      canonicalPropertyId: propertyId,
+      canonicalVersion: 3,
+      duplicateVersion: 2,
+      reason: "Verified duplicate of the canonical building",
+    };
+    assert.equal(
+      mergeAdminPropertyByIdSchema.safeParse({
+        params: { duplicateId },
+        body,
+      }).success,
+      true,
+    );
+    assert.equal(
+      mergeAdminPropertiesSchema.safeParse({
+        body: { ...body, duplicatePropertyId: duplicateId },
+      }).success,
+      true,
+    );
+    assert.equal(
+      mergeAdminPropertiesSchema.safeParse({
+        body: { ...body, duplicatePropertyId: propertyId },
+      }).success,
       false,
     );
   });

@@ -13,7 +13,7 @@ export type RegisterInput = RequestMetadata & {
   email: string;
   phone: string;
   password: string;
-  role: "DRIVER" | "PARKING_OWNER";
+  role: "DRIVER" | "PROVIDER";
 };
 
 export type LoginInput = RequestMetadata & {

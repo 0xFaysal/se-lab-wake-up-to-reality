@@ -30,6 +30,7 @@ const schema = z
     JWT_REFRESH_SECRET: z.string().min(32),
     VERIFICATION_CODE_SECRET: z.string().min(32),
     AUTH_METADATA_HASH_SECRET: z.string().min(32),
+    PROPERTY_ADDRESS_FINGERPRINT_SECRET: z.string().min(32),
     DATA_ENCRYPTION_KEY: z
       .string()
       .regex(/^[0-9a-fA-F]{64}$/)
@@ -84,6 +85,7 @@ const schema = z
       value.JWT_REFRESH_SECRET,
       value.VERIFICATION_CODE_SECRET,
       value.AUTH_METADATA_HASH_SECRET,
+      value.PROPERTY_ADDRESS_FINGERPRINT_SECRET,
       ...(value.DATA_ENCRYPTION_KEY ? [value.DATA_ENCRYPTION_KEY] : []),
     ];
     if (new Set(securitySecrets).size !== securitySecrets.length) {

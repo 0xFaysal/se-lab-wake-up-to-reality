@@ -34,7 +34,7 @@ integration("parking owner property management integration", () => {
 
   async function createAuthenticatedUser(input: {
     key: string;
-    role: "PARKING_OWNER" | "DRIVER" | "GUARD" | "ADMIN";
+    role: "PROVIDER" | "DRIVER" | "GUARD" | "ADMIN";
     phonePrefix: "013" | "014" | "015" | "016" | "017" | "018" | "019";
     ready: boolean;
     emailVerified?: boolean;
@@ -98,6 +98,8 @@ integration("parking owner property management integration", () => {
       "property-integration-verification-secret-at-least-32-characters";
     process.env.AUTH_METADATA_HASH_SECRET =
       "property-integration-metadata-secret-at-least-32-characters";
+    process.env.PROPERTY_ADDRESS_FINGERPRINT_SECRET =
+      "property-integration-fingerprint-secret-at-least-32-characters";
     process.env.DATA_ENCRYPTION_KEY =
       "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
     process.env.ENABLE_API_DOCS = "false";
@@ -114,14 +116,14 @@ integration("parking owner property management integration", () => {
 
     await createAuthenticatedUser({
       key: "owner-a",
-      role: "PARKING_OWNER",
+      role: "PROVIDER",
       phonePrefix: "013",
       ready: true,
       passwordHash,
     });
     await createAuthenticatedUser({
       key: "owner-b",
-      role: "PARKING_OWNER",
+      role: "PROVIDER",
       phonePrefix: "014",
       ready: true,
       passwordHash,
@@ -142,7 +144,7 @@ integration("parking owner property management integration", () => {
     });
     await createAuthenticatedUser({
       key: "unverified-owner",
-      role: "PARKING_OWNER",
+      role: "PROVIDER",
       phonePrefix: "017",
       ready: false,
       passwordHash,
@@ -156,7 +158,7 @@ integration("parking owner property management integration", () => {
     });
     await createAuthenticatedUser({
       key: "phone-unverified-owner",
-      role: "PARKING_OWNER",
+      role: "PROVIDER",
       phonePrefix: "019",
       ready: true,
       phoneVerified: false,
@@ -164,7 +166,7 @@ integration("parking owner property management integration", () => {
     });
     await createAuthenticatedUser({
       key: "must-change-owner",
-      role: "PARKING_OWNER",
+      role: "PROVIDER",
       phonePrefix: "013",
       ready: true,
       mustChangePassword: true,
@@ -181,7 +183,8 @@ integration("parking owner property management integration", () => {
   after(async () => {
     if (userIds.length > 0) {
       await prisma.$transaction([
-        prisma.property.deleteMany({ where: { ownerUserId: { in: userIds } } }),
+        prisma.propertyProvider.deleteMany({ where: { providerUserId: { in: userIds } } }),
+        prisma.property.deleteMany({ where: { createdByUserId: { in: userIds } } }),
         prisma.refreshSession.deleteMany({
           where: { userId: { in: userIds } },
         }),
@@ -278,7 +281,7 @@ integration("parking owner property management integration", () => {
       request(`/api/v1/owner/properties/${propertyId}`, {
         method: "PATCH",
         cookie: cookies.get("owner-b"),
-        body: JSON.stringify({ name: "Stolen Property" }),
+        body: JSON.stringify({ name: "Stolen Property", version: 1 }),
       }),
       request(`/api/v1/owner/properties/${propertyId}`, {
         method: "DELETE",
@@ -346,6 +349,7 @@ integration("parking owner property management integration", () => {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
       body: JSON.stringify({
+        version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
         name: "Gulshan Secure Parking",
         accessInstructions: "Use Gate B and call the desk",
       }),
@@ -377,7 +381,10 @@ integration("parking owner property management integration", () => {
     const response = await request(`/api/v1/owner/properties/${propertyId}`, {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
-      body: JSON.stringify({ exactAddress: updatedExactAddress }),
+      body: JSON.stringify({
+        version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
+        exactAddress: updatedExactAddress,
+      }),
     });
     assert.equal(response.status, 200);
     const body = (await response.json()) as {
@@ -418,7 +425,10 @@ integration("parking owner property management integration", () => {
     const response = await request(`/api/v1/owner/properties/${propertyId}`, {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
-      body: JSON.stringify({ approximateAddress: "Beside Gulshan market" }),
+      body: JSON.stringify({
+        version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
+        approximateAddress: "Beside Gulshan market",
+      }),
     });
     assert.equal(response.status, 200);
     const body = (await response.json()) as {

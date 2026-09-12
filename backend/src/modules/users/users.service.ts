@@ -8,28 +8,37 @@ import {
 import { normalizeBangladeshPhone } from "../../common/auth/phone.js";
 import { hashPassword } from "../../common/auth/password.js";
 import { hashToken } from "../../common/auth/token-hash.js";
-import { sendGuardInvitationEmail } from "../../common/email/email.service.js";
+import {
+  sendGuardInvitationEmail,
+  sendManagerInvitationEmail,
+} from "../../common/email/email.service.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
 import { prisma } from "../../config/prisma.js";
 import { authUserSelect } from "../auth/auth.repository.js";
 
-type CreatedGuardAccount = {
+type CreatedWorkforceAccount = {
   user: Prisma.UserGetPayload<{ select: typeof authUserSelect }>;
   tokenId: string;
 };
 
-export async function createGuardAccount(input: {
+async function createWorkforceAccount(input: {
   actorUserId: string;
   actorRoles: UserRoleType[];
+  targetRole: typeof UserRoleType.GUARD | typeof UserRoleType.MANAGER;
   fullName: string;
   email: string;
   phone: string;
 }) {
-  const accountOrigin = input.actorRoles.includes(UserRoleType.ADMIN)
-    ? AccountOrigin.ADMIN_CREATED_GUARD
-    : AccountOrigin.OWNER_CREATED_GUARD;
+  const accountOrigin =
+    input.targetRole === UserRoleType.GUARD
+      ? input.actorRoles.includes(UserRoleType.ADMIN)
+        ? AccountOrigin.ADMIN_CREATED_GUARD
+        : AccountOrigin.PROVIDER_CREATED_GUARD
+      : input.actorRoles.includes(UserRoleType.ADMIN)
+        ? AccountOrigin.ADMIN_CREATED_MANAGER
+        : AccountOrigin.PROVIDER_CREATED_MANAGER;
   const phone = normalizeBangladeshPhone(input.phone);
   const setupToken = randomBytes(32).toString("base64url");
   const unusablePassword = randomBytes(48).toString("base64url");
@@ -38,7 +47,7 @@ export async function createGuardAccount(input: {
     Date.now() + env.PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000,
   );
 
-  let created: CreatedGuardAccount;
+  let created: CreatedWorkforceAccount;
   try {
     created = await prisma.$transaction(async (tx) => {
       const existing = await tx.user.findFirst({
@@ -63,7 +72,7 @@ export async function createGuardAccount(input: {
           mustChangePassword: true,
           accountOrigin,
           createdByUserId: input.actorUserId,
-          roles: { create: { role: UserRoleType.GUARD } },
+          roles: { create: { role: input.targetRole } },
         },
         select: authUserSelect,
       });
@@ -100,7 +109,11 @@ export async function createGuardAccount(input: {
   setupUrl.searchParams.set("token", setupToken);
 
   try {
-    await sendGuardInvitationEmail({
+    const sendInvitation =
+      input.targetRole === UserRoleType.GUARD
+        ? sendGuardInvitationEmail
+        : sendManagerInvitationEmail;
+    await sendInvitation({
       to: created.user.email,
       fullName: created.user.fullName,
       setupUrl: setupUrl.toString(),
@@ -118,7 +131,7 @@ export async function createGuardAccount(input: {
     } catch (cleanupError) {
       logger.error(
         { error: cleanupError, userId: created.user.id },
-        "Failed to roll back undelivered Guard invitation",
+        "Failed to roll back undelivered workforce invitation",
       );
     }
     throw error;
@@ -140,4 +153,16 @@ export async function createGuardAccount(input: {
       ? { developmentSetupToken: setupToken }
       : {}),
   };
+}
+
+export function createGuardAccount(
+  input: Omit<Parameters<typeof createWorkforceAccount>[0], "targetRole">,
+) {
+  return createWorkforceAccount({ ...input, targetRole: UserRoleType.GUARD });
+}
+
+export function createManagerAccount(
+  input: Omit<Parameters<typeof createWorkforceAccount>[0], "targetRole">,
+) {
+  return createWorkforceAccount({ ...input, targetRole: UserRoleType.MANAGER });
 }

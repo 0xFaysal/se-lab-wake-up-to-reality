@@ -9,7 +9,7 @@
 
 ### Upload two Property images
 # @name uploadPropertyImages
-POST {{baseUrl}}/owner/properties/{{propertyId}}/images
+POST {{baseUrl}}/properties/{{propertyId}}/images
 Content-Type: multipart/form-data; boundary=ParkEaseBoundary
 
 --ParkEaseBoundary
@@ -25,10 +25,10 @@ Content-Type: image/png
 --ParkEaseBoundary--
 
 ### List ordered images
-GET {{baseUrl}}/owner/properties/{{propertyId}}/images
+GET {{baseUrl}}/properties/{{propertyId}}/images
 
 ### Reorder and make the second uploaded image the cover
-PATCH {{baseUrl}}/owner/properties/{{propertyId}}/images/reorder
+PATCH {{baseUrl}}/properties/{{propertyId}}/images/reorder
 Content-Type: application/json
 
 {
@@ -40,7 +40,7 @@ Content-Type: application/json
 }
 
 ### Delete the selected cover and promote the remaining image
-DELETE {{baseUrl}}/owner/properties/{{propertyId}}/images/{{uploadPropertyImages.response.body.$.data.images[1].id}}
+DELETE {{baseUrl}}/properties/{{propertyId}}/images/{{uploadPropertyImages.response.body.$.data.images[1].id}}
 
 ### Login another ready owner
 POST {{baseUrl}}/auth/login
@@ -52,10 +52,10 @@ Content-Type: application/json
 }
 
 ### Cross-owner list should return 404
-GET {{baseUrl}}/owner/properties/{{propertyId}}/images
+GET {{baseUrl}}/properties/{{propertyId}}/images
 
 ### Cross-owner upload should return 404
-POST {{baseUrl}}/owner/properties/{{propertyId}}/images
+POST {{baseUrl}}/properties/{{propertyId}}/images
 Content-Type: multipart/form-data; boundary=ParkEaseBoundary
 
 --ParkEaseBoundary

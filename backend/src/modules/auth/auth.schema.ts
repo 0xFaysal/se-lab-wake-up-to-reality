@@ -59,9 +59,11 @@ export const registerSchema = z.object({
 
     password: strongPasswordSchema,
 
-    role: z.enum(["DRIVER", "PARKING_OWNER"], {
-      error: "Role must be either DRIVER or PARKING_OWNER",
-    }),
+    role: z
+      .enum(["DRIVER", "PROVIDER", "PARKING_OWNER"], {
+        error: "Role must be either DRIVER or PROVIDER",
+      })
+      .transform((role) => (role === "PARKING_OWNER" ? "PROVIDER" : role)),
 
     acceptTerms: z.literal(true),
     acceptPrivacyPolicy: z.literal(true),

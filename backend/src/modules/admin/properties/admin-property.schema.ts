@@ -27,3 +27,27 @@ export const verifyAdminPropertySchema = z.object({
   params: z.object({ propertyId: z.uuid() }).strict(),
   body: propertyVerificationDecisionSchema,
 });
+
+const mergeAdminPropertyBodySchema = z
+  .object({
+    canonicalPropertyId: z.uuid(),
+    canonicalVersion: z.number().int().positive(),
+    duplicateVersion: z.number().int().positive(),
+    reason: z.string().trim().min(10).max(500),
+  })
+  .strict();
+
+export const mergeAdminPropertyByIdSchema = z.object({
+  params: z.object({ duplicateId: z.uuid() }).strict(),
+  body: mergeAdminPropertyBodySchema,
+});
+
+export const mergeAdminPropertiesSchema = z.object({
+  body: mergeAdminPropertyBodySchema
+    .extend({ duplicatePropertyId: z.uuid() })
+    .strict()
+    .refine((value) => value.canonicalPropertyId !== value.duplicatePropertyId, {
+      path: ["duplicatePropertyId"],
+      message: "Canonical and duplicate Property must be different",
+    }),
+});

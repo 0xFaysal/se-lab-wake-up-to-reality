@@ -131,7 +131,7 @@ default; deleting a default promotes the newest remaining active vehicle.
 
 ## Parking Owner property endpoints
 
-All Property endpoints require an authenticated, ready `PARKING_OWNER`.
+All Property endpoints require an authenticated, ready `PROVIDER`.
 Email verification is mandatory; phone verification is optional:
 
 - `POST /api/v1/owner/properties`
@@ -150,7 +150,7 @@ block deletion.
 
 ## Property image endpoints
 
-These routes use the same ready `PARKING_OWNER` authorization as Property CRUD:
+These routes use live Property-scoped authority rather than the global role alone:
 
 - `POST /api/v1/owner/properties/:propertyId/images`
 - `GET /api/v1/owner/properties/:propertyId/images`
@@ -181,7 +181,7 @@ another.
 
 ## Guard assignment endpoints
 
-Owner routes require a ready `PARKING_OWNER` and expose only assignments for
+Provider routes require a ready `PROVIDER` and expose only assignments for
 Properties owned by that user:
 
 - `POST /api/v1/owner/properties/:propertyId/guard-invitations`

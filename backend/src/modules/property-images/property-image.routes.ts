@@ -17,12 +17,12 @@ export const propertyImageRouter = Router();
 
 /**
  * @openapi
- * /api/v1/owner/properties/{propertyId}/images:
+ * /api/v1/properties/{propertyId}/images:
  *   post:
  *     tags: [Property Images]
- *     summary: Upload images for an owned Property
+ *     summary: Upload shared Property images with live authority
  *     operationId: uploadOwnerPropertyImages
- *     description: Requires a ready PARKING_OWNER account. Accepts up to 10 valid JPEG, PNG, or WebP files, each no larger than 5 MB. File signatures are checked and metadata is stripped during storage.
+ *     description: Requires live Property common-operation authority. Accepts up to 10 valid JPEG, PNG, or WebP files, each no larger than 5 MB. File signatures are checked and metadata is stripped during storage.
  *     security:
  *       - accessCookie: []
  *     parameters:
@@ -70,7 +70,7 @@ export const propertyImageRouter = Router();
  *         description: External image storage failed.
  *   get:
  *     tags: [Property Images]
- *     summary: List images for an owned Property
+ *     summary: List images for an authorized Property
  *     operationId: listOwnerPropertyImages
  *     security:
  *       - accessCookie: []
@@ -107,7 +107,7 @@ propertyImageRouter.get(
 
 /**
  * @openapi
- * /api/v1/owner/properties/{propertyId}/images/reorder:
+ * /api/v1/properties/{propertyId}/images/reorder:
  *   patch:
  *     tags: [Property Images]
  *     summary: Reorder images and select the cover
@@ -150,10 +150,10 @@ propertyImageRouter.patch(
 
 /**
  * @openapi
- * /api/v1/owner/properties/{propertyId}/images/{imageId}:
+ * /api/v1/properties/{propertyId}/images/{imageId}:
  *   delete:
  *     tags: [Property Images]
- *     summary: Delete an owned Property image
+ *     summary: Delete a shared Property image with live authority
  *     operationId: deleteOwnerPropertyImage
  *     description: Deletes the Cloudinary asset before its database row. Deleting the cover promotes the first remaining image and sort orders are normalized. Removing the final image from a VERIFIED Property returns it to PENDING and INACTIVE.
  *     security:

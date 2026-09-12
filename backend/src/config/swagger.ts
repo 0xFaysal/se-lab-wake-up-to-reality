@@ -20,7 +20,8 @@ ParkEase BD backend REST API.
 
 Main user roles:
 - Driver
-- Parking Owner
+- Provider
+- Manager
 - Security Guard
 - Admin
 
@@ -28,8 +29,9 @@ Authentication uses HttpOnly cookies containing short-lived access tokens and
 rotating refresh tokens.
 
 Important:
-- Public registration is available only for DRIVER and PARKING_OWNER.
-- GUARD accounts are created through controlled Owner/Admin flows.
+- Public registration is available only for DRIVER and PROVIDER.
+- PARKING_OWNER is accepted temporarily as a deprecated registration alias.
+- MANAGER and GUARD accounts are created through controlled Provider/Admin flows.
 - ADMIN accounts cannot be created through public registration.
       `.trim(),
       contact: {

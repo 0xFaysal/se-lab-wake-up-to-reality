@@ -18,7 +18,8 @@ enum UserStatus {
 
 enum UserRoleType {
   DRIVER
-  PARKING_OWNER
+  PROVIDER
+  MANAGER
   GUARD
   ADMIN
 
@@ -27,8 +28,10 @@ enum UserRoleType {
 
 enum AccountOrigin {
   SELF_REGISTERED
-  OWNER_CREATED_GUARD
+  PROVIDER_CREATED_GUARD
   ADMIN_CREATED_GUARD
+  PROVIDER_CREATED_MANAGER
+  ADMIN_CREATED_MANAGER
 
   @@map("account_origin")
 }
@@ -65,6 +68,7 @@ enum VehicleType {
   SEDAN
   SUV
   MICROBUS
+
   @@map("vehicle_type")
 }
 
@@ -78,13 +82,121 @@ enum GuardAssignmentStatus {
   @@map("guard_assignment_status")
 }
 
+enum PropertyProviderStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ENDED
+
+  @@map("property_provider_status")
+}
+
+enum BuildingManagerAssignmentStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  ENDED
+  CANCELLED
+  PENDING_RECONFIRMATION
+
+  @@map("building_manager_assignment_status")
+}
+
+enum GovernanceVoteDecision {
+  APPROVE
+  REJECT
+
+  @@map("governance_vote_decision")
+}
+
+enum ManagerDelegationStatus {
+  PENDING_ACCEPTANCE
+  ACTIVE
+  SUSPENDED
+  ENDED
+  CANCELLED
+
+  @@map("manager_delegation_status")
+}
+
+enum ManagerDelegationPermission {
+  RESOURCE_VIEW
+  LISTING_VIEW
+  LISTING_MANAGE
+  PRICE_MANAGE
+  AVAILABILITY_MANAGE
+  BOOKING_VIEW
+  BOOKING_MANAGE
+  IMAGE_MANAGE
+  GUARD_VIEW
+  GUARD_ADD_TO_PROPERTY
+  GUARD_ASSIGN
+  EARNINGS_VIEW
+  REPORTS_VIEW
+
+  @@map("manager_delegation_permission")
+}
+
+enum PropertyGuardMembershipStatus {
+  PENDING_ACCEPTANCE
+  ACTIVE
+  SUSPENDED
+  ENDED
+  CANCELLED
+
+  @@map("property_guard_membership_status")
+}
+
+enum PropertyChangeType {
+  COMMON_RULES
+  TEMPORARY_CLOSURE
+  IDENTITY_LOCATION
+
+  @@map("property_change_type")
+}
+
+enum PropertyChangeProposalStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  APPLIED
+  STALE
+  CANCELLED
+
+  @@map("property_change_proposal_status")
+}
+
+enum DomainAuditEventType {
+  PROPERTY_PROVIDER_JOINED
+  PROPERTY_PROVIDER_ENDED
+  BUILDING_MANAGER_NOMINATED
+  BUILDING_MANAGER_APPROVED
+  BUILDING_MANAGER_REJECTED
+  BUILDING_MANAGER_ACTIVATED
+  BUILDING_MANAGER_ENDED
+  PROPERTY_CHANGE_PROPOSED
+  PROPERTY_CHANGE_APPROVED
+  PROPERTY_CHANGE_REJECTED
+  PROPERTY_CHANGE_APPLIED
+  MANAGER_DELEGATION_CREATED
+  MANAGER_DELEGATION_ACCEPTED
+  MANAGER_PERMISSION_UPDATED
+  MANAGER_DELEGATION_ENDED
+  PROPERTY_GUARD_ADDED
+  PROPERTY_GUARD_REMOVED
+  PROVIDER_GUARD_ASSIGNED
+  PROVIDER_GUARD_ASSIGNMENT_ENDED
+  PROPERTY_MERGED
+
+  @@map("domain_audit_event_type")
+}
+
 enum AvailabilityExceptionType {
   BLOCKED
   SPECIAL_AVAILABLE
 
   @@map("availability_exception_type")
 }
-
 
 enum LegalDocumentType {
   TERMS_OF_SERVICE
@@ -131,37 +243,47 @@ enum ReconciliationStatus {
 }
 
 model User {
-  id                  String        @id @default(uuid()) @db.Uuid
-  fullName            String        @map("full_name") @db.VarChar(120)
-  email               String        @unique @db.Citext
-  phone               String        @unique @db.VarChar(20)
-  passwordHash        String        @map("password_hash")
-  status              UserStatus    @default(PENDING)
-  mustChangePassword  Boolean       @default(false) @map("must_change_password")
-  accountOrigin       AccountOrigin @default(SELF_REGISTERED) @map("account_origin")
-  createdByUserId     String?       @map("created_by_user_id") @db.Uuid
-  emailVerifiedAt     DateTime?     @map("email_verified_at") @db.Timestamptz(6)
-  phoneVerifiedAt     DateTime?     @map("phone_verified_at") @db.Timestamptz(6)
-  lastLoginAt         DateTime?     @map("last_login_at") @db.Timestamptz(6)
-  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt           DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  id                 String        @id @default(uuid()) @db.Uuid
+  fullName           String        @map("full_name") @db.VarChar(120)
+  email              String        @unique @db.Citext
+  phone              String        @unique @db.VarChar(20)
+  passwordHash       String        @map("password_hash")
+  status             UserStatus    @default(PENDING)
+  mustChangePassword Boolean       @default(false) @map("must_change_password")
+  accountOrigin      AccountOrigin @default(SELF_REGISTERED) @map("account_origin")
+  createdByUserId    String?       @map("created_by_user_id") @db.Uuid
+  emailVerifiedAt    DateTime?     @map("email_verified_at") @db.Timestamptz(6)
+  phoneVerifiedAt    DateTime?     @map("phone_verified_at") @db.Timestamptz(6)
+  lastLoginAt        DateTime?     @map("last_login_at") @db.Timestamptz(6)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
-  creator                 User?                     @relation("UserCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  createdUsers            User[]                    @relation("UserCreator")
-  roles                   UserRole[]
-  refreshSessions         RefreshSession[]
-  passwordResetTokens     PasswordResetToken[]
-  vehicles                Vehicle[]                 @relation("VehicleOwner")
-  ownedProperties         Property[]                @relation("PropertyOwner")
-  verifiedProperties      Property[]                @relation("PropertyVerifier")
-  guardAssignments        PropertyGuardAssignment[] @relation("AssignedGuard")
-  createdGuardAssignments PropertyGuardAssignment[] @relation("GuardAssignmentCreator")
-  createdExceptions       AvailabilityException[]   @relation("ExceptionCreator")
-  legalAcceptances        UserLegalAcceptance[]
-  walletAccounts          WalletAccount[]
-  ledgerTransactions      LedgerTransaction[]       @relation("LedgerActor")
-  reconciliationsReviewed WalletReconciliation[]    @relation("ReconciliationReviewer")
+  creator                         User?                               @relation("UserCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdUsers                    User[]                              @relation("UserCreator")
+  roles                           UserRole[]
+  refreshSessions                 RefreshSession[]
+  passwordResetTokens             PasswordResetToken[]
+  vehicles                        Vehicle[]                           @relation("VehicleOwner")
+  createdProperties               Property[]                          @relation("PropertyCreator")
+  verifiedProperties              Property[]                          @relation("PropertyVerifier")
+  providerMemberships             PropertyProvider[]                  @relation("PropertyProviderUser")
+  verifiedProviderMemberships     PropertyProvider[]                  @relation("PropertyProviderVerifier")
+  managerCandidates               PropertyBuildingManagerAssignment[] @relation("BuildingManagerCandidate")
+  managerNominations              PropertyBuildingManagerAssignment[] @relation("BuildingManagerNominator")
+  buildingManagerVotes            PropertyBuildingManagerVote[]       @relation("BuildingManagerVoter")
+  managerDelegations              ProviderManagerDelegation[]         @relation("DelegationManager")
+  createdGuardMemberships         PropertyGuardMembership[]           @relation("PropertyGuardAdder")
+  propertyGuardMemberships        PropertyGuardMembership[]           @relation("PropertyGuardUser")
+  createdProviderGuardAssignments ProviderGuardAssignment[]           @relation("ProviderGuardAssignmentCreator")
+  proposedPropertyChanges         PropertyChangeProposal[]            @relation("PropertyChangeProposer")
+  propertyChangeVotes             PropertyChangeVote[]                @relation("PropertyChangeVoter")
+  domainAuditEvents               DomainAuditEvent[]                  @relation("DomainAuditActor")
+  createdExceptions               AvailabilityException[]             @relation("ExceptionCreator")
+  legalAcceptances                UserLegalAcceptance[]
+  walletAccounts                  WalletAccount[]
+  ledgerTransactions              LedgerTransaction[]                 @relation("LedgerActor")
+  reconciliationsReviewed         WalletReconciliation[]              @relation("ReconciliationReviewer")
 
   @@index([status])
   @@index([accountOrigin])
@@ -241,8 +363,8 @@ model UserLegalAcceptance {
   acceptanceSource LegalAcceptanceSource @map("acceptance_source")
   acceptedAt       DateTime              @default(now()) @map("accepted_at") @db.Timestamptz(6)
 
-  user User @relation( fields: [userId],references: [id], onDelete: Restrict)
-  legalDocument LegalDocument @relation(fields: [legalDocumentId], references: [id],onDelete: Restrict)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  legalDocument LegalDocument @relation(fields: [legalDocumentId], references: [id], onDelete: Restrict)
 
   @@unique([userId, legalDocumentId])
   @@index([userId])
@@ -251,22 +373,22 @@ model UserLegalAcceptance {
 }
 
 model Vehicle {
-  id                           String              @id @default(uuid()) @db.Uuid
-  ownerUserId                  String              @map("owner_user_id") @db.Uuid
-  vehicleType                  VehicleType         @map("vehicle_type")
-  registrationNumber           String              @map("registration_number") @db.VarChar(50)
-  normalizedRegistrationNumber String              @unique @map("normalized_registration_number") @db.VarChar(50)
-  brand                        String?             @db.VarChar(80)
-  model                        String?             @db.VarChar(80)
-  color                        String?             @db.VarChar(40)
-  heightCm                     Int?                @map("height_cm")
-  widthCm                      Int?                @map("width_cm")
-  lengthCm                     Int?                @map("length_cm")
+  id                           String             @id @default(uuid()) @db.Uuid
+  ownerUserId                  String             @map("owner_user_id") @db.Uuid
+  vehicleType                  VehicleType        @map("vehicle_type")
+  registrationNumber           String             @map("registration_number") @db.VarChar(50)
+  normalizedRegistrationNumber String             @unique @map("normalized_registration_number") @db.VarChar(50)
+  brand                        String?            @db.VarChar(80)
+  model                        String?            @db.VarChar(80)
+  color                        String?            @db.VarChar(40)
+  heightCm                     Int?               @map("height_cm")
+  widthCm                      Int?               @map("width_cm")
+  lengthCm                     Int?               @map("length_cm")
   verificationStatus           VerificationStatus @default(PENDING) @map("verification_status")
-  isDefault                    Boolean             @default(false) @map("is_default")
-  createdAt                    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt                    DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  isDefault                    Boolean            @default(false) @map("is_default")
+  createdAt                    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                    DateTime?          @map("deleted_at") @db.Timestamptz(6)
 
   owner User @relation("VehicleOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
 
@@ -276,41 +398,288 @@ model Vehicle {
 }
 
 model Property {
-  id                           String              @id @default(uuid()) @db.Uuid
-  ownerUserId                  String              @map("owner_user_id") @db.Uuid
-  name                         String              @db.VarChar(150)
-  description                  String?
-  publicArea                   String              @map("public_area") @db.VarChar(120)
-  approximateAddress           String              @map("approximate_address") @db.VarChar(255)
-  exactAddressCiphertext       String              @map("exact_address_ciphertext")
-  exactAddressIv               String?             @map("exact_address_iv") @db.VarChar(32)
-  exactAddressTag              String?             @map("exact_address_tag") @db.VarChar(32)
-  latitude                     Decimal             @db.Decimal(9, 6)
-  longitude                    Decimal             @db.Decimal(9, 6)
-  entranceLatitude             Decimal?            @map("entrance_latitude") @db.Decimal(9, 6)
-  entranceLongitude            Decimal?            @map("entrance_longitude") @db.Decimal(9, 6)
-  accessInstructionsCiphertext String?             @map("access_instructions_ciphertext")
-  accessInstructionsIv         String?             @map("access_instructions_iv") @db.VarChar(32)
-  accessInstructionsTag        String?             @map("access_instructions_tag") @db.VarChar(32)
-  verificationStatus           VerificationStatus @default(DRAFT) @map("verification_status")
-  status                       PropertyStatus      @default(INACTIVE)
-  verifiedByAdminId            String?             @map("verified_by_admin_id") @db.Uuid
-  verifiedAt                   DateTime?           @map("verified_at") @db.Timestamptz(6)
-  rejectionReason              String?             @map("rejection_reason")
-  createdAt                    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt                    DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  id                            String             @id @default(uuid()) @db.Uuid
+  createdByUserId               String             @map("created_by_user_id") @db.Uuid
+  name                          String             @db.VarChar(150)
+  normalizedName                String             @map("normalized_name") @db.VarChar(150)
+  description                   String?
+  publicArea                    String             @map("public_area") @db.VarChar(120)
+  approximateAddress            String             @map("approximate_address") @db.VarChar(255)
+  exactAddressCiphertext        String             @map("exact_address_ciphertext")
+  exactAddressIv                String?            @map("exact_address_iv") @db.VarChar(32)
+  exactAddressTag               String?            @map("exact_address_tag") @db.VarChar(32)
+  latitude                      Decimal            @db.Decimal(9, 6)
+  longitude                     Decimal            @db.Decimal(9, 6)
+  entranceLatitude              Decimal?           @map("entrance_latitude") @db.Decimal(9, 6)
+  entranceLongitude             Decimal?           @map("entrance_longitude") @db.Decimal(9, 6)
+  accessInstructionsCiphertext  String?            @map("access_instructions_ciphertext")
+  accessInstructionsIv          String?            @map("access_instructions_iv") @db.VarChar(32)
+  accessInstructionsTag         String?            @map("access_instructions_tag") @db.VarChar(32)
+  addressFingerprint            String?            @map("address_fingerprint") @db.VarChar(64)
+  visitorIdentificationRequired Boolean            @default(false) @map("visitor_identification_required")
+  vehicleHeightLimitCm          Int?               @map("vehicle_height_limit_cm")
+  entryCutoffLocalTime          DateTime?          @map("entry_cutoff_local_time") @db.Time(6)
+  generalParkingRules           String?            @map("general_parking_rules")
+  commonSafetyRules             String?            @map("common_safety_rules")
+  temporaryClosureReason        String?            @map("temporary_closure_reason") @db.VarChar(500)
+  temporaryClosedAt             DateTime?          @map("temporary_closed_at") @db.Timestamptz(6)
+  temporaryClosedUntil          DateTime?          @map("temporary_closed_until") @db.Timestamptz(6)
+  version                       Int                @default(1)
+  canonicalPropertyId           String?            @map("canonical_property_id") @db.Uuid
+  archivedAt                    DateTime?          @map("archived_at") @db.Timestamptz(6)
+  verificationStatus            VerificationStatus @default(DRAFT) @map("verification_status")
+  status                        PropertyStatus     @default(INACTIVE)
+  verifiedByAdminId             String?            @map("verified_by_admin_id") @db.Uuid
+  verifiedAt                    DateTime?          @map("verified_at") @db.Timestamptz(6)
+  rejectionReason               String?            @map("rejection_reason")
+  createdAt                     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                     DateTime?          @map("deleted_at") @db.Timestamptz(6)
 
-  owner            User                      @relation("PropertyOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
-  verifiedByAdmin  User?                     @relation("PropertyVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
-  images           PropertyImage[]
-  guardAssignments PropertyGuardAssignment[]
-  parkingSpots     ParkingSpot[]
+  createdBy                  User                                @relation("PropertyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  verifiedByAdmin            User?                               @relation("PropertyVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  canonicalProperty          Property?                           @relation("PropertyCanonicalMerge", fields: [canonicalPropertyId], references: [id], onDelete: Restrict)
+  mergedDuplicates           Property[]                          @relation("PropertyCanonicalMerge")
+  images                     PropertyImage[]
+  providerMemberships        PropertyProvider[]
+  buildingManagerAssignments PropertyBuildingManagerAssignment[]
+  managerDelegations         ProviderManagerDelegation[]
+  guardMemberships           PropertyGuardMembership[]
+  changeProposals            PropertyChangeProposal[]
+  domainAuditEvents          DomainAuditEvent[]
+  parkingSpots               ParkingSpot[]
 
-  @@index([ownerUserId])
+  @@index([createdByUserId])
+  @@index([normalizedName, publicArea])
+  @@index([addressFingerprint])
+  @@index([canonicalPropertyId])
   @@index([verificationStatus, status, publicArea])
   @@index([latitude, longitude])
   @@map("properties")
+}
+
+model PropertyProvider {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  propertyId         String                 @map("property_id") @db.Uuid
+  providerUserId     String                 @map("provider_user_id") @db.Uuid
+  status             PropertyProviderStatus @default(ACTIVE)
+  verificationStatus VerificationStatus     @default(PENDING) @map("verification_status")
+  joinedAt           DateTime               @default(now()) @map("joined_at") @db.Timestamptz(6)
+  verifiedByAdminId  String?                @map("verified_by_admin_id") @db.Uuid
+  verifiedAt         DateTime?              @map("verified_at") @db.Timestamptz(6)
+  rejectionReason    String?                @map("rejection_reason") @db.VarChar(500)
+  endedAt            DateTime?              @map("ended_at") @db.Timestamptz(6)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  property             Property                      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  provider             User                          @relation("PropertyProviderUser", fields: [providerUserId], references: [id], onDelete: Restrict)
+  verifiedByAdmin      User?                         @relation("PropertyProviderVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  buildingManagerVotes PropertyBuildingManagerVote[]
+  managerDelegations   ProviderManagerDelegation[]
+  guardAssignments     ProviderGuardAssignment[]
+  changeVotes          PropertyChangeVote[]
+  parkingSpots         ParkingSpot[]
+
+  @@unique([propertyId, providerUserId])
+  @@index([propertyId, status, verificationStatus])
+  @@index([providerUserId, status, verificationStatus])
+  @@map("property_providers")
+}
+
+model PropertyBuildingManagerAssignment {
+  id                String                          @id @default(uuid()) @db.Uuid
+  propertyId        String                          @map("property_id") @db.Uuid
+  candidateUserId   String                          @map("candidate_user_id") @db.Uuid
+  nominatedByUserId String                          @map("nominated_by_user_id") @db.Uuid
+  status            BuildingManagerAssignmentStatus @default(PENDING_APPROVAL)
+  nominatedAt       DateTime                        @default(now()) @map("nominated_at") @db.Timestamptz(6)
+  activatedAt       DateTime?                       @map("activated_at") @db.Timestamptz(6)
+  endedAt           DateTime?                       @map("ended_at") @db.Timestamptz(6)
+  createdAt         DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  property    Property                      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  candidate   User                          @relation("BuildingManagerCandidate", fields: [candidateUserId], references: [id], onDelete: Restrict)
+  nominatedBy User                          @relation("BuildingManagerNominator", fields: [nominatedByUserId], references: [id], onDelete: Restrict)
+  votes       PropertyBuildingManagerVote[]
+
+  @@index([propertyId, status])
+  @@index([candidateUserId, status])
+  @@map("property_building_manager_assignments")
+}
+
+model PropertyBuildingManagerVote {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  assignmentId         String                 @map("assignment_id") @db.Uuid
+  providerMembershipId String                 @map("provider_membership_id") @db.Uuid
+  voterUserId          String                 @map("voter_user_id") @db.Uuid
+  decision             GovernanceVoteDecision
+  reason               String?                @db.VarChar(500)
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  assignment         PropertyBuildingManagerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  providerMembership PropertyProvider                  @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
+  voter              User                              @relation("BuildingManagerVoter", fields: [voterUserId], references: [id], onDelete: Restrict)
+
+  @@unique([assignmentId, providerMembershipId])
+  @@index([assignmentId, decision])
+  @@map("property_building_manager_votes")
+}
+
+model ProviderManagerDelegation {
+  id                          String                  @id @default(uuid()) @db.Uuid
+  grantorProviderMembershipId String                  @map("grantor_provider_membership_id") @db.Uuid
+  managerUserId               String                  @map("manager_user_id") @db.Uuid
+  propertyId                  String                  @map("property_id") @db.Uuid
+  status                      ManagerDelegationStatus @default(PENDING_ACCEPTANCE)
+  validFrom                   DateTime?               @map("valid_from") @db.Timestamptz(6)
+  validUntil                  DateTime?               @map("valid_until") @db.Timestamptz(6)
+  invitedAt                   DateTime                @default(now()) @map("invited_at") @db.Timestamptz(6)
+  acceptedAt                  DateTime?               @map("accepted_at") @db.Timestamptz(6)
+  endedAt                     DateTime?               @map("ended_at") @db.Timestamptz(6)
+  createdAt                   DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  grantorProviderMembership PropertyProvider                      @relation(fields: [grantorProviderMembershipId], references: [id], onDelete: Restrict)
+  manager                   User                                  @relation("DelegationManager", fields: [managerUserId], references: [id], onDelete: Restrict)
+  property                  Property                              @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  permissions               ProviderManagerDelegationPermission[]
+  resources                 ProviderManagerDelegationResource[]
+
+  @@index([grantorProviderMembershipId, status])
+  @@index([managerUserId, status, propertyId])
+  @@index([propertyId, status])
+  @@map("provider_manager_delegations")
+}
+
+model ProviderManagerDelegationPermission {
+  delegationId String                      @map("delegation_id") @db.Uuid
+  permission   ManagerDelegationPermission
+  createdAt    DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  delegation ProviderManagerDelegation @relation(fields: [delegationId], references: [id], onDelete: Cascade)
+
+  @@id([delegationId, permission])
+  @@index([permission, delegationId])
+  @@map("provider_manager_delegation_permissions")
+}
+
+model ProviderManagerDelegationResource {
+  delegationId  String   @map("delegation_id") @db.Uuid
+  parkingSpotId String   @map("parking_spot_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  delegation  ProviderManagerDelegation @relation(fields: [delegationId], references: [id], onDelete: Cascade)
+  parkingSpot ParkingSpot               @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+
+  @@id([delegationId, parkingSpotId])
+  @@index([parkingSpotId])
+  @@map("provider_manager_delegation_resources")
+}
+
+model PropertyGuardMembership {
+  id            String                        @id @default(uuid()) @db.Uuid
+  propertyId    String                        @map("property_id") @db.Uuid
+  guardUserId   String                        @map("guard_user_id") @db.Uuid
+  addedByUserId String                        @map("added_by_user_id") @db.Uuid
+  status        PropertyGuardMembershipStatus @default(PENDING_ACCEPTANCE)
+  invitedAt     DateTime                      @default(now()) @map("invited_at") @db.Timestamptz(6)
+  joinedAt      DateTime?                     @map("joined_at") @db.Timestamptz(6)
+  endedAt       DateTime?                     @map("ended_at") @db.Timestamptz(6)
+  createdAt     DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  property    Property                  @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  guard       User                      @relation("PropertyGuardUser", fields: [guardUserId], references: [id], onDelete: Restrict)
+  addedBy     User                      @relation("PropertyGuardAdder", fields: [addedByUserId], references: [id], onDelete: Restrict)
+  assignments ProviderGuardAssignment[]
+
+  @@unique([propertyId, guardUserId])
+  @@index([propertyId, status])
+  @@index([guardUserId, status])
+  @@map("property_guard_memberships")
+}
+
+model ProviderGuardAssignment {
+  id                        String                @id @default(uuid()) @db.Uuid
+  propertyGuardMembershipId String                @map("property_guard_membership_id") @db.Uuid
+  providerMembershipId      String                @map("provider_membership_id") @db.Uuid
+  createdByUserId           String                @map("created_by_user_id") @db.Uuid
+  status                    GuardAssignmentStatus @default(ACTIVE)
+  shiftStart                DateTime?             @map("shift_start") @db.Time(6)
+  shiftEnd                  DateTime?             @map("shift_end") @db.Time(6)
+  assignedAt                DateTime              @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  endedAt                   DateTime?             @map("ended_at") @db.Timestamptz(6)
+  createdAt                 DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  propertyGuardMembership PropertyGuardMembership @relation(fields: [propertyGuardMembershipId], references: [id], onDelete: Restrict)
+  providerMembership      PropertyProvider        @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
+  createdBy               User                    @relation("ProviderGuardAssignmentCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([providerMembershipId, status])
+  @@index([propertyGuardMembershipId, status])
+  @@map("provider_guard_assignments")
+}
+
+model PropertyChangeProposal {
+  id                  String                       @id @default(uuid()) @db.Uuid
+  propertyId          String                       @map("property_id") @db.Uuid
+  proposedByUserId    String                       @map("proposed_by_user_id") @db.Uuid
+  basePropertyVersion Int                          @map("base_property_version")
+  changeType          PropertyChangeType           @map("change_type")
+  proposedChanges     Json                         @map("proposed_changes")
+  status              PropertyChangeProposalStatus @default(PENDING_APPROVAL)
+  resolvedAt          DateTime?                    @map("resolved_at") @db.Timestamptz(6)
+  appliedAt           DateTime?                    @map("applied_at") @db.Timestamptz(6)
+  createdAt           DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  property   Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  proposedBy User                 @relation("PropertyChangeProposer", fields: [proposedByUserId], references: [id], onDelete: Restrict)
+  votes      PropertyChangeVote[]
+
+  @@index([propertyId, status, createdAt(sort: Desc)])
+  @@index([proposedByUserId, createdAt(sort: Desc)])
+  @@map("property_change_proposals")
+}
+
+model PropertyChangeVote {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  proposalId           String                 @map("proposal_id") @db.Uuid
+  providerMembershipId String                 @map("provider_membership_id") @db.Uuid
+  voterUserId          String                 @map("voter_user_id") @db.Uuid
+  decision             GovernanceVoteDecision
+  reason               String?                @db.VarChar(500)
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  proposal           PropertyChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  providerMembership PropertyProvider       @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
+  voter              User                   @relation("PropertyChangeVoter", fields: [voterUserId], references: [id], onDelete: Restrict)
+
+  @@unique([proposalId, providerMembershipId])
+  @@index([proposalId, decision])
+  @@map("property_change_votes")
+}
+
+model DomainAuditEvent {
+  id          String               @id @default(uuid()) @db.Uuid
+  eventType   DomainAuditEventType @map("event_type")
+  actorUserId String?              @map("actor_user_id") @db.Uuid
+  propertyId  String?              @map("property_id") @db.Uuid
+  entityType  String               @map("entity_type") @db.VarChar(80)
+  entityId    String               @map("entity_id") @db.Uuid
+  metadata    Json?
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor    User?     @relation("DomainAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  @@index([propertyId, createdAt(sort: Desc)])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@map("domain_audit_events")
 }
 
 model PropertyImage {
@@ -331,34 +700,10 @@ model PropertyImage {
   @@map("property_images")
 }
 
-model PropertyGuardAssignment {
-  id              String                @id @default(uuid()) @db.Uuid
-  propertyId      String                @map("property_id") @db.Uuid
-  guardUserId     String                @map("guard_user_id") @db.Uuid
-  createdByUserId String                @map("created_by_user_id") @db.Uuid
-  status          GuardAssignmentStatus @default(PENDING_ACCEPTANCE)
-  shiftStart      DateTime?             @map("shift_start") @db.Time(6)
-  shiftEnd        DateTime?             @map("shift_end") @db.Time(6)
-  invitedAt       DateTime              @default(now()) @map("invited_at") @db.Timestamptz(6)
-  acceptedAt      DateTime?             @map("accepted_at") @db.Timestamptz(6)
-  assignedAt      DateTime?             @map("assigned_at") @db.Timestamptz(6)
-  endedAt         DateTime?             @map("ended_at") @db.Timestamptz(6)
-  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  property  Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  guard     User     @relation("AssignedGuard", fields: [guardUserId], references: [id], onDelete: Restrict)
-  createdBy User     @relation("GuardAssignmentCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-
-  @@index([propertyId, status])
-  @@index([guardUserId, status])
-  @@index([createdByUserId])
-  @@map("property_guard_assignments")
-}
-
 model ParkingSpot {
   id                            String            @id @default(uuid()) @db.Uuid
   propertyId                    String            @map("property_id") @db.Uuid
+  providerMembershipId          String            @map("provider_membership_id") @db.Uuid
   spotCode                      String            @map("spot_code") @db.VarChar(30)
   supportedVehicleType          VehicleType       @map("supported_vehicle_type")
   hourlyRatePaisa               BigInt            @map("hourly_rate_paisa")
@@ -379,13 +724,16 @@ model ParkingSpot {
   updatedAt                     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt                     DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  property               Property                @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  facilities             ParkingSpotFacility[]
-  availabilityRules      AvailabilityRule[]
-  availabilityExceptions AvailabilityException[]
+  property                   Property                            @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  providerMembership         PropertyProvider                    @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
+  managerDelegationResources ProviderManagerDelegationResource[]
+  facilities                 ParkingSpotFacility[]
+  availabilityRules          AvailabilityRule[]
+  availabilityExceptions     AvailabilityException[]
 
   @@unique([propertyId, spotCode])
   @@index([propertyId])
+  @@index([providerMembershipId])
   @@index([status, supportedVehicleType, hourlyRatePaisa])
   @@map("parking_spots")
 }
@@ -405,7 +753,7 @@ model ParkingSpotFacility {
   facilityId    Int    @map("facility_id") @db.SmallInt
 
   parkingSpot ParkingSpot     @relation(fields: [parkingSpotId], references: [id], onDelete: Cascade)
-  facility   ParkingFacility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  facility    ParkingFacility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
 
   @@id([parkingSpotId, facilityId])
   @@map("parking_spot_facilities")

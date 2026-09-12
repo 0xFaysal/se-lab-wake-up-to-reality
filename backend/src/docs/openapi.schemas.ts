@@ -27,7 +27,7 @@ export const openApiSchemas = {
   },
   UserRole: {
     type: "string",
-    enum: ["DRIVER", "PARKING_OWNER", "GUARD", "ADMIN"],
+    enum: ["DRIVER", "PROVIDER", "MANAGER", "GUARD", "ADMIN"],
   },
   UserStatus: {
     type: "string",
@@ -115,7 +115,11 @@ export const openApiSchemas = {
         example: "01712345678",
       },
       password: { $ref: "#/components/schemas/StrongPassword" },
-      role: { type: "string", enum: ["DRIVER", "PARKING_OWNER"] },
+      role: {
+        type: "string",
+        enum: ["DRIVER", "PROVIDER", "PARKING_OWNER"],
+        description: "PARKING_OWNER is a deprecated compatibility alias for PROVIDER.",
+      },
       acceptTerms: { type: "boolean", enum: [true] },
       acceptPrivacyPolicy: { type: "boolean", enum: [true] },
     },
@@ -379,6 +383,21 @@ export const openApiSchemas = {
       },
       status: { $ref: "#/components/schemas/PropertyStatus" },
       rejectionReason: { type: "string", nullable: true },
+      version: { type: "integer", minimum: 1 },
+      governanceMode: {
+        allOf: [{ $ref: "#/components/schemas/PropertyGovernanceMode" }],
+        nullable: true,
+      },
+      providerMembership: {
+        allOf: [{ $ref: "#/components/schemas/PropertyProviderMembership" }],
+        nullable: true,
+      },
+      isSoleController: { type: "boolean" },
+      buildingManager: {
+        allOf: [{ $ref: "#/components/schemas/BuildingManagerSummary" }],
+        nullable: true,
+      },
+      canonicalPropertyId: { type: "string", format: "uuid", nullable: true },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
     },
@@ -392,6 +411,12 @@ export const openApiSchemas = {
       "verificationStatus",
       "status",
       "rejectionReason",
+      "version",
+      "governanceMode",
+      "providerMembership",
+      "isSoleController",
+      "buildingManager",
+      "canonicalPropertyId",
       "createdAt",
       "updatedAt",
     ],
@@ -414,6 +439,14 @@ export const openApiSchemas = {
             nullable: true,
           },
           accessInstructions: { type: "string", nullable: true },
+          visitorIdentificationRequired: { type: "boolean" },
+          vehicleHeightLimitCm: { type: "integer", nullable: true },
+          entryCutoffLocalTime: { type: "string", nullable: true, example: "22:00" },
+          generalParkingRules: { type: "string", nullable: true },
+          commonSafetyRules: { type: "string", nullable: true },
+          temporaryClosureReason: { type: "string", nullable: true },
+          temporaryClosedAt: { type: "string", format: "date-time", nullable: true },
+          temporaryClosedUntil: { type: "string", format: "date-time", nullable: true },
           verifiedAt: { type: "string", format: "date-time", nullable: true },
         },
         required: [
@@ -421,6 +454,14 @@ export const openApiSchemas = {
           "entranceLatitude",
           "entranceLongitude",
           "accessInstructions",
+          "visitorIdentificationRequired",
+          "vehicleHeightLimitCm",
+          "entryCutoffLocalTime",
+          "generalParkingRules",
+          "commonSafetyRules",
+          "temporaryClosureReason",
+          "temporaryClosedAt",
+          "temporaryClosedUntil",
           "verifiedAt",
         ],
       },
@@ -439,6 +480,11 @@ export const openApiSchemas = {
       entranceLatitude: { type: "number", minimum: -90, maximum: 90 },
       entranceLongitude: { type: "number", minimum: -180, maximum: 180 },
       accessInstructions: { type: "string", minLength: 1, maxLength: 1000 },
+      visitorIdentificationRequired: { type: "boolean" },
+      vehicleHeightLimitCm: { type: "integer", minimum: 1, maximum: 1000 },
+      entryCutoffLocalTime: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
+      generalParkingRules: { type: "string", minLength: 1, maxLength: 2000 },
+      commonSafetyRules: { type: "string", minLength: 1, maxLength: 2000 },
     },
     required: [
       "name",
@@ -478,7 +524,18 @@ export const openApiSchemas = {
         maxLength: 1000,
         nullable: true,
       },
+      visitorIdentificationRequired: { type: "boolean" },
+      vehicleHeightLimitCm: { type: "integer", minimum: 1, maximum: 1000, nullable: true },
+      entryCutoffLocalTime: {
+        type: "string",
+        pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+        nullable: true,
+      },
+      generalParkingRules: { type: "string", minLength: 1, maxLength: 2000, nullable: true },
+      commonSafetyRules: { type: "string", minLength: 1, maxLength: 2000, nullable: true },
+      version: { type: "integer", minimum: 1 },
     },
+    required: ["version"],
   },
   OwnerPropertyResponse: {
     type: "object",
@@ -570,9 +627,415 @@ export const openApiSchemas = {
     },
     required: ["imageIds"],
   },
+  PropertyGovernanceMode: {
+    type: "string",
+    enum: ["SINGLE_PROVIDER", "MULTI_PROVIDER"],
+    description: "Derived from the number of active verified Provider memberships.",
+  },
+  PropertyProviderStatus: {
+    type: "string",
+    enum: ["PENDING", "ACTIVE", "SUSPENDED", "ENDED"],
+  },
+  PropertyProviderMembership: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      propertyId: { type: "string", format: "uuid" },
+      providerUserId: { type: "string", format: "uuid" },
+      status: { $ref: "#/components/schemas/PropertyProviderStatus" },
+      verificationStatus: {
+        $ref: "#/components/schemas/PropertyVerificationStatus",
+      },
+      joinedAt: { type: "string", format: "date-time" },
+      verifiedAt: { type: "string", format: "date-time", nullable: true },
+      rejectionReason: { type: "string", nullable: true },
+      endedAt: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "status", "verificationStatus", "joinedAt", "verifiedAt"],
+  },
+  BuildingManagerAssignmentStatus: {
+    type: "string",
+    enum: ["PENDING_APPROVAL", "ACTIVE", "REJECTED", "ENDED", "CANCELLED", "PENDING_RECONFIRMATION"],
+  },
+  BuildingManagerSummary: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      status: { $ref: "#/components/schemas/BuildingManagerAssignmentStatus" },
+      candidate: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          fullName: { type: "string" },
+        },
+        required: ["id", "fullName"],
+      },
+    },
+    required: ["id", "status", "candidate"],
+  },
+  PropertyBuildingManagerAssignment: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      propertyId: { type: "string", format: "uuid" },
+      status: { $ref: "#/components/schemas/BuildingManagerAssignmentStatus" },
+      candidate: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          fullName: { type: "string" },
+        },
+        required: ["id"],
+      },
+      votes: {
+        type: "array",
+        items: { $ref: "#/components/schemas/GovernanceVote" },
+      },
+      nominatedAt: { type: "string", format: "date-time" },
+      activatedAt: { type: "string", format: "date-time", nullable: true },
+      endedAt: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "propertyId", "status", "candidate", "nominatedAt", "activatedAt", "endedAt"],
+  },
+  GovernanceVote: {
+    type: "object",
+    properties: {
+      providerMembershipId: { type: "string", format: "uuid" },
+      voterUserId: { type: "string", format: "uuid" },
+      decision: { type: "string", enum: ["APPROVE", "REJECT"] },
+      reason: { type: "string", nullable: true },
+      createdAt: { type: "string", format: "date-time" },
+    },
+    required: ["providerMembershipId", "voterUserId", "decision", "reason", "createdAt"],
+  },
+  GovernanceVoteRequest: {
+    oneOf: [
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: { decision: { type: "string", enum: ["APPROVE"] } },
+        required: ["decision"],
+      },
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          decision: { type: "string", enum: ["REJECT"] },
+          reason: { type: "string", minLength: 5, maxLength: 500 },
+        },
+        required: ["decision", "reason"],
+      },
+    ],
+    discriminator: { propertyName: "decision" },
+  },
+  BuildingManagerNominationRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: { candidateUserId: { type: "string", format: "uuid" } },
+    required: ["candidateUserId"],
+  },
+  CommonPropertyRulesUpdateRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      version: { type: "integer", minimum: 1 },
+      accessInstructions: { type: "string", nullable: true, maxLength: 1000 },
+      visitorIdentificationRequired: { type: "boolean" },
+      vehicleHeightLimitCm: { type: "integer", minimum: 1, maximum: 1000, nullable: true },
+      entryCutoffLocalTime: { type: "string", nullable: true, example: "22:00" },
+      generalParkingRules: { type: "string", nullable: true, maxLength: 2000 },
+      commonSafetyRules: { type: "string", nullable: true, maxLength: 2000 },
+    },
+    required: ["version"],
+  },
+  TemporaryClosureUpdateRequest: {
+    oneOf: [
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          action: { type: "string", enum: ["CLOSE"] },
+          version: { type: "integer", minimum: 1 },
+          reason: { type: "string", minLength: 5, maxLength: 500 },
+          until: { type: "string", format: "date-time" },
+        },
+        required: ["action", "version", "reason"],
+      },
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          action: { type: "string", enum: ["REOPEN"] },
+          version: { type: "integer", minimum: 1 },
+        },
+        required: ["action", "version"],
+      },
+    ],
+    discriminator: { propertyName: "action" },
+  },
+  PropertyChangeProposalRequest: {
+    oneOf: [
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          changeType: { type: "string", enum: ["COMMON_RULES"] },
+          baseVersion: { type: "integer", minimum: 1 },
+          changes: {
+            type: "object",
+            additionalProperties: false,
+            minProperties: 1,
+            properties: {
+              accessInstructions: { type: "string", nullable: true, maxLength: 1000 },
+              visitorIdentificationRequired: { type: "boolean" },
+              vehicleHeightLimitCm: { type: "integer", minimum: 1, maximum: 1000, nullable: true },
+              entryCutoffLocalTime: { type: "string", nullable: true, example: "22:00" },
+              generalParkingRules: { type: "string", nullable: true, maxLength: 2000 },
+              commonSafetyRules: { type: "string", nullable: true, maxLength: 2000 },
+            },
+          },
+        },
+        required: ["changeType", "baseVersion", "changes"],
+      },
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          changeType: { type: "string", enum: ["IDENTITY_LOCATION"] },
+          baseVersion: { type: "integer", minimum: 1 },
+          changes: {
+            type: "object",
+            additionalProperties: false,
+            minProperties: 1,
+            properties: {
+              name: { type: "string", minLength: 3, maxLength: 120 },
+              publicArea: { type: "string", minLength: 2, maxLength: 120 },
+              approximateAddress: { type: "string", minLength: 5, maxLength: 255 },
+              exactAddress: { type: "string", minLength: 5, maxLength: 500 },
+              latitude: { type: "number", minimum: -90, maximum: 90 },
+              longitude: { type: "number", minimum: -180, maximum: 180 },
+              entranceLatitude: { type: "number", minimum: -90, maximum: 90, nullable: true },
+              entranceLongitude: { type: "number", minimum: -180, maximum: 180, nullable: true },
+            },
+          },
+        },
+        required: ["changeType", "baseVersion", "changes"],
+      },
+    ],
+    discriminator: { propertyName: "changeType" },
+  },
+  PropertyChangeProposal: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      propertyId: { type: "string", format: "uuid" },
+      proposedByUserId: { type: "string", format: "uuid" },
+      basePropertyVersion: { type: "integer", minimum: 1 },
+      changeType: {
+        type: "string",
+        enum: ["COMMON_RULES", "IDENTITY_LOCATION", "TEMPORARY_CLOSURE"],
+        description:
+          "TEMPORARY_CLOSURE can appear only on historical records; new proposals accept common-rule or identity/location changes.",
+      },
+      proposedChanges: { type: "object", additionalProperties: true },
+      status: { type: "string", enum: ["PENDING_APPROVAL", "APPROVED", "APPLIED", "REJECTED", "CANCELLED", "STALE"] },
+      votes: {
+        type: "array",
+        items: { $ref: "#/components/schemas/GovernanceVote" },
+      },
+      resolvedAt: { type: "string", format: "date-time", nullable: true },
+      appliedAt: { type: "string", format: "date-time", nullable: true },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+    required: ["id", "propertyId", "proposedByUserId", "basePropertyVersion", "changeType", "proposedChanges", "status", "resolvedAt", "appliedAt", "createdAt", "updatedAt"],
+  },
+  AdminPropertyMergeRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      canonicalPropertyId: { type: "string", format: "uuid" },
+      canonicalVersion: { type: "integer", minimum: 1 },
+      duplicateVersion: { type: "integer", minimum: 1 },
+      reason: { type: "string", minLength: 10, maxLength: 500 },
+    },
+    required: ["canonicalPropertyId", "canonicalVersion", "duplicateVersion", "reason"],
+  },
+  ManagerDelegationStatus: {
+    type: "string",
+    enum: ["PENDING_ACCEPTANCE", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED"],
+  },
+  ManagerDelegationPermission: {
+    type: "string",
+    enum: [
+      "RESOURCE_VIEW", "LISTING_VIEW", "LISTING_MANAGE", "PRICE_MANAGE",
+      "AVAILABILITY_MANAGE", "BOOKING_VIEW", "BOOKING_MANAGE", "IMAGE_MANAGE",
+      "GUARD_VIEW", "GUARD_ADD_TO_PROPERTY", "GUARD_ASSIGN", "EARNINGS_VIEW", "REPORTS_VIEW",
+    ],
+  },
+  PropertyGuardMembershipStatus: {
+    type: "string",
+    enum: ["PENDING_ACCEPTANCE", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED"],
+  },
+  PropertyGuardMembership: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      status: { $ref: "#/components/schemas/PropertyGuardMembershipStatus" },
+      property: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          publicArea: { type: "string" },
+        },
+        required: ["id", "name", "publicArea"],
+      },
+      guard: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          fullName: { type: "string" },
+          emailMasked: { type: "string" },
+          phoneMasked: { type: "string" },
+        },
+        required: ["id", "fullName", "emailMasked", "phoneMasked"],
+      },
+      invitedAt: { type: "string", format: "date-time" },
+      joinedAt: { type: "string", format: "date-time", nullable: true },
+      endedAt: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "status", "property", "guard", "invitedAt", "joinedAt", "endedAt"],
+  },
+  PropertyGuardMembershipResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          membership: { $ref: "#/components/schemas/PropertyGuardMembership" },
+        },
+        required: ["membership"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  ProviderPropertySummary: {
+    allOf: [{ $ref: "#/components/schemas/OwnerPropertySummary" }],
+  },
+  ProviderPropertyDetail: {
+    allOf: [{ $ref: "#/components/schemas/OwnerPropertyDetail" }],
+  },
+  ProviderPropertyResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          property: { $ref: "#/components/schemas/ProviderPropertyDetail" },
+        },
+        required: ["property"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  ProviderPropertyListResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          properties: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ProviderPropertySummary" },
+          },
+        },
+        required: ["properties"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
+  },
+  ManagerDelegation: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      property: { type: "object", additionalProperties: true },
+      providerMembershipId: { type: "string", format: "uuid" },
+      provider: { type: "object", additionalProperties: true },
+      manager: { type: "object", additionalProperties: true },
+      status: { $ref: "#/components/schemas/ManagerDelegationStatus" },
+      permissions: { type: "array", uniqueItems: true, items: { $ref: "#/components/schemas/ManagerDelegationPermission" } },
+      resourceIds: { type: "array", uniqueItems: true, items: { type: "string", format: "uuid" } },
+      validFrom: { type: "string", format: "date-time", nullable: true },
+      validUntil: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "property", "providerMembershipId", "provider", "manager", "status", "permissions", "resourceIds"],
+  },
   GuardAssignmentStatus: {
     type: "string",
     enum: ["PENDING_ACCEPTANCE", "ACTIVE", "SUSPENDED", "ENDED", "CANCELLED"],
+  },
+  ProviderGuardAssignment: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      status: { $ref: "#/components/schemas/GuardAssignmentStatus" },
+      property: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          publicArea: { type: "string" },
+        },
+        required: ["id", "name", "publicArea"],
+      },
+      providerMembershipId: { type: "string", format: "uuid" },
+      provider: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          fullName: { type: "string" },
+        },
+        required: ["id", "fullName"],
+      },
+      guardMembershipId: { type: "string", format: "uuid" },
+      guard: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          fullName: { type: "string" },
+          emailMasked: { type: "string" },
+          phoneMasked: { type: "string" },
+        },
+        required: ["id", "fullName", "emailMasked", "phoneMasked"],
+      },
+      shiftStart: { type: "string", nullable: true, example: "08:00" },
+      shiftEnd: { type: "string", nullable: true, example: "20:00" },
+      assignedAt: { type: "string", format: "date-time" },
+      endedAt: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "status", "property", "providerMembershipId", "provider", "guardMembershipId", "guard", "shiftStart", "shiftEnd", "assignedAt", "endedAt"],
+  },
+  ProviderGuardAssignmentResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", enum: [true] },
+      data: {
+        type: "object",
+        properties: {
+          assignment: { $ref: "#/components/schemas/ProviderGuardAssignment" },
+        },
+        required: ["assignment"],
+      },
+      meta: { $ref: "#/components/schemas/Meta" },
+    },
+    required: ["success", "data", "meta"],
   },
   CreateGuardInvitationRequest: {
     type: "object",
@@ -583,6 +1046,20 @@ export const openApiSchemas = {
         minLength: 3,
         maxLength: 254,
         description: "Known Guard email address or Bangladesh mobile number.",
+      },
+    },
+    required: ["identifier"],
+  },
+  CreateProviderGuardAssignmentRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      guardMembershipId: { type: "string", format: "uuid" },
+      providerMembershipId: {
+        type: "string",
+        format: "uuid",
+        description:
+          "Required for a delegated Manager who can act for multiple Providers in the same Property.",
       },
       shiftStart: {
         type: "string",
@@ -595,7 +1072,32 @@ export const openApiSchemas = {
         example: "20:00",
       },
     },
-    required: ["identifier", "shiftStart", "shiftEnd"],
+    required: ["guardMembershipId", "shiftStart", "shiftEnd"],
+  },
+  CanonicalCreateProviderGuardAssignmentRequest: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      propertyId: { type: "string", format: "uuid" },
+      guardMembershipId: { type: "string", format: "uuid" },
+      providerMembershipId: {
+        type: "string",
+        format: "uuid",
+        description:
+          "Required for a delegated Manager who can act for multiple Providers in the same Property.",
+      },
+      shiftStart: {
+        type: "string",
+        pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+        example: "08:00",
+      },
+      shiftEnd: {
+        type: "string",
+        pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+        example: "20:00",
+      },
+    },
+    required: ["propertyId", "guardMembershipId", "shiftStart", "shiftEnd"],
   },
   UpdateGuardAssignmentRequest: {
     oneOf: [

@@ -1,204 +1,81 @@
-import type { Request, RequestHandler } from "express";
+import type { Request, RequestHandler, Response } from "express";
 import { AppError } from "../../common/errors/app-error.js";
 import { authErrors } from "../auth/auth.errors.js";
-import {
-  listGuardAssignmentsQuerySchema,
-  listOwnerGuardAssignmentsQuerySchema,
-} from "./guard-assignment.schema.js";
+import { listGuardAssignmentsQuerySchema, listGuardMembershipsQuerySchema } from "./guard-assignment.schema.js";
 import * as service from "./guard-assignment.service.js";
 
-function requireUserId(req: Request): string {
+function userId(req: Request) {
   if (!req.auth) throw authErrors.authenticationRequired();
   return req.auth.userId;
 }
-
-function requireParam(
-  req: Request,
-  name: "propertyId" | "assignmentId",
-): string {
+function param(req: Request, name: "propertyId" | "membershipId" | "assignmentId") {
   const value = req.params[name];
-  if (typeof value !== "string") {
-    throw new AppError({
-      statusCode: 400,
-      code: "VALIDATION_ERROR",
-      message: `${name} must be a valid UUID`,
-    });
-  }
+  if (typeof value !== "string") throw new AppError({ statusCode: 400, code: "VALIDATION_ERROR", message: `${name} must be a valid UUID` });
   return value;
 }
-
-function meta(req: Request) {
-  return { requestId: req.requestId, timestamp: new Date().toISOString() };
+function respond(req: Request, res: Response, data: unknown, status = 200) {
+  res.status(status).json({ success: true, data, meta: { requestId: req.requestId, timestamp: new Date().toISOString() } });
 }
 
-export const inviteGuardController: RequestHandler = async (req, res, next) => {
-  try {
-    const assignment = await service.inviteGuard(
-      requireUserId(req),
-      requireParam(req, "propertyId"),
-      req.body,
-    );
-    res.status(201).json({
-      success: true,
-      data: { assignment },
-      meta: meta(req),
-    });
-  } catch (error) {
-    next(error);
-  }
+export const addPropertyGuardController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { membership: await service.addPropertyGuard(userId(req), param(req, "propertyId"), req.body) }, 201); } catch (error) { next(error); }
 };
-
-export const listOwnerAssignmentsController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
-  try {
-    const query = listOwnerGuardAssignmentsQuerySchema.parse({
-      query: req.query,
-    }).query;
-    const result = await service.listOwnerAssignments(
-      requireUserId(req),
-      query,
-    );
-    res.status(200).json({ success: true, data: result, meta: meta(req) });
-  } catch (error) {
-    next(error);
-  }
+export const listPropertyGuardsController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { memberships: await service.listPropertyGuards(userId(req), param(req, "propertyId")) }); } catch (error) { next(error); }
 };
-
-export const getOwnerAssignmentController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
+export const listMyGuardMembershipsController: RequestHandler = async (req, res, next) => {
   try {
-    const assignment = await service.getOwnerAssignment(
-      requireUserId(req),
-      requireParam(req, "assignmentId"),
-    );
-    res.status(200).json({
-      success: true,
-      data: { assignment },
-      meta: meta(req),
-    });
-  } catch (error) {
-    next(error);
-  }
+    const query = listGuardMembershipsQuerySchema.parse({ query: req.query }).query;
+    respond(req, res, await service.listMyGuardMemberships(userId(req), query));
+  } catch (error) { next(error); }
 };
-
-export const updateOwnerAssignmentController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
-  try {
-    const assignment = await service.updateOwnerAssignment(
-      requireUserId(req),
-      requireParam(req, "assignmentId"),
-      req.body,
-    );
-    res.status(200).json({
-      success: true,
-      data: { assignment },
-      meta: meta(req),
-    });
-  } catch (error) {
-    next(error);
-  }
+export const acceptGuardMembershipController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { membership: await service.respondToGuardMembership(userId(req), param(req, "membershipId"), true) }); } catch (error) { next(error); }
 };
-
-export const endOwnerAssignmentController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
+export const rejectGuardMembershipController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { membership: await service.respondToGuardMembership(userId(req), param(req, "membershipId"), false) }); } catch (error) { next(error); }
+};
+export const createProviderGuardAssignmentController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { assignment: await service.createProviderGuardAssignment(userId(req), param(req, "propertyId"), req.body) }, 201); } catch (error) { next(error); }
+};
+export const createCanonicalProviderGuardAssignmentController: RequestHandler = async (req, res, next) => {
   try {
-    await service.endOwnerAssignment(
-      requireUserId(req),
-      requireParam(req, "assignmentId"),
-    );
+    const { propertyId, ...input } = req.body;
+    respond(req, res, { assignment: await service.createProviderGuardAssignment(userId(req), propertyId, input) }, 201);
+  } catch (error) { next(error); }
+};
+export const listProviderAssignmentsController: RequestHandler = async (req, res, next) => {
+  try {
+    const query = listGuardAssignmentsQuerySchema.parse({ query: req.query }).query;
+    respond(req, res, await service.listProviderAssignments(userId(req), query));
+  } catch (error) { next(error); }
+};
+export const getProviderAssignmentController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { assignment: await service.getProviderAssignment(userId(req), param(req, "assignmentId")) }); } catch (error) { next(error); }
+};
+export const listMyProviderAssignmentsController: RequestHandler = async (req, res, next) => {
+  try {
+    const query = listGuardAssignmentsQuerySchema.parse({ query: req.query }).query;
+    respond(req, res, await service.listMyProviderAssignments(userId(req), query));
+  } catch (error) { next(error); }
+};
+export const updateProviderGuardAssignmentController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { assignment: await service.updateProviderGuardAssignment(userId(req), param(req, "assignmentId"), req.body) }); } catch (error) { next(error); }
+};
+export const endProviderGuardAssignmentController: RequestHandler = async (req, res, next) => {
+  try { await service.endProviderGuardAssignment(userId(req), param(req, "assignmentId")); res.status(204).send(); } catch (error) { next(error); }
+};
+export const removePropertyGuardController: RequestHandler = async (req, res, next) => {
+  try {
+    await service.removePropertyGuard(userId(req), param(req, "propertyId"), param(req, "membershipId"));
     res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 };
 
-export const listGuardAssignmentsController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
-  try {
-    const query = listGuardAssignmentsQuerySchema.parse({
-      query: req.query,
-    }).query;
-    const result = await service.listGuardAssignments(
-      requireUserId(req),
-      query,
-    );
-    res.status(200).json({ success: true, data: result, meta: meta(req) });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getGuardAssignmentController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
-  try {
-    const assignment = await service.getGuardAssignment(
-      requireUserId(req),
-      requireParam(req, "assignmentId"),
-    );
-    res.status(200).json({
-      success: true,
-      data: { assignment },
-      meta: meta(req),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const acceptGuardAssignmentController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
-  try {
-    const assignment = await service.acceptGuardAssignment(
-      requireUserId(req),
-      requireParam(req, "assignmentId"),
-    );
-    res.status(200).json({
-      success: true,
-      data: { assignment },
-      meta: meta(req),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const rejectGuardAssignmentController: RequestHandler = async (
-  req,
-  res,
-  next,
-) => {
-  try {
-    const assignment = await service.rejectGuardAssignment(
-      requireUserId(req),
-      requireParam(req, "assignmentId"),
-    );
-    res.status(200).json({
-      success: true,
-      data: { assignment },
-      meta: meta(req),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const inviteGuardController = addPropertyGuardController;
+export const listOwnerAssignmentsController = listProviderAssignmentsController;
+export const updateOwnerAssignmentController = updateProviderGuardAssignmentController;
+export const endOwnerAssignmentController = endProviderGuardAssignmentController;
+export const listGuardAssignmentsController = listMyProviderAssignmentsController;
+export const acceptGuardAssignmentController = acceptGuardMembershipController;
+export const rejectGuardAssignmentController = rejectGuardMembershipController;

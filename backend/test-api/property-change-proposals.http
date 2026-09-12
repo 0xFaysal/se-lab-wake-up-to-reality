@@ -1,0 +1,71 @@
+@baseUrl = http://localhost:4000/api/v1
+@providerEmail = provider@example.com
+@providerPassword = StrongProvider123!
+@propertyId = replace-with-multi-provider-property-id
+@proposalId = replace-with-proposal-id
+@propertyVersion = 1
+
+### Provider login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Propose a common-rule change in multi-provider mode
+POST {{baseUrl}}/properties/{{propertyId}}/change-proposals
+Content-Type: application/json
+
+{
+  "changeType": "COMMON_RULES",
+  "baseVersion": {{propertyVersion}},
+  "changes": {
+    "visitorIdentificationRequired": true,
+    "generalParkingRules": "No overnight parking without prior approval"
+  }
+}
+
+### Propose an identity/location change in multi-provider mode
+POST {{baseUrl}}/properties/{{propertyId}}/change-proposals
+Content-Type: application/json
+
+{
+  "changeType": "IDENTITY_LOCATION",
+  "baseVersion": {{propertyVersion}},
+  "changes": {
+    "approximateAddress": "Beside Gulshan 2 circle, Dhaka"
+  }
+}
+
+### List proposals and their votes
+GET {{baseUrl}}/properties/{{propertyId}}/change-proposals
+
+### Read one proposal in the same Property scope
+GET {{baseUrl}}/properties/{{propertyId}}/change-proposals/{{proposalId}}
+
+### Approve once as the current verified Provider membership
+POST {{baseUrl}}/properties/{{propertyId}}/change-proposals/{{proposalId}}/vote
+Content-Type: application/json
+
+{ "decision": "APPROVE" }
+
+### Reject with the mandatory reason
+POST {{baseUrl}}/properties/{{propertyId}}/change-proposals/{{proposalId}}/vote
+Content-Type: application/json
+
+{
+  "decision": "REJECT",
+  "reason": "The proposed location is not supported by the submitted documents"
+}
+
+### Direct temporary closure by a sole Provider, active Building Manager, or Admin
+# An ordinary Provider in multi-provider mode receives 403 for this operation.
+PATCH {{baseUrl}}/properties/{{propertyId}}/temporary-closure
+Content-Type: application/json
+
+{
+  "action": "CLOSE",
+  "version": {{propertyVersion}},
+  "reason": "Scheduled electrical maintenance",
+  "until": "2026-09-15T12:00:00.000Z"
+}
+

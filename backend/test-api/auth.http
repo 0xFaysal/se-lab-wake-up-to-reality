@@ -59,7 +59,7 @@ Content-Type: application/json
   "email": "{{ownerEmail}}",
   "phone": "{{ownerPhone}}",
   "password": "{{password}}",
-  "role": "PARKING_OWNER",
+  "role": "PROVIDER",
   "acceptTerms": true,
   "acceptPrivacyPolicy": true
 }
