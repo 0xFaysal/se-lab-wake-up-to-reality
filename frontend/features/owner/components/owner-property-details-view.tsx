@@ -33,8 +33,13 @@ import {
   CheckCircle2,
   Smartphone,
   Layers,
+  Plus,
 } from "lucide-react";
-import { MOCK_OWNER_PROFILE } from "@/lib/data/mock-owner-data";
+import {
+  MOCK_OWNER_PROFILE,
+  MOCK_OWNER_PROPERTIES,
+  MOCK_OWNER_MANAGERS,
+} from "@/lib/data/mock-owner-data";
 
 interface SpaceBay {
   id: string;
@@ -56,6 +61,42 @@ export function OwnerPropertyDetailsView({ propertyId }: { propertyId?: string }
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // Locate current property details
+  const currentProperty =
+    MOCK_OWNER_PROPERTIES.find((p) => p.id === propertyId) ||
+    MOCK_OWNER_PROPERTIES[0];
+
+  // Resolve assigned manager (Strict 1-manager rule)
+  const assignedManager = currentProperty?.managerName
+    ? MOCK_OWNER_MANAGERS.find(
+        (m) =>
+          m.name.toLowerCase() === currentProperty.managerName?.toLowerCase() ||
+          m.assignedPropertyIds.includes(currentProperty.id)
+      ) || {
+        id: "mgr-temp",
+        name: currentProperty.managerName,
+        initials: currentProperty.managerName
+          .split(" ")
+          .map((n) => n[0])
+          .slice(0, 2)
+          .join("")
+          .toUpperCase(),
+        phone: "+880 1712-345678",
+        email: "manager@parkease.bd",
+        assignedPropertyIds: [currentProperty.id],
+        assignedPropertyTitles: [currentProperty.title],
+        permissions: {
+          canManageListings: true,
+          canManageBookings: true,
+          canManageGuards: true,
+          canRespondReviews: true,
+          canAccessFinancials: false,
+        },
+        status: "ACTIVE" as const,
+        joinedDate: "15 Jan 2026",
+      }
+    : null;
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -540,68 +581,149 @@ export function OwnerPropertyDetailsView({ propertyId }: { propertyId?: string }
                   Property Operations & Staff
                 </h3>
               </div>
-              <Link
-                href="/owner/guards"
-                className="text-xs font-bold text-[#064E3B] hover:underline font-heading"
-              >
-                Manage Staff Assignments
-              </Link>
-            </div>
-
-            {/* Staff Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Staff 1: Property Manager */}
-              <div className="p-3.5 rounded-xl border border-[#E5E7EB] bg-slate-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center font-heading shrink-0 shadow-2xs">
-                    RU
-                  </div>
-                  <div>
-                    <h4 className="font-heading font-bold text-xs text-slate-900">
-                      Rahim Uddin
-                    </h4>
-                    <p className="text-[11px] text-slate-500">
-                      Assigned Property Manager · <span className="text-emerald-700 font-semibold">Active</span>
-                    </p>
-                  </div>
-                </div>
-
+              <div className="flex items-center gap-4 text-xs font-heading font-bold">
                 <Link
                   href="/owner/managers"
-                  className="px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs font-heading"
+                  className="text-[#064E3B] hover:underline"
                 >
-                  View Manager
+                  All Managers →
                 </Link>
-              </div>
-
-              {/* Staff 2: Guard On-Duty */}
-              <div className="p-3.5 rounded-xl border border-[#E5E7EB] bg-slate-50/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-emerald-100 text-[#064E3B] font-bold text-xs flex items-center justify-center font-heading shrink-0 shadow-2xs border border-emerald-200">
-                    TI
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-heading font-bold text-xs text-slate-900">
-                        Tariqul Islam
-                      </h4>
-                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                        <span className="size-1 rounded-full bg-emerald-600" />
-                        On Duty (Gate 2)
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Next Shift: Mahmud Hasan · 2:00 PM
-                    </p>
-                  </div>
-                </div>
-
                 <Link
                   href="/owner/guards"
-                  className="px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs font-heading"
+                  className="text-[#064E3B] hover:underline"
                 >
-                  Manage Guards (2)
+                  All Guards →
                 </Link>
+              </div>
+            </div>
+
+            {/* Staff Cards Row: Single Manager Slot + Multi-Guard Slot */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Staff Slot 1: Strictly Single Property Manager */}
+              {assignedManager ? (
+                <div className="p-4 rounded-xl border border-[#E5E7EB] bg-slate-50/50 flex flex-col justify-between gap-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="size-11 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center font-heading shrink-0 shadow-2xs">
+                        {assignedManager.initials}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-heading font-bold text-sm text-slate-900">
+                            {assignedManager.name}
+                          </h4>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            Active
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Assigned Property Manager
+                        </p>
+                      </div>
+                    </div>
+
+                    {assignedManager.permissions.canAccessFinancials ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                        Financial Access
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                        Ops Only
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200/80">
+                    <span className="text-[11px] text-slate-500">
+                      Capacity: 1 Manager / Property
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/owner/managers?action=edit&manager=${encodeURIComponent(assignedManager.name)}`}
+                        className="px-2.5 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition shadow-2xs font-heading"
+                      >
+                        Edit Permissions
+                      </Link>
+                      <Link
+                        href={`/owner/managers?action=replace&property=${encodeURIComponent(currentProperty.id)}`}
+                        className="px-2.5 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition shadow-2xs font-heading"
+                      >
+                        Replace Manager
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Empty Manager Slot (Dashed Border Card) */
+                <div className="p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/30 flex flex-col justify-between gap-3 text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="size-11 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 shrink-0">
+                      <Users className="size-5 text-slate-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-heading font-bold text-xs text-slate-800">
+                        No Manager Assigned
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Strict architectural limit: Only 1 delegated manager per property.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-dashed border-slate-200">
+                    <span className="text-[10px] text-slate-400">
+                      Operations unmanaged
+                    </span>
+                    <Link
+                      href={`/owner/managers?action=assign&property=${encodeURIComponent(currentProperty.id)}`}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#064E3B] hover:bg-emerald-50 border border-emerald-300/80 bg-white transition shadow-2xs font-heading inline-flex items-center gap-1.5"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>+ Assign Manager to Property</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Staff Slot 2: Multi-Guard Operations */}
+              <div className="p-4 rounded-xl border border-[#E5E7EB] bg-slate-50/50 flex flex-col justify-between gap-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="size-11 rounded-xl bg-emerald-100 text-[#064E3B] font-bold text-xs flex items-center justify-center font-heading shrink-0 shadow-2xs border border-emerald-200">
+                      TI
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-heading font-bold text-sm text-slate-900">
+                          Tariqul Islam
+                        </h4>
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                          <span className="size-1 rounded-full bg-emerald-600" />
+                          On Duty (Gate 2)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Next Shift: Mahmud Hasan · 2:00 PM
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                    Gate Security
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200/80">
+                  <span className="text-[11px] text-slate-500">
+                    Capacity: N Guards / Property
+                  </span>
+                  <Link
+                    href="/owner/guards"
+                    className="px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 transition shadow-2xs font-heading"
+                  >
+                    Manage Guards (3)
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
