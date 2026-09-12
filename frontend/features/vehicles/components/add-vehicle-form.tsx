@@ -15,20 +15,20 @@ import {
 import { Vehicle, VehicleCategory } from "@/types/driver";
 
 interface AddVehicleFormProps {
-  onAddVehicle: (newVehicle: Omit<Vehicle, "id">) => void;
+  onAddVehicle: (newVehicle: Omit<Vehicle, "id">) => Promise<void>;
+  pending?: boolean;
 }
 
-export function AddVehicleForm({ onAddVehicle }: AddVehicleFormProps) {
+export function AddVehicleForm({ onAddVehicle, pending = false }: AddVehicleFormProps) {
   const [type, setType] = useState<VehicleCategory>("SEDAN");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [color, setColor] = useState("");
-  const [year, setYear] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!brand || !model || !registrationNumber || !color) {
       setError("Please fill in all required vehicle details.");
@@ -36,23 +36,17 @@ export function AddVehicleForm({ onAddVehicle }: AddVehicleFormProps) {
     }
 
     setError("");
-    onAddVehicle({
-      name: `${brand} ${model}`.trim(),
-      brand,
-      model,
-      registrationNumber,
-      type,
-      color,
-      year: year || undefined,
-      isDefault,
-    });
+    try {
+      await onAddVehicle({ name: `${brand} ${model}`.trim(), brand, model, registrationNumber, type, color, isDefault });
+    } catch {
+      return;
+    }
 
     // Reset form
     setBrand("");
     setModel("");
     setRegistrationNumber("");
     setColor("");
-    setYear("");
     setIsDefault(false);
   }
 
@@ -92,7 +86,6 @@ export function AddVehicleForm({ onAddVehicle }: AddVehicleFormProps) {
               <SelectItem value="SUV" className="py-2.5">SUV / Crossover</SelectItem>
               <SelectItem value="MOTORCYCLE" className="py-2.5">Motorcycle / Scooter</SelectItem>
               <SelectItem value="MICROBUS" className="py-2.5">Microbus / Van</SelectItem>
-              <SelectItem value="HATCHBACK" className="py-2.5">Hatchback / Compact</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -169,23 +162,6 @@ export function AddVehicleForm({ onAddVehicle }: AddVehicleFormProps) {
           />
         </div>
 
-        {/* Year (Optional) Input */}
-        <div className="space-y-2">
-          <label
-            htmlFor="vehicle-year"
-            className="text-xs font-bold text-foreground uppercase tracking-wider font-heading"
-          >
-            Year (Optional)
-          </label>
-          <Input
-            id="vehicle-year"
-            type="text"
-            placeholder="e.g. 2022"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary font-mono"
-          />
-        </div>
       </div>
 
       {/* Default Checkbox */}
@@ -207,11 +183,13 @@ export function AddVehicleForm({ onAddVehicle }: AddVehicleFormProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2 border-t border-border/80">
         <Button
           type="submit"
+          disabled={pending}
+          aria-busy={pending}
           size="lg"
           className="bg-primary text-white hover:bg-primary/90 font-bold text-sm h-12 px-8 rounded-xl shadow-xs gap-2 cursor-pointer"
         >
           <PlusCircle className="size-4" />
-          Add Vehicle
+          {pending ? "Adding…" : "Add Vehicle"}
         </Button>
         <span className="text-xs text-muted-foreground">
           Make sure the registration number matches the vehicle you will use for

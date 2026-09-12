@@ -1,6 +1,5 @@
-import React from "react";
 import type { Metadata } from "next";
-import { OwnerEditListingView } from "@/features/owner/components/owner-edit-listing-view";
+import { PropertyEditLiveView } from "@/features/owner/components/property-edit-live-view";
 
 export const metadata: Metadata = {
   title: "Edit Listing | Residential Building, Gulshan | ParkEase BD",
@@ -13,5 +12,5 @@ export default async function OwnerEditListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <OwnerEditListingView propertyId={id} />;
+  return <PropertyEditLiveView propertyId={id} />;
 }

@@ -22,6 +22,7 @@ export function SupportTicketForm() {
   const [fileName, setFileName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [ticketCode, setTicketCode] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +31,7 @@ export function SupportTicketForm() {
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitted(true);
+      setTicketCode(`TK-${Date.now().toString().slice(-6)}`);
       setBookingId("");
       setSubject("");
       setDescription("");
@@ -127,8 +129,7 @@ export function SupportTicketForm() {
                 Issue Reported Successfully!
               </p>
               <p className="text-xs text-emerald-800">
-                Ticket #TK-
-                {Math.floor(100000 + Math.random() * 900000)} has been created.
+                Ticket #{ticketCode} has been created.
                 Our team will respond within a few minutes.
               </p>
             </div>

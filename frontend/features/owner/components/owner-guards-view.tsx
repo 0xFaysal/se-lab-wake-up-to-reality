@@ -18,8 +18,6 @@ import {
   Users,
   Shield,
   Send,
-  Eye,
-  EyeOff,
   MoreVertical,
   Download,
   Calendar,
@@ -60,9 +58,6 @@ export function OwnerGuardsView() {
   const [assignedGate, setAssignedGate] = useState("Gate 1");
   const [shiftStart, setShiftStart] = useState("08:00 AM");
   const [shiftEnd, setShiftEnd] = useState("06:00 PM");
-  const [tempPassword, setTempPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,15 +111,6 @@ export function OwnerGuardsView() {
       setFormError("Please provide a valid phone number for SMS delivery.");
       return;
     }
-    if (!tempPassword || tempPassword.length < 8) {
-      setFormError("Temporary initial password must be at least 8 characters.");
-      return;
-    }
-    if (tempPassword !== confirmPassword) {
-      setFormError("Temporary initial passwords do not match.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     setTimeout(() => {
@@ -166,8 +152,6 @@ export function OwnerGuardsView() {
       setFullName("");
       setPhone("");
       setEmail("");
-      setTempPassword("");
-      setConfirmPassword("");
     }, 450);
   };
 
@@ -891,50 +875,8 @@ export function OwnerGuardsView() {
                 </div>
               </div>
 
-              {/* Temporary Initial Password */}
-              <div className="pt-2 border-t border-slate-100 space-y-3">
-                <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-[11px] text-amber-900">
-                  <span className="font-bold">Initial Password Requirement:</span> Set a temporary initial password. The guard will receive an SMS activation link and must change it on first login.
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Initial Password *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={tempPassword}
-                        onChange={(e) => setTempPassword(e.target.value)}
-                        placeholder="Min 8 characters"
-                        className="w-full h-10 pl-3 pr-9 rounded-lg border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Confirm Password *
-                    </label>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repeat password"
-                      className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B]"
-                    />
-                  </div>
-                </div>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] leading-relaxed text-emerald-900">
+                <span className="font-bold">Secure account setup:</span> An account setup link will be sent securely to the Guard. ParkEase never creates or displays a plaintext temporary password.
               </div>
 
               {/* Form Actions */}
@@ -956,7 +898,7 @@ export function OwnerGuardsView() {
                   ) : (
                     <>
                       <Plus className="size-3.5 stroke-[2.5]" />
-                      <span>Create Guard Account</span>
+                      <span>Send Secure Invitation</span>
                     </>
                   )}
                 </button>

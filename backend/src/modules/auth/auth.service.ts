@@ -269,7 +269,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
               role:
                 input.role === "DRIVER"
                   ? UserRoleType.DRIVER
-                  : UserRoleType.PARKING_OWNER,
+                  : UserRoleType.PROVIDER,
             },
           },
           walletAccounts: {
@@ -1056,6 +1056,7 @@ export async function changeInitialPassword(
 
   if (
     !authUser.roles.includes(UserRoleType.GUARD) &&
+    !authUser.roles.includes(UserRoleType.MANAGER) &&
     !authUser.roles.includes(UserRoleType.ADMIN)
   ) {
     throw authErrors.forbidden();

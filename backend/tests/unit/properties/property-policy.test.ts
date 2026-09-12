@@ -7,7 +7,7 @@ import {
 } from "../../../src/modules/properties/property.policy.js";
 
 describe("property policy", () => {
-  it("resets a verified property only for critical location changes", () => {
+  it("resets a verified property only for critical identity or location changes", () => {
     assert.equal(
       shouldResetVerification(
         VerificationStatus.VERIFIED,
@@ -19,6 +19,13 @@ describe("property policy", () => {
       shouldResetVerification(
         VerificationStatus.VERIFIED,
         new Set(["name", "accessInstructions"]),
+      ),
+      true,
+    );
+    assert.equal(
+      shouldResetVerification(
+        VerificationStatus.VERIFIED,
+        new Set(["accessInstructions", "generalParkingRules"]),
       ),
       false,
     );
@@ -39,6 +46,7 @@ describe("property policy", () => {
         existingPropertyImageCount: 0,
         existingParkingSpotCount: 0,
         blockingGuardAssignmentCount: 0,
+        providerCount: 1,
       }),
       true,
     );
@@ -47,6 +55,7 @@ describe("property policy", () => {
         existingPropertyImageCount: 0,
         existingParkingSpotCount: 1,
         blockingGuardAssignmentCount: 0,
+        providerCount: 1,
       }),
       false,
     );
@@ -55,6 +64,7 @@ describe("property policy", () => {
         existingPropertyImageCount: 0,
         existingParkingSpotCount: 0,
         blockingGuardAssignmentCount: 1,
+        providerCount: 1,
       }),
       false,
     );
@@ -63,6 +73,16 @@ describe("property policy", () => {
         existingPropertyImageCount: 1,
         existingParkingSpotCount: 0,
         blockingGuardAssignmentCount: 0,
+        providerCount: 1,
+      }),
+      false,
+    );
+    assert.equal(
+      canDeleteProperty({
+        existingPropertyImageCount: 0,
+        existingParkingSpotCount: 0,
+        blockingGuardAssignmentCount: 0,
+        providerCount: 2,
       }),
       false,
     );

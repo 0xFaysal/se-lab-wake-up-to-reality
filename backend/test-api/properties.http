@@ -21,7 +21,7 @@ Content-Type: application/json
   "email": "{{ownerAEmail}}",
   "phone": "{{ownerAPhone}}",
   "password": "{{password}}",
-  "role": "PARKING_OWNER",
+  "role": "PROVIDER",
   "acceptTerms": true,
   "acceptPrivacyPolicy": true
 }
@@ -52,7 +52,7 @@ Content-Type: application/json
 
 ### Create property - PENDING and INACTIVE
 # @name createProperty
-POST {{baseUrl}}/owner/properties
+POST {{baseUrl}}/provider/properties
 Content-Type: application/json
 
 {
@@ -68,35 +68,38 @@ Content-Type: application/json
 }
 
 ### List own property summaries - no exactAddress/accessInstructions
-GET {{baseUrl}}/owner/properties
+GET {{baseUrl}}/provider/properties
 
 ### Get owner detail - private fields are decrypted
-GET {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+GET {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 
 ### Minor update
-PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+PATCH {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 Content-Type: application/json
 
 {
+  "version": 1,
   "name": "Gulshan Secure Parking",
   "accessInstructions": "Use Gate B and call the desk"
 }
 
 ### Critical location update - verified properties return to PENDING
-PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+PATCH {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 Content-Type: application/json
 
 {
+  "version": 2,
   "exactAddress": "House 18, Road 51, Gulshan 2, Dhaka",
   "entranceLatitude": 23.7948,
   "entranceLongitude": 90.4147
 }
 
 ### Protected owner-controlled field - should return 400
-PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+PATCH {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 Content-Type: application/json
 
 {
+  "version": 3,
   "verificationStatus": "VERIFIED"
 }
 
@@ -109,13 +112,13 @@ Content-Type: application/json
   "email": "{{unverifiedOwnerEmail}}",
   "phone": "{{unverifiedOwnerPhone}}",
   "password": "{{password}}",
-  "role": "PARKING_OWNER",
+  "role": "PROVIDER",
   "acceptTerms": true,
   "acceptPrivacyPolicy": true
 }
 
 ### Unverified Owner create - should return 403
-POST {{baseUrl}}/owner/properties
+POST {{baseUrl}}/provider/properties
 Content-Type: application/json
 
 {
@@ -166,7 +169,7 @@ Content-Type: application/json
 }
 
 ### Ready Driver create - should return 403 AUTH_FORBIDDEN
-POST {{baseUrl}}/owner/properties
+POST {{baseUrl}}/provider/properties
 Content-Type: application/json
 
 {
@@ -187,7 +190,7 @@ Content-Type: application/json
   "email": "{{ownerBEmail}}",
   "phone": "{{ownerBPhone}}",
   "password": "{{password}}",
-  "role": "PARKING_OWNER",
+  "role": "PROVIDER",
   "acceptTerms": true,
   "acceptPrivacyPolicy": true
 }
@@ -217,18 +220,19 @@ Content-Type: application/json
 }
 
 ### Cross-owner GET - should return 404
-GET {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+GET {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 
 ### Cross-owner PATCH - should return 404
-PATCH {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+PATCH {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 Content-Type: application/json
 
 {
+  "version": 1,
   "name": "Stolen Property"
 }
 
 ### Cross-owner DELETE - should return 404
-DELETE {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+DELETE {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 
 ### Login Owner A again before deleting
 POST {{baseUrl}}/auth/login
@@ -240,7 +244,7 @@ Content-Type: application/json
 }
 
 ### Soft-delete own property
-DELETE {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+DELETE {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}
 
 ### Deleted property detail - should return 404
-GET {{baseUrl}}/owner/properties/{{createProperty.response.body.$.data.property.id}}
+GET {{baseUrl}}/provider/properties/{{createProperty.response.body.$.data.property.id}}

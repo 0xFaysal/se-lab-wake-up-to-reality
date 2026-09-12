@@ -1,10 +1,11 @@
-import type { GuardAssignmentRecord } from "./guard-assignment.repository.js";
+import type {
+  GuardMembershipRecord,
+  ProviderGuardAssignmentRecord,
+} from "./guard-assignment.repository.js";
 
 function formatShiftTime(value: Date | null): string | null {
   if (!value) return null;
-  const hours = value.getUTCHours().toString().padStart(2, "0");
-  const minutes = value.getUTCMinutes().toString().padStart(2, "0");
-  return `${hours}:${minutes}`;
+  return `${value.getUTCHours().toString().padStart(2, "0")}:${value.getUTCMinutes().toString().padStart(2, "0")}`;
 }
 
 export function maskEmail(email: string): string {
@@ -13,53 +14,46 @@ export function maskEmail(email: string): string {
 }
 
 export function maskPhone(phone: string): string {
-  const visiblePrefixLength = Math.min(6, Math.max(0, phone.length - 3));
-  const hiddenLength = Math.max(3, phone.length - visiblePrefixLength - 3);
-  return `${phone.slice(0, visiblePrefixLength)}${"*".repeat(hiddenLength)}${phone.slice(-3)}`;
+  return `${phone.slice(0, Math.max(0, phone.length - 7))}****${phone.slice(-3)}`;
 }
 
-function assignmentFields(assignment: GuardAssignmentRecord) {
+export function toGuardMembership(record: GuardMembershipRecord) {
   return {
-    id: assignment.id,
-    status: assignment.status,
-    shiftStart: formatShiftTime(assignment.shiftStart),
-    shiftEnd: formatShiftTime(assignment.shiftEnd),
-    invitedAt: assignment.invitedAt,
-    acceptedAt: assignment.acceptedAt,
-    assignedAt: assignment.assignedAt,
-    endedAt: assignment.endedAt,
-    createdAt: assignment.createdAt,
-    updatedAt: assignment.updatedAt,
-  };
-}
-
-export function toOwnerGuardAssignment(assignment: GuardAssignmentRecord) {
-  return {
-    ...assignmentFields(assignment),
-    property: {
-      id: assignment.property.id,
-      name: assignment.property.name,
-    },
+    id: record.id,
+    status: record.status,
+    property: record.property,
     guard: {
-      id: assignment.guard.id,
-      fullName: assignment.guard.fullName,
-      emailMasked: maskEmail(assignment.guard.email),
-      phoneMasked: maskPhone(assignment.guard.phone),
+      id: record.guard.id,
+      fullName: record.guard.fullName,
+      emailMasked: maskEmail(record.guard.email),
+      phoneMasked: maskPhone(record.guard.phone),
     },
+    invitedAt: record.invitedAt,
+    joinedAt: record.joinedAt,
+    endedAt: record.endedAt,
   };
 }
 
-export function toGuardAssignment(assignment: GuardAssignmentRecord) {
+export function toProviderGuardAssignment(record: ProviderGuardAssignmentRecord) {
   return {
-    ...assignmentFields(assignment),
-    property: {
-      id: assignment.property.id,
-      name: assignment.property.name,
-      publicArea: assignment.property.publicArea,
+    id: record.id,
+    status: record.status,
+    property: record.propertyGuardMembership.property,
+    providerMembershipId: record.providerMembership.id,
+    provider: record.providerMembership.provider,
+    guardMembershipId: record.propertyGuardMembership.id,
+    guard: {
+      id: record.propertyGuardMembership.guard.id,
+      fullName: record.propertyGuardMembership.guard.fullName,
+      emailMasked: maskEmail(record.propertyGuardMembership.guard.email),
+      phoneMasked: maskPhone(record.propertyGuardMembership.guard.phone),
     },
-    owner: {
-      id: assignment.property.owner.id,
-      fullName: assignment.property.owner.fullName,
-    },
+    shiftStart: formatShiftTime(record.shiftStart),
+    shiftEnd: formatShiftTime(record.shiftEnd),
+    assignedAt: record.assignedAt,
+    endedAt: record.endedAt,
   };
 }
+
+export const toOwnerGuardAssignment = toProviderGuardAssignment;
+export const toGuardAssignment = toProviderGuardAssignment;

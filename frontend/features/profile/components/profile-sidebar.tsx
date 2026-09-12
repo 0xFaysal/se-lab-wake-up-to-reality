@@ -1,5 +1,6 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
 import {
   Car,
   CreditCard,
@@ -10,9 +11,12 @@ import {
   CheckCircle2,
   Shield,
 } from "lucide-react";
-import avatarAnisaImg from "@/assets/avatar-anisa.jpg";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export function ProfileSidebar() {
+  const { data: currentUser } = useCurrentUser();
+  const displayName = currentUser?.fullName || "Driver";
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const NAV_LINKS = [
     {
       label: "Manage Vehicles",
@@ -41,20 +45,12 @@ export function ProfileSidebar() {
       {/* 1. Deep Emerald Profile Summary Card */}
       <div className="rounded-2xl bg-[#064E3B] text-white p-6 shadow-md text-center space-y-4">
         {/* Avatar Photo */}
-        <div className="relative size-20 sm:size-24 rounded-full overflow-hidden mx-auto ring-3 ring-white/30 border-2 border-white/60 shadow-lg">
-          <Image
-            src={avatarAnisaImg}
-            alt="Anisa Rahman"
-            fill
-            className="object-cover"
-            priority
-          />
-        </div>
+        <div className="mx-auto flex size-20 items-center justify-center rounded-full border-2 border-white/60 bg-white/15 text-2xl font-black shadow-lg ring-3 ring-white/30 sm:size-24">{initials}</div>
 
         {/* Name & Role Badge */}
         <div className="space-y-1.5">
           <h3 className="text-xl font-black font-heading tracking-tight text-white">
-            Anisa Rahman
+            {displayName}
           </h3>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-xs font-bold text-emerald-100 font-heading">
             <span>Driver</span>

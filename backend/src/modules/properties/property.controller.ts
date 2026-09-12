@@ -44,6 +44,25 @@ export const createPropertyController: RequestHandler = async (
   }
 };
 
+export const findPossiblePropertyMatchesController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const possibleMatches = await propertyService.findPossiblePropertyMatches(
+      req.body,
+    );
+    res.status(200).json({
+      success: true,
+      data: { possibleMatches },
+      meta: responseMeta(req),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const listPropertiesController: RequestHandler = async (
   req,
   res,

@@ -7,7 +7,7 @@ import {
   listUserSessions,
   revokeUserSession,
 } from "../auth/auth.service.js";
-import { createGuardAccount } from "./users.service.js";
+import { createGuardAccount, createManagerAccount } from "./users.service.js";
 
 function getClientIp(req: Parameters<RequestHandler>[0]): string {
   return req.ip || req.socket.remoteAddress || "unknown";
@@ -23,6 +23,24 @@ export const createGuardController: RequestHandler = async (req, res, next) => {
       ...req.body,
     });
 
+    res.status(201).json({
+      success: true,
+      data: result,
+      meta: { requestId: req.requestId, timestamp: new Date().toISOString() },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createManagerController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.auth) throw authErrors.authenticationRequired();
+    const result = await createManagerAccount({
+      actorUserId: req.auth.userId,
+      actorRoles: req.auth.roles,
+      ...req.body,
+    });
     res.status(201).json({
       success: true,
       data: result,

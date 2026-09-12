@@ -8,11 +8,15 @@ import {
   getAdminPropertyController,
   listPendingPropertiesController,
   verifyAdminPropertyController,
+  mergeAdminPropertiesController,
+  mergeAdminPropertyByIdController,
 } from "./admin-property.controller.js";
 import {
   adminPropertyIdSchema,
   pendingAdminPropertiesSchema,
   verifyAdminPropertySchema,
+  mergeAdminPropertiesSchema,
+  mergeAdminPropertyByIdSchema,
 } from "./admin-property.schema.js";
 
 export const adminPropertyRouter = Router();
@@ -65,6 +69,48 @@ adminPropertyRouter.get(
   listPendingPropertiesController,
 );
 
+/** @openapi
+ * /api/v1/admin/properties/merge:
+ *   post:
+ *     tags: [Admin Properties]
+ *     summary: Merge a duplicate Property into its canonical Property
+ *     deprecated: true
+ *     description: Preserves provider, Guard, image, and parking-resource records. Both Property versions are required for optimistic concurrency.
+ *     security: [{ accessCookie: [] }]
+ *     responses:
+ *       200: { description: Duplicate Property archived and linked to the canonical Property. }
+ *       409: { description: Version conflict or overlapping provider/Guard memberships require manual resolution. }
+ */
+adminPropertyRouter.post(
+  "/merge",
+  validate(mergeAdminPropertiesSchema),
+  mergeAdminPropertiesController,
+);
+
+/** @openapi
+ * /api/v1/admin/properties/{duplicateId}/merge:
+ *   post:
+ *     tags: [Admin Properties]
+ *     summary: Merge a duplicate Property into its canonical Property
+ *     description: Canonical merge endpoint. Preserves current relationships, archives the duplicate, and requires optimistic versions for both records.
+ *     security: [{ accessCookie: [] }]
+ *     parameters:
+ *       - { name: duplicateId, in: path, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/AdminPropertyMergeRequest' }
+ *     responses:
+ *       200: { description: Duplicate Property archived and linked to the canonical Property. }
+ *       409: { description: Version conflict or overlapping relationships require manual resolution. }
+ */
+adminPropertyRouter.post(
+  "/:duplicateId/merge",
+  validate(mergeAdminPropertyByIdSchema),
+  mergeAdminPropertyByIdController,
+);
+
 /**
  * @openapi
  * /api/v1/admin/properties/{propertyId}:
@@ -72,7 +118,7 @@ adminPropertyRouter.get(
  *     tags: [Admin Properties]
  *     summary: Get Property verification detail
  *     operationId: getAdminPropertyDetail
- *     description: Returns owner identity, decrypted private location data, and images without exposing ciphertext, IVs, tags, or storage public IDs.
+ *     description: Returns creator and provider identity, decrypted private location data, and images without exposing ciphertext, IVs, tags, or storage public IDs.
  *     security:
  *       - accessCookie: []
  *     parameters:
@@ -109,7 +155,7 @@ adminPropertyRouter.get(
  *     tags: [Admin Properties]
  *     summary: Approve or reject a pending Property
  *     operationId: verifyAdminProperty
- *     description: Only PENDING Properties can transition. Approval requires a ready owner, valid protected location data, valid coordinates, and at least one image. Concurrent decisions are serialized and conditionally updated.
+ *     description: Only PENDING Properties can transition. Approval requires a ready creating Provider, valid protected location data, valid coordinates, and at least one image. Concurrent decisions are serialized and conditionally updated.
  *     security:
  *       - accessCookie: []
  *     parameters:

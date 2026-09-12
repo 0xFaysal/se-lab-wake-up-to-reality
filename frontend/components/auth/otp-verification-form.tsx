@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   ShieldCheck,
@@ -11,31 +12,90 @@ import {
   Loader2,
   ArrowLeft,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authApi } from "@/lib/api/auth-api";
+import { ApiError, getApiErrorMessage } from "@/lib/api/api-error";
+import { destinationForUser, getRequiredAccountAction } from "@/lib/auth-routing";
+import { queryKeys } from "@/lib/query-keys";
+import type { AuthUser } from "@/lib/api/api-types";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export function OtpVerificationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentUser = useCurrentUser();
+  const queryClient = useQueryClient();
 
   // Read URL query parameters
-  const initialIdentifier = searchParams.get("identifier") || "+880 1712-345678";
-  const initialType = (searchParams.get("type") as "phone" | "email") || "phone";
-  const altIdentifier = searchParams.get("altIdentifier") || "user@example.com";
+  const initialType = searchParams.get("type") === "phone" ? "phone" : "email";
   const action = searchParams.get("action") || "login";
   const redirectTarget = searchParams.get("redirect") || "/driver/bookings";
 
   // State
-  const [channel, setChannel] = useState<"phone" | "email">(initialType);
-  const [activeIdentifier, setActiveIdentifier] = useState(initialIdentifier);
+  const [selectedChannel, setChannel] = useState<"phone" | "email">(initialType);
+  const channel = currentUser.data?.emailVerified === false ? "email" : selectedChannel;
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [countdown, setCountdown] = useState(45);
-  const [resendSuccess, setResendSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [delivery, setDelivery] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const requestInFlight = useRef(false);
+  const initialRequestStarted = useRef(false);
+
+  const continueForUser = useCallback((user: AuthUser) => {
+    queryClient.setQueryData(queryKeys.auth.me, user);
+    const safeRedirect = redirectTarget.startsWith("/") &&
+      !redirectTarget.startsWith("//") && !redirectTarget.includes("\\") && !/\s/.test(redirectTarget) &&
+      !redirectTarget.startsWith("/verify-otp");
+    router.replace(getRequiredAccountAction(user).kind === "READY" && safeRedirect &&
+      redirectTarget !== "/driver/bookings" ? redirectTarget : destinationForUser(user));
+  }, [queryClient, redirectTarget, router]);
+
+  const requestCode = useCallback(async (target: "email" | "phone") => {
+    if (requestInFlight.current) return;
+    requestInFlight.current = true;
+    setDelivery("sending");
+    setErrorMsg("");
+    try {
+      const result = await authApi.requestVerification(target);
+      if (result.alreadyVerified) {
+        const { user } = await authApi.me();
+        continueForUser(user);
+        setDelivery("idle");
+        return;
+      }
+      setDelivery("sent");
+      setCountdown(45);
+      setOtp(["", "", "", "", "", ""]);
+    } catch (error) {
+      setDelivery("failed");
+      const details = error instanceof ApiError ? error.details : undefined;
+      const retryAfter = details && typeof details === "object" && "retryAfterSeconds" in details
+        ? details.retryAfterSeconds : undefined;
+      if (error instanceof ApiError && error.status === 429 &&
+          typeof retryAfter === "number" && Number.isFinite(retryAfter) && retryAfter > 0) {
+        setCountdown(Math.ceil(retryAfter));
+      }
+      if (error instanceof ApiError && error.code === "REQUEST_TIMEOUT") {
+        setCountdown(45);
+        setErrorMsg("Sending is taking longer than expected. Check your inbox and spam folder before requesting another code.");
+      } else {
+        setErrorMsg(getApiErrorMessage(error));
+      }
+    } finally {
+      requestInFlight.current = false;
+    }
+  }, [continueForUser]);
+
+  useEffect(() => {
+    if (!currentUser.data || currentUser.isFetching || currentUser.isError || initialRequestStarted.current) return;
+    // A ref prevents React Strict Mode from sending the initial email twice.
+    initialRequestStarted.current = true;
+    void requestCode(channel);
+  }, [channel, currentUser.data, currentUser.isFetching, currentUser.isError, requestCode]);
 
   // Masking helpers
   function maskEmail(email: string) {
@@ -52,8 +112,8 @@ export function OtpVerificationForm() {
     return clean.slice(0, 6) + "****" + clean.slice(-4);
   }
 
-  const maskedDisplay =
-    channel === "phone" ? maskPhone(activeIdentifier) : maskEmail(activeIdentifier);
+  const resolvedIdentifier = (channel === "phone" ? currentUser.data?.phone : currentUser.data?.email) || "";
+  const maskedDisplay = resolvedIdentifier ? (channel === "phone" ? maskPhone(resolvedIdentifier) : maskEmail(resolvedIdentifier)) : `your registered ${channel}`;
 
   // Countdown timer for resend
   useEffect(() => {
@@ -104,38 +164,26 @@ export function OtpVerificationForm() {
   }
 
   // Toggle channel (SMS <-> Email)
-  function handleSwitchChannel() {
-    setErrorMsg("");
-    if (channel === "phone") {
-      setChannel("email");
-      setActiveIdentifier(altIdentifier || "anisa.rahman@example.com");
-    } else {
-      setChannel("phone");
-      setActiveIdentifier(initialIdentifier.includes("@") ? "+880 1712-345678" : initialIdentifier);
-    }
-    setCountdown(45);
-    setResendSuccess(true);
-    setTimeout(() => setResendSuccess(false), 3000);
-  }
-
-  // Fill demo code helper
-  function handleFillDemoCode() {
-    setOtp(["4", "8", "2", "7", "3", "1"]);
-    setErrorMsg("");
-    inputRefs.current[5]?.focus();
+  async function handleSwitchChannel() {
+    if (!currentUser.data || countdown > 0 || requestInFlight.current || isSubmitting) return;
+    const nextChannel = channel === "phone" ? "email" : "phone";
+    if (nextChannel === "phone" && !currentUser.data.emailVerified) return;
+    setChannel(nextChannel);
+    setOtp(["", "", "", "", "", ""]);
+    setCountdown(0);
+    await requestCode(nextChannel);
   }
 
   // Resend code handler
-  function handleResend() {
-    if (countdown > 0) return;
-    setCountdown(45);
-    setResendSuccess(true);
-    setTimeout(() => setResendSuccess(false), 3000);
+  async function handleResend() {
+    if (!currentUser.data || countdown > 0 || requestInFlight.current || isSubmitting) return;
+    await requestCode(channel);
   }
 
   // Submit OTP
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (requestInFlight.current || isSubmitting) return;
     const fullCode = otp.join("");
     if (fullCode.length < 6) {
       setErrorMsg("Please enter all 6 digits of the verification code.");
@@ -145,11 +193,15 @@ export function OtpVerificationForm() {
     setIsSubmitting(true);
     setErrorMsg("");
 
-    // Simulate verification
-    setTimeout(() => {
+    try {
+      await authApi.confirmVerification(channel, fullCode);
+      const { user } = await authApi.me();
       setIsSubmitting(false);
-      router.push(redirectTarget);
-    }, 1000);
+      continueForUser(user);
+    } catch (error) {
+      setIsSubmitting(false);
+      setErrorMsg(getApiErrorMessage(error));
+    }
   }
 
   return (
@@ -193,28 +245,30 @@ export function OtpVerificationForm() {
               <span className="inline-flex size-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
             <p className="text-xs text-foreground font-medium leading-relaxed">
-              We sent a 6-digit code to{" "}
+              {delivery === "sending" ? "Sending a 6-digit code to " :
+                delivery === "sent" ? "A 6-digit code was sent to " : "Verification email or SMS for "}
               <strong className="font-mono text-primary font-bold">{maskedDisplay}</strong>
             </p>
           </div>
         </div>
 
         {/* Switch Verification Method Link */}
-        <div className="border-t border-primary/15 pt-2 flex items-center justify-between text-xs">
-          <span className="text-muted-foreground text-[11px]">Didn't receive it here?</span>
+        {(channel === "phone" || currentUser.data?.emailVerified) && <div className="border-t border-primary/15 pt-2 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground text-[11px]">Didn&apos;t receive it here?</span>
           <button
             type="button"
             onClick={handleSwitchChannel}
+            disabled={delivery === "sending" || countdown > 0 || isSubmitting || !currentUser.data}
             className="text-primary hover:underline font-bold text-xs cursor-pointer font-heading"
           >
             {channel === "phone"
               ? "Verify via Email instead →"
               : "Verify via SMS instead →"}
           </button>
-        </div>
+        </div>}
       </div>
 
-      {resendSuccess && (
+      {delivery === "sent" && (
         <div className="rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 p-2.5 text-xs font-semibold text-center animate-in fade-in">
           ✓ Fresh 6-digit code sent to {maskedDisplay}
         </div>
@@ -228,15 +282,6 @@ export function OtpVerificationForm() {
             <label className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">
               Enter 6-Digit Code
             </label>
-            {/* Quick Demo Helper */}
-            <button
-              type="button"
-              onClick={handleFillDemoCode}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer"
-            >
-              <Sparkles className="size-3" />
-              Fill Demo Code (482731)
-            </button>
           </div>
 
           <div className="flex items-center justify-between gap-2 sm:gap-2.5">
@@ -260,15 +305,19 @@ export function OtpVerificationForm() {
             ))}
           </div>
 
-          {errorMsg && (
-            <p className="text-xs font-semibold text-destructive pt-1">{errorMsg}</p>
+          {(errorMsg || currentUser.error) && (
+            <p role="alert" className="text-xs font-semibold text-destructive pt-1">{errorMsg || getApiErrorMessage(currentUser.error)}</p>
           )}
         </div>
 
         {/* Resend Action & Countdown */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
           <span>Didn&apos;t get the code?</span>
-          {countdown > 0 ? (
+          {delivery === "sending" ? (
+            <span role="status" className="inline-flex items-center gap-1.5">
+              <Loader2 className="size-3 animate-spin" /> Sending code...
+            </span>
+          ) : countdown > 0 ? (
             <span className="font-mono text-foreground font-semibold">
               Resend in {countdown}s
             </span>
@@ -276,10 +325,11 @@ export function OtpVerificationForm() {
             <button
               type="button"
               onClick={handleResend}
+              disabled={isSubmitting || !currentUser.data}
               className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline cursor-pointer font-heading"
             >
               <RefreshCw className="size-3" />
-              Resend Code
+              {delivery === "sent" ? "Resend Code" : "Send Code"}
             </button>
           )}
         </div>
@@ -287,7 +337,7 @@ export function OtpVerificationForm() {
         {/* Submit Button */}
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || delivery === "sending" || !currentUser.data}
           className="w-full h-12 text-sm font-bold bg-[#064E3B] text-white hover:bg-[#003527] rounded-xl shadow-md transition-all cursor-pointer font-heading"
         >
           {isSubmitting ? (

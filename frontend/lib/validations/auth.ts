@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const strongPasswordSchema = z.string()
+  .min(12, "Password must be at least 12 characters")
+  .max(128, "Password must be under 128 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/\d/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9\s]/, "Password must contain at least one special character")
+  .regex(/^\S+$/, "Password must not contain spaces");
+
 // ---------------------------------------------------------------------------
 // Login Schema
 // ---------------------------------------------------------------------------
@@ -19,7 +28,7 @@ export const loginSchema = z.object({
   password: z
     .string()
     .min(1, "Password is required")
-    .min(6, "Password must be at least 6 characters"),
+    .max(128, "Password must be under 128 characters"),
   rememberMe: z.boolean(),
 });
 
@@ -35,7 +44,7 @@ export const registerSchema = z
       .string()
       .min(1, "Full name is required")
       .min(2, "Full name must be at least 2 characters")
-      .max(100, "Full name must be under 100 characters"),
+      .max(120, "Full name must be under 120 characters"),
     email: z
       .string()
       .min(1, "Email is required")
@@ -47,13 +56,7 @@ export const registerSchema = z
         (val) => /^(?:\+?880|0)1[3-9]\d{8}$/.test(val.replace(/\s/g, "")),
         { message: "Enter a valid Bangladeshi phone number (e.g. 01712345678)" }
       ),
-    password: z
-      .string()
-      .min(1, "Password is required")
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/\d/, "Password must contain at least one number"),
+    password: strongPasswordSchema,
     confirmPassword: z.string().min(1, "Please confirm your password"),
     role: z.enum(["DRIVER", "PARKING_OWNER"], {
       required_error: "Please select a role",
@@ -93,12 +96,7 @@ export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export const resetPasswordSchema = z
   .object({
     otp: z.string().length(6, "Verification code must be 6 digits"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Must contain at least one lowercase letter")
-      .regex(/\d/, "Must contain at least one number"),
+    password: strongPasswordSchema,
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {

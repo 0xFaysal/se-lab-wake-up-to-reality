@@ -22,6 +22,20 @@ export const propertyErrors = {
       message: "Property has dependent records and cannot be deleted",
     }),
 
+  sharedPropertyOperationForbidden: () =>
+    new AppError({
+      statusCode: 403,
+      code: "SHARED_PROPERTY_GOVERNANCE_REQUIRED",
+      message: "This shared Property change requires governance authority",
+    }),
+
+  staleVersion: () =>
+    new AppError({
+      statusCode: 409,
+      code: "PROPERTY_VERSION_CONFLICT",
+      message: "Property changed since it was loaded; reload and try again",
+    }),
+
   encryptionFailed: () =>
     new AppError({
       statusCode: 500,

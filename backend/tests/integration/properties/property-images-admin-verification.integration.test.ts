@@ -58,7 +58,7 @@ integration("Property images and Admin verification integration", () => {
 
   async function createAuthenticatedUser(
     key: string,
-    role: "PARKING_OWNER" | "DRIVER" | "ADMIN",
+    role: "PROVIDER" | "DRIVER" | "ADMIN",
     passwordHash: string,
   ) {
     const generated = await import("../../../generated/prisma/client.js");
@@ -104,7 +104,8 @@ integration("Property images and Admin verification integration", () => {
     const access = encryptSensitiveText("Use the guarded south entrance");
     const property = await prisma.property.create({
       data: {
-        ownerUserId,
+        createdByUserId: ownerUserId,
+        normalizedName: `${label} parking`.toLowerCase(),
         name: `${label} Parking`,
         publicArea: "Gulshan 2, Dhaka",
         approximateAddress: "Near Gulshan 2 circle",
@@ -118,6 +119,12 @@ integration("Property images and Admin verification integration", () => {
         accessInstructionsTag: access.authTag,
         verificationStatus: generated.VerificationStatus.PENDING,
         status: generated.PropertyStatus.INACTIVE,
+        providerMemberships: {
+          create: {
+            providerUserId: ownerUserId,
+            verificationStatus: generated.VerificationStatus.PENDING,
+          },
+        },
       },
     });
     propertyIds.push(property.id);
@@ -137,6 +144,8 @@ integration("Property images and Admin verification integration", () => {
       "day-six-verification-secret-at-least-32-characters";
     process.env.AUTH_METADATA_HASH_SECRET =
       "day-six-metadata-secret-at-least-32-characters";
+    process.env.PROPERTY_ADDRESS_FINGERPRINT_SECRET =
+      "day-six-property-secret-at-least-32-characters";
     process.env.DATA_ENCRYPTION_KEY =
       "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
     process.env.CLOUDINARY_CLOUD_NAME = "test-cloud";
@@ -180,10 +189,10 @@ integration("Property images and Admin verification integration", () => {
 
     const ownerA = await createAuthenticatedUser(
       "owner-a",
-      "PARKING_OWNER",
+      "PROVIDER",
       passwordHash,
     );
-    await createAuthenticatedUser("owner-b", "PARKING_OWNER", passwordHash);
+    await createAuthenticatedUser("owner-b", "PROVIDER", passwordHash);
     await createAuthenticatedUser("driver", "DRIVER", passwordHash);
     await createAuthenticatedUser("admin", "ADMIN", passwordHash);
 
@@ -211,6 +220,8 @@ integration("Property images and Admin verification integration", () => {
   after(async () => {
     resetStorage();
     if (propertyIds.length > 0) {
+      await prisma.propertyImage.deleteMany({ where: { propertyId: { in: propertyIds } } });
+      await prisma.propertyProvider.deleteMany({ where: { propertyId: { in: propertyIds } } });
       await prisma.property.deleteMany({ where: { id: { in: propertyIds } } });
     }
     if (userIds.length > 0) {

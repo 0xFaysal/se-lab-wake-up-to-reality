@@ -8,8 +8,7 @@ export type VehicleCategory =
   | "SEDAN"
   | "SUV"
   | "MOTORCYCLE"
-  | "MICROBUS"
-  | "HATCHBACK";
+  | "MICROBUS";
 
 export interface Vehicle {
   id: string;

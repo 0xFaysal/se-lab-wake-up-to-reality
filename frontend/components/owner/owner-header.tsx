@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Bell, Settings, LogOut, ShieldCheck, User } from "lucide-react";
+import { Bell, Settings, ShieldCheck, User } from "lucide-react";
 import { MOCK_OWNER_PROFILE } from "@/lib/data/mock-owner-data";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 interface OwnerHeaderProps {
   title?: string;
@@ -117,14 +118,7 @@ export function OwnerHeader({
 
               <div className="my-1 border-t border-[#E5E7EB]" />
 
-              <Link
-                href="/login"
-                onClick={() => setProfileDropdownOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition"
-              >
-                <LogOut className="size-4" />
-                Sign Out
-              </Link>
+              <LogoutButton className="h-auto w-full justify-start rounded-none border-0 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50" />
             </div>
           )}
         </div>

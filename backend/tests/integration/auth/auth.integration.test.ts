@@ -69,6 +69,8 @@ integration("authentication integration", () => {
       "integration-verification-secret-at-least-32-characters";
     process.env.AUTH_METADATA_HASH_SECRET ??=
       "integration-metadata-secret-at-least-32-characters";
+    process.env.PROPERTY_ADDRESS_FINGERPRINT_SECRET ??=
+      "integration-property-secret-at-least-32-characters";
     process.env.EXPOSE_DEVELOPMENT_AUTH_CODES = "true";
 
     const appModule = await import("../../../src/app.js");
@@ -159,7 +161,7 @@ integration("authentication integration", () => {
         email,
         phone: localPhone,
         password,
-        role: "PARKING_OWNER",
+        role: "PROVIDER",
         acceptTerms: true,
         acceptPrivacyPolicy: true,
       }),

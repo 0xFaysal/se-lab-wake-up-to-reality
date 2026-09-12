@@ -1,12 +1,19 @@
 import React from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GuardTopBar } from "@/features/guard/components/guard-top-bar";
 import { GuardBottomNav } from "@/features/guard/components/guard-bottom-nav";
+import { RoleGuard } from "@/components/auth/role-guard";
 
 export const metadata: Metadata = {
   title: "Security Guard Portal | ParkEase BD",
   description: "Mobile App Shell for ParkEase BD Gate Guards and Parking Marshals",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function GuardLayout({
@@ -28,7 +35,7 @@ export default function GuardLayout({
 
         {/* Scrollable Main Content Area with bottom padding for fixed navigation & FAB */}
         <main className="flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-24 [-webkit-overflow-scrolling:touch]">
-          {children}
+          <RoleGuard roles={["GUARD"]}>{children}</RoleGuard>
         </main>
 
         {/* Fixed Bottom Navigation with Raised FAB */}

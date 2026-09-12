@@ -848,7 +848,7 @@ export function Step3SpacesView() {
                   <label className="block font-semibold text-slate-700 mb-1">Size</label>
                   <select
                     value={newSpaceSize}
-                    onChange={(e) => setNewSpaceSize(e.target.value as any)}
+                    onChange={(e) => setNewSpaceSize(e.target.value as ParkingSpaceItem["size"])}
                     className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white text-slate-900 focus:outline-none focus:border-[#064E3B]"
                   >
                     <option value="Standard">Standard</option>
@@ -962,7 +962,7 @@ export function Step3SpacesView() {
                     onChange={(e) =>
                       setEditingSpace({
                         ...editingSpace,
-                        size: e.target.value as any,
+                        size: e.target.value as ParkingSpaceItem["size"],
                       })
                     }
                     className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white text-slate-900 focus:outline-none focus:border-[#064E3B]"

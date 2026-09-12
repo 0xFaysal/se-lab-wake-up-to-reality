@@ -38,6 +38,8 @@ export const createGuardSchema = z.object({
   }),
 });
 
+export const createManagerSchema = createGuardSchema;
+
 export const changePasswordSchema = z.object({
   body: z.object({
     currentPassword: z.string().min(1).max(128),

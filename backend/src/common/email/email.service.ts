@@ -63,6 +63,7 @@ function getEmailTransporter(): Transporter {
     pool: true,
     maxConnections: 3,
     maxMessages: 100,
+    dnsTimeout: 5_000,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
@@ -125,6 +126,7 @@ async function sendTransactionalEmail(input: {
 }): Promise<void> {
   const configuration = getEmailConfiguration();
   const transporter = getEmailTransporter();
+  const startedAt = Date.now();
 
   try {
     const info = await transporter.sendMail({
@@ -142,9 +144,22 @@ async function sendTransactionalEmail(input: {
       throw new Error("The SMTP server did not accept the email");
     }
 
-    logger.info({ messageId: info.messageId }, "Transactional email accepted");
+    logger.info({
+      messageId: info.messageId,
+      durationMs: Date.now() - startedAt,
+      smtpHost: configuration.host,
+      smtpPort: configuration.port,
+    }, "Transactional email accepted by SMTP server");
   } catch (error) {
-    logger.error({ error }, "Transactional email delivery failed");
+    const smtpError = error instanceof Error ? error : undefined;
+    logger.error({
+      durationMs: Date.now() - startedAt,
+      smtpHost: configuration.host,
+      smtpPort: configuration.port,
+      smtpErrorCode: smtpError && "code" in smtpError ? smtpError.code : undefined,
+      smtpCommand: smtpError && "command" in smtpError ? smtpError.command : undefined,
+      smtpResponseCode: smtpError && "responseCode" in smtpError ? smtpError.responseCode : undefined,
+    }, "Transactional email delivery failed");
     throw new AppError({
       statusCode: 503,
       code: input.failureCode,
@@ -243,5 +258,34 @@ export async function sendGuardInvitationEmail(input: {
     }),
     failureCode: "GUARD_INVITATION_DELIVERY_FAILED",
     failureMessage: "Unable to send the Guard invitation right now",
+  });
+}
+
+export async function sendManagerInvitationEmail(input: {
+  to: string;
+  fullName: string;
+  setupUrl: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const safeUrl = escapeHtml(input.setupUrl);
+  await sendTransactionalEmail({
+    to: input.to,
+    subject: "You have been invited to manage ParkEase BD operations",
+    text: [
+      `Hello ${input.fullName},`,
+      "",
+      "A ParkEase BD Manager account has been created for you.",
+      `Set your password using this link: ${input.setupUrl}`,
+      `This link expires in ${input.expiresInMinutes} minutes.`,
+    ].join("\n"),
+    html: emailLayout({
+      fullName: input.fullName,
+      heading: "Complete your Manager account",
+      content: "A controlled ParkEase BD Manager account has been created for you.",
+      actionHtml: `<a href="${safeUrl}" style="display:inline-block;padding:12px 18px;background:#116466;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700">Set account password</a><p style="margin:16px 0 0;line-height:1.6">This link expires in <strong>${input.expiresInMinutes} minutes</strong>.</p>`,
+      footer: "If you were not expecting this invitation, contact ParkEase BD support.",
+    }),
+    failureCode: "MANAGER_INVITATION_DELIVERY_FAILED",
+    failureMessage: "Unable to send the Manager invitation right now",
   });
 }

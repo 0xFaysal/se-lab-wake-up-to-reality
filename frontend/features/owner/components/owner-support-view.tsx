@@ -68,7 +68,7 @@ export function OwnerSupportView() {
   const handleMiniFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (miniCategory) {
-      setModalCategory(miniCategory as any);
+      setModalCategory(miniCategory);
     }
     if (miniProperty) {
       setModalProperty(miniProperty);
@@ -85,7 +85,7 @@ export function OwnerSupportView() {
       id: `ticket-${Date.now()}`,
       ticketCode: newTicketCode,
       subject: modalSubject.trim(),
-      category: modalCategory as any,
+      category: modalCategory as SupportTicket["category"],
       status: "Open",
       updatedTime: "Just now",
       propertyTitle: modalProperty,

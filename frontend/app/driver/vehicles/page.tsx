@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Car,
+  AlertCircle,
+  Loader2,
   ShieldCheck,
   Zap,
   Shield,
@@ -13,44 +14,30 @@ import {
 import { VehicleCard } from "@/features/vehicles/components/vehicle-card";
 import { AddVehicleForm } from "@/features/vehicles/components/add-vehicle-form";
 import { DefaultVehicleCard } from "@/features/vehicles/components/default-vehicle-card";
-import { MOCK_VEHICLES } from "@/lib/data/mock-driver-data";
 import { Vehicle } from "@/types/driver";
+import { useVehicles } from "@/hooks/use-vehicles";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import { VehicleEditDialog } from "@/features/vehicles/components/vehicle-edit-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function ManageVehiclesPage() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const vehiclesApi = useVehicles();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const vehicles: Vehicle[] = (vehiclesApi.query.data ?? []).map((vehicle) => ({ id: vehicle.id, name: `${vehicle.brand} ${vehicle.model}`, brand: vehicle.brand, model: vehicle.model, registrationNumber: vehicle.registrationNumber, type: vehicle.vehicleType, color: vehicle.color, isDefault: vehicle.isDefault }));
 
   const defaultVehicle = vehicles.find((v) => v.isDefault) || vehicles[0];
 
   function handleSetDefault(id: string) {
-    setVehicles((prev) =>
-      prev.map((v) => ({
-        ...v,
-        isDefault: v.id === id,
-      }))
-    );
+    vehiclesApi.setDefault.mutate(id);
   }
 
   function handleRemove(id: string) {
-    if (vehicles.length <= 1) {
-      alert("You must keep at least one registered vehicle.");
-      return;
-    }
-    setVehicles((prev) => prev.filter((v) => v.id !== id));
+    vehiclesApi.remove.mutate(id);
   }
 
-  function handleAddVehicle(newVehicleData: Omit<Vehicle, "id">) {
-    const newVehicle: Vehicle = {
-      ...newVehicleData,
-      id: `v-${Date.now()}`,
-    };
-
-    setVehicles((prev) => {
-      if (newVehicle.isDefault) {
-        return [...prev.map((v) => ({ ...v, isDefault: false })), newVehicle];
-      }
-      return [...prev, newVehicle];
-    });
+  async function handleAddVehicle(newVehicleData: Omit<Vehicle, "id">) {
+    await vehiclesApi.create.mutateAsync({ vehicleType: newVehicleData.type, registrationNumber: newVehicleData.registrationNumber, brand: newVehicleData.brand, model: newVehicleData.model, color: newVehicleData.color, isDefault: newVehicleData.isDefault });
   }
 
   return (
@@ -78,17 +65,17 @@ export default function ManageVehiclesPage() {
             <h2 className="text-xs font-bold tracking-widest text-primary uppercase font-heading bg-primary/10 px-3 py-1 rounded-full inline-block">
               Your Vehicles
             </h2>
+            {vehiclesApi.query.isPending && <div className="rounded-2xl border bg-card p-8 text-center"><Loader2 className="mx-auto size-6 animate-spin text-primary" /><p className="mt-2 text-sm text-muted-foreground">Loading vehicles…</p></div>}
+            {vehiclesApi.query.isError && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"><AlertCircle className="mb-2 size-5" />{getApiErrorMessage(vehiclesApi.query.error)}</div>}
+            {!vehiclesApi.query.isPending && !vehiclesApi.query.isError && vehicles.length === 0 && <div className="rounded-2xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">No vehicle registered yet. Add your first vehicle below.</div>}
             <div className="space-y-3.5">
               {vehicles.map((v) => (
                 <VehicleCard
                   key={v.id}
                   vehicle={v}
                   onSetDefault={handleSetDefault}
-                  onEdit={(veh) => {
-                    setEditingVehicle(veh);
-                    alert(`Editing ${veh.name}. You can update or re-register below.`);
-                  }}
-                  onRemove={handleRemove}
+                  onEdit={() => setEditId(v.id)}
+                  onRemove={() => setDeleteId(v.id)}
                 />
               ))}
             </div>
@@ -99,7 +86,8 @@ export default function ManageVehiclesPage() {
             <h2 className="text-xs font-bold tracking-widest text-primary uppercase font-heading bg-primary/10 px-3 py-1 rounded-full inline-block">
               Add a Vehicle
             </h2>
-            <AddVehicleForm onAddVehicle={handleAddVehicle} />
+            <AddVehicleForm onAddVehicle={handleAddVehicle} pending={vehiclesApi.create.isPending} />
+            {(vehiclesApi.create.isError || vehiclesApi.remove.isError || vehiclesApi.setDefault.isError) && <p role="alert" className="text-sm font-semibold text-red-700">{getApiErrorMessage(vehiclesApi.create.error ?? vehiclesApi.remove.error ?? vehiclesApi.setDefault.error)}</p>}
           </div>
         </div>
 
@@ -186,6 +174,8 @@ export default function ManageVehiclesPage() {
           </div>
         </div>
       </div>
+      <VehicleEditDialog vehicleId={editId} onClose={() => setEditId(null)} />
+      <AlertDialog open={Boolean(deleteId)} onOpenChange={(open) => { if (!open && !vehiclesApi.remove.isPending) setDeleteId(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remove this vehicle?</AlertDialogTitle><AlertDialogDescription>The backend may block deletion when the vehicle is referenced by an active record.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={vehiclesApi.remove.isPending} onClick={() => { if (deleteId) { handleRemove(deleteId); setDeleteId(null); } }}>Remove vehicle</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }

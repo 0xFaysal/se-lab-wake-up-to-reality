@@ -1,0 +1,84 @@
+@baseUrl = http://localhost:4000/api/v1
+@providerEmail = provider@example.com
+@providerPassword = StrongProvider123!
+@managerEmail = manager@example.com
+@managerPassword = StrongManager123!
+@guardEmail = guard@example.com
+@guardPassword = StrongGuard123!
+@propertyId = replace-with-verified-property-id
+@providerMembershipId = replace-with-provider-membership-id
+@guardMembershipId = replace-with-guard-membership-id
+@assignmentId = replace-with-provider-guard-assignment-id
+
+### Provider login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Add a known Guard to the shared Property Guard pool
+POST {{baseUrl}}/properties/{{propertyId}}/guards
+Content-Type: application/json
+
+{ "identifier": "{{guardEmail}}" }
+
+### List shared Property Guard memberships
+GET {{baseUrl}}/properties/{{propertyId}}/guards
+
+### Guard login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{guardEmail}}", "password": "{{guardPassword}}" }
+
+### Guard lists pending Property memberships
+GET {{baseUrl}}/guard/property-memberships?status=PENDING_ACCEPTANCE&page=1&limit=20
+
+### Guard accepts shared Property membership
+POST {{baseUrl}}/guard/property-memberships/{{guardMembershipId}}/accept
+
+### Provider login again
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Provider creates an assignment in its own commercial scope
+POST {{baseUrl}}/provider/guard-assignments
+Content-Type: application/json
+
+{
+  "propertyId": "{{propertyId}}",
+  "guardMembershipId": "{{guardMembershipId}}",
+  "shiftStart": "08:00",
+  "shiftEnd": "20:00"
+}
+
+### Manager login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{managerEmail}}", "password": "{{managerPassword}}" }
+
+### Delegated Manager selects the exact Provider scope
+# providerMembershipId is mandatory when this Manager can act for multiple
+# Providers in the same Property.
+POST {{baseUrl}}/provider/guard-assignments
+Content-Type: application/json
+
+{
+  "propertyId": "{{propertyId}}",
+  "providerMembershipId": "{{providerMembershipId}}",
+  "guardMembershipId": "{{guardMembershipId}}",
+  "shiftStart": "09:00",
+  "shiftEnd": "18:00"
+}
+
+### List only authorized Provider assignments
+GET {{baseUrl}}/provider/guard-assignments?propertyId={{propertyId}}&page=1&limit=20
+
+### Read one assignment without leaking another Provider's scope
+GET {{baseUrl}}/provider/guard-assignments/{{assignmentId}}
+
+### End the exact scoped assignment
+DELETE {{baseUrl}}/provider/guard-assignments/{{assignmentId}}

@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
@@ -13,16 +14,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { authApi } from "@/lib/api/auth-api";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import { destinationForUser } from "@/lib/auth-routing";
+import { queryKeys } from "@/lib/query-keys";
 
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const {
-    register,
+    register, control,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -34,19 +39,18 @@ export function LoginForm() {
   });
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/driver/bookings";
-  const rememberMe = watch("rememberMe");
+  const rememberMe = useWatch({ control, name: "rememberMe" });
 
   async function onSubmit(data: LoginFormValues) {
-    const isPhone = /^(?:\+?880|0)1[3-9]\d{8}$/.test(data.identifier.replace(/\s/g, ""));
-    const verifyType = isPhone ? "phone" : "email";
-    
-    router.push(
-      `/verify-otp?identifier=${encodeURIComponent(
-        data.identifier
-      )}&type=${verifyType}&action=login&redirect=${encodeURIComponent(redirect)}`
-    );
+    setSubmitError("");
+    try {
+      const result = await authApi.login({ identifier: data.identifier, password: data.password, rememberDevice: data.rememberMe });
+      queryClient.setQueryData(queryKeys.auth.me, result.user);
+      router.push(redirect !== "/driver/bookings" ? redirect : destinationForUser(result.user));
+    } catch (error) { setSubmitError(getApiErrorMessage(error)); }
   }
 
   return (
@@ -66,6 +70,7 @@ export function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {submitError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">{submitError}</div>}
         {/* Email or Phone Number */}
         <div className="space-y-2">
           <Label htmlFor="identifier" className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">

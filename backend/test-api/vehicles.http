@@ -163,7 +163,7 @@ Content-Type: application/json
 ### Cross-user DELETE - should return 404
 DELETE {{baseUrl}}/vehicles/{{createFirstVehicle.response.body.$.data.vehicle.id}}
 
-### Register Parking Owner for role check
+### Register Provider for role check
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -172,7 +172,7 @@ Content-Type: application/json
   "email": "{{ownerEmail}}",
   "phone": "{{ownerPhone}}",
   "password": "{{password}}",
-  "role": "PARKING_OWNER",
+  "role": "PROVIDER",
   "acceptTerms": true,
   "acceptPrivacyPolicy": true
 }
