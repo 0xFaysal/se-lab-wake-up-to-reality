@@ -451,7 +451,7 @@ export function OwnerDisputesView() {
               <span>Sort:</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 className="px-2.5 py-1.5 bg-white border border-[#E5E7EB] rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#064E3B] cursor-pointer"
               >
                 <option value="URGENCY">Urgency / Action First</option>

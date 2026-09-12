@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PropertyWizardLiveView } from "@/features/owner/components/property-wizard-live-view";
 
 export default function NewPropertyIndexPage() {
-  redirect("/owner/properties/new/step-1");
+  return <PropertyWizardLiveView />;
 }

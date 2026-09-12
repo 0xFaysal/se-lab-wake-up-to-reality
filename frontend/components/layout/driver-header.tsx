@@ -3,13 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import {
   Bell,
   ChevronDown,
   Car,
   Calendar,
-  LogOut,
   Menu,
   X,
   Search,
@@ -21,9 +19,9 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AppLogo } from "@/components/common/app-logo";
-import { MOCK_DRIVER_PROFILE } from "@/lib/data/mock-driver-data";
 import { cn } from "@/lib/utils";
-import avatarAnisaImg from "@/assets/avatar-anisa.jpg";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -34,10 +32,13 @@ const NAV_LINKS = [
 ];
 
 export function DriverHeader() {
+  const { data: currentUser } = useCurrentUser();
   const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [hasNotifications] = useState(true);
+  const [hasNotifications] = useState(false);
+  const displayName = currentUser?.fullName || "Driver";
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
@@ -95,16 +96,9 @@ export function DriverHeader() {
               aria-expanded={userMenuOpen}
               aria-label="Open user menu"
             >
-              <div className="relative size-8 overflow-hidden rounded-full ring-1 ring-primary/20">
-                <Image
-                  src={avatarAnisaImg}
-                  alt={MOCK_DRIVER_PROFILE.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+              <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary ring-1 ring-primary/20">{initials}</div>
               <span className="text-sm font-bold text-foreground font-heading">
-                {MOCK_DRIVER_PROFILE.name.split(" ")[0]}
+                {displayName.split(" ")[0]}
               </span>
               <ChevronDown className="size-4 text-muted-foreground" />
             </button>
@@ -118,10 +112,10 @@ export function DriverHeader() {
                 <div className="px-3 py-2 border-b border-border/60 mb-1">
                   <p className="text-xs text-muted-foreground">Signed in as</p>
                   <p className="text-sm font-bold text-foreground truncate">
-                    {MOCK_DRIVER_PROFILE.name}
+                    {displayName}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {MOCK_DRIVER_PROFILE.email}
+                    {currentUser?.email || "Loading account…"}
                   </p>
                 </div>
 
@@ -190,14 +184,7 @@ export function DriverHeader() {
 
                 <div className="border-t border-border/60 my-1" />
 
-                <Link
-                  href="/login"
-                  onClick={() => setUserMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-destructive rounded-xl hover:bg-destructive/10 transition-colors"
-                >
-                  <LogOut className="size-4" />
-                  Sign Out
-                </Link>
+                <LogoutButton className="h-auto w-full justify-start rounded-xl border-0 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10" />
               </div>
             )}
           </div>
@@ -221,17 +208,10 @@ export function DriverHeader() {
                 <AppLogo size="sm" />
               </div>
               <div className="px-4 mb-4 pb-4 border-b border-border/60 flex items-center gap-3">
-                <div className="relative size-10 overflow-hidden rounded-full ring-1 ring-primary/20">
-                  <Image
-                    src={avatarAnisaImg}
-                    alt={MOCK_DRIVER_PROFILE.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+                <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary ring-1 ring-primary/20">{initials}</div>
                 <div>
                   <p className="text-sm font-bold text-foreground">
-                    {MOCK_DRIVER_PROFILE.name}
+                    {displayName}
                   </p>
                   <p className="text-xs text-muted-foreground">Driver Portal</p>
                 </div>
@@ -295,13 +275,7 @@ export function DriverHeader() {
                 >
                   <User className="size-4 text-primary" /> My Profile
                 </Link>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-base font-medium text-destructive hover:bg-destructive/10"
-                >
-                  <LogOut className="size-4" /> Sign Out
-                </Link>
+                <LogoutButton className="h-auto w-full justify-start rounded-lg border-0 px-4 py-2.5 text-base font-medium text-destructive hover:bg-destructive/10" />
               </nav>
             </SheetContent>
           </Sheet>

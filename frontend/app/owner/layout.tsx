@@ -6,6 +6,7 @@ import { OwnerSidebar } from "@/components/owner/owner-sidebar";
 import { OwnerFooter } from "@/components/owner/owner-footer";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { RoleGuard } from "@/components/auth/role-guard";
 
 export default function OwnerPortalLayout({
   children,
@@ -19,7 +20,7 @@ export default function OwnerPortalLayout({
   const isWizardRoute = pathname?.startsWith("/owner/properties/new");
 
   if (isWizardRoute) {
-    return <>{children}</>;
+    return <RoleGuard roles={["PROVIDER", "PARKING_OWNER", "MANAGER"]}>{children}</RoleGuard>;
   }
 
   return (
@@ -64,7 +65,7 @@ export default function OwnerPortalLayout({
 
       {/* Main Workspace Column */}
       <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
-        <main className="flex-1 pb-12">{children}</main>
+        <main className="flex-1 pb-12"><RoleGuard roles={["PROVIDER", "PARKING_OWNER", "MANAGER"]}>{children}</RoleGuard></main>
         <OwnerFooter />
       </div>
     </div>

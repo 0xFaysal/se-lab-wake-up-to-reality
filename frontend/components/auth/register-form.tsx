@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, Car, Building2 } from "lucide-react";
@@ -14,17 +15,22 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { authApi } from "@/lib/api/auth-api";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import { destinationForUser } from "@/lib/auth-routing";
+import { queryKeys } from "@/lib/query-keys";
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
   const {
-    register,
+    register, control,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -39,19 +45,17 @@ export function RegisterForm() {
     },
   });
 
-  const selectedRole = watch("role");
-  const agreeToPrivacy = watch("agreeToPrivacy");
+  const selectedRole = useWatch({ control, name: "role" });
+  const agreeToPrivacy = useWatch({ control, name: "agreeToPrivacy" });
 
   async function onSubmit(data: RegisterFormValues) {
-    const defaultDest = data.role === "PARKING_OWNER" ? "/owner/dashboard" : "/driver/bookings";
-    const dest = searchParams.get("redirect") || defaultDest;
-    router.push(
-      `/verify-otp?identifier=${encodeURIComponent(
-        data.phone
-      )}&type=phone&altIdentifier=${encodeURIComponent(
-        data.email
-      )}&action=signup&redirect=${encodeURIComponent(dest)}`
-    );
+    setSubmitError("");
+    try {
+      const result = await authApi.register({ fullName: data.fullName, email: data.email, phone: data.phone, password: data.password, role: data.role === "PARKING_OWNER" ? "PROVIDER" : "DRIVER", acceptTerms: true, acceptPrivacyPolicy: true });
+      const requested = searchParams.get("redirect");
+      queryClient.setQueryData(queryKeys.auth.me, result.user);
+      router.push(requested || destinationForUser(result.user));
+    } catch (error) { setSubmitError(getApiErrorMessage(error)); }
   }
 
   return (
@@ -71,6 +75,7 @@ export function RegisterForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {submitError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">{submitError}</div>}
         {/* Role Selector Tabs */}
         <div className="space-y-2">
           <Label className="text-xs font-bold text-foreground uppercase tracking-wider font-heading">

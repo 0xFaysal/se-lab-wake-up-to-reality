@@ -58,7 +58,7 @@ export function SupportFaqAccordion({ searchQuery = "" }: SupportFaqAccordionPro
 
       {filteredItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground bg-card">
-          No matching questions found for "{searchQuery}".
+          No matching questions found for &ldquo;{searchQuery}&rdquo;.
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card divide-y divide-border/60 shadow-2xs urban-card-shadow overflow-hidden">

@@ -475,7 +475,7 @@ export function OwnerSettingsView() {
 
               <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
                 <Lock className="size-3.5 text-slate-400 shrink-0" />
-                <span>We'll notify you about unusual sign-in activity via verified SMS & email.</span>
+                <span>We&apos;ll notify you about unusual sign-in activity via verified SMS &amp; email.</span>
               </div>
             </div>
           </div>

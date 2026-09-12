@@ -336,7 +336,7 @@ export function OwnerSupportTicketDetailsView({ ticketId = "SUP-1048" }: { ticke
 
                     {/* Message Content */}
                     <p className="text-xs text-slate-800 leading-relaxed pl-9">
-                      "{msg.content}"
+                      &ldquo;{msg.content}&rdquo;
                     </p>
                   </div>
                 );
