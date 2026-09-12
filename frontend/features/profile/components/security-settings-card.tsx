@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Laptop, Shield, Lock } from "lucide-react";
+import Link from "next/link";
+import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordModal } from "./change-password-modal";
 
@@ -49,35 +50,15 @@ export function SecuritySettingsCard() {
             <span className="text-sm font-bold text-foreground font-heading">
               Remembered Devices
             </span>
-            <button
-              type="button"
-              onClick={() =>
-                alert("Session management: Windows PC is currently the only active authorized session.")
-              }
+            <Link
+              href="/account/sessions"
               className="text-xs font-bold text-primary hover:underline cursor-pointer font-heading"
             >
               Manage Devices
-            </button>
+            </Link>
           </div>
 
-          {/* Device Card */}
-          <div className="flex items-center gap-3.5 rounded-xl border border-border/70 bg-muted/30 p-3.5">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-card border border-border text-foreground/80">
-              <Laptop className="size-4.5" />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <span className="text-xs sm:text-sm font-bold text-foreground font-heading block truncate">
-                Windows PC — Dhaka
-              </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[11px] text-emerald-800 font-semibold">
-                  Current device
-                </span>
-              </div>
-            </div>
-          </div>
+          <p className="rounded-xl border bg-muted/30 p-3.5 text-xs text-muted-foreground">Open Manage Devices to view the live server session list. Device names are not guessed locally.</p>
         </div>
 
         {/* Security Alert Banner */}

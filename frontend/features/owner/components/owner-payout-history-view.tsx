@@ -652,7 +652,7 @@ export function OwnerPayoutHistoryView() {
               <ArrowUpDown className="size-3.5 text-slate-400 shrink-0" />
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 className="px-2.5 py-1.5 bg-white border border-[#E5E7EB] rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#064E3B] cursor-pointer"
               >
                 <option value="NEWEST">Newest First</option>

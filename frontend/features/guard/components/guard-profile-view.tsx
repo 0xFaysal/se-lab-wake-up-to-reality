@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Lock,
   Smartphone,
@@ -11,24 +10,13 @@ import {
   Shield,
   ShieldCheck,
   ChevronRight,
-  LogOut,
   Info,
-  Building,
-  DoorOpen,
-  Clock,
-  CheckCircle2,
 } from "lucide-react";
 import { MOCK_GUARD_PROFILE } from "@/lib/data/mock-guard-data";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 export function GuardProfileView() {
-  const router = useRouter();
   const [isOnDuty, setIsOnDuty] = useState(MOCK_GUARD_PROFILE.isOnDuty);
-
-  const handleSignOut = () => {
-    if (confirm("Are you sure you want to sign out of the Guard Portal?")) {
-      router.push("/login");
-    }
-  };
 
   return (
     <div className="space-y-4 select-none pb-28">
@@ -201,9 +189,8 @@ export function GuardProfileView() {
         </h3>
 
         <div className="divide-y divide-gray-100 text-xs">
-          <button
-            type="button"
-            onClick={() => alert("Change Password modal / flow")}
+          <Link
+            href="/account/security"
             className="flex w-full items-center justify-between py-2.5 text-left hover:text-[#064E3B] transition-colors [-webkit-tap-highlight-color:transparent]"
           >
             <div className="flex items-center gap-2.5">
@@ -211,9 +198,9 @@ export function GuardProfileView() {
               <span className="font-medium text-gray-800">Change Password</span>
             </div>
             <ChevronRight className="h-4 w-4 text-gray-400" />
-          </button>
+          </Link>
 
-          <div className="flex w-full items-center justify-between py-2.5">
+          <Link href="/account/sessions" className="flex w-full items-center justify-between py-2.5">
             <div className="flex items-center gap-2.5">
               <Smartphone className="h-4 w-4 text-gray-400" />
               <div>
@@ -222,7 +209,7 @@ export function GuardProfileView() {
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-gray-400" />
-          </div>
+          </Link>
         </div>
       </section>
 
@@ -279,14 +266,7 @@ export function GuardProfileView() {
         </div>
 
         {/* Sign Out Button */}
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-100/80 py-3 text-xs font-bold text-red-700 transition-colors hover:bg-red-200 active:scale-[0.99] [-webkit-tap-highlight-color:transparent]"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
-        </button>
+        <LogoutButton className="w-full rounded-xl border-0 bg-red-100/80 py-3 text-xs font-bold text-red-700 hover:bg-red-200" />
 
         {/* Footnote: Last login */}
         <p className="text-center text-[11px] text-gray-400">

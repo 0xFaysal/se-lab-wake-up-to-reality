@@ -41,7 +41,7 @@ export function GuardBottomNav() {
 
         {/* Bookings */}
         <Link
-          href="/guard/bookings"
+          href="/guard/assignments"
           className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 text-center transition-transform active:scale-95 [-webkit-tap-highlight-color:transparent]"
         >
           <div

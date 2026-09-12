@@ -173,7 +173,7 @@ export function OwnerPropertyDetailsView({ propertyId }: { propertyId?: string }
         {/* Metric 1: Today's Bookings */}
         <div className="bg-white rounded-xl border border-[#E5E7EB] p-4.5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Today's Bookings</span>
+            <span className="text-xs font-semibold text-slate-500">Today&apos;s Bookings</span>
             <div className="size-7 rounded-lg bg-emerald-50 text-[#064E3B] flex items-center justify-center">
               <Smartphone className="size-4" />
             </div>
@@ -217,7 +217,7 @@ export function OwnerPropertyDetailsView({ propertyId }: { propertyId?: string }
         {/* Metric 4: Today's Earnings */}
         <div className="bg-white rounded-xl border border-[#E5E7EB] p-4.5 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Today's Earnings</span>
+            <span className="text-xs font-semibold text-slate-500">Today&apos;s Earnings</span>
             <div className="size-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <DollarSign className="size-4" />
             </div>

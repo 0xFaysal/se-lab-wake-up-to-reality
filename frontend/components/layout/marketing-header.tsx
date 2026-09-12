@@ -4,10 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AppLogo } from "@/components/common/app-logo";
 import { cn } from "@/lib/utils";
+import { authApi } from "@/lib/api/auth-api";
+import { queryKeys } from "@/lib/query-keys";
+import { destinationForUser } from "@/lib/auth-routing";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -20,6 +25,14 @@ const NAV_LINKS = [
 export function MarketingHeader() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const auth = useQuery({
+    queryKey: queryKeys.auth.me,
+    queryFn: async () => (await authApi.me({ skipAuthRefresh: true })).user,
+    retry: false,
+  });
+  const user = auth.data;
+  const dashboardHref = user ? destinationForUser(user) : "/login";
+  const firstName = user?.fullName.trim().split(/\s+/)[0] || "Account";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
@@ -46,7 +59,21 @@ export function MarketingHeader() {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden min-w-52 items-center justify-end gap-3 md:flex">
+          {auth.isPending ? <div className="h-9 w-36 animate-pulse rounded-lg bg-muted" /> : user ? <>
+          <Link
+            href={dashboardHref}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-sm font-semibold")}
+          >
+            Hi, {firstName}
+          </Link>
+          <Link
+            href={dashboardHref}
+            className={cn(buttonVariants({ size: "sm" }), "rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90")}
+          >
+            Dashboard
+          </Link>
+          </> : <>
           <Link
             href="/login"
             className={cn(
@@ -65,6 +92,7 @@ export function MarketingHeader() {
           >
             Get Started
           </Link>
+          </>}
         </div>
 
         {/* Mobile Hamburger & Actions */}
@@ -113,7 +141,16 @@ export function MarketingHeader() {
                   </Link>
                 ))}
                 <div className="my-4 h-px bg-border" />
+                {auth.isPending ? <div className="mx-4 h-11 animate-pulse rounded-lg bg-muted" /> : user ? <>
                 <Link
+                  href={dashboardHref}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-lg px-4 py-3 text-base font-semibold text-primary transition-colors hover:bg-muted"
+                >
+                  Hi, {firstName} · Dashboard
+                </Link>
+                <div className="px-4 pt-2"><LogoutButton className="w-full justify-center" /></div>
+                </> : <><Link
                   href="/login"
                   onClick={() => setMobileOpen(false)}
                   className="rounded-lg px-4 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted"
@@ -132,6 +169,7 @@ export function MarketingHeader() {
                     Get Started
                   </Link>
                 </div>
+                </>}
               </nav>
             </SheetContent>
           </Sheet>

@@ -1,6 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
-import { OwnerPropertiesView } from "@/features/owner/components/owner-properties-view";
+import { OwnerPropertiesLiveView } from "@/features/owner/components/owner-properties-live-view";
 
 export const metadata: Metadata = {
   title: "My Listings | Property Owner Management Portal",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function OwnerPropertiesPage() {
-  return <OwnerPropertiesView />;
+  return <OwnerPropertiesLiveView />;
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
-import { OwnerGuardsView } from "@/features/owner/components/owner-guards-view";
+import { OwnerGuardsLiveView } from "@/features/owner/components/owner-guards-live-view";
 
 export const metadata: Metadata = {
   title: "Guards Management | Property Owner Management Portal",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function OwnerGuardsPage() {
-  return <OwnerGuardsView />;
+  return <OwnerGuardsLiveView />;
 }
