@@ -1,6 +1,8 @@
 import type {
   PropertyBuildingManagerAssignment,
+  PropertyBuildingManagerVote,
   PropertyChangeProposal,
+  PropertyChangeVote,
   PropertyProvider,
 } from "../../../generated/prisma/client.js";
 
@@ -21,6 +23,16 @@ export function toProviderMembershipDto(membership: PropertyProvider) {
 export function toBuildingManagerDto(
   assignment: PropertyBuildingManagerAssignment & {
     candidate?: { id: string; fullName: string };
+    votes?: Array<
+      Pick<
+        PropertyBuildingManagerVote,
+        | "providerMembershipId"
+        | "voterUserId"
+        | "decision"
+        | "reason"
+        | "createdAt"
+      >
+    >;
   },
 ) {
   return {
@@ -31,11 +43,23 @@ export function toBuildingManagerDto(
     nominatedAt: assignment.nominatedAt,
     activatedAt: assignment.activatedAt,
     endedAt: assignment.endedAt,
+    ...(assignment.votes ? { votes: assignment.votes } : {}),
   };
 }
 
 export function toPropertyChangeProposalDto(
-  proposal: PropertyChangeProposal,
+  proposal: PropertyChangeProposal & {
+    votes?: Array<
+      Pick<
+        PropertyChangeVote,
+        | "providerMembershipId"
+        | "voterUserId"
+        | "decision"
+        | "reason"
+        | "createdAt"
+      >
+    >;
+  },
   proposedChanges: unknown,
 ) {
   return {
@@ -50,5 +74,6 @@ export function toPropertyChangeProposalDto(
     appliedAt: proposal.appliedAt,
     createdAt: proposal.createdAt,
     updatedAt: proposal.updatedAt,
+    ...(proposal.votes ? { votes: proposal.votes } : {}),
   };
 }

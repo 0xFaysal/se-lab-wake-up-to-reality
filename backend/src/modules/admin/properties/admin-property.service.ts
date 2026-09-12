@@ -82,6 +82,17 @@ function propertyMeetsApprovalRequirements(
 ): boolean {
   const latitude = property.latitude.toNumber();
   const longitude = property.longitude.toNumber();
+  const hasEligibleProvider = property.providerMemberships.some(
+    (membership) =>
+      membership.status === PropertyProviderStatus.ACTIVE &&
+      membership.provider.status === UserStatus.ACTIVE &&
+      membership.provider.deletedAt === null &&
+      membership.provider.emailVerifiedAt !== null &&
+      !membership.provider.mustChangePassword &&
+      membership.provider.roles.some(
+        (role) => role.role === UserRoleType.PROVIDER,
+      ),
+  );
   return (
     property.exactAddressCiphertext.length > 0 &&
     Boolean(property.exactAddressIv) &&
@@ -93,13 +104,7 @@ function propertyMeetsApprovalRequirements(
     longitude >= -180 &&
     longitude <= 180 &&
     property.images.length > 0 &&
-    property.createdBy.status === UserStatus.ACTIVE &&
-    property.createdBy.deletedAt === null &&
-    property.createdBy.emailVerifiedAt !== null &&
-    !property.createdBy.mustChangePassword &&
-    property.createdBy.roles.some(
-      (role) => role.role === UserRoleType.PROVIDER,
-    )
+    hasEligibleProvider
   );
 }
 
@@ -134,6 +139,17 @@ export async function verifyProperty(
       }
 
       const reviewedAt = new Date();
+      const hasVerifiedProvider = property.providerMemberships.some(
+        (membership) =>
+          membership.status === PropertyProviderStatus.ACTIVE &&
+          membership.verificationStatus === VerificationStatus.VERIFIED,
+      );
+      const provisionalMembership = hasVerifiedProvider
+        ? null
+        : property.providerMemberships.find(
+            (membership) =>
+              membership.status === PropertyProviderStatus.ACTIVE,
+          ) ?? null;
       const updated =
         await adminPropertyRepository.updatePendingPropertyVerification(
           propertyId,
@@ -156,26 +172,25 @@ export async function verifyProperty(
         );
       if (updated.count !== 1) throw adminPropertyErrors.conflict();
 
-      await tx.propertyProvider.updateMany({
-        where: {
-          propertyId,
-          providerUserId: property.createdByUserId,
-        },
-        data:
-          input.decision === "APPROVE"
-            ? {
-                verificationStatus: VerificationStatus.VERIFIED,
-                verifiedByAdminId: adminUserId,
-                verifiedAt: reviewedAt,
-                rejectionReason: null,
-              }
-            : {
-                verificationStatus: VerificationStatus.REJECTED,
-                verifiedByAdminId: adminUserId,
-                verifiedAt: null,
-                rejectionReason: input.reason,
-              },
-      });
+      if (provisionalMembership) {
+        await tx.propertyProvider.update({
+          where: { id: provisionalMembership.id },
+          data:
+            input.decision === "APPROVE"
+              ? {
+                  verificationStatus: VerificationStatus.VERIFIED,
+                  verifiedByAdminId: adminUserId,
+                  verifiedAt: reviewedAt,
+                  rejectionReason: null,
+                }
+              : {
+                  verificationStatus: VerificationStatus.REJECTED,
+                  verifiedByAdminId: adminUserId,
+                  verifiedAt: null,
+                  rejectionReason: input.reason,
+                },
+        });
+      }
 
       const result = await adminPropertyRepository.findAdminPropertyById(
         propertyId,
@@ -193,6 +208,11 @@ export async function mergeDuplicateProperties(
   adminUserId: string,
   input: MergeAdminPropertiesInput,
 ) {
+  if (input.canonicalPropertyId === input.duplicatePropertyId) {
+    throw adminPropertyErrors.mergeConflict(
+      "Canonical and duplicate Property must be different",
+    );
+  }
   try {
     return await prisma.$transaction(async (tx) => {
     const ids = [input.canonicalPropertyId, input.duplicatePropertyId].sort();

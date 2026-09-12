@@ -147,6 +147,18 @@ export async function getProviderDelegation(providerUserId: string, delegationId
   return toManagerDelegationDto(record);
 }
 
+export async function getManagerDelegation(
+  managerUserId: string,
+  delegationId: string,
+) {
+  const record = await prisma.providerManagerDelegation.findFirst({
+    where: { id: delegationId, managerUserId },
+    include: delegationInclude,
+  });
+  if (!record) throw managerDelegationErrors.notFound();
+  return toManagerDelegationDto(record);
+}
+
 export async function updateManagerDelegationPermissions(
   providerUserId: string,
   delegationId: string,

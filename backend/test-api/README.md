@@ -29,9 +29,11 @@ Development responses also expose the code for local testing. Phone verification
 is optional and never blocks account access; using it in production still requires
 an SMS delivery provider.
 
-`guard-assignments.http` covers shared Property membership, Guard consent,
-and provider-specific assignments. `manager-delegations.http` covers scoped
-Manager permissions, while `property-governance.http` covers memberships,
-Building Manager voting, shared changes, duplicate detection, and Admin merge.
+`property-guards.http` covers shared Property membership, Guard consent, and
+Provider-specific assignments. `manager-delegations.http` covers scoped Manager
+permissions. `provider-properties.http`, `property-governance.http`,
+`property-change-proposals.http`, and `admin-property-merge.http` separate the
+canonical membership, voting, shared-change, duplicate-detection, and merge
+flows. The older `guard-assignments.http` remains as a compatibility example.
 Replace placeholder identifiers with seeded or locally created records before
 running those requests.

@@ -38,11 +38,20 @@ export const rejectGuardMembershipController: RequestHandler = async (req, res, 
 export const createProviderGuardAssignmentController: RequestHandler = async (req, res, next) => {
   try { respond(req, res, { assignment: await service.createProviderGuardAssignment(userId(req), param(req, "propertyId"), req.body) }, 201); } catch (error) { next(error); }
 };
+export const createCanonicalProviderGuardAssignmentController: RequestHandler = async (req, res, next) => {
+  try {
+    const { propertyId, ...input } = req.body;
+    respond(req, res, { assignment: await service.createProviderGuardAssignment(userId(req), propertyId, input) }, 201);
+  } catch (error) { next(error); }
+};
 export const listProviderAssignmentsController: RequestHandler = async (req, res, next) => {
   try {
     const query = listGuardAssignmentsQuerySchema.parse({ query: req.query }).query;
     respond(req, res, await service.listProviderAssignments(userId(req), query));
   } catch (error) { next(error); }
+};
+export const getProviderAssignmentController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { assignment: await service.getProviderAssignment(userId(req), param(req, "assignmentId")) }); } catch (error) { next(error); }
 };
 export const listMyProviderAssignmentsController: RequestHandler = async (req, res, next) => {
   try {

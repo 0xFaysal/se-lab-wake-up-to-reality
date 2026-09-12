@@ -435,6 +435,33 @@ export async function getBuildingManager(propertyId: string, userId: string) {
   return assignment ? toBuildingManagerDto(assignment) : null;
 }
 
+export async function listBuildingManagerNominations(
+  propertyId: string,
+  userId: string,
+) {
+  if (!(await canReadProviderProperty(userId, propertyId))) {
+    throw governanceErrors.notFound();
+  }
+  const assignments = await prisma.propertyBuildingManagerAssignment.findMany({
+    where: { propertyId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    include: {
+      candidate: { select: { id: true, fullName: true } },
+      votes: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: {
+          providerMembershipId: true,
+          voterUserId: true,
+          decision: true,
+          reason: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+  return assignments.map(toBuildingManagerDto);
+}
+
 export async function voteForBuildingManager(
   voterUserId: string,
   propertyId: string,
@@ -750,13 +777,6 @@ export async function createPropertyChangeProposal(
     const property = await propertyRepository.findPropertyById(propertyId, tx);
     if (!property) throw governanceErrors.notFound();
     if (property.version !== input.baseVersion) throw propertyErrors.staleVersion();
-    if (
-      input.changeType === "TEMPORARY_CLOSURE" &&
-      ((input.changes.action === "CLOSE" && property.status !== PropertyStatus.ACTIVE) ||
-        (input.changes.action === "REOPEN" && property.status !== PropertyStatus.TEMPORARILY_CLOSED))
-    ) {
-      throw governanceErrors.conflict();
-    }
     if ((await getPropertyGovernanceMode(propertyId, tx)) !== "MULTI_PROVIDER") {
       throw governanceErrors.conflict();
     }
@@ -801,12 +821,56 @@ export async function listPropertyChangeProposals(
   const proposals = await prisma.propertyChangeProposal.findMany({
     where: { propertyId },
     orderBy: { createdAt: "desc" },
+    include: {
+      votes: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: {
+          providerMembershipId: true,
+          voterUserId: true,
+          decision: true,
+          reason: true,
+          createdAt: true,
+        },
+      },
+    },
   });
   return proposals.map((proposal) =>
     toPropertyChangeProposalDto(
       proposal,
       revealProposalChanges(proposal.proposedChanges),
     ),
+  );
+}
+
+export async function getPropertyChangeProposal(
+  userId: string,
+  propertyId: string,
+  proposalId: string,
+) {
+  const membership = await repository.findActiveVerifiedProviderMembership(
+    userId,
+    propertyId,
+  );
+  if (!membership) throw governanceErrors.notFound();
+  const proposal = await prisma.propertyChangeProposal.findFirst({
+    where: { id: proposalId, propertyId },
+    include: {
+      votes: {
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: {
+          providerMembershipId: true,
+          voterUserId: true,
+          decision: true,
+          reason: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+  if (!proposal) throw governanceErrors.notFound();
+  return toPropertyChangeProposalDto(
+    proposal,
+    revealProposalChanges(proposal.proposedChanges),
   );
 }
 

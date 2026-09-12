@@ -91,6 +91,14 @@ integration("normalized Property Guard lifecycle integration", () => {
       },
     });
     propertyId = property.id;
+    await prisma.propertyProvider.create({
+      data: {
+        propertyId,
+        providerUserId: users.get("other-provider")!.id,
+        verificationStatus: generated.VerificationStatus.VERIFIED,
+        verifiedAt: new Date(),
+      },
+    });
     server = appModule.app.listen(0);
     await new Promise<void>((resolve) => server.once("listening", resolve));
     const address = server.address();
@@ -122,6 +130,16 @@ integration("normalized Property Guard lifecycle integration", () => {
     assert.equal(invitation.status, 201);
     const membershipId = (await invitation.json() as { data: { membership: { id: string } } }).data.membership.id;
 
+    const sharedDirectory = await request(`/api/v1/properties/${propertyId}/guards`, {
+      cookie: cookies.get("other-provider"),
+    });
+    assert.equal(sharedDirectory.status, 200);
+    assert.equal(
+      (await sharedDirectory.json() as { data: { memberships: unknown[] } })
+        .data.memberships.length,
+      1,
+    );
+
     const tooEarly = await request(`/api/v1/provider/properties/${propertyId}/guard-assignments`, {
       method: "POST",
       cookie: cookies.get("provider"),
@@ -141,11 +159,39 @@ integration("normalized Property Guard lifecycle integration", () => {
       body: JSON.stringify({ guardMembershipId: membershipId, shiftStart: "08:00", shiftEnd: "20:00" }),
     });
     assert.equal(assigned.status, 201);
+    const providerAAssignmentId = (await assigned.json() as {
+      data: { assignment: { id: string } };
+    }).data.assignment.id;
 
     const isolated = await request(`/api/v1/provider/guard-assignments?propertyId=${propertyId}`, {
       cookie: cookies.get("other-provider"),
     });
     assert.equal(isolated.status, 200);
     assert.equal((await isolated.json() as { data: { assignments: unknown[] } }).data.assignments.length, 0);
+
+    const crossProviderMutation = await request(
+      `/api/v1/provider/guard-assignments/${providerAAssignmentId}`,
+      {
+        method: "PATCH",
+        cookie: cookies.get("other-provider"),
+        body: JSON.stringify({ action: "SUSPEND" }),
+      },
+    );
+    assert.equal(crossProviderMutation.status, 404);
+
+    const independentAssignment = await request(
+      "/api/v1/provider/guard-assignments",
+      {
+        method: "POST",
+        cookie: cookies.get("other-provider"),
+        body: JSON.stringify({
+          propertyId,
+          guardMembershipId: membershipId,
+          shiftStart: "09:00",
+          shiftEnd: "18:00",
+        }),
+      },
+    );
+    assert.equal(independentAssignment.status, 201);
   });
 });

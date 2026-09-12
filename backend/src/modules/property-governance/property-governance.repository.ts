@@ -46,17 +46,16 @@ export function findActiveProviderMembership(
   });
 }
 
-export function findInitialCreatorMembership(
-  userId: string,
+export function findProvisionalProviderMembership(
+  providerUserId: string,
   propertyId: string,
   db: GovernanceClient = prisma,
 ) {
-  return db.property.findFirst({
+  return db.propertyProvider.findFirst({
     where: {
-      id: propertyId,
-      createdByUserId: userId,
-      deletedAt: null,
-      archivedAt: null,
+      propertyId,
+      providerUserId,
+      status: PropertyProviderStatus.ACTIVE,
       verificationStatus: {
         in: [
           VerificationStatus.DRAFT,
@@ -64,14 +63,18 @@ export function findInitialCreatorMembership(
           VerificationStatus.REJECTED,
         ],
       },
-      providerMemberships: {
-        some: {
-          providerUserId: userId,
-          status: PropertyProviderStatus.ACTIVE,
+      property: {
+        deletedAt: null,
+        archivedAt: null,
+        verificationStatus: {
+          in: [
+            VerificationStatus.DRAFT,
+            VerificationStatus.PENDING,
+            VerificationStatus.REJECTED,
+          ],
         },
       },
     },
-    select: { id: true },
   });
 }
 

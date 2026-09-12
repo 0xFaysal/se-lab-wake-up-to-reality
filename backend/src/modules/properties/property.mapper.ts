@@ -1,4 +1,9 @@
-import type { Property } from "../../../generated/prisma/client.js";
+import type {
+  BuildingManagerAssignmentStatus,
+  Property,
+  PropertyProviderStatus,
+  VerificationStatus,
+} from "../../../generated/prisma/client.js";
 import type { PropertyGovernanceMode } from "../property-governance/property-governance.policy.js";
 import type { OwnerPropertySummaryRecord } from "./property.repository.js";
 
@@ -6,9 +11,26 @@ function coordinate(value: Property["latitude"]): number {
   return value.toNumber();
 }
 
+export interface ProviderPropertyRelationshipContext {
+  providerMembership: {
+    id: string;
+    status: PropertyProviderStatus;
+    verificationStatus: VerificationStatus;
+    joinedAt: Date;
+    verifiedAt: Date | null;
+  } | null;
+  isSoleController: boolean;
+  buildingManager: {
+    id: string;
+    status: BuildingManagerAssignmentStatus;
+    candidate: { id: string; fullName: string };
+  } | null;
+}
+
 export function toOwnerPropertySummary(
   property: OwnerPropertySummaryRecord,
   governanceMode?: PropertyGovernanceMode,
+  relationship?: ProviderPropertyRelationshipContext,
 ) {
   return {
     id: property.id,
@@ -22,6 +44,13 @@ export function toOwnerPropertySummary(
     rejectionReason: property.rejectionReason,
     version: property.version,
     governanceMode: governanceMode ?? null,
+    ...(relationship
+      ? {
+          providerMembership: relationship.providerMembership,
+          isSoleController: relationship.isSoleController,
+          buildingManager: relationship.buildingManager,
+        }
+      : {}),
     canonicalPropertyId: property.canonicalPropertyId,
     createdAt: property.createdAt,
     updatedAt: property.updatedAt,
@@ -35,9 +64,10 @@ export function toOwnerPropertyDetail(
     accessInstructions: string | null;
   },
   governanceMode?: PropertyGovernanceMode,
+  relationship?: ProviderPropertyRelationshipContext,
 ) {
   return {
-    ...toOwnerPropertySummary(property, governanceMode),
+    ...toOwnerPropertySummary(property, governanceMode, relationship),
     exactAddress: sensitive.exactAddress,
     entranceLatitude: property.entranceLatitude
       ? coordinate(property.entranceLatitude)

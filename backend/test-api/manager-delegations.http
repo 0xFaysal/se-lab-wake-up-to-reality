@@ -49,6 +49,9 @@ Content-Type: application/json
 ### Manager lists invitations
 GET {{baseUrl}}/manager/delegations
 
+### Manager reads one invitation in its own scope
+GET {{baseUrl}}/manager/delegations/{{createDelegation.response.body.$.data.delegation.id}}
+
 ### Manager accepts delegation
 POST {{baseUrl}}/manager/delegations/{{createDelegation.response.body.$.data.delegation.id}}/accept
 

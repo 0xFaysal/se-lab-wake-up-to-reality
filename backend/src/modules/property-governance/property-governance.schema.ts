@@ -12,17 +12,39 @@ export const buildingManagerNominationSchema = z.object({
   body: z.object({ candidateUserId: z.uuid() }).strict(),
 });
 
+const governanceVoteBodySchema = z
+  .discriminatedUnion("decision", [
+    z.object({ decision: z.literal("APPROVE") }).strict(),
+    z.object({ decision: z.literal("REJECT"), reason: reasonSchema }).strict(),
+  ]);
+
 export const governanceVoteSchema = z.object({
   params: z.object({
     propertyId: z.uuid(),
     assignmentId: z.uuid().optional(),
     proposalId: z.uuid().optional(),
   }),
-  body: z
-    .discriminatedUnion("decision", [
-      z.object({ decision: z.literal("APPROVE") }).strict(),
-      z.object({ decision: z.literal("REJECT"), reason: reasonSchema }).strict(),
-    ]),
+  body: governanceVoteBodySchema,
+});
+
+export const buildingManagerVoteSchema = z.object({
+  params: z
+    .object({ propertyId: z.uuid(), assignmentId: z.uuid() })
+    .strict(),
+  body: governanceVoteBodySchema,
+});
+
+export const propertyChangeProposalIdSchema = z.object({
+  params: z
+    .object({ propertyId: z.uuid(), proposalId: z.uuid() })
+    .strict(),
+});
+
+export const propertyChangeVoteSchema = z.object({
+  params: z
+    .object({ propertyId: z.uuid(), proposalId: z.uuid() })
+    .strict(),
+  body: governanceVoteBodySchema,
 });
 
 export const commonRulesSchema = z.object({
@@ -115,22 +137,6 @@ export const propertyChangeProposalSchema = z.object({
         changeType: z.literal("COMMON_RULES"),
         baseVersion: z.number().int().positive(),
         changes: proposedCommonRules,
-      })
-      .strict(),
-    z
-      .object({
-        changeType: z.literal("TEMPORARY_CLOSURE"),
-        baseVersion: z.number().int().positive(),
-        changes: z.discriminatedUnion("action", [
-          z
-            .object({
-              action: z.literal("CLOSE"),
-              reason: reasonSchema,
-              until: z.iso.datetime().optional(),
-            })
-            .strict(),
-          z.object({ action: z.literal("REOPEN") }).strict(),
-        ]),
       })
       .strict(),
     z

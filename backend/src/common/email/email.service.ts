@@ -63,6 +63,7 @@ function getEmailTransporter(): Transporter {
     pool: true,
     maxConnections: 3,
     maxMessages: 100,
+    dnsTimeout: 5_000,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
@@ -125,6 +126,7 @@ async function sendTransactionalEmail(input: {
 }): Promise<void> {
   const configuration = getEmailConfiguration();
   const transporter = getEmailTransporter();
+  const startedAt = Date.now();
 
   try {
     const info = await transporter.sendMail({
@@ -142,9 +144,22 @@ async function sendTransactionalEmail(input: {
       throw new Error("The SMTP server did not accept the email");
     }
 
-    logger.info({ messageId: info.messageId }, "Transactional email accepted");
+    logger.info({
+      messageId: info.messageId,
+      durationMs: Date.now() - startedAt,
+      smtpHost: configuration.host,
+      smtpPort: configuration.port,
+    }, "Transactional email accepted by SMTP server");
   } catch (error) {
-    logger.error({ error }, "Transactional email delivery failed");
+    const smtpError = error instanceof Error ? error : undefined;
+    logger.error({
+      durationMs: Date.now() - startedAt,
+      smtpHost: configuration.host,
+      smtpPort: configuration.port,
+      smtpErrorCode: smtpError && "code" in smtpError ? smtpError.code : undefined,
+      smtpCommand: smtpError && "command" in smtpError ? smtpError.command : undefined,
+      smtpResponseCode: smtpError && "responseCode" in smtpError ? smtpError.responseCode : undefined,
+    }, "Transactional email delivery failed");
     throw new AppError({
       statusCode: 503,
       code: input.failureCode,

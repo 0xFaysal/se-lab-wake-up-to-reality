@@ -73,10 +73,43 @@ async function resolveProviderMembership(
   actorUserId: string,
   propertyId: string,
   permission: ManagerDelegationPermission,
+  requestedProviderMembershipId?: string,
 ) {
   const own = await governanceRepository.findActiveVerifiedProviderMembership(actorUserId, propertyId, tx);
-  if (own) return own;
-  const delegated = await governanceRepository.findLiveManagerDelegation(actorUserId, propertyId, permission, undefined, tx);
+  if (own && (!requestedProviderMembershipId || requestedProviderMembershipId === own.id)) {
+    return own;
+  }
+
+  if (!requestedProviderMembershipId) {
+    const now = new Date();
+    const delegatedScopes = await tx.providerManagerDelegation.findMany({
+      where: {
+        managerUserId: actorUserId,
+        propertyId,
+        status: ManagerDelegationStatus.ACTIVE,
+        OR: [{ validFrom: null }, { validFrom: { lte: now } }],
+        AND: [{ OR: [{ validUntil: null }, { validUntil: { gt: now } }] }],
+        grantorProviderMembership: governanceRepository.activeVerifiedProviderWhere,
+        permissions: { some: { permission } },
+      },
+      select: { grantorProviderMembershipId: true },
+      take: 2,
+    });
+    if (delegatedScopes.length === 0) throw propertyErrors.notFound();
+    if (delegatedScopes.length > 1) {
+      throw guardAssignmentErrors.providerScopeRequired();
+    }
+    requestedProviderMembershipId =
+      delegatedScopes[0]!.grantorProviderMembershipId;
+  }
+
+  const delegated = await governanceRepository.findLiveManagerDelegation(
+    actorUserId,
+    propertyId,
+    permission,
+    requestedProviderMembershipId,
+    tx,
+  );
   if (!delegated) throw propertyErrors.notFound();
   const membership = await tx.propertyProvider.findUnique({ where: { id: delegated.grantorProviderMembershipId } });
   if (!membership) throw propertyErrors.notFound();
@@ -217,7 +250,13 @@ export async function createProviderGuardAssignment(actorUserId: string, propert
   try {
     return await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
-      const providerMembership = await resolveProviderMembership(tx, actorUserId, propertyId, ManagerDelegationPermission.GUARD_ASSIGN);
+      const providerMembership = await resolveProviderMembership(
+        tx,
+        actorUserId,
+        propertyId,
+        ManagerDelegationPermission.GUARD_ASSIGN,
+        input.providerMembershipId,
+      );
       await requireEligibleProperty(tx, propertyId);
       const guardMembership = await tx.propertyGuardMembership.findFirst({
         where: { id: input.guardMembershipId, propertyId, status: PropertyGuardMembershipStatus.ACTIVE },
@@ -302,6 +341,21 @@ export async function listProviderAssignments(actorUserId: string, query: ListGu
   return { assignments: records.map(toProviderGuardAssignment), pagination: pagination(query.page, query.limit, total) };
 }
 
+export async function getProviderAssignment(
+  actorUserId: string,
+  assignmentId: string,
+) {
+  const record = await prisma.providerGuardAssignment.findFirst({
+    where: {
+      id: assignmentId,
+      ...providerAssignmentActorWhere(actorUserId),
+    },
+    include: providerGuardAssignmentInclude,
+  });
+  if (!record) throw guardAssignmentErrors.notFound();
+  return toProviderGuardAssignment(record);
+}
+
 export async function listMyProviderAssignments(guardUserId: string, query: ListGuardAssignmentsQuery) {
   const where: Prisma.ProviderGuardAssignmentWhereInput = {
     propertyGuardMembership: { guardUserId, ...(query.propertyId ? { propertyId: query.propertyId } : {}) },
@@ -322,7 +376,13 @@ async function requireAssignmentMutationAuthority(tx: Prisma.TransactionClient, 
   });
   if (!assignment) throw guardAssignmentErrors.notFound();
   const propertyId = assignment.propertyGuardMembership.propertyId;
-  const membership = await resolveProviderMembership(tx, actorUserId, propertyId, ManagerDelegationPermission.GUARD_ASSIGN);
+  const membership = await resolveProviderMembership(
+    tx,
+    actorUserId,
+    propertyId,
+    ManagerDelegationPermission.GUARD_ASSIGN,
+    assignment.providerMembershipId,
+  );
   if (membership.id !== assignment.providerMembershipId) throw guardAssignmentErrors.notFound();
   return assignment;
 }

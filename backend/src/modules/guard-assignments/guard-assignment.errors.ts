@@ -75,4 +75,11 @@ export const guardAssignmentErrors = {
       code: "PROPERTY_GUARD_REMOVAL_BLOCKED",
       message: "End every active Provider Guard assignment before removing this Guard",
     }),
+  providerScopeRequired: () =>
+    new AppError({
+      statusCode: 400,
+      code: "PROVIDER_SCOPE_REQUIRED",
+      message:
+        "providerMembershipId is required when a Manager can act for multiple Providers",
+    }),
 };

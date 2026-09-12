@@ -42,7 +42,9 @@ propertyRouter.use(
  *   post:
  *     tags: [Property Guards]
  *     summary: Invite a known Guard to a verified active Property
+ *     deprecated: true
  *     operationId: invitePropertyGuard
+ *     description: Compatibility alias for POST /api/v1/properties/{propertyId}/guards. It creates a shared Property Guard membership, not a Provider assignment.
  *     security: [{ accessCookie: [] }]
  *     parameters:
  *       - { name: propertyId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -53,10 +55,10 @@ propertyRouter.use(
  *           schema: { $ref: '#/components/schemas/CreateGuardInvitationRequest' }
  *     responses:
  *       201:
- *         description: Guard assignment invitation created.
+ *         description: Property Guard membership invitation created.
  *         content:
  *           application/json:
- *             schema: { $ref: '#/components/schemas/OwnerGuardAssignmentResponse' }
+ *             schema: { $ref: '#/components/schemas/PropertyGuardMembershipResponse' }
  *       400: { $ref: '#/components/responses/BadRequest' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  *       403: { $ref: '#/components/responses/Forbidden' }
@@ -95,7 +97,7 @@ propertyRouter.use(propertyImageRouter);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/OwnerPropertyResponse'
+ *               $ref: '#/components/schemas/ProviderPropertyResponse'
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
@@ -111,11 +113,11 @@ propertyRouter.use(propertyImageRouter);
  *       - accessCookie: []
  *     responses:
  *       200:
- *         description: Owner property summaries.
+ *         description: Provider membership-scoped Property summaries.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/OwnerPropertyListResponse'
+ *               $ref: '#/components/schemas/ProviderPropertyListResponse'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
@@ -138,7 +140,7 @@ propertyRouter.get("/", listPropertiesController);
  * /api/v1/provider/properties/{propertyId}:
  *   get:
  *     tags: [Properties]
- *     summary: Get an owned property
+ *     summary: Get a Provider membership-scoped Property
  *     operationId: getProviderProperty
  *     description: Returns membership-scoped details with decrypted exact address and access instructions. Inaccessible resources return 404.
  *     security:
@@ -152,11 +154,11 @@ propertyRouter.get("/", listPropertiesController);
  *           format: uuid
  *     responses:
  *       200:
- *         description: Owned property details.
+ *         description: Provider Property details.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/OwnerPropertyResponse'
+ *               $ref: '#/components/schemas/ProviderPropertyResponse'
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
@@ -164,7 +166,7 @@ propertyRouter.get("/", listPropertiesController);
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  *       404:
- *         description: Property was not found for the authenticated owner.
+ *         description: Property was not found in the authenticated Provider's scope.
  *         content:
  *           application/json:
  *             schema:
@@ -177,7 +179,7 @@ propertyRouter.get("/", listPropertiesController);
  *               $ref: '#/components/schemas/ErrorResponse'
  *   patch:
  *     tags: [Properties]
- *     summary: Update an owned property
+ *     summary: Update a Provider Property
  *     operationId: updateProviderProperty
  *     description: Re-encrypts changed private fields with a fresh IV. Critical location changes reset verified properties to PENDING and INACTIVE. Owners cannot submit verification or operational fields.
  *     security:
@@ -201,7 +203,7 @@ propertyRouter.get("/", listPropertiesController);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/OwnerPropertyResponse'
+ *               $ref: '#/components/schemas/ProviderPropertyResponse'
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  *       401:
@@ -209,7 +211,7 @@ propertyRouter.get("/", listPropertiesController);
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  *       404:
- *         description: Property was not found for the authenticated owner.
+ *         description: Property was not found in the authenticated Provider's scope.
  *         content:
  *           application/json:
  *             schema:
@@ -222,7 +224,7 @@ propertyRouter.get("/", listPropertiesController);
  *               $ref: '#/components/schemas/ErrorResponse'
  *   delete:
  *     tags: [Properties]
- *     summary: Delete an owned property
+ *     summary: Delete a sole or provisional Provider Property
  *     operationId: deleteProviderProperty
  *     description: Soft-deletes an owned property when it has no images, existing parking spots, or blocking guard assignments.
  *     security:

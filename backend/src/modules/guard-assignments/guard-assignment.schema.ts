@@ -20,7 +20,27 @@ export const addPropertyGuardSchema = z.object({
 });
 export const createProviderGuardAssignmentSchema = z.object({
   params: z.object({ propertyId: z.uuid() }).strict(),
-  body: z.object({ guardMembershipId: z.uuid(), shiftStart: timeSchema, shiftEnd: timeSchema }).strict().superRefine(validateShift),
+  body: z
+    .object({
+      guardMembershipId: z.uuid(),
+      providerMembershipId: z.uuid().optional(),
+      shiftStart: timeSchema,
+      shiftEnd: timeSchema,
+    })
+    .strict()
+    .superRefine(validateShift),
+});
+export const createCanonicalProviderGuardAssignmentSchema = z.object({
+  body: z
+    .object({
+      propertyId: z.uuid(),
+      guardMembershipId: z.uuid(),
+      providerMembershipId: z.uuid().optional(),
+      shiftStart: timeSchema,
+      shiftEnd: timeSchema,
+    })
+    .strict()
+    .superRefine(validateShift),
 });
 export const updateGuardAssignmentSchema = z.object({
   params: z.object({ assignmentId: z.uuid() }).strict(),

@@ -1,4 +1,5 @@
 import {
+  BuildingManagerAssignmentStatus,
   Prisma,
   PropertyProviderStatus,
   PropertyStatus,
@@ -16,6 +17,7 @@ import {
   canManagePropertyCommonRules,
   governanceModeFromCount,
 } from "../property-governance/property-governance.policy.js";
+import type { PropertyGovernanceMode } from "../property-governance/property-governance.policy.js";
 import { propertyErrors } from "./property.errors.js";
 import {
   fingerprintPropertyAddress,
@@ -26,6 +28,7 @@ import {
   toOwnerPropertySummary,
   toPublicPropertySummary,
 } from "./property.mapper.js";
+import type { ProviderPropertyRelationshipContext } from "./property.mapper.js";
 import {
   canDeleteProperty,
   canOwnerEditProperty,
@@ -65,6 +68,111 @@ function duplicateMatchInput(input: PropertyDuplicateMatchInput) {
   };
 }
 
+async function loadProviderPropertyRelationshipContexts(
+  providerUserId: string,
+  propertyIds: string[],
+): Promise<
+  Map<
+    string,
+    {
+      governanceMode: PropertyGovernanceMode;
+      relationship: ProviderPropertyRelationshipContext;
+    }
+  >
+> {
+  if (propertyIds.length === 0) {
+    return new Map<
+      string,
+      {
+        governanceMode: PropertyGovernanceMode;
+        relationship: ProviderPropertyRelationshipContext;
+      }
+    >();
+  }
+
+  const [counts, memberships, managerAssignments] = await Promise.all([
+    prisma.propertyProvider.groupBy({
+      by: ["propertyId"],
+      where: {
+        propertyId: { in: propertyIds },
+        ...governanceRepository.activeVerifiedProviderWhere,
+      },
+      _count: { _all: true },
+    }),
+    prisma.propertyProvider.findMany({
+      where: {
+        propertyId: { in: propertyIds },
+        providerUserId,
+        status: { not: PropertyProviderStatus.ENDED },
+      },
+    }),
+    prisma.propertyBuildingManagerAssignment.findMany({
+      where: {
+        propertyId: { in: propertyIds },
+        status: {
+          in: [
+            BuildingManagerAssignmentStatus.ACTIVE,
+            BuildingManagerAssignmentStatus.PENDING_APPROVAL,
+            BuildingManagerAssignmentStatus.PENDING_RECONFIRMATION,
+          ],
+        },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        propertyId: true,
+        status: true,
+        candidate: { select: { id: true, fullName: true } },
+      },
+    }),
+  ]);
+
+  const countByProperty = new Map(
+    counts.map((row) => [row.propertyId, row._count._all]),
+  );
+  const membershipByProperty = new Map(
+    memberships.map((membership) => [membership.propertyId, membership]),
+  );
+  const managerByProperty = new Map<
+    string,
+    (typeof managerAssignments)[number]
+  >();
+  for (const assignment of managerAssignments) {
+    if (!managerByProperty.has(assignment.propertyId)) {
+      managerByProperty.set(assignment.propertyId, assignment);
+    }
+  }
+
+  return new Map(
+    propertyIds.map((propertyId) => {
+      const providerCount = countByProperty.get(propertyId) ?? 0;
+      const membership = membershipByProperty.get(propertyId) ?? null;
+      return [
+        propertyId,
+        {
+          governanceMode: governanceModeFromCount(providerCount),
+          relationship: {
+            providerMembership: membership
+              ? {
+                  id: membership.id,
+                  status: membership.status,
+                  verificationStatus: membership.verificationStatus,
+                  joinedAt: membership.joinedAt,
+                  verifiedAt: membership.verifiedAt,
+                }
+              : null,
+            isSoleController:
+              providerCount === 1 &&
+              membership?.status === PropertyProviderStatus.ACTIVE &&
+              membership.verificationStatus === VerificationStatus.VERIFIED,
+            buildingManager: managerByProperty.get(propertyId) ?? null,
+          },
+        },
+      ] as const;
+    }),
+  );
+}
+
 export async function findPossiblePropertyMatches(
   input: PropertyDuplicateMatchInput,
 ) {
@@ -85,7 +193,7 @@ export async function createProperty(
       : null;
     const possibleMatches = await findPossiblePropertyMatches(input);
 
-    const property = await prisma.$transaction(async (tx) => {
+    const { property, membership } = await prisma.$transaction(async (tx) => {
       const created = await propertyRepository.createProperty(
         {
           createdByUserId: providerUserId,
@@ -132,7 +240,7 @@ export async function createProperty(
         tx,
       );
 
-      await tx.propertyProvider.create({
+      const createdMembership = await tx.propertyProvider.create({
         data: {
           propertyId: created.id,
           providerUserId,
@@ -140,7 +248,7 @@ export async function createProperty(
           verificationStatus: VerificationStatus.PENDING,
         },
       });
-      return created;
+      return { property: created, membership: createdMembership };
     });
 
     return {
@@ -151,6 +259,17 @@ export async function createProperty(
           accessInstructions: input.accessInstructions ?? null,
         },
         "SINGLE_PROVIDER",
+        {
+          providerMembership: {
+            id: membership.id,
+            status: membership.status,
+            verificationStatus: membership.verificationStatus,
+            joinedAt: membership.joinedAt,
+            verifiedAt: membership.verifiedAt,
+          },
+          isSoleController: false,
+          buildingManager: null,
+        },
       ),
       possibleMatches,
     };
@@ -163,23 +282,18 @@ export async function listProperties(providerUserId: string) {
   const properties =
     await propertyRepository.findPropertiesByProvider(providerUserId);
   if (properties.length === 0) return [];
-  const counts = await prisma.propertyProvider.groupBy({
-    by: ["propertyId"],
-    where: {
-      propertyId: { in: properties.map((property) => property.id) },
-      ...governanceRepository.activeVerifiedProviderWhere,
-    },
-    _count: { _all: true },
-  });
-  const byProperty = new Map(
-    counts.map((row) => [row.propertyId, row._count._all]),
+  const contexts = await loadProviderPropertyRelationshipContexts(
+    providerUserId,
+    properties.map((property) => property.id),
   );
-  return properties.map((property) =>
-    toOwnerPropertySummary(
+  return properties.map((property) => {
+    const context = contexts.get(property.id);
+    return toOwnerPropertySummary(
       property,
-      governanceModeFromCount(byProperty.get(property.id) ?? 0),
-    ),
-  );
+      context?.governanceMode,
+      context?.relationship,
+    );
+  });
 }
 
 export async function getProperty(providerUserId: string, propertyId: string) {
@@ -193,13 +307,17 @@ export async function getProperty(providerUserId: string, propertyId: string) {
   ) {
     throw propertyErrors.notFound();
   }
-  const providerCount =
-    await governanceRepository.getActiveVerifiedProviderCount(propertyId);
+  const contexts = await loadProviderPropertyRelationshipContexts(
+    providerUserId,
+    [propertyId],
+  );
+  const context = contexts.get(propertyId);
   try {
     return toOwnerPropertyDetail(
       property,
       decryptPropertySensitiveData(property),
-      governanceModeFromCount(providerCount),
+      context?.governanceMode,
+      context?.relationship,
     );
   } catch (error) {
     throwEncryptionFailure(error, propertyId);
@@ -226,19 +344,21 @@ export async function updateProperty(
       changedFields.delete("version");
       const providerCount =
         await governanceRepository.getActiveVerifiedProviderCount(propertyId, tx);
-      const verifiedMembership = await governanceRepository.findActiveVerifiedProviderMembership(
-        providerUserId,
-        propertyId,
-        tx,
-      );
-      const isInitialCreator = Boolean(
-        await governanceRepository.findInitialCreatorMembership(
+      const [verifiedMembership, provisionalMembership] = await Promise.all([
+        governanceRepository.findActiveVerifiedProviderMembership(
           providerUserId,
           propertyId,
           tx,
         ),
-      );
-      if (!verifiedMembership && !isInitialCreator) throw propertyErrors.notFound();
+        governanceRepository.findProvisionalProviderMembership(
+          providerUserId,
+          propertyId,
+          tx,
+        ),
+      ]);
+      if (!verifiedMembership && !provisionalMembership) {
+        throw propertyErrors.notFound();
+      }
       if (providerCount >= 2) {
         throw propertyErrors.sharedPropertyOperationForbidden();
       }
@@ -337,12 +457,16 @@ export async function updateProperty(
       return result;
     });
 
-    const providerCount =
-      await governanceRepository.getActiveVerifiedProviderCount(propertyId);
+    const contexts = await loadProviderPropertyRelationshipContexts(
+      providerUserId,
+      [propertyId],
+    );
+    const context = contexts.get(propertyId);
     return toOwnerPropertyDetail(
       property,
       decryptPropertySensitiveData(property),
-      governanceModeFromCount(providerCount),
+      context?.governanceMode,
+      context?.relationship,
     );
   } catch (error) {
     throwEncryptionFailure(error, propertyId);
@@ -361,17 +485,21 @@ export async function deleteProperty(
       tx,
     );
     if (!existing) throw propertyErrors.notFound();
-    const membership = await governanceRepository.findActiveVerifiedProviderMembership(
-      providerUserId,
-      propertyId,
-      tx,
-    );
-    const initialCreator = await governanceRepository.findInitialCreatorMembership(
-      providerUserId,
-      propertyId,
-      tx,
-    );
-    if (!membership && !initialCreator) throw propertyErrors.notFound();
+    const [verifiedMembership, provisionalMembership] = await Promise.all([
+      governanceRepository.findActiveVerifiedProviderMembership(
+        providerUserId,
+        propertyId,
+        tx,
+      ),
+      governanceRepository.findProvisionalProviderMembership(
+        providerUserId,
+        propertyId,
+        tx,
+      ),
+    ]);
+    if (!verifiedMembership && !provisionalMembership) {
+      throw propertyErrors.notFound();
+    }
     const blockers = await propertyRepository.findPropertyDeleteBlockers(
       propertyId,
       tx,

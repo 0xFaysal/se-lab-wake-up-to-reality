@@ -23,9 +23,9 @@ export async function canManagePropertyCommonRules(
   propertyId: string,
   db?: GovernanceClient,
 ): Promise<boolean> {
-  const [membership, initialCreator, count, manager, admin] = await Promise.all([
+  const [verifiedMembership, provisionalMembership, count, manager, admin] = await Promise.all([
     repository.findActiveVerifiedProviderMembership(userId, propertyId, db),
-    repository.findInitialCreatorMembership(userId, propertyId, db),
+    repository.findProvisionalProviderMembership(userId, propertyId, db),
     repository.getActiveVerifiedProviderCount(propertyId, db),
     repository.findActiveBuildingManager(propertyId, db),
     (db ?? prisma).user.findFirst({
@@ -38,8 +38,8 @@ export async function canManagePropertyCommonRules(
     }),
   ]);
   return (
-    (count === 0 && Boolean(initialCreator)) ||
-    (count === 1 && Boolean(membership)) ||
+    (count === 0 && Boolean(provisionalMembership)) ||
+    (count === 1 && Boolean(verifiedMembership)) ||
     manager?.candidateUserId === userId ||
     Boolean(admin)
   );
@@ -82,7 +82,7 @@ export async function canReadProviderProperty(
   if (admin) return true;
   return Boolean(
     (await repository.findActiveVerifiedProviderMembership(userId, propertyId, db)) ||
-      (await repository.findInitialCreatorMembership(userId, propertyId, db)) ||
+      (await repository.findProvisionalProviderMembership(userId, propertyId, db)) ||
       (await repository.findActiveBuildingManager(propertyId, db))?.candidateUserId === userId ||
       (await repository.findLiveManagerDelegation(
         userId,

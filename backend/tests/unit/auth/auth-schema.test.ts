@@ -20,6 +20,14 @@ describe("registerSchema", () => {
   });
 
   it("allows DRIVER or PROVIDER and normalizes the legacy Provider alias", () => {
+    const provider = registerSchema.parse({
+      body: { ...validBody, role: "PROVIDER" },
+    });
+    const legacyProvider = registerSchema.parse({
+      body: { ...validBody, role: "PARKING_OWNER" },
+    });
+    assert.equal(provider.body.role, "PROVIDER");
+    assert.equal(legacyProvider.body.role, "PROVIDER");
     for (const role of ["GUARD", "ADMIN"]) {
       const result = registerSchema.safeParse({ body: { ...validBody, role } });
       assert.equal(result.success, false);

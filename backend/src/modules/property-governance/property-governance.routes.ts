@@ -7,7 +7,9 @@ import { validate } from "../../common/middleware/validate.js";
 import {
   createPropertyChangeProposalController,
   getBuildingManagerController,
+  getPropertyChangeProposalController,
   leaveProviderMembershipController,
+  listBuildingManagerNominationsController,
   listPropertyChangeProposalsController,
   nominateBuildingManagerController,
   requestProviderMembershipController,
@@ -19,10 +21,12 @@ import {
 } from "./property-governance.controller.js";
 import {
   buildingManagerNominationSchema,
+  buildingManagerVoteSchema,
   commonRulesSchema,
-  governanceVoteSchema,
   membershipVerificationSchema,
   propertyChangeProposalSchema,
+  propertyChangeProposalIdSchema,
+  propertyChangeVoteSchema,
   propertyGovernanceIdSchema,
   temporaryClosureSchema,
 } from "./property-governance.schema.js";
@@ -51,13 +55,28 @@ propertyGovernanceRouter.use((_req, res, next) => {
  *     tags: [Property Governance]
  *     summary: Verify or reject a pending Provider membership
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/GovernanceVoteRequest' }
  *     responses: { 200: { description: Membership verification updated. } }
  * /api/v1/properties/{propertyId}/building-manager/nominations:
  *   post:
  *     tags: [Property Governance]
  *     summary: Nominate a Property-scoped Building Manager
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/BuildingManagerNominationRequest' }
  *     responses: { 201: { description: Nomination created or activated for a sole Provider. } }
+ *   get:
+ *     tags: [Property Governance]
+ *     summary: List Building Manager nomination history and votes
+ *     security: [{ accessCookie: [] }]
+ *     responses: { 200: { description: Authorized nomination history. } }
  * /api/v1/properties/{propertyId}/building-manager:
  *   get:
  *     tags: [Property Governance]
@@ -69,24 +88,44 @@ propertyGovernanceRouter.use((_req, res, next) => {
  *     tags: [Property Governance]
  *     summary: Cast one verified Provider vote on a nomination
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/GovernanceVoteRequest' }
  *     responses: { 200: { description: Vote recorded and unanimity evaluated. }, 409: { description: Duplicate vote or stale nomination. } }
  * /api/v1/properties/{propertyId}/common-rules:
  *   patch:
  *     tags: [Property Governance]
  *     summary: Update shared common rules with live authority and version check
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/CommonPropertyRulesUpdateRequest' }
  *     responses: { 200: { description: Common rules updated. }, 409: { description: Stale Property version. } }
  * /api/v1/properties/{propertyId}/temporary-closure:
  *   patch:
  *     tags: [Property Governance]
  *     summary: Close or reopen a Property temporarily
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/TemporaryClosureUpdateRequest' }
  *     responses: { 200: { description: Temporary closure state updated. } }
  * /api/v1/properties/{propertyId}/change-proposals:
  *   post:
  *     tags: [Property Governance]
  *     summary: Propose a versioned shared change in multi-provider mode
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/PropertyChangeProposalRequest' }
  *     responses: { 201: { description: Proposal and proposer's approval vote created. } }
  *   get:
  *     tags: [Property Governance]
@@ -98,7 +137,18 @@ propertyGovernanceRouter.use((_req, res, next) => {
  *     tags: [Property Governance]
  *     summary: Vote on and conditionally apply a shared change proposal
  *     security: [{ accessCookie: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/GovernanceVoteRequest' }
  *     responses: { 200: { description: Vote recorded; unanimous current approvals apply a non-stale proposal. } }
+ * /api/v1/properties/{propertyId}/change-proposals/{proposalId}:
+ *   get:
+ *     tags: [Property Governance]
+ *     summary: Read one shared Property change proposal and its votes
+ *     security: [{ accessCookie: [] }]
+ *     responses: { 200: { description: Authorized proposal detail. }, 404: { description: Proposal not found in this Property scope. } }
  */
 
 propertyGovernanceRouter.post(
@@ -131,10 +181,15 @@ propertyGovernanceRouter.get(
   validate(propertyGovernanceIdSchema),
   getBuildingManagerController,
 );
+propertyGovernanceRouter.get(
+  "/properties/:propertyId/building-manager/nominations",
+  validate(propertyGovernanceIdSchema),
+  listBuildingManagerNominationsController,
+);
 propertyGovernanceRouter.post(
   "/properties/:propertyId/building-manager/nominations/:assignmentId/vote",
   requireRole(UserRoleType.PROVIDER),
-  validate(governanceVoteSchema),
+  validate(buildingManagerVoteSchema),
   voteBuildingManagerController,
 );
 
@@ -160,9 +215,15 @@ propertyGovernanceRouter.get(
   validate(propertyGovernanceIdSchema),
   listPropertyChangeProposalsController,
 );
+propertyGovernanceRouter.get(
+  "/properties/:propertyId/change-proposals/:proposalId",
+  requireRole(UserRoleType.PROVIDER),
+  validate(propertyChangeProposalIdSchema),
+  getPropertyChangeProposalController,
+);
 propertyGovernanceRouter.post(
   "/properties/:propertyId/change-proposals/:proposalId/vote",
   requireRole(UserRoleType.PROVIDER),
-  validate(governanceVoteSchema),
+  validate(propertyChangeVoteSchema),
   votePropertyChangeProposalController,
 );

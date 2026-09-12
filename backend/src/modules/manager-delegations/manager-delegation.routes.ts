@@ -71,6 +71,12 @@ managerDelegationRouter.get(
  *     summary: Accept a pending Manager delegation
  *     security: [{ accessCookie: [] }]
  *     responses: { 200: { description: Delegation activated. }, 409: { description: State changed or invitation expired. } }
+ * /api/v1/manager/delegations/{delegationId}:
+ *   get:
+ *     tags: [Manager Delegations]
+ *     summary: Get one delegation addressed to the authenticated Manager
+ *     security: [{ accessCookie: [] }]
+ *     responses: { 200: { description: Manager-scoped delegation detail. }, 404: { description: Delegation not found. } }
  * /api/v1/manager/delegations/{delegationId}/reject:
  *   post:
  *     tags: [Manager Delegations]
@@ -103,6 +109,12 @@ managerDelegationRouter.get(
   "/manager/delegations",
   requireRole(UserRoleType.MANAGER),
   controller.listManagerDelegationsController,
+);
+managerDelegationRouter.get(
+  "/manager/delegations/:delegationId",
+  requireRole(UserRoleType.MANAGER),
+  validate(managerDelegationIdSchema),
+  controller.getManagerDelegationController,
 );
 managerDelegationRouter.post(
   "/manager/delegations/:delegationId/accept",

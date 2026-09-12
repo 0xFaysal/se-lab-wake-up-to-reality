@@ -21,6 +21,18 @@ function requirePropertyId(req: Request): string {
   return propertyId;
 }
 
+function requireDuplicatePropertyId(req: Request): string {
+  const duplicateId = req.params.duplicateId;
+  if (typeof duplicateId !== "string") {
+    throw new AppError({
+      statusCode: 400,
+      code: "VALIDATION_ERROR",
+      message: "Duplicate Property ID must be a valid UUID",
+    });
+  }
+  return duplicateId;
+}
+
 function responseMeta(req: Request) {
   return { requestId: req.requestId, timestamp: new Date().toISOString() };
 }
@@ -94,6 +106,29 @@ export const mergeAdminPropertiesController: RequestHandler = async (
     const merge = await adminPropertyService.mergeDuplicateProperties(
       requireAdminUserId(req),
       req.body,
+    );
+    res.status(200).json({
+      success: true,
+      data: { merge },
+      meta: responseMeta(req),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const mergeAdminPropertyByIdController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const merge = await adminPropertyService.mergeDuplicateProperties(
+      requireAdminUserId(req),
+      {
+        ...req.body,
+        duplicatePropertyId: requireDuplicatePropertyId(req),
+      },
     );
     res.status(200).json({
       success: true,

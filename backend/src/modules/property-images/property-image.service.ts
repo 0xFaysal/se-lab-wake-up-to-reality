@@ -67,12 +67,12 @@ async function cleanupStoredImages(
 }
 
 export async function uploadPropertyImages(
-  ownerUserId: string,
+  actorUserId: string,
   propertyId: string,
   files: Express.Multer.File[],
 ) {
   if (files.length === 0) throw propertyImageErrors.required();
-  await requirePropertyImageMutationAccess(ownerUserId, propertyId);
+  await requirePropertyImageMutationAccess(actorUserId, propertyId);
 
   const validatedFiles = await Promise.all(
     files.map(validatePropertyImageFile),
@@ -100,7 +100,7 @@ export async function uploadPropertyImages(
       const property = await propertyRepository.findPropertyById(propertyId, tx);
       if (
         !property ||
-        !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+        !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
       ) throw propertyErrors.sharedPropertyOperationForbidden();
 
       const currentCount = await propertyImageRepository.countPropertyImages(
@@ -149,16 +149,16 @@ export async function uploadPropertyImages(
 }
 
 export async function listPropertyImages(
-  ownerUserId: string,
+  actorUserId: string,
   propertyId: string,
 ) {
-  await requirePropertyImageReadAccess(ownerUserId, propertyId);
+  await requirePropertyImageReadAccess(actorUserId, propertyId);
   const images = await propertyImageRepository.findPropertyImages(propertyId);
   return images.map(toPropertyImageDto);
 }
 
 export async function reorderPropertyImages(
-  ownerUserId: string,
+  actorUserId: string,
   propertyId: string,
   input: ReorderPropertyImagesInput,
 ) {
@@ -167,7 +167,7 @@ export async function reorderPropertyImages(
     const property = await propertyRepository.findPropertyById(propertyId, tx);
     if (
       !property ||
-      !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+      !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
     ) throw propertyErrors.sharedPropertyOperationForbidden();
 
     const currentImages = await propertyImageRepository.findPropertyImages(
@@ -205,7 +205,7 @@ export async function reorderPropertyImages(
 }
 
 export async function deletePropertyImage(
-  ownerUserId: string,
+  actorUserId: string,
   propertyId: string,
   imageId: string,
 ): Promise<void> {
@@ -214,7 +214,7 @@ export async function deletePropertyImage(
     const property = await propertyRepository.findPropertyById(propertyId, tx);
     if (
       !property ||
-      !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+      !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
     ) throw propertyErrors.sharedPropertyOperationForbidden();
 
     const existingImage = await propertyImageRepository.findPropertyImage(
@@ -237,7 +237,7 @@ export async function deletePropertyImage(
     const property = await propertyRepository.findPropertyById(propertyId, tx);
     if (
       !property ||
-      !(await canManageSharedPropertyImages(ownerUserId, propertyId, tx))
+      !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
     ) throw propertyErrors.sharedPropertyOperationForbidden();
     const currentImage = await propertyImageRepository.findPropertyImage(
       propertyId,

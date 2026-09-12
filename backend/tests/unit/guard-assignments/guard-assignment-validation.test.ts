@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addPropertyGuardSchema, createProviderGuardAssignmentSchema, updateGuardAssignmentSchema } from "../../../src/modules/guard-assignments/guard-assignment.schema.js";
+import {
+  addPropertyGuardSchema,
+  createCanonicalProviderGuardAssignmentSchema,
+  createProviderGuardAssignmentSchema,
+  updateGuardAssignmentSchema,
+} from "../../../src/modules/guard-assignments/guard-assignment.schema.js";
 
 const propertyId = "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56";
 const membershipId = "65bb81d0-90ca-49bb-a918-bb1db912d352";
+const providerMembershipId = "3ec149eb-1c2f-45d7-84fa-4a1df93a402f";
 const assignmentId = "1ab8bbeb-9668-4d1d-a798-7bc07162c720";
 
 describe("normalized Guard request validation", () => {
@@ -13,6 +19,27 @@ describe("normalized Guard request validation", () => {
       params: { propertyId },
       body: { guardMembershipId: membershipId, shiftStart: "08:00", shiftEnd: "20:00" },
     }).success, true);
+    assert.equal(createProviderGuardAssignmentSchema.safeParse({
+      params: { propertyId },
+      body: {
+        guardMembershipId: membershipId,
+        providerMembershipId,
+        shiftStart: "08:00",
+        shiftEnd: "20:00",
+      },
+    }).success, true);
+    assert.equal(createCanonicalProviderGuardAssignmentSchema.safeParse({
+      body: {
+        propertyId,
+        guardMembershipId: membershipId,
+        providerMembershipId,
+        shiftStart: "08:00",
+        shiftEnd: "20:00",
+      },
+    }).success, true);
+    assert.equal(createCanonicalProviderGuardAssignmentSchema.safeParse({
+      body: { guardMembershipId: membershipId, shiftStart: "08:00", shiftEnd: "20:00" },
+    }).success, false);
   });
 
   it("rejects invalid or overnight shifts", () => {

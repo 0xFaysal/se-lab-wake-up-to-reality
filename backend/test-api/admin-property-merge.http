@@ -1,0 +1,37 @@
+@baseUrl = http://localhost:4000/api/v1
+@adminEmail = admin@example.com
+@adminPassword = StrongAdmin123!
+@canonicalPropertyId = replace-with-canonical-property-id
+@duplicatePropertyId = replace-with-duplicate-property-id
+@canonicalVersion = 1
+@duplicateVersion = 1
+
+### Admin login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{adminEmail}}", "password": "{{adminPassword}}" }
+
+### Canonical merge endpoint with optimistic versions
+POST {{baseUrl}}/admin/properties/{{duplicatePropertyId}}/merge
+Content-Type: application/json
+
+{
+  "canonicalPropertyId": "{{canonicalPropertyId}}",
+  "canonicalVersion": {{canonicalVersion}},
+  "duplicateVersion": {{duplicateVersion}},
+  "reason": "Confirmed duplicate after address and supporting document review"
+}
+
+### Deprecated compatibility endpoint
+POST {{baseUrl}}/admin/properties/merge
+Content-Type: application/json
+
+{
+  "canonicalPropertyId": "{{canonicalPropertyId}}",
+  "duplicatePropertyId": "{{duplicatePropertyId}}",
+  "canonicalVersion": {{canonicalVersion}},
+  "duplicateVersion": {{duplicateVersion}},
+  "reason": "Confirmed duplicate after address and supporting document review"
+}
+

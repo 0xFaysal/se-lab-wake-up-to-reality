@@ -58,12 +58,11 @@ POST {{baseUrl}}/properties/{{propertyId}}/change-proposals
 Content-Type: application/json
 
 {
-  "changeType": "TEMPORARY_CLOSURE",
+  "changeType": "COMMON_RULES",
   "baseVersion": 1,
   "changes": {
-    "action": "CLOSE",
-    "reason": "Scheduled electrical maintenance",
-    "until": "2026-09-15T12:00:00.000Z"
+    "visitorIdentificationRequired": true,
+    "generalParkingRules": "No overnight parking without prior approval"
   }
 }
 
@@ -77,12 +76,11 @@ Content-Type: application/json
 { "decision": "APPROVE" }
 
 ### Admin merges duplicate into canonical Property using optimistic versions
-POST {{baseUrl}}/admin/properties/merge
+POST {{baseUrl}}/admin/properties/replace-with-duplicate-property-id/merge
 Content-Type: application/json
 
 {
   "canonicalPropertyId": "{{propertyId}}",
-  "duplicatePropertyId": "replace-with-duplicate-property-id",
   "canonicalVersion": 1,
   "duplicateVersion": 1,
   "reason": "Confirmed duplicate after address and document review"

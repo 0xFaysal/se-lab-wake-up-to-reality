@@ -31,6 +31,9 @@ export const listManagerDelegationsController: RequestHandler = async (req, res,
 export const getProviderDelegationController: RequestHandler = async (req, res, next) => {
   try { respond(req, res, { delegation: await service.getProviderDelegation(userId(req), delegationId(req)) }); } catch (error) { next(error); }
 };
+export const getManagerDelegationController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { delegation: await service.getManagerDelegation(userId(req), delegationId(req)) }); } catch (error) { next(error); }
+};
 export const updateManagerDelegationController: RequestHandler = async (req, res, next) => {
   try { respond(req, res, { delegation: await service.updateManagerDelegationPermissions(userId(req), delegationId(req), req.body) }); } catch (error) { next(error); }
 };

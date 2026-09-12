@@ -83,6 +83,15 @@ export const getBuildingManagerController = handler(async (req) => ({
   ),
 }));
 
+export const listBuildingManagerNominationsController = handler(
+  async (req) => ({
+    assignments: await service.listBuildingManagerNominations(
+      param(req, "propertyId"),
+      userId(req),
+    ),
+  }),
+);
+
 export const voteBuildingManagerController = handler(async (req) => ({
   assignment: await service.voteForBuildingManager(
     userId(req),
@@ -123,6 +132,14 @@ export const listPropertyChangeProposalsController = handler(async (req) => ({
   proposals: await service.listPropertyChangeProposals(
     userId(req),
     param(req, "propertyId"),
+  ),
+}));
+
+export const getPropertyChangeProposalController = handler(async (req) => ({
+  proposal: await service.getPropertyChangeProposal(
+    userId(req),
+    param(req, "propertyId"),
+    param(req, "proposalId"),
   ),
 }));
 
