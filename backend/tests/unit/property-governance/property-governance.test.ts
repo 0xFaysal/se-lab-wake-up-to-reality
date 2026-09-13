@@ -22,6 +22,7 @@ describe("Property governance invariants", () => {
   function fakeDb(input: {
     verifiedMembership?: boolean;
     provisionalMembership?: boolean;
+    activeMembership?: boolean;
     providerCount: number;
     managerUserId?: string;
     admin?: boolean;
@@ -30,11 +31,11 @@ describe("Property governance invariants", () => {
       propertyProvider: {
         findFirst: async (args: { where: { property?: unknown; verificationStatus?: unknown } }) => {
           if (args.where.property) {
-            return input.provisionalMembership
+            return (input.provisionalMembership || input.activeMembership)
               ? { id: "provisional-membership" }
               : null;
           }
-          return input.verifiedMembership
+          return (input.verifiedMembership || input.activeMembership)
             ? { id: "verified-membership" }
             : null;
         },
