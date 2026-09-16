@@ -27,6 +27,7 @@ export interface PermissionsProviderProps {
   initialPropertyId?: string;
   initialPermissions?: Partial<NormalizedPermissions>;
   allowFinancialAccess?: boolean;
+  enforceManagerScope?: boolean;
 }
 
 export function PermissionsProvider({
@@ -35,6 +36,7 @@ export function PermissionsProvider({
   initialPropertyId = "prop-gulshan-1",
   initialPermissions,
   allowFinancialAccess = false,
+  enforceManagerScope = false,
 }: PermissionsProviderProps) {
   const { data: user } = useCurrentUser();
 
@@ -65,18 +67,18 @@ export function PermissionsProvider({
   const isManager = Boolean(user?.roles?.includes("MANAGER") || !isOwner);
 
   const hasPermission = (permission: AppPermission): boolean => {
-    // Owners always have full permissions
-    if (isOwner && !isManager) return true;
+    // When enforceManagerScope is true, strictly respect the manager permissions
+    if (!enforceManagerScope && isOwner && !isManager) return true;
     return Boolean(permissions[permission]);
   };
 
   const hasAnyPermission = (perms: AppPermission[]): boolean => {
-    if (isOwner && !isManager) return true;
+    if (!enforceManagerScope && isOwner && !isManager) return true;
     return perms.some((p) => Boolean(permissions[p]));
   };
 
   const hasAllPermissions = (perms: AppPermission[]): boolean => {
-    if (isOwner && !isManager) return true;
+    if (!enforceManagerScope && isOwner && !isManager) return true;
     return perms.every((p) => Boolean(permissions[p]));
   };
 
