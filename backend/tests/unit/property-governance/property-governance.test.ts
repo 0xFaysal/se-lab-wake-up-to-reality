@@ -36,7 +36,7 @@ describe("Property governance invariants", () => {
               ? { id: "provisional-membership" }
               : null;
           }
-          return input.verifiedMembership
+          return (input.verifiedMembership || input.activeMembership)
             ? { id: "verified-membership" }
             : null;
         },
