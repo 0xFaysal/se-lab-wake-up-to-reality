@@ -1601,6 +1601,132 @@ export const openApiSchemas = {
     },
     required: ["success", "data", "meta"],
   },
+  ParkingResource: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      propertyId: { type: "string", format: "uuid" },
+      resourceType: { type: "string", enum: ["FIXED_SPACE", "SHARED_POOL"] },
+      displayName: { type: "string" },
+      spotCode: { type: "string", nullable: true },
+      capacity: { type: "integer", minimum: 1 },
+      supportedVehicleTypes: { type: "array", items: { type: "string" } },
+      isCovered: { type: "boolean" },
+      status: { type: "string" },
+    },
+    required: ["id", "propertyId", "resourceType", "displayName", "capacity", "status"],
+  },
+  ParkingRight: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      parkingSpotId: { type: "string", format: "uuid" },
+      rightType: { type: "string", enum: ["OWNERSHIP", "LEASE", "MANAGEMENT", "USE_ONLY"] },
+      status: { type: "string", enum: ["PENDING_VERIFICATION", "VERIFIED", "REJECTED", "DISPUTED", "REVOKED"] },
+      quantity: { type: "integer", minimum: 1 },
+      canList: { type: "boolean" },
+      validFrom: { type: "string", format: "date-time" },
+      validUntil: { type: "string", format: "date-time", nullable: true },
+    },
+    required: ["id", "parkingSpotId", "rightType", "status", "quantity", "canList", "validFrom"],
+  },
+  ParkingListing: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      parkingSpotId: { type: "string", format: "uuid" },
+      parkingRightId: { type: "string", format: "uuid" },
+      title: { type: "string" },
+      status: { type: "string", enum: ["DRAFT", "ACTIVE", "PAUSED", "SUSPENDED", "ENDED"] },
+      pricePerHourPaisa: { type: "string", example: "5000" },
+      securityDepositPaisa: { type: "string", example: "0" },
+      allowedVehicleTypes: { type: "array", items: { type: "string" } },
+    },
+    required: ["id", "parkingSpotId", "parkingRightId", "title", "status", "pricePerHourPaisa"],
+  },
+  AvailabilityRule: {
+    type: "object",
+    properties: {
+      dayOfWeek: { type: "integer", minimum: 0, maximum: 6 },
+      startLocalTime: { type: "string", example: "08:00" },
+      endLocalTime: { type: "string", example: "22:00" },
+      isAvailable: { type: "boolean" },
+      timeZone: { type: "string", enum: ["Asia/Dhaka"] },
+    },
+  },
+  BookingQuote: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      listingId: { type: "string", format: "uuid" },
+      startAt: { type: "string", format: "date-time" },
+      endAt: { type: "string", format: "date-time" },
+      totalAmountPaisa: { type: "string" },
+      expiresAt: { type: "string", format: "date-time" },
+    },
+  },
+  ReservationHold: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      status: { type: "string", enum: ["ACTIVE", "CONSUMED", "RELEASED", "EXPIRED"] },
+      expiresAt: { type: "string", format: "date-time" },
+    },
+  },
+  Booking: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      bookingCode: { type: "string" },
+      status: { type: "string", enum: ["PAYMENT_PENDING", "CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED", "COMPLETED", "CANCELLED", "EXPIRED", "NO_SHOW", "DISPUTED"] },
+      totalAmountPaisa: { type: "string" },
+      startAt: { type: "string", format: "date-time" },
+      scheduledEndAt: { type: "string", format: "date-time" },
+    },
+  },
+  AccessCredential: {
+    type: "object",
+    description: "Raw credential is returned once after successful payment; only its hash is stored.",
+    properties: { accessCredential: { type: "string", writeOnly: true } },
+  },
+  Payment: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      status: { type: "string", enum: ["PENDING", "CAPTURED", "FAILED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+      amountPaisa: { type: "string" },
+      providerReference: { type: "string", nullable: true },
+    },
+  },
+  Wallet: {
+    type: "object",
+    properties: {
+      currency: { type: "string", enum: ["BDT"] },
+      availableBalancePaisa: { type: "string" },
+      pendingBalancePaisa: { type: "string" },
+      heldBalancePaisa: { type: "string" },
+    },
+  },
+  Refund: {
+    type: "object",
+    properties: { id: { type: "string", format: "uuid" }, amountPaisa: { type: "string" }, status: { type: "string" } },
+  },
+  Payout: {
+    type: "object",
+    properties: { id: { type: "string", format: "uuid" }, amountPaisa: { type: "string" }, status: { type: "string" } },
+  },
+  Notification: {
+    type: "object",
+    properties: { id: { type: "string", format: "uuid" }, type: { type: "string" }, title: { type: "string" }, message: { type: "string" }, readAt: { type: "string", format: "date-time", nullable: true } },
+  },
+  Review: {
+    type: "object",
+    properties: { id: { type: "string", format: "uuid" }, rating: { type: "integer", minimum: 1, maximum: 5 }, comment: { type: "string", nullable: true }, providerReply: { type: "string", nullable: true } },
+  },
+  Dispute: {
+    type: "object",
+    properties: { id: { type: "string", format: "uuid" }, category: { type: "string" }, status: { type: "string" }, description: { type: "string" }, resolution: { type: "string", nullable: true } },
+  },
 } as const;
 
 export const openApiResponses = {

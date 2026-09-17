@@ -344,13 +344,20 @@ integration("parking owner property management integration", () => {
         verifiedAt: new Date(),
       },
     });
+    await prisma.propertyProvider.updateMany({
+      where: { propertyId, providerUserId: userIds[0]! },
+      data: {
+        status: generated.PropertyProviderStatus.ACTIVE,
+        verificationStatus: generated.VerificationStatus.VERIFIED,
+        verifiedAt: new Date(),
+      },
+    });
 
     const response = await request(`/api/v1/owner/properties/${propertyId}`, {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
       body: JSON.stringify({
         version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
-        name: "Gulshan Secure Parking",
         accessInstructions: "Use Gate B and call the desk",
       }),
     });

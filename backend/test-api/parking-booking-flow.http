@@ -1,0 +1,73 @@
+@baseUrl = http://localhost:4000/api/v1
+@driverEmail = driver@example.com
+@driverPassword = StrongDriver123!
+@listingId = replace-listing-id
+@vehicleId = replace-vehicle-id
+@quoteId = replace-quote-id
+@holdId = replace-hold-id
+@bookingId = replace-booking-id
+@startAt = 2026-09-20T04:00:00.000Z
+@endAt = 2026-09-20T06:00:00.000Z
+
+### Public search (one marker per Property)
+GET {{baseUrl}}/parking/search?latitude=23.7949&longitude=90.4143&radiusKm=5&startAt={{startAt}}&endAt={{endAt}}&vehicleType=SEDAN
+
+### Login as Driver
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{driverEmail}}",
+  "password": "{{driverPassword}}"
+}
+
+### Get authoritative five-minute quote
+POST {{baseUrl}}/parking/quotes
+Content-Type: application/json
+
+{
+  "listingId": "{{listingId}}",
+  "vehicleId": "{{vehicleId}}",
+  "startAt": "{{startAt}}",
+  "endAt": "{{endAt}}"
+}
+
+### Atomically hold capacity
+POST {{baseUrl}}/parking/holds
+Content-Type: application/json
+
+{
+  "quoteId": "{{quoteId}}",
+  "idempotencyKey": "rest-hold-{{$guid}}"
+}
+
+### Create payment-pending booking from hold
+POST {{baseUrl}}/bookings
+Content-Type: application/json
+
+{
+  "holdId": "{{holdId}}",
+  "idempotencyKey": "rest-booking-{{$guid}}"
+}
+
+### Simulate payment capture (save the one-time accessCredential from response)
+POST {{baseUrl}}/payments/simulated/capture
+Content-Type: application/json
+
+{
+  "bookingId": "{{bookingId}}",
+  "idempotencyKey": "rest-payment-{{$guid}}"
+}
+
+### Request checkout after Guard check-in
+POST {{baseUrl}}/bookings/{{bookingId}}/checkout-request
+
+### Review completed booking
+POST {{baseUrl}}/bookings/{{bookingId}}/reviews
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Smooth entry and checkout."
+}
+

@@ -1006,24 +1006,39 @@ export function OwnerDashboardView({
             {/* Vertical Timeline */}
             <div className="relative pl-5 space-y-5 border-l-2 border-slate-100 ml-2">
               {MOCK_OWNER_ACTIVITIES.map((activity) => {
+
                 const isEmerald =
                   activity.type === "manager" || activity.type === "booking";
+
+                const nodeColor =
+                  activity.type === "manager"
+                    ? "bg-[#064E3B]"
+                    : activity.type === "booking"
+                    ? "bg-emerald-600"
+                    : activity.type === "guard"
+                    ? "bg-indigo-600"
+                    : "bg-slate-400";
 
                 return (
                   <div key={activity.id} className="relative">
                     {/* Timeline Node Dot */}
                     <span
-                      className={`absolute -left-[27px] top-1 size-3 rounded-full ring-4 ring-white ${
-                        isEmerald ? "bg-emerald-600" : "bg-slate-400"
-                      }`}
+                      className={`absolute -left-[27px] top-1 size-3 rounded-full ring-4 ring-white ${nodeColor}`}
                     />
 
                     {/* Activity Content */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-900 font-heading">
-                          {activity.title}
-                        </h4>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-slate-900 font-heading">
+                            {activity.title}
+                          </h4>
+                          {activity.type === "manager" && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              Manager
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
                           {activity.description}
                         </p>

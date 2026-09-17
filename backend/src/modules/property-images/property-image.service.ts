@@ -43,7 +43,7 @@ async function requirePropertyImageMutationAccess(
   const property = await propertyRepository.findPropertyById(propertyId);
   if (!property) throw propertyErrors.notFound();
   if (!(await canManageSharedPropertyImages(userId, propertyId))) {
-    throw propertyErrors.sharedPropertyOperationForbidden();
+    throw propertyErrors.notFound();
   }
   return property;
 }
@@ -99,9 +99,9 @@ export async function uploadPropertyImages(
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
       const property = await propertyRepository.findPropertyById(propertyId, tx);
       if (
-        !property ||
-        !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-      ) throw propertyErrors.sharedPropertyOperationForbidden();
+      !property ||
+      !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
+      ) throw propertyErrors.notFound();
 
       const currentCount = await propertyImageRepository.countPropertyImages(
         propertyId,
@@ -168,7 +168,7 @@ export async function reorderPropertyImages(
     if (
       !property ||
       !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-    ) throw propertyErrors.sharedPropertyOperationForbidden();
+    ) throw propertyErrors.notFound();
 
     const currentImages = await propertyImageRepository.findPropertyImages(
       propertyId,
@@ -215,7 +215,7 @@ export async function deletePropertyImage(
     if (
       !property ||
       !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-    ) throw propertyErrors.sharedPropertyOperationForbidden();
+    ) throw propertyErrors.notFound();
 
     const existingImage = await propertyImageRepository.findPropertyImage(
       propertyId,

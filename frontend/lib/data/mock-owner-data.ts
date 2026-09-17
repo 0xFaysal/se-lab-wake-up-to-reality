@@ -414,22 +414,30 @@ export const MOCK_ALL_BOOKINGS: OwnerBooking[] = [
 export const MOCK_OWNER_ACTIVITIES: OwnerActivity[] = [
   {
     id: "act-1",
-    title: "Manager Assignment Updated",
-    description: "Rahim Uddin was assigned to Office Parking, Banani.",
-    timestamp: "20 mins ago",
+    title: "Manager Assigned",
+    description: "Tanvir Ahmed assigned to Gulshan Residential.",
+    timestamp: "10 mins ago",
     type: "manager",
     isImportant: true,
   },
   {
     id: "act-2",
-    title: "New Booking Confirmed",
-    description: "Spot 3 reserved for Farhan Ahmed.",
-    timestamp: "45 mins ago",
-    type: "booking",
+    title: "Financial Access Granted",
+    description: "Settings updated for Manager Karim.",
+    timestamp: "35 mins ago",
+    type: "manager",
     isImportant: true,
   },
   {
     id: "act-3",
+    title: "New Booking Confirmed",
+    description: "Spot 3 reserved for Farhan Ahmed.",
+    timestamp: "1 hr ago",
+    type: "booking",
+    isImportant: true,
+  },
+  {
+    id: "act-4",
     title: "Guard Check-In",
     description: "Guard Tariqul verified at Gulshan facility.",
     timestamp: "2 hrs ago",
@@ -437,7 +445,7 @@ export const MOCK_OWNER_ACTIVITIES: OwnerActivity[] = [
     isImportant: false,
   },
   {
-    id: "act-4",
+    id: "act-5",
     title: "Listing Status",
     description: "Residential Building, Gulshan operating at standard tariff.",
     timestamp: "4 hrs ago",
@@ -1235,7 +1243,89 @@ export const MOCK_OWNER_MANAGERS: OwnerManager[] = [
 ];
 
 
+export interface ManagerPermissions {
+  canManageListings: boolean;
+  canManageBookings: boolean;
+  canManageGuards: boolean;
+  canRespondReviews: boolean;
+  canAccessFinancials: boolean;
+}
 
+export interface OwnerManager {
+  id: string;
+  name: string;
+  initials: string;
+  phone: string;
+  email: string;
+  avatarUrl?: string;
+  assignedPropertyIds: string[];
+  assignedPropertyTitles: string[];
+  permissions: ManagerPermissions;
+  status: "ACTIVE" | "PENDING_ACTIVATION" | "SUSPENDED";
+  joinedDate: string;
+  lastActive?: string;
+  notes?: string;
+}
 
-
-
+export const MOCK_OWNER_MANAGERS: OwnerManager[] = [
+  {
+    id: "mgr-1",
+    name: "Rahim Uddin",
+    initials: "RU",
+    phone: "+880 1712-345678",
+    email: "rahim.uddin@parkease.bd",
+    assignedPropertyIds: ["prop-gulshan-1", "prop-banani-2"],
+    assignedPropertyTitles: ["Residential Building, Gulshan", "Office Parking, Banani"],
+    permissions: {
+      canManageListings: true,
+      canManageBookings: true,
+      canManageGuards: true,
+      canRespondReviews: true,
+      canAccessFinancials: false,
+    },
+    status: "ACTIVE",
+    joinedDate: "15 Jan 2026",
+    lastActive: "12 mins ago",
+    notes: "Senior site manager supervising Gulshan & Banani hubs.",
+  },
+  {
+    id: "mgr-2",
+    name: "Kazi Farhan",
+    initials: "KF",
+    phone: "+880 1819-876543",
+    email: "kazi.farhan@gmail.com",
+    assignedPropertyIds: ["prop-dhanmondi-3"],
+    assignedPropertyTitles: ["Apartment Parking, Dhanmondi"],
+    permissions: {
+      canManageListings: true,
+      canManageBookings: true,
+      canManageGuards: true,
+      canRespondReviews: false,
+      canAccessFinancials: true,
+    },
+    status: "ACTIVE",
+    joinedDate: "02 Feb 2026",
+    lastActive: "1 hour ago",
+    notes: "Entrusted with financial overview and monthly settlement reconciliation.",
+  },
+  {
+    id: "mgr-3",
+    name: "Nasir Chowdhury",
+    initials: "NC",
+    phone: "+880 1911-223344",
+    email: "nasir.chowdhury@outlook.com",
+    assignedPropertyIds: [],
+    assignedPropertyTitles: [],
+    permissions: {
+      canManageListings: true,
+      canManageBookings: true,
+      canManageGuards: false,
+      canRespondReviews: false,
+      canAccessFinancials: false,
+    },
+    status: "PENDING_ACTIVATION",
+    joinedDate: "10 Mar 2026",
+    lastActive: "Never",
+    notes: "Invitation code sent. Awaiting initial password creation.",
+  },
+];
