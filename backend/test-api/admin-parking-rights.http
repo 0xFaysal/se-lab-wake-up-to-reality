@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:4000/api/v1
+@adminEmail = admin@parkease.local
+@adminPassword = replace-admin-password
+@rightId = replace-right-id
+@listingId = replace-listing-id
+@payoutId = replace-payout-id
+@disputeId = replace-dispute-id
+
+### Login as Admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### List pending right claims
+GET {{baseUrl}}/admin/parking-rights/pending
+
+### Verify a commercially valid right
+PATCH {{baseUrl}}/admin/parking-rights/{{rightId}}/verification
+Content-Type: application/json
+
+{
+  "decision": "VERIFIED"
+}
+
+### Suspend an unsafe or ineligible listing
+POST {{baseUrl}}/admin/listings/{{listingId}}/suspend
+Content-Type: application/json
+
+{
+  "reason": "Commercial parking authority is under administrative review."
+}
+
+### List pending Provider payouts
+GET {{baseUrl}}/admin/payouts?status=PENDING
+
+### Approve a payout request
+PATCH {{baseUrl}}/admin/payouts/{{payoutId}}
+Content-Type: application/json
+
+{
+  "decision": "APPROVED",
+  "note": "Provider and available balance verified."
+}
+
+### Mark an approved payout paid (simulated settlement)
+PATCH {{baseUrl}}/admin/payouts/{{payoutId}}
+Content-Type: application/json
+
+{
+  "decision": "PAID",
+  "note": "Simulated payout settlement completed."
+}
+
+### List open disputes
+GET {{baseUrl}}/admin/disputes?status=OPEN
+
+### Resolve a dispute
+PATCH {{baseUrl}}/admin/disputes/{{disputeId}}
+Content-Type: application/json
+
+{
+  "decision": "RESOLVED",
+  "resolution": "Evidence was reviewed and the parties were notified of the decision."
+}

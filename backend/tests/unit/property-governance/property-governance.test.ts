@@ -95,7 +95,7 @@ describe("Property governance invariants", () => {
     assert.equal(await canManagePropertyCommonRules("creator-without-membership", propertyId, fakeDb({ providerCount: 0 })), false);
     assert.equal(await canManagePropertyCommonRules("provider", propertyId, fakeDb({ verifiedMembership: true, providerCount: 1 })), true);
     assert.equal(await canManagePropertyCommonRules("provider", propertyId, fakeDb({ verifiedMembership: true, providerCount: 2 })), false);
-    assert.equal(await canManagePropertyCommonRules("pending-provider", propertyId, fakeDb({ activeMembership: true, providerCount: 0 })), true);
+    assert.equal(await canManagePropertyCommonRules("pending-provider", propertyId, fakeDb({ provisionalMembership: true, providerCount: 0 })), true);
     assert.equal(await canManagePropertyCommonRules("creator-only", propertyId, fakeDb({ providerCount: 0 })), false);
     assert.equal(await canManagePropertyCommonRules("manager", propertyId, fakeDb({ providerCount: 3, managerUserId: "manager" })), true);
     assert.equal(await canManagePropertyCommonRules("unrelated", propertyId, fakeDb({ providerCount: 1 })), false);

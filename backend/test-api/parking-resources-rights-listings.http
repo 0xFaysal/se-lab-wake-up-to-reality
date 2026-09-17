@@ -1,0 +1,86 @@
+@baseUrl = http://localhost:4000/api/v1
+@providerEmail = provider@example.com
+@providerPassword = StrongProvider123!
+@propertyId = replace-property-id
+@resourceId = replace-resource-id
+@rightId = replace-right-id
+@listingId = replace-listing-id
+
+### Login as verified Provider (REST Client must remember cookies)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{providerEmail}}",
+  "password": "{{providerPassword}}"
+}
+
+### Create a real fixed space
+POST {{baseUrl}}/provider/properties/{{propertyId}}/parking-resources
+Content-Type: application/json
+
+{
+  "type": "FIXED_SPACE",
+  "displayName": "Basement Slot A-01",
+  "spotCode": "A-01",
+  "floor": "Basement 1",
+  "zone": "East",
+  "capacity": 1,
+  "supportedVehicleTypes": ["SEDAN", "SUV"],
+  "isCovered": true,
+  "hasCctv": true,
+  "hasGuard": true,
+  "maxHeightCm": 220
+}
+
+### List Property resources
+GET {{baseUrl}}/provider/properties/{{propertyId}}/parking-resources
+
+### Submit ownership claim (Admin must verify before listing activation)
+POST {{baseUrl}}/provider/parking-resources/{{resourceId}}/rights/claims
+Content-Type: application/json
+
+{
+  "rightType": "OWNERSHIP",
+  "quantity": 1,
+  "canUse": true,
+  "canList": true,
+  "canSetPrice": true,
+  "canManageBookings": true,
+  "canDelegateManager": true
+}
+
+### Create draft listing after right verification
+POST {{baseUrl}}/provider/listings
+Content-Type: application/json
+
+{
+  "parkingRightId": "{{rightId}}",
+  "title": "Covered basement parking",
+  "description": "Guarded fixed parking near the main entrance.",
+  "pricePerHourPaisa": "6000",
+  "minDurationMinutes": 60,
+  "maxDurationMinutes": 720,
+  "allowedVehicleTypes": ["SEDAN", "SUV"],
+  "securityDepositPaisa": "10000"
+}
+
+### Replace weekly Asia/Dhaka schedule
+PUT {{baseUrl}}/provider/parking-resources/{{resourceId}}/availability
+Content-Type: application/json
+
+{
+  "rules": [
+    { "dayOfWeek": 0, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" },
+    { "dayOfWeek": 1, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" },
+    { "dayOfWeek": 2, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" },
+    { "dayOfWeek": 3, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" },
+    { "dayOfWeek": 4, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" },
+    { "dayOfWeek": 5, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" },
+    { "dayOfWeek": 6, "startLocalTime": "08:00", "endLocalTime": "22:00", "validFrom": "2026-01-01" }
+  ]
+}
+
+### Activate listing
+POST {{baseUrl}}/provider/listings/{{listingId}}/activate
+

@@ -25,6 +25,7 @@ import { guardAssignmentRouter } from "./modules/guard-assignments/guard-assignm
 import { propertyGovernanceRouter } from "./modules/property-governance/property-governance.routes.js";
 import { managerDelegationRouter } from "./modules/manager-delegations/manager-delegation.routes.js";
 import { propertyImageRouter } from "./modules/property-images/property-image.routes.js";
+import { marketplaceRouter } from "./modules/marketplace/marketplace.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -155,6 +156,7 @@ app.use("/api/v1", guardAssignmentRouter);
 app.use("/api/v1/admin/properties", adminPropertyRouter);
 app.use("/api/v1", propertyGovernanceRouter);
 app.use("/api/v1", managerDelegationRouter);
+app.use("/api/v1", marketplaceRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
