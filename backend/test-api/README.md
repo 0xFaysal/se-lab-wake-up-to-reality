@@ -37,3 +37,8 @@ canonical membership, voting, shared-change, duplicate-detection, and merge
 flows. The older `guard-assignments.http` remains as a compatibility example.
 Replace placeholder identifiers with seeded or locally created records before
 running those requests.
+
+The marketplace flow is split across `parking-resources-rights-listings.http`,
+`admin-parking-rights.http`, `parking-booking-flow.http`,
+`guard-booking-operations.http`, and `marketplace-finance-operations.http`.
+Run Provider setup and Admin right verification before the Driver booking flow.

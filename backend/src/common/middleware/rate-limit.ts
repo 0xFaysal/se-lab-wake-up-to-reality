@@ -50,9 +50,12 @@ function createRateLimit(options: RateLimitOptions): RequestHandler {
       const identities = options.identities?.(req) ?? [
         { value: `ip:${req.ip ?? "unknown"}`, limit: options.limit },
       ];
+      const testNamespace = process.env.NODE_ENV === "test"
+        ? `test:${process.pid}:`
+        : "";
       const keys = identities.map(
         (identity) =>
-          `rate-limit:${options.keyPrefix}:${hashToken(identity.value)}`,
+          `rate-limit:${testNamespace}${options.keyPrefix}:${hashToken(identity.value)}`,
       );
       const reply = (await redis.eval(incrementScript, {
         keys,
