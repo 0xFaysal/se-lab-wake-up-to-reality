@@ -82,19 +82,25 @@ export function OwnerPropertyDetailsView({ propertyId }: { propertyId?: string }
           .slice(0, 2)
           .join("")
           .toUpperCase(),
-        phone: "+880 1712-345678",
+        phone: "+880 17XX-XXXXXX",
         email: "manager@parkease.bd",
+        role: "Property Manager",
         assignedPropertyIds: [currentProperty.id],
         assignedPropertyTitles: [currentProperty.title],
         permissions: {
-          canManageListings: true,
+          canViewProperty: true,
+          canEditProperty: true,
+          canManageParkingSpaces: true,
+          canManageAvailability: true,
+          canManagePricing: false,
+          canViewBookings: true,
           canManageBookings: true,
+          canManageActiveSessions: true,
           canManageGuards: true,
           canRespondReviews: true,
-          canAccessFinancials: false,
         },
         status: "ACTIVE" as const,
-        joinedDate: "15 Jan 2026",
+        joinedDate: "Aug 12, 2026",
       }
     : null;
 
@@ -622,15 +628,9 @@ export function OwnerPropertyDetailsView({ propertyId }: { propertyId?: string }
                       </div>
                     </div>
 
-                    {assignedManager.permissions.canAccessFinancials ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
-                        Financial Access
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
-                        Ops Only
-                      </span>
-                    )}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
+                      Property Manager
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-slate-200/80">
