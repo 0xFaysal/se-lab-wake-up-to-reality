@@ -1,12 +1,3 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerNotificationsView } from "@/features/owner/components/owner-notifications-view";
-
-export const metadata: Metadata = {
-  title: "Notifications & Alerts | Property Owner Management Portal",
-  description: "Stay updated on real-time bookings, payment settlements, security guard check-ins, driver reviews, and property alerts across your facilities.",
-};
-
-export default function OwnerNotificationsPage() {
-  return <OwnerNotificationsView />;
-}
+"use client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"; import { Loader2 } from "lucide-react"; import { Button } from "@/components/ui/button"; import { notificationsApi } from "@/lib/api/notifications-api"; import { formatDateTime } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function NotificationsPage() { const client = useQueryClient(); const query = useQuery({ queryKey: queryKeys.notifications.all(), queryFn: notificationsApi.list }); const refresh = () => client.invalidateQueries({ queryKey: queryKeys.notifications.root }); const read = useMutation({ mutationFn: notificationsApi.read, onSuccess: refresh }); const all = useMutation({ mutationFn: notificationsApi.readAll, onSuccess: refresh }); return <div className="space-y-6"><div className="flex justify-between"><h1 className="text-3xl font-extrabold">Notifications</h1><Button variant="outline" disabled={all.isPending} onClick={() => all.mutate()}>Mark all read</Button></div>{query.isPending ? <Loader2 className="size-6 animate-spin" /> : <div className="divide-y rounded-lg border bg-white">{query.data?.map((item) => <button key={item.id} onClick={() => !item.readAt && read.mutate(item.id)} className={`block w-full p-5 text-left ${item.readAt ? "opacity-60" : "bg-emerald-50/40"}`}><strong>{item.title}</strong><p className="mt-1 text-sm text-slate-600">{item.message}</p><small className="mt-2 block text-slate-500">{formatDateTime(item.createdAt)}</small></button>)}{query.data?.length === 0 && <p className="p-8 text-center text-sm text-slate-500">No notifications.</p>}</div>}</div>; }

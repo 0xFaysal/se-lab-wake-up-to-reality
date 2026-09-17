@@ -1,278 +1,45 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import {
-  Lock,
-  Smartphone,
-  HelpCircle,
-  Shield,
-  ShieldCheck,
-  ChevronRight,
-  Info,
-} from "lucide-react";
-import { MOCK_GUARD_PROFILE } from "@/lib/data/mock-guard-data";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronRight, Clock, Loader2, Lock, MapPin, ShieldCheck, Smartphone } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { Button } from "@/components/ui/button";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { guardApi } from "@/lib/api/guard-api";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import { formatDateTime } from "@/lib/formatters";
+import { queryKeys } from "@/lib/query-keys";
 
 export function GuardProfileView() {
-  const [isOnDuty, setIsOnDuty] = useState(MOCK_GUARD_PROFILE.isOnDuty);
+  const user = useCurrentUser();
+  const assignments = useQuery({
+    queryKey: queryKeys.guardAssignments.all(),
+    queryFn: () => guardApi.listForGuard({ limit: 100 }),
+  });
 
-  return (
-    <div className="space-y-4 select-none pb-28">
-      {/* 1. Page Header */}
-      <div className="pt-1">
-        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 font-heading">
-          Profile
-        </h1>
-        <p className="mt-0.5 text-xs text-gray-500">
-          Guard account &amp; duty information
-        </p>
-      </div>
+  if (user.isPending || assignments.isPending) {
+    return <div className="py-24 text-center"><Loader2 className="mx-auto size-7 animate-spin" /><p className="mt-3 text-sm text-slate-500">Loading Guard profile</p></div>;
+  }
 
-      {/* 2. Profile Header Card */}
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-emerald-600/30 shadow-xs">
-            <Image
-              src="/assets/avatar-guard.jpg"
-              alt={MOCK_GUARD_PROFILE.name}
-              width={64}
-              height={64}
-              className="h-full w-full object-cover"
-              priority
-            />
-          </div>
+  if (user.isError || assignments.isError) {
+    return <div className="rounded-lg border bg-white p-8 text-center"><p className="text-sm text-red-700">{getApiErrorMessage(user.error ?? assignments.error)}</p><Button className="mt-4" variant="outline" onClick={() => void Promise.all([user.refetch(), assignments.refetch()])}>Retry</Button></div>;
+  }
 
-          <div className="space-y-1">
-            <h2 className="text-lg font-extrabold text-gray-900 font-heading">
-              {MOCK_GUARD_PROFILE.name}
-            </h2>
+  const currentUser = user.data!;
+  const activeAssignments = assignments.data.assignments.filter((item) => item.status === "ACTIVE");
+  const initials = currentUser.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="rounded bg-[#064E3B] px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
-                Security Guard
-              </span>
+  return <div className="space-y-4 pb-28">
+    <header><h1 className="text-2xl font-extrabold text-gray-900">Profile</h1><p className="mt-1 text-xs text-gray-500">Guard account and server-authorized assignments</p></header>
+    <section className="rounded-xl border bg-white p-5"><div className="flex items-center gap-4"><div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 text-xl font-extrabold text-emerald-900">{initials}</div><div><h2 className="text-lg font-extrabold">{currentUser.fullName}</h2><div className="mt-1 flex flex-wrap gap-2"><span className="rounded bg-emerald-900 px-2 py-1 text-[10px] font-bold text-white">SECURITY GUARD</span><span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold">{currentUser.status}</span></div></div></div><dl className="mt-5 space-y-3 border-t pt-4 text-xs"><Info label="Email" value={currentUser.email} /><Info label="Phone" value={currentUser.phone} /><Info label="Email verification" value={currentUser.emailVerified ? "Verified" : "Pending"} /></dl></section>
+    <section className="rounded-xl border bg-white p-5"><div className="flex items-center gap-2"><ShieldCheck className="size-5 text-emerald-800" /><h2 className="font-bold">Active assignments</h2></div>{activeAssignments.length === 0 ? <p className="mt-4 text-sm text-slate-500">No active Provider assignment is currently available.</p> : <div className="mt-4 space-y-3">{activeAssignments.map((item) => <article key={item.id} className="rounded-lg bg-slate-50 p-4"><p className="flex items-center gap-2 font-semibold"><MapPin className="size-4" />{item.property.name}</p><p className="mt-1 text-xs text-slate-500">{item.property.publicArea ?? "Public area unavailable"}</p><p className="mt-3 flex items-center gap-2 text-xs"><Clock className="size-4" />{item.shiftStart && item.shiftEnd ? `${formatDateTime(item.shiftStart)} to ${formatDateTime(item.shiftEnd)}` : "No shift window configured"}</p>{item.provider && <p className="mt-2 text-xs text-slate-500">Assigned by {item.provider.fullName}</p>}</article>)}</div>}</section>
+    <section className="rounded-xl border bg-white p-5"><h2 className="text-xs font-bold uppercase text-slate-500">Security</h2><div className="mt-2 divide-y text-sm"><Link href="/account/security" className="flex items-center justify-between py-3"><span className="flex items-center gap-2"><Lock className="size-4" />Change password</span><ChevronRight className="size-4" /></Link><Link href="/account/sessions" className="flex items-center justify-between py-3"><span className="flex items-center gap-2"><Smartphone className="size-4" />Active sessions</span><ChevronRight className="size-4" /></Link></div></section>
+    <p className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-900">Guard access is enforced by active Property membership and Provider assignment on every operational request.</p>
+    <LogoutButton className="w-full rounded-xl bg-red-100 py-3 text-xs font-bold text-red-700 hover:bg-red-200" />
+  </div>;
+}
 
-              <button
-                type="button"
-                onClick={() => setIsOnDuty(!isOnDuty)}
-                className={`flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                  isOnDuty
-                    ? "bg-[#a7f3d0] text-[#064E3B]"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    isOnDuty ? "bg-[#064E3B] animate-pulse" : "bg-gray-400"
-                  }`}
-                />
-                <span>{isOnDuty ? "ON DUTY" : "OFF DUTY"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="my-3.5 border-t border-gray-100" />
-
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Assigned Property</span>
-            <span className="font-bold text-gray-900">Gulshan Avenue Parking</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Assigned Entrance</span>
-            <span className="font-bold text-gray-900">Gate 2</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Shift</span>
-            <span className="font-bold text-gray-900">8:00 AM – 6:00 PM</span>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Account Information Card */}
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 mb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800 font-heading">
-            Account Information
-          </h3>
-          <span className="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">
-            Read-only
-          </span>
-        </div>
-
-        <div className="space-y-2.5 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Full Name</span>
-            <span className="font-bold text-gray-900">Rahim Uddin</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Phone</span>
-            <span className="font-mono font-bold text-gray-900">+880 17XX-XXXXXX</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Email</span>
-            <span className="font-bold text-gray-900">rahim@example.com</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Role</span>
-            <span className="font-bold text-gray-900">Security Guard</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Account Status</span>
-            <span className="flex items-center gap-1 font-bold text-emerald-700">
-              <span className="h-2 w-2 rounded-full bg-emerald-600" />
-              <span>Active</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-3.5 flex items-center gap-1.5 border-t border-gray-100 pt-3 text-[11px] text-gray-400">
-          <Lock className="h-3 w-3 shrink-0" />
-          <span>Details managed by property owner/administrator</span>
-        </div>
-      </section>
-
-      {/* 4. Duty Information Card */}
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800 font-heading mb-3">
-          Duty Information
-        </h3>
-
-        {/* Two Prominent Side-by-Side Boxes */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="rounded-xl bg-[#f0f4ff] p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-              Access Point
-            </p>
-            <p className="mt-1 text-base font-extrabold text-gray-900 font-heading">
-              Gate 2
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-[#f0f4ff] p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-              Duty Status
-            </p>
-            <p className="mt-1 flex items-center gap-1.5 text-base font-extrabold text-[#064E3B] font-heading">
-              <span className="h-2 w-2 rounded-full bg-[#064E3B] animate-pulse" />
-              <span>{isOnDuty ? "ON DUTY" : "OFF DUTY"}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Assigned Property</span>
-            <span className="font-bold text-gray-900">Gulshan Avenue Parking</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500">Current Shift</span>
-            <span className="font-bold text-gray-900">8:00 AM – 6:00 PM</span>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Security & Settings Card */}
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800 font-heading mb-2">
-          Security &amp; Settings
-        </h3>
-
-        <div className="divide-y divide-gray-100 text-xs">
-          <Link
-            href="/account/security"
-            className="flex w-full items-center justify-between py-2.5 text-left hover:text-[#064E3B] transition-colors [-webkit-tap-highlight-color:transparent]"
-          >
-            <div className="flex items-center gap-2.5">
-              <Lock className="h-4 w-4 text-gray-400" />
-              <span className="font-medium text-gray-800">Change Password</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </Link>
-
-          <Link href="/account/sessions" className="flex w-full items-center justify-between py-2.5">
-            <div className="flex items-center gap-2.5">
-              <Smartphone className="h-4 w-4 text-gray-400" />
-              <div>
-                <p className="font-medium text-gray-800">Remembered Device</p>
-                <p className="text-[10px] text-gray-400">Current device</p>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </Link>
-        </div>
-      </section>
-
-      {/* 6. Support & Policies Card */}
-      <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800 font-heading mb-2">
-          Support &amp; Policies
-        </h3>
-
-        <div className="divide-y divide-gray-100 text-xs">
-          <Link
-            href="/support"
-            className="flex items-center justify-between py-2.5 hover:text-[#064E3B] transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <HelpCircle className="h-4 w-4 text-gray-400" />
-              <span className="font-medium text-gray-800">Help &amp; Support</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </Link>
-
-          <Link
-            href="/privacy"
-            className="flex items-center justify-between py-2.5 hover:text-[#064E3B] transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <Shield className="h-4 w-4 text-gray-400" />
-              <span className="font-medium text-gray-800">Privacy Policy</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </Link>
-
-          <Link
-            href="/safety"
-            className="flex items-center justify-between py-2.5 hover:text-[#064E3B] transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="h-4 w-4 text-gray-400" />
-              <span className="font-medium text-gray-800">Safety Guidelines</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </Link>
-        </div>
-      </section>
-
-      {/* 7. Scope Notice & Sign Out Button */}
-      <div className="space-y-3 pt-1">
-        {/* Scope Info Box */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-indigo-100 bg-[#f0f4ff] p-3 text-xs leading-relaxed text-slate-600">
-          <Info className="h-4 w-4 shrink-0 text-indigo-500 mt-0.5" />
-          <p className="text-[11px]">
-            Your account access is limited to the property, bookings, and parking operations assigned to you.
-          </p>
-        </div>
-
-        {/* Sign Out Button */}
-        <LogoutButton className="w-full rounded-xl border-0 bg-red-100/80 py-3 text-xs font-bold text-red-700 hover:bg-red-200" />
-
-        {/* Footnote: Last login */}
-        <p className="text-center text-[11px] text-gray-400">
-          Last login: Today, 7:52 AM
-        </p>
-      </div>
-    </div>
-  );
+function Info({ label, value }: { label: string; value: string }) {
+  return <div className="flex items-start justify-between gap-4"><dt className="text-slate-500">{label}</dt><dd className="break-all text-right font-semibold text-slate-900">{value}</dd></div>;
 }

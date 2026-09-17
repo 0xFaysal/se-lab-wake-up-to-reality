@@ -1,13 +1,4 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerDashboardView } from "@/features/owner/components/owner-dashboard-view";
-import { OwnerLiveSummary } from "@/features/owner/components/owner-live-summary";
-
-export const metadata: Metadata = {
-  title: "Overview | Property Owner Management Portal",
-  description: "Monitor active listings, occupied spaces, upcoming bookings, and recent operational activity across your parking spaces in Dhaka.",
-};
-
-export default function OwnerDashboardPage() {
-  return <><OwnerLiveSummary /><OwnerDashboardView /></>;
-}
+"use client";
+import Link from "next/link"; import { useQuery } from "@tanstack/react-query"; import { Building2, CalendarDays, Loader2, Wallet } from "lucide-react"; import { bookingsApi } from "@/lib/api/bookings-api"; import { financeApi } from "@/lib/api/finance-api"; import { propertyApi } from "@/lib/api/property-api"; import { formatBDTFromPaisa } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function ProviderDashboardPage() { const properties = useQuery({ queryKey: queryKeys.properties.all(), queryFn: propertyApi.list }); const bookings = useQuery({ queryKey: queryKeys.bookings.provider(), queryFn: bookingsApi.providerList }); const earnings = useQuery({ queryKey: queryKeys.earnings.summary(), queryFn: financeApi.earnings }); const loading = properties.isPending || bookings.isPending || earnings.isPending; return <div className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6"><div><h1 className="text-3xl font-extrabold">Provider overview</h1><p className="mt-1 text-sm text-slate-500">Live marketplace and settlement state.</p></div>{loading ? <Loader2 className="size-6 animate-spin" /> : <><div className="grid gap-4 sm:grid-cols-3"><Metric icon={<Building2 />} label="Properties" value={String(properties.data?.length ?? 0)} href="/owner/properties" /><Metric icon={<CalendarDays />} label="Bookings" value={String(bookings.data?.length ?? 0)} href="/owner/bookings" /><Metric icon={<Wallet />} label="Available earnings" value={formatBDTFromPaisa(earnings.data?.availableBalancePaisa ?? "0")} href="/owner/earnings" /></div><section><h2 className="mb-3 font-bold">Recent bookings</h2><div className="divide-y rounded-lg border bg-white">{bookings.data?.slice(0, 5).map((booking) => <Link key={booking.id} href={`/owner/bookings/${booking.id}`} className="flex justify-between gap-3 p-4 hover:bg-slate-50"><span><strong className="font-mono text-sm">{booking.bookingCode}</strong><span className="ml-2 text-xs text-slate-500">{booking.property?.name}</span></span><span className="text-xs font-bold">{booking.status.replaceAll("_", " ")}</span></Link>)}{bookings.data?.length === 0 && <p className="p-8 text-center text-sm text-slate-500">No bookings yet.</p>}</div></section></>}</div>; }
+function Metric({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: string; href: string }) { return <Link href={href} className="flex items-center gap-3 rounded-lg border bg-white p-5"><span className="text-emerald-700">{icon}</span><span><small className="text-slate-500">{label}</small><strong className="block text-2xl">{value}</strong></span></Link>; }

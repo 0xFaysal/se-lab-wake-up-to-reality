@@ -1,13 +1,2 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerDisputesView } from "@/features/owner/components/owner-disputes-view";
-
-export const metadata: Metadata = {
-  title: "Disputes & Claims Manager | ParkEase BD Owner Portal",
-  description:
-    "Mediate customer grievances, review driver claims, submit facility CCTV evidence, and manage parking refund requests.",
-};
-
-export default function OwnerDisputesPage() {
-  return <OwnerDisputesView />;
-}
+import Link from "next/link"; import { Button } from "@/components/ui/button";
+export default function ProviderDisputesPage() { return <div className="max-w-3xl space-y-5"><h1 className="text-3xl font-extrabold">Disputes</h1><div className="rounded-lg border bg-white p-8"><p className="text-sm text-slate-600">A Provider can open a dispute from a related booking. The backend does not currently expose a Provider dispute list, so no placeholder history is shown here.</p><Link href="/owner/bookings"><Button className="mt-4">Open provider bookings</Button></Link></div></div>; }

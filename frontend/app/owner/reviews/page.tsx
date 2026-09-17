@@ -1,12 +1,3 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerReviewsView } from "@/features/owner/components/owner-reviews-view";
-
-export const metadata: Metadata = {
-  title: "Driver Reviews & Ratings | Property Owner Management Portal",
-  description: "Monitor driver reviews, reply to customer feedback, analyze property ratings, and report inappropriate content across ParkEase BD facilities.",
-};
-
-export default function OwnerReviewsPage() {
-  return <OwnerReviewsView />;
-}
+"use client";
+import { useState } from "react"; import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"; import { Loader2, Star } from "lucide-react"; import { toast } from "sonner"; import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input"; import { reviewsApi } from "@/lib/api/reviews-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { formatDateTime } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function ReviewsPage() { const client = useQueryClient(); const [replies, setReplies] = useState<Record<string,string>>({}); const query = useQuery({ queryKey: queryKeys.reviews.provider(), queryFn: reviewsApi.providerList }); const reply = useMutation({ mutationFn: ({ id, text }: { id: string; text: string }) => reviewsApi.reply(id, text), onSuccess: async () => { toast.success("Reply saved"); await client.invalidateQueries({ queryKey: queryKeys.reviews.root }); }, onError: (error) => toast.error(getApiErrorMessage(error)) }); return <div className="space-y-6"><h1 className="text-3xl font-extrabold">Driver reviews</h1>{query.isPending ? <Loader2 className="size-6 animate-spin" /> : <div className="space-y-4">{query.data?.map((review) => <article key={review.id} className="rounded-lg border bg-white p-5"><div className="flex justify-between"><strong>{review.driver?.fullName ?? "Driver"}</strong><span className="flex gap-0.5">{Array.from({length:5},(_,i) => <Star key={i} className={`size-4 ${i < review.rating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />)}</span></div><p className="mt-2 text-sm">{review.comment || "No written comment."}</p><small className="mt-2 block text-slate-500">Booking {review.booking?.bookingCode} · {formatDateTime(review.createdAt)}</small>{review.providerReply ? <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm"><strong>Provider reply:</strong> {review.providerReply}</p> : <div className="mt-3 flex gap-2"><Input value={replies[review.id] ?? ""} onChange={(event) => setReplies((current) => ({...current,[review.id]:event.target.value}))} placeholder="Reply to review" /><Button disabled={!replies[review.id]?.trim() || reply.isPending} onClick={() => reply.mutate({ id: review.id, text: replies[review.id]! })}>Reply</Button></div>}</article>)}{query.data?.length === 0 && <p className="rounded-lg border bg-white p-8 text-center text-sm text-slate-500">No reviews yet.</p>}</div>}</div>; }

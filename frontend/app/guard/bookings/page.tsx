@@ -1,6 +1,2 @@
-import React from "react";
-import { GuardBookingsListView } from "@/features/guard/components/guard-bookings-list-view";
-
-export default function GuardBookingsPage() {
-  return <GuardBookingsListView />;
-}
+import Link from "next/link"; import { Button } from "@/components/ui/button";
+export default function GuardBookingsPage() { return <div className="space-y-5 pb-24"><h1 className="text-2xl font-extrabold text-slate-900">Booking operations</h1><div className="rounded-lg border bg-white p-6"><p className="text-sm text-slate-600">Guard access is credential-driven. The backend does not expose a Guard booking queue, so only a Driver-presented credential can reveal an authorized booking.</p><Link href="/guard/scan"><Button className="mt-4">Verify credential</Button></Link></div></div>; }

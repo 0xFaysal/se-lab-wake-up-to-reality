@@ -1,24 +1,3 @@
-import { Metadata } from "next";
-import { ManagerDetailsView } from "@/features/owner/managers/manager-details-view";
-import { MOCK_OWNER_MANAGERS } from "@/lib/data/mock-owner-data";
-
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const manager = MOCK_OWNER_MANAGERS.find((m) => m.id === id);
-  return {
-    title: manager
-      ? `${manager.name} - Manager Overview | Owner Portal | ParkEase BD`
-      : "Manager Overview | Owner Portal | ParkEase BD",
-    description:
-      "Detailed operational overview, property delegations, and audit logs for property manager.",
-  };
-}
-
-export default async function ManagerDetailsPage({ params }: PageProps) {
-  const { id } = await params;
-  return <ManagerDetailsView managerId={id} />;
-}
+"use client";
+import { use, useState } from "react"; import Link from "next/link"; import { useMutation,useQuery,useQueryClient } from "@tanstack/react-query"; import { ArrowLeft,Loader2 } from "lucide-react"; import { toast } from "sonner"; import { AlertDialog,AlertDialogAction,AlertDialogCancel,AlertDialogContent,AlertDialogDescription,AlertDialogFooter,AlertDialogHeader,AlertDialogTitle } from "@/components/ui/alert-dialog"; import { Button } from "@/components/ui/button"; import { managerApi } from "@/lib/api/manager-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { formatDateTime } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function ManagerDetailPage({params}:{params:Promise<{id:string}>}){const{id}=use(params);const[confirmEnd,setConfirmEnd]=useState(false);const client=useQueryClient();const query=useQuery({queryKey:[...queryKeys.managerDelegations.provider,id],queryFn:()=>managerApi.detail(id)});const end=useMutation({mutationFn:()=>managerApi.end(id),onSuccess:async()=>{setConfirmEnd(false);toast.success("Delegation ended");await client.invalidateQueries({queryKey:queryKeys.managerDelegations.provider});await query.refetch();},onError:e=>toast.error(getApiErrorMessage(e))});if(query.isPending)return<Loader2 className="size-6 animate-spin"/>;if(query.isError)return<p>{getApiErrorMessage(query.error)}</p>;const item=query.data;return<div className="space-y-6"><Link href="/owner/managers" className="inline-flex items-center gap-2 text-sm"><ArrowLeft className="size-4"/>Managers</Link><div className="flex flex-wrap justify-between gap-3"><div><h1 className="text-3xl font-extrabold">{item.manager.fullName}</h1><p className="text-sm text-slate-500">{item.property.name} · {item.status}</p></div><div className="flex flex-wrap gap-2"><Link href={`/owner/managers/${id}/permissions`}><Button variant="outline">Edit permissions</Button></Link>{!["ENDED","REJECTED"].includes(item.status)&&<Button variant="destructive" disabled={end.isPending} onClick={()=>setConfirmEnd(true)}>End delegation</Button>}</div></div><section className="rounded-lg border bg-white p-6"><Info label="Invited" value={formatDateTime(item.invitedAt)}/><Info label="Accepted" value={item.acceptedAt?formatDateTime(item.acceptedAt):"Not accepted"}/><Info label="Valid until" value={item.validUntil?formatDateTime(item.validUntil):"No expiry"}/><div className="mt-5 flex flex-wrap gap-2">{item.permissions.map(permission=><span key={permission} className="rounded bg-slate-100 px-2 py-1 text-xs">{permission.replaceAll("_"," ")}</span>)}</div></section><AlertDialog open={confirmEnd} onOpenChange={setConfirmEnd}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>End this Manager delegation?</AlertDialogTitle><AlertDialogDescription>The Manager will lose the delegated Property and resource permissions immediately.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep delegation</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={end.isPending} onClick={()=>end.mutate()}>{end.isPending&&<Loader2 className="size-4 animate-spin"/>}End delegation</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>;} function Info({label,value}:{label:string;value:string}){return<div className="mb-4"><dt className="text-xs font-bold uppercase text-slate-500">{label}</dt><dd className="mt-1 text-sm">{value}</dd></div>}

@@ -1,12 +1,3 @@
-import React from "react";
-import type { Metadata } from "next";
-import { DriverFinancialHistoryView } from "@/features/payments/components/driver-financial-history-view";
-
-export const metadata: Metadata = {
-  title: "Payment History | ParkEase BD",
-  description: "View and download receipts for all completed parking sessions and extensions in Dhaka.",
-};
-
-export default function DriverPaymentsPage() {
-  return <DriverFinancialHistoryView initialTab="payments" />;
-}
+"use client";
+import { useQuery } from "@tanstack/react-query"; import { Loader2 } from "lucide-react"; import { financeApi } from "@/lib/api/finance-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function PaymentsPage() { const wallet = useQuery({ queryKey: queryKeys.wallet.current, queryFn: financeApi.wallet }); const entries = useQuery({ queryKey: queryKeys.wallet.transactions(), queryFn: financeApi.walletTransactions }); if (wallet.isPending || entries.isPending) return <div className="py-24"><Loader2 className="mx-auto size-6 animate-spin" /></div>; if (wallet.isError || entries.isError) return <div className="py-24 text-center text-red-700">{getApiErrorMessage(wallet.error ?? entries.error)}</div>; return <div className="mx-auto max-w-5xl space-y-6 px-4"><h1 className="text-3xl font-extrabold">Wallet &amp; transactions</h1><div className="grid gap-4 sm:grid-cols-3"><Metric label="Available" value={wallet.data.availableBalancePaisa} /><Metric label="Pending" value={wallet.data.pendingBalancePaisa} /><Metric label="Held" value={wallet.data.heldBalancePaisa} /></div><div className="divide-y overflow-hidden rounded-lg border bg-white">{entries.data.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">No wallet transactions yet.</p> : entries.data.map((entry) => <div key={entry.id} className="flex items-center justify-between gap-4 p-4"><div><strong className="text-sm">{entry.ledgerTransaction.description}</strong><p className="mt-1 text-xs text-slate-500">{entry.accountCode} · {formatDateTime(entry.createdAt)}</p></div><span className={`font-semibold ${entry.entrySide === "CREDIT" ? "text-emerald-700" : "text-red-700"}`}>{entry.entrySide === "CREDIT" ? "+" : "-"}{formatBDTFromPaisa(entry.amountPaisa)}</span></div>)}</div></div>; } function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border bg-white p-5"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 text-2xl font-extrabold">{formatBDTFromPaisa(value)}</p></div>; }

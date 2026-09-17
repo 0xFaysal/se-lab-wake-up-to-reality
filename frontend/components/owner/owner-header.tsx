@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Bell, Settings, ShieldCheck, User } from "lucide-react";
-import { MOCK_OWNER_PROFILE } from "@/lib/data/mock-owner-data";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 interface OwnerHeaderProps {
   title?: string;
@@ -20,6 +20,10 @@ export function OwnerHeader({
   badge,
 }: OwnerHeaderProps) {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const { data: currentUser } = useCurrentUser();
+  const displayName = currentUser?.fullName ?? "Provider";
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  const role = currentUser?.roles.includes("MANAGER") ? "Manager" : "Provider";
 
   return (
     <header className="h-20 bg-white border-b border-[#E5E7EB] px-6 sm:px-8 lg:px-10 flex items-center justify-between sticky top-0 z-20">
@@ -69,15 +73,15 @@ export function OwnerHeader({
             aria-label="Owner profile menu"
           >
             <div className="size-9 rounded-lg bg-emerald-100 text-[#064E3B] font-bold text-xs flex items-center justify-center font-heading shadow-2xs shrink-0">
-              {MOCK_OWNER_PROFILE.initials}
+              {initials}
             </div>
 
             <div className="hidden md:flex flex-col">
               <span className="text-sm font-bold text-slate-900 font-heading leading-tight">
-                {MOCK_OWNER_PROFILE.name}
+                {displayName}
               </span>
               <span className="text-[11px] text-slate-500 font-medium">
-                {MOCK_OWNER_PROFILE.role}
+                {role}
               </span>
             </div>
           </button>
@@ -91,10 +95,10 @@ export function OwnerHeader({
               <div className="px-4 py-2 border-b border-[#E5E7EB] mb-1">
                 <p className="text-xs text-slate-400">Signed in as</p>
                 <p className="text-sm font-bold text-slate-800 truncate">
-                  {MOCK_OWNER_PROFILE.name}
+                  {displayName}
                 </p>
                 <p className="text-xs text-slate-500 truncate">
-                  {MOCK_OWNER_PROFILE.email}
+                  {currentUser?.email ?? "Loading account..."}
                 </p>
               </div>
 

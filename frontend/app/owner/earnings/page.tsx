@@ -1,12 +1,3 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerEarningsView } from "@/features/owner/components/owner-earnings-view";
-
-export const metadata: Metadata = {
-  title: "Earnings & Payouts | Property Owner Management Portal",
-  description: "Track parking revenue, owner earnings, bank payouts, and recent transaction settlements across your properties.",
-};
-
-export default function OwnerEarningsPage() {
-  return <OwnerEarningsView />;
-}
+"use client";
+import Link from "next/link"; import { useQuery } from "@tanstack/react-query"; import { Loader2 } from "lucide-react"; import { Button } from "@/components/ui/button"; import { financeApi } from "@/lib/api/finance-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function EarningsPage() { const summary = useQuery({ queryKey: queryKeys.earnings.summary(), queryFn: financeApi.earnings }); const entries = useQuery({ queryKey: queryKeys.earnings.transactions(), queryFn: financeApi.earningsTransactions }); if (summary.isPending || entries.isPending) return <Loader2 className="mx-auto size-6 animate-spin" />; if (summary.isError || entries.isError) return <p>{getApiErrorMessage(summary.error ?? entries.error)}</p>; return <div className="space-y-6"><div className="flex justify-between"><div><h1 className="text-3xl font-extrabold">Earnings</h1><p className="text-sm text-slate-500">Ledger-derived Provider balances.</p></div><Link href="/owner/payouts"><Button>Request payout</Button></Link></div><div className="grid gap-4 sm:grid-cols-3"><Metric label="Available" value={summary.data.availableBalancePaisa} /><Metric label="Pending" value={summary.data.pendingBalancePaisa} /><Metric label="Held for payout" value={summary.data.heldBalancePaisa} /></div><div className="divide-y rounded-lg border bg-white">{entries.data.map((entry) => <div key={entry.id} className="flex justify-between gap-4 p-4"><span><strong className="text-sm">{entry.ledgerTransaction.description}</strong><small className="mt-1 block text-slate-500">{formatDateTime(entry.createdAt)}</small></span><strong>{entry.entrySide === "CREDIT" ? "+" : "-"}{formatBDTFromPaisa(entry.amountPaisa)}</strong></div>)}{entries.data.length === 0 && <p className="p-8 text-center text-sm text-slate-500">No earnings transactions yet.</p>}</div></div>; } function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border bg-white p-5"><small>{label}</small><strong className="mt-2 block text-2xl">{formatBDTFromPaisa(value)}</strong></div>; }

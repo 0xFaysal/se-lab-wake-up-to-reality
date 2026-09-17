@@ -1,13 +1,3 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerPayoutHistoryView } from "@/features/owner/components/owner-payout-history-view";
-
-export const metadata: Metadata = {
-  title: "Payout History | ParkEase BD Owner Portal",
-  description:
-    "Review historical disbursements, pending transfers, and weekly settlement statements for all your parking listings.",
-};
-
-export default function OwnerPayoutsPage() {
-  return <OwnerPayoutHistoryView />;
-}
+"use client";
+import { useRef, useState } from "react"; import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"; import { Loader2 } from "lucide-react"; import { toast } from "sonner"; import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input"; import { financeApi } from "@/lib/api/finance-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { formatBDTFromPaisa } from "@/lib/formatters"; import { queryKeys } from "@/lib/query-keys";
+export default function PayoutPage() { const client = useQueryClient(); const [amount, setAmount] = useState(""); const key = useRef(crypto.randomUUID()); const earnings = useQuery({ queryKey: queryKeys.earnings.summary(), queryFn: financeApi.earnings }); const payout = useMutation({ mutationFn: () => financeApi.requestPayout(String(Math.round(Number(amount) * 100)), key.current), onSuccess: async () => { toast.success("Simulated payout request submitted"); setAmount(""); key.current = crypto.randomUUID(); await client.invalidateQueries({ queryKey: queryKeys.earnings.root }); }, onError: (error) => toast.error(getApiErrorMessage(error)) }); return <div className="max-w-2xl space-y-6"><h1 className="text-3xl font-extrabold">Request payout</h1><div className="rounded-lg border bg-white p-6"><p className="text-sm text-slate-500">Available balance</p><p className="mt-2 text-3xl font-extrabold">{earnings.isPending ? <Loader2 className="size-6 animate-spin" /> : formatBDTFromPaisa(earnings.data?.availableBalancePaisa ?? "0")}</p><label className="mt-5 block space-y-2 text-sm font-semibold">Amount in BDT<Input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><p className="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-800">Payout settlement is simulated. This does not transfer money to a bank account.</p><Button className="mt-4" disabled={!amount || payout.isPending} onClick={() => payout.mutate()}>{payout.isPending && <Loader2 className="size-4 animate-spin" />}Request simulated payout</Button></div><p className="text-sm text-slate-500">Provider payout history is not displayed because the backend currently exposes the payout queue only to Admin.</p></div>; }

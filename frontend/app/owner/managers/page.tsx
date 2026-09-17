@@ -1,5 +1,3 @@
-import { OwnerManagersView } from "@/features/owner/components/owner-managers-view";
-
-export default function OwnerManagersPage() {
-  return <OwnerManagersView />;
-}
+"use client";
+import Link from "next/link"; import { useQuery } from "@tanstack/react-query"; import { Loader2, Plus } from "lucide-react"; import { Button } from "@/components/ui/button"; import { managerApi } from "@/lib/api/manager-api"; import { queryKeys } from "@/lib/query-keys";
+export default function ManagersPage() { const query=useQuery({queryKey:queryKeys.managerDelegations.provider,queryFn:managerApi.listForProvider}); return <div className="space-y-6"><div className="flex justify-between"><div><h1 className="text-3xl font-extrabold">Manager delegations</h1><p className="text-sm text-slate-500">Live permission scopes granted by Providers.</p></div><Link href="/owner/managers/new"><Button><Plus className="size-4"/>Invite Manager</Button></Link></div>{query.isPending?<Loader2 className="size-6 animate-spin"/>:<div className="divide-y rounded-lg border bg-white">{query.data?.map(item=><Link key={item.id} href={`/owner/managers/${item.id}`} className="flex justify-between gap-4 p-5 hover:bg-slate-50"><span><strong>{item.manager.fullName}</strong><small className="mt-1 block text-slate-500">{item.property.name} · {item.permissions.length} permissions</small></span><span className="text-xs font-bold">{item.status.replaceAll("_"," ")}</span></Link>)}{query.data?.length===0&&<p className="p-8 text-center text-sm text-slate-500">No Manager delegations.</p>}</div>}</div>; }

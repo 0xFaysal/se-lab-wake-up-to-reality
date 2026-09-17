@@ -1,12 +1,4 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerBookingsView } from "@/features/owner/components/owner-bookings-view";
-
-export const metadata: Metadata = {
-  title: "Bookings | Property Owner Management Portal",
-  description: "Manage and monitor reservations, drivers, and parking schedules across all your properties in Dhaka.",
-};
-
-export default function OwnerBookingsPage() {
-  return <OwnerBookingsView />;
-}
+"use client";
+import Link from "next/link"; import { useQuery } from "@tanstack/react-query"; import { Loader2 } from "lucide-react"; import { bookingsApi } from "@/lib/api/bookings-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters"; import { bookingStatus } from "@/lib/marketplace-status"; import { queryKeys } from "@/lib/query-keys";
+export default function ProviderBookingsPage() { const query = useQuery({ queryKey: queryKeys.bookings.provider(), queryFn: bookingsApi.providerList, refetchInterval: 30_000 }); if (query.isPending) return <State text="Loading bookings" loading />; if (query.isError) return <State text={getApiErrorMessage(query.error)} />; return <div className="space-y-6"><div><h1 className="text-3xl font-extrabold">Provider bookings</h1><p className="mt-1 text-sm text-slate-500">Bookings within your commercial or delegated scope.</p></div><div className="divide-y overflow-hidden rounded-lg border bg-white">{query.data.map((booking) => { const status = bookingStatus[booking.status]; return <Link href={`/owner/bookings/${booking.id}`} key={booking.id} className="grid gap-3 p-5 hover:bg-slate-50 sm:grid-cols-[1fr_auto]"><div><div className="flex gap-2"><strong className="font-mono">{booking.bookingCode}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${status.className}`}>{status.label}</span></div><p className="mt-2 text-sm font-semibold">{booking.property?.name} · {booking.parkingSpot?.resourceType === "SHARED_POOL" ? "Shared Parking Area" : booking.parkingSpot?.displayName}</p><p className="mt-1 text-xs text-slate-500">{booking.vehicle?.registrationNumber} · {formatDateTime(booking.startAt)}</p></div><strong>{formatBDTFromPaisa(booking.totalAmountPaisa)}</strong></Link>; })}{query.data.length === 0 && <p className="p-10 text-center text-sm text-slate-500">No marketplace bookings yet.</p>}</div></div>; }
+function State({ text, loading }: { text: string; loading?: boolean }) { return <div className="py-24 text-center">{loading && <Loader2 className="mx-auto mb-3 size-6 animate-spin" />}<p>{text}</p></div>; }

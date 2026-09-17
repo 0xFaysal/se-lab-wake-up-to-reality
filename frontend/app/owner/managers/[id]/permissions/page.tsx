@@ -1,29 +1,5 @@
-import { Suspense } from "react";
-import { Metadata } from "next";
-import { ManagerPermissionsView } from "@/features/owner/managers/manager-permissions-view";
-import { MOCK_OWNER_MANAGERS } from "@/lib/data/mock-owner-data";
-
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const manager = MOCK_OWNER_MANAGERS.find((m) => m.id === id);
-  return {
-    title: manager
-      ? `Manage Permissions - ${manager.name} | Owner Portal | ParkEase BD`
-      : "Manage Permissions | Owner Portal | ParkEase BD",
-    description:
-      "Granular operational RBAC toggles, property delegations, and security governance for manager.",
-  };
-}
-
-export default async function ManagerPermissionsPage({ params }: PageProps) {
-  const { id } = await params;
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f9f9ff] flex items-center justify-center"><div className="size-8 border-3 border-[#064E3B] border-t-transparent rounded-full animate-spin" /></div>}>
-      <ManagerPermissionsView managerId={id} />
-    </Suspense>
-  );
-}
+"use client";
+import { use,useState } from "react"; import { useMutation,useQuery,useQueryClient } from "@tanstack/react-query"; import { useRouter } from "next/navigation"; import { Loader2 } from "lucide-react"; import { Button } from "@/components/ui/button"; import { Checkbox } from "@/components/ui/checkbox"; import { managerApi,type ManagerPermission } from "@/lib/api/manager-api"; import { getApiErrorMessage } from "@/lib/api/api-error"; import { queryKeys } from "@/lib/query-keys";
+const ALL:ManagerPermission[]=["RESOURCE_VIEW","LISTING_VIEW","LISTING_MANAGE","PRICE_MANAGE","AVAILABILITY_MANAGE","BOOKING_VIEW","BOOKING_MANAGE","IMAGE_MANAGE","GUARD_VIEW","GUARD_ADD_TO_PROPERTY","GUARD_ASSIGN","EARNINGS_VIEW","REPORTS_VIEW"];
+export default function ManagerPermissionsPage({params}:{params:Promise<{id:string}>}){const{id}=use(params);const query=useQuery({queryKey:[...queryKeys.managerDelegations.provider,id],queryFn:()=>managerApi.detail(id)});if(query.isPending)return<Loader2 className="size-6 animate-spin"/>;if(query.isError)return<p>{getApiErrorMessage(query.error)}</p>;return<PermissionForm id={id} initial={query.data.permissions} resources={query.data.resourceIds}/>;}
+function PermissionForm({id,initial,resources}:{id:string;initial:ManagerPermission[];resources:string[]}){const router=useRouter();const client=useQueryClient();const[permissions,setPermissions]=useState(initial);const mutation=useMutation({mutationFn:()=>managerApi.updatePermissions(id,{permissions,resourceIds:resources}),onSuccess:async()=>{await client.invalidateQueries({queryKey:queryKeys.managerDelegations.provider});router.push(`/owner/managers/${id}`);}});return<form className="max-w-3xl space-y-6" onSubmit={e=>{e.preventDefault();mutation.mutate();}}><div><h1 className="text-3xl font-extrabold">Manager permissions</h1><p className="text-sm text-slate-500">Server-enforced delegation capabilities.</p></div><div className="grid gap-3 rounded-lg border bg-white p-6 sm:grid-cols-2">{ALL.map(permission=><label key={permission} className="flex items-center gap-3 text-sm"><Checkbox checked={permissions.includes(permission)} onCheckedChange={checked=>setPermissions(current=>checked?[...current,permission]:current.filter(item=>item!==permission))}/>{permission.replaceAll("_"," ")}</label>)}</div>{mutation.isError&&<p className="text-sm text-red-700">{getApiErrorMessage(mutation.error)}</p>}<Button type="submit" disabled={mutation.isPending}>{mutation.isPending&&<Loader2 className="size-4 animate-spin"/>}Save permissions</Button></form>}

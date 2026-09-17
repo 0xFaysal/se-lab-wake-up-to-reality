@@ -1,12 +1,2 @@
-import React from "react";
-import type { Metadata } from "next";
-import { DriverFinancialHistoryView } from "@/features/payments/components/driver-financial-history-view";
-
-export const metadata: Metadata = {
-  title: "Refund History | ParkEase BD",
-  description: "Track automated security deposit returns, adjustments, and cancellation refunds in Dhaka.",
-};
-
-export default function DriverRefundsPage() {
-  return <DriverFinancialHistoryView initialTab="refunds" />;
-}
+import Link from "next/link"; import { Button } from "@/components/ui/button";
+export default function RefundsPage() { return <div className="mx-auto max-w-3xl space-y-5 px-4"><h1 className="text-3xl font-extrabold">Refunds</h1><div className="rounded-lg border bg-white p-8"><p className="text-sm text-slate-600">Refunds are requested from an eligible booking payment. The backend currently returns refund state through the action response and updated payment state; it does not expose a separate Driver refund-history endpoint.</p><Link href="/driver/bookings"><Button className="mt-4">Open bookings</Button></Link></div></div>; }
