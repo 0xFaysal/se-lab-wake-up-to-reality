@@ -46,6 +46,14 @@ export function validate(schema: z.ZodType<RequestParts>): RequestHandler {
     if (result.data.params !== undefined) {
       req.params = result.data.params as typeof req.params;
     }
+    if (result.data.query !== undefined) {
+      Object.defineProperty(req, "query", {
+        value: result.data.query,
+        configurable: true,
+        enumerable: true,
+        writable: true,
+      });
+    }
     next();
   };
 }

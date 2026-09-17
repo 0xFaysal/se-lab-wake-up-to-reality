@@ -1,7 +1,8 @@
 import { ApiError, type ApiErrorPayload } from "./api-error";
 import type { ApiSuccess } from "./api-types";
+import { publicEnv } from "@/lib/config/public-env";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
+const API_BASE_URL = publicEnv.API_BASE_URL;
 const DEFAULT_TIMEOUT_MS = 15_000;
 let refreshPromise: Promise<boolean> | null = null;
 export const AUTH_EXPIRED_EVENT = "parkease:auth-expired";

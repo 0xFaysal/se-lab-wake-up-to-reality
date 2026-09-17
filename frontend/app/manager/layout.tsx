@@ -57,7 +57,7 @@ export default function ManagerPortalLayout({
         {/* Main Workspace Column */}
         <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
           <main className="flex-1 pb-12">
-            <RoleGuard roles={["MANAGER", "PROVIDER", "PARKING_OWNER", "ADMIN"]}>
+            <RoleGuard roles={["MANAGER"]}>
               {children}
             </RoleGuard>
           </main>

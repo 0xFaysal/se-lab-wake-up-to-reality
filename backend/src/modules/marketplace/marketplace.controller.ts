@@ -36,9 +36,15 @@ export const suspendListing = action((req) => service.suspendListing(userId(req)
 
 export const replaceAvailability = action((req) => service.replaceAvailability(userId(req), param(req, "resourceId"), req.body.rules));
 export const createAvailabilityException = action((req) => service.createAvailabilityException(userId(req), param(req, "resourceId"), req.body), 201);
+export const updateAvailabilityException = action((req) => service.updateAvailabilityException(userId(req), param(req, "exceptionId"), req.body));
+export const deleteAvailabilityException = action(async (req) => {
+  await service.deleteAvailabilityException(userId(req), param(req, "exceptionId"));
+  return { deleted: true };
+});
 export const listAvailability = action((req) => service.listAvailability(userId(req), param(req, "resourceId")));
 
 export const searchParking = action((req) => service.searchParking(req.query as never));
+export const getPublicPropertyDetail = action((req) => service.getPublicPropertyDetail(param(req, "propertyId"), req.query as never));
 export const createQuote = action((req) => service.createQuote(userId(req), req.body), 201);
 export const getQuote = action((req) => service.getQuote(userId(req), param(req, "quoteId")));
 export const createHold = action((req) => service.createHold(userId(req), req.body), 201);
@@ -48,6 +54,11 @@ export const createBooking = action((req) => service.createBooking(userId(req), 
 export const listDriverBookings = action((req) => service.listDriverBookings(userId(req)));
 export const getDriverBooking = action((req) => service.getDriverBooking(userId(req), param(req, "bookingId")));
 export const listProviderBookings = action((req) => service.listProviderBookings(userId(req)));
+export const getProviderBooking = action((req) =>
+  service.getProviderBooking(userId(req), param(req, "bookingId")),
+);
+export const listGuardBookings = action((req) => service.listGuardBookings(userId(req), req.query as never));
+export const getGuardBooking = action((req) => service.getGuardBooking(userId(req), param(req, "bookingId")));
 export const cancelBooking = action((req) => service.cancelBooking(userId(req), param(req, "bookingId")));
 export const capturePayment = action((req) => service.captureSimulatedPayment(userId(req), req.body), 201);
 export const verifyCredential = action((req) => service.verifyAccessCredential(userId(req), req.body.credential));
@@ -60,7 +71,11 @@ export const listWalletTransactions = action((req) => service.listWalletTransact
 export const earningsSummary = action((req) => service.getEarningsSummary(userId(req)));
 export const listEarningsTransactions = action((req) => service.listEarningsTransactions(userId(req)));
 export const createRefund = action((req) => service.createRefund(userId(req), param(req, "paymentId"), req.body), 201);
+export const listDriverRefunds = action((req) => service.listDriverRefunds(userId(req), req.query as never));
+export const getDriverRefund = action((req) => service.getDriverRefund(userId(req), param(req, "refundId")));
 export const createPayout = action((req) => service.createPayout(userId(req), req.body), 201);
+export const listProviderPayouts = action((req) => service.listProviderPayouts(userId(req), req.query as never));
+export const getProviderPayout = action((req) => service.getProviderPayout(userId(req), param(req, "payoutId")));
 export const listPayouts = action((req) => service.listPayouts(req.query.status as never));
 export const reviewPayout = action((req) => service.reviewPayout(userId(req), param(req, "payoutId"), req.body));
 
@@ -71,5 +86,11 @@ export const createReview = action((req) => service.createReview(userId(req), pa
 export const listProviderReviews = action((req) => service.listProviderReviews(userId(req)));
 export const replyReview = action((req) => service.replyReview(userId(req), param(req, "reviewId"), req.body.reply));
 export const createDispute = action((req) => service.createDispute(userId(req), param(req, "bookingId"), req.body), 201);
+export const listDriverDisputes = action((req) => service.listDriverDisputes(userId(req), req.query as never));
+export const getDriverDispute = action((req) => service.getDriverDispute(userId(req), param(req, "disputeId")));
+export const listProviderDisputes = action((req) => service.listProviderDisputes(userId(req), req.query as never));
+export const getProviderDispute = action((req) => service.getProviderDispute(userId(req), param(req, "disputeId")));
 export const resolveDispute = action((req) => service.resolveDispute(userId(req), param(req, "disputeId"), req.body));
 export const listDisputes = action((req) => service.listDisputes(req.query.status as never));
+export const listAdminListings = action((req) => service.listAdminListings(req.query as never));
+export const getAdminListing = action((req) => service.getAdminListing(param(req, "listingId")));

@@ -8,6 +8,7 @@ import {
   VerificationStatus,
 } from "../../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
+import { normalizeBangladeshPhone } from "../../common/auth/phone.js";
 import { createDomainAuditEvent } from "../property-governance/domain-audit.js";
 import * as propertyRepository from "../properties/property.repository.js";
 import { managerDelegationErrors } from "./manager-delegation.errors.js";
@@ -115,6 +116,39 @@ export async function createManagerDelegation(
     if (isUniqueConstraintError(error)) throw managerDelegationErrors.conflict();
     throw error;
   }
+}
+
+export async function createManagerDelegationByIdentifier(
+  providerUserId: string,
+  input: Omit<CreateManagerDelegationInput, "managerUserId"> & {
+    managerIdentifier: string;
+  },
+) {
+  const identifier = input.managerIdentifier.trim();
+  let normalizedPhone: string | null = null;
+  try {
+    normalizedPhone = normalizeBangladeshPhone(identifier);
+  } catch {
+    // The identifier may be an email address.
+  }
+  const manager = await prisma.user.findFirst({
+    where: {
+      deletedAt: null,
+      status: { in: [UserStatus.PENDING, UserStatus.ACTIVE] },
+      roles: { some: { role: UserRoleType.MANAGER } },
+      OR: [
+        { email: identifier.toLowerCase() },
+        ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+      ],
+    },
+    select: { id: true },
+  });
+  if (!manager) throw managerDelegationErrors.managerNotEligible();
+  const { managerIdentifier: _managerIdentifier, ...delegation } = input;
+  return createManagerDelegation(providerUserId, {
+    ...delegation,
+    managerUserId: manager.id,
+  });
 }
 
 export async function listProviderDelegations(providerUserId: string) {

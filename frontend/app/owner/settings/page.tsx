@@ -1,12 +1,11 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerSettingsView } from "@/features/owner/components/owner-settings-view";
-
-export const metadata: Metadata = {
-  title: "Settings | Property Owner Management Portal",
-  description: "Manage your owner profile, security, notifications, payout account, and account preferences.",
-};
+import Link from "next/link";
+import { LockKeyhole, MonitorSmartphone } from "lucide-react";
+import { ProviderPage, ProviderPageHeader } from "@/components/owner/provider-page";
 
 export default function OwnerSettingsPage() {
-  return <OwnerSettingsView />;
+  return <ProviderPage className="max-w-4xl"><ProviderPageHeader title="Provider settings" description="Manage the account controls currently supported by ParkEase BD." breadcrumbs={[{ label: "Account" }, { label: "Settings" }]} /><div className="grid gap-4 sm:grid-cols-2"><SettingLink href="/owner/security" icon={<LockKeyhole className="size-5" />} title="Security" description="Change your password or sign out from every device." /><SettingLink href="/owner/account/sessions" icon={<MonitorSmartphone className="size-5" />} title="Active sessions" description="Review and revoke individual login sessions." /></div></ProviderPage>;
+}
+
+function SettingLink({ href, icon, title, description }: { href: string; icon: React.ReactNode; title: string; description: string }) {
+  return <Link href={href} className="rounded-lg border bg-white p-5 hover:border-emerald-300 hover:bg-emerald-50/30"><span className="text-emerald-800">{icon}</span><h2 className="mt-3 font-bold">{title}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{description}</p></Link>;
 }

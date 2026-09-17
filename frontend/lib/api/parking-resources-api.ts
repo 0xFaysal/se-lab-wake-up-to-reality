@@ -26,4 +26,6 @@ export const parkingResourcesApi = {
   availability: (resourceId: string) => apiClient.get<AvailabilityDto>(`/provider/parking-resources/${resourceId}/availability`),
   replaceAvailability: (resourceId: string, rules: AvailabilityRuleInput[]) => apiClient.put<AvailabilityRuleInput[]>(`/provider/parking-resources/${resourceId}/availability`, { rules }),
   addException: (resourceId: string, input: { startsAt: string; endsAt: string; exceptionType: "BLOCKED" | "SPECIAL_AVAILABLE"; reason?: string }) => apiClient.post<AvailabilityExceptionDto>(`/provider/parking-resources/${resourceId}/availability/exceptions`, input),
+  updateException: (exceptionId: string, input: Partial<{ startsAt: string; endsAt: string; exceptionType: "BLOCKED" | "SPECIAL_AVAILABLE"; reason: string | null }>) => apiClient.patch<AvailabilityExceptionDto>(`/provider/availability/exceptions/${exceptionId}`, input),
+  removeException: (exceptionId: string) => apiClient.delete<{ deleted: true }>(`/provider/availability/exceptions/${exceptionId}`),
 };

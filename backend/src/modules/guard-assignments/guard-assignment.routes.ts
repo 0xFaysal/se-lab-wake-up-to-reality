@@ -19,7 +19,6 @@ import {
 } from "./guard-assignment.schema.js";
 
 export const guardAssignmentRouter = Router();
-guardAssignmentRouter.use(authenticate);
 
 /** @openapi
  * /api/v1/properties/{propertyId}/guards:
@@ -46,6 +45,7 @@ guardAssignmentRouter.use(authenticate);
  */
 guardAssignmentRouter.post(
   "/properties/:propertyId/guards",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(addPropertyGuardSchema),
@@ -53,6 +53,7 @@ guardAssignmentRouter.post(
 );
 guardAssignmentRouter.get(
   "/properties/:propertyId/guards",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER, UserRoleType.ADMIN),
   validate(propertyIdParamSchema),
@@ -154,6 +155,7 @@ guardAssignmentRouter.get(
 
 guardAssignmentRouter.post(
   "/provider/properties/:propertyId/guard-assignments",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(createProviderGuardAssignmentSchema),
@@ -161,6 +163,7 @@ guardAssignmentRouter.post(
 );
 guardAssignmentRouter.post(
   "/provider/guard-assignments",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(createCanonicalProviderGuardAssignmentSchema),
@@ -168,6 +171,7 @@ guardAssignmentRouter.post(
 );
 guardAssignmentRouter.get(
   "/provider/guard-assignments",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(listGuardAssignmentsQuerySchema),
@@ -175,6 +179,7 @@ guardAssignmentRouter.get(
 );
 guardAssignmentRouter.get(
   "/provider/guard-assignments/:assignmentId",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(guardAssignmentIdParamSchema),
@@ -182,6 +187,7 @@ guardAssignmentRouter.get(
 );
 guardAssignmentRouter.patch(
   "/provider/guard-assignments/:assignmentId",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(updateGuardAssignmentSchema),
@@ -189,6 +195,7 @@ guardAssignmentRouter.patch(
 );
 guardAssignmentRouter.delete(
   "/provider/guard-assignments/:assignmentId",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER),
   validate(guardAssignmentIdParamSchema),
@@ -197,12 +204,14 @@ guardAssignmentRouter.delete(
 
 guardAssignmentRouter.get(
   "/guard/property-memberships",
+  authenticate,
   requireRole(UserRoleType.GUARD),
   validate(listGuardMembershipsQuerySchema),
   controller.listMyGuardMembershipsController,
 );
 guardAssignmentRouter.post(
   "/guard/property-memberships/:membershipId/accept",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.GUARD),
   validate(guardMembershipIdSchema),
@@ -210,12 +219,14 @@ guardAssignmentRouter.post(
 );
 guardAssignmentRouter.post(
   "/guard/property-memberships/:membershipId/reject",
+  authenticate,
   requireRole(UserRoleType.GUARD),
   validate(guardMembershipIdSchema),
   controller.rejectGuardMembershipController,
 );
 guardAssignmentRouter.get(
   "/guard/provider-assignments",
+  authenticate,
   requireRole(UserRoleType.GUARD),
   validate(listGuardAssignmentsQuerySchema),
   controller.listMyProviderAssignmentsController,
@@ -223,6 +234,7 @@ guardAssignmentRouter.get(
 
 guardAssignmentRouter.delete(
   "/admin/properties/:propertyId/guards/:membershipId",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.ADMIN),
   validate(propertyGuardMembershipParamsSchema),

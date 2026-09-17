@@ -5,6 +5,10 @@ const isoDate = z.iso.datetime({ offset: true });
 const vehicleType = z.enum(["MOTORCYCLE", "SEDAN", "SUV", "MICROBUS"]);
 const positivePaisa = z.coerce.bigint().positive();
 const idempotencyKey = z.string().trim().min(8).max(100);
+const pagination = {
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+};
 
 export const propertyResourceParamsSchema = z.object({
   params: z.object({ propertyId: uuid }),
@@ -159,6 +163,24 @@ export const createAvailabilityExceptionSchema = z.object({
   }),
 });
 
+export const availabilityExceptionParamsSchema = z.object({
+  params: z.object({ exceptionId: uuid }),
+});
+
+export const updateAvailabilityExceptionSchema = z.object({
+  params: z.object({ exceptionId: uuid }),
+  body: z.object({
+    startsAt: isoDate.optional(),
+    endsAt: isoDate.optional(),
+    exceptionType: z.enum(["BLOCKED", "SPECIAL_AVAILABLE"]).optional(),
+    reason: z.string().trim().max(255).nullable().optional(),
+  }).strict().refine((value) => Object.keys(value).length > 0, "At least one field is required")
+    .refine(
+      (value) => !value.startsAt || !value.endsAt || new Date(value.endsAt) > new Date(value.startsAt),
+      { path: ["endsAt"], message: "endsAt must be later than startsAt" },
+    ),
+});
+
 export const searchParkingSchema = z.object({
   query: z.object({
     latitude: z.coerce.number().min(-90).max(90),
@@ -175,6 +197,17 @@ export const searchParkingSchema = z.object({
   }),
 });
 
+export const publicPropertyDetailSchema = z.object({
+  params: z.object({ propertyId: uuid }),
+  query: z.object({
+    startAt: isoDate,
+    endAt: isoDate,
+    vehicleType,
+  }).strict().refine((value) => new Date(value.endAt) > new Date(value.startAt), {
+    path: ["endAt"], message: "endAt must be later than startAt",
+  }),
+});
+
 export const createQuoteSchema = z.object({
   body: z.object({ listingId: uuid, vehicleId: uuid, startAt: isoDate, endAt: isoDate }).strict()
     .refine((value) => new Date(value.endAt) > new Date(value.startAt), {
@@ -186,6 +219,13 @@ export const quoteParamsSchema = z.object({ params: z.object({ quoteId: uuid }) 
 export const holdParamsSchema = z.object({ params: z.object({ holdId: uuid }) });
 export const bookingParamsSchema = z.object({ params: z.object({ bookingId: uuid }) });
 export const paymentParamsSchema = z.object({ params: z.object({ paymentId: uuid }) });
+
+export const guardBookingQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED"]).optional(),
+  }).strict(),
+});
 
 export const createHoldSchema = z.object({
   body: z.object({ quoteId: uuid, idempotencyKey }).strict(),
@@ -212,6 +252,22 @@ export const payoutSchema = z.object({
   body: z.object({ amountPaisa: positivePaisa, idempotencyKey }).strict(),
 });
 
+export const payoutParamsSchema = z.object({ params: z.object({ payoutId: uuid }) });
+export const providerPayoutQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["PENDING", "APPROVED", "REJECTED", "PAID"]).optional(),
+  }).strict(),
+});
+
+export const refundParamsSchema = z.object({ params: z.object({ refundId: uuid }) });
+export const driverRefundQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["PENDING", "SUCCEEDED", "FAILED"]).optional(),
+  }).strict(),
+});
+
 export const adminListingSuspensionSchema = z.object({
   params: z.object({ listingId: uuid }),
   body: z.object({ reason: z.string().trim().min(5).max(500) }).strict(),
@@ -231,6 +287,22 @@ export const adminPayoutReviewSchema = z.object({
 
 export const adminDisputeQuerySchema = z.object({
   query: z.object({ status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "REJECTED"]).optional() }).strict(),
+});
+
+export const disputeListQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "REJECTED"]).optional(),
+  }).strict(),
+});
+
+export const adminListingQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "SUSPENDED", "ENDED"]).optional(),
+    providerUserId: uuid.optional(),
+    propertyId: uuid.optional(),
+  }).strict(),
 });
 
 export const notificationParamsSchema = z.object({ params: z.object({ notificationId: uuid }) });

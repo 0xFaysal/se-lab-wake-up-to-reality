@@ -24,10 +24,12 @@ export const csrfProtection: RequestHandler = (req, _res, next) => {
   const origin = req.header("origin");
   const fetchSite = req.header("sec-fetch-site");
   const requestOrigin = `${req.protocol}://${req.get("host")}`;
+  const originIsAllowed = !!origin &&
+    (configuredOrigins.has(origin) || origin === requestOrigin);
 
   if (
-    (origin && !configuredOrigins.has(origin) && origin !== requestOrigin) ||
-    fetchSite === "cross-site"
+    (origin && !originIsAllowed) ||
+    (fetchSite === "cross-site" && !originIsAllowed)
   ) {
     next(
       new AppError({

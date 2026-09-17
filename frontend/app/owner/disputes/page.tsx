@@ -1,2 +1,3 @@
-import Link from "next/link"; import { Button } from "@/components/ui/button";
-export default function ProviderDisputesPage() { return <div className="max-w-3xl space-y-5"><h1 className="text-3xl font-extrabold">Disputes</h1><div className="rounded-lg border bg-white p-8"><p className="text-sm text-slate-600">A Provider can open a dispute from a related booking. The backend does not currently expose a Provider dispute list, so no placeholder history is shown here.</p><Link href="/owner/bookings"><Button className="mt-4">Open provider bookings</Button></Link></div></div>; }
+import { DisputeHistory } from "@/features/marketplace/components/dispute-history";
+
+export default function ProviderDisputesPage() { return <DisputeHistory scope="provider" />; }

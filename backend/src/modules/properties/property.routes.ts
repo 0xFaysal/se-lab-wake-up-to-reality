@@ -77,6 +77,31 @@ propertyRouter.use(propertyImageRouter);
 
 /**
  * @openapi
+ * /api/v1/provider/properties/possible-matches:
+ *   post:
+ *     tags: [Properties]
+ *     summary: Find possible canonical Property matches before creation
+ *     description: Compares normalized identity and location signals so the Provider can reuse an existing canonical Property or explicitly continue with a different one.
+ *     security:
+ *       - accessCookie: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, publicArea, approximateAddress, latitude, longitude]
+ *             properties:
+ *               name: { type: string }
+ *               publicArea: { type: string }
+ *               approximateAddress: { type: string }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *     responses:
+ *       200: { description: Privacy-safe list of possible canonical Property matches. }
+ *       400: { $ref: '#/components/responses/BadRequest' }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
  * /api/v1/provider/properties:
  *   post:
  *     tags: [Properties]

@@ -1,5 +1,5 @@
 import { apiClient } from "./api-client";
-import type { BookingQuoteDto, ParkingSearchParams, ParkingSearchResultDto, ReservationHoldDto } from "./marketplace-types";
+import type { BookingQuoteDto, ParkingSearchParams, ParkingSearchResultDto, PublicPropertyDetailDto, ReservationHoldDto } from "./marketplace-types";
 
 function query(input: ParkingSearchParams) {
   const params = new URLSearchParams();
@@ -9,6 +9,8 @@ function query(input: ParkingSearchParams) {
 
 export const parkingSearchApi = {
   search: (input: ParkingSearchParams) => apiClient.get<ParkingSearchResultDto[]>(`/parking/search?${query(input)}`),
+  propertyDetail: (propertyId: string, input: Pick<ParkingSearchParams, "startAt" | "endAt" | "vehicleType">) =>
+    apiClient.get<PublicPropertyDetailDto>(`/parking/properties/${propertyId}?${query(input as ParkingSearchParams)}`),
   createQuote: (input: { listingId: string; vehicleId: string; startAt: string; endAt: string }) => apiClient.post<BookingQuoteDto>("/parking/quotes", input),
   quote: (quoteId: string) => apiClient.get<BookingQuoteDto>(`/parking/quotes/${quoteId}`),
   createHold: (quoteId: string, idempotencyKey: string) => apiClient.post<ReservationHoldDto>("/parking/holds", { quoteId, idempotencyKey }),

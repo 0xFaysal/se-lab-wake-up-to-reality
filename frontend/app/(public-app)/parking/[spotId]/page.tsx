@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "react-qr-code";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { VehicleType } from "@/lib/api/api-types";
 import { bookingsApi } from "@/lib/api/bookings-api";
-import type { BookingDto, BookingQuoteDto, ParkingOfferDto, PaymentCaptureResult, ReservationHoldDto } from "@/lib/api/marketplace-types";
+import type { BookingDto, BookingQuoteDto, PaymentCaptureResult, PublicPropertyOfferDto, ReservationHoldDto } from "@/lib/api/marketplace-types";
 import { parkingSearchApi } from "@/lib/api/parking-search-api";
 import { vehicleApi } from "@/lib/api/vehicle-api";
 import { formatBDTFromPaisa, formatDateTime, vehicleLabels } from "@/lib/formatters";
@@ -18,20 +19,21 @@ import { queryKeys } from "@/lib/query-keys";
 
 export default function ParkingDetailsPage({ params }: { params: Promise<{ spotId: string }> }) {
   const { spotId } = use(params); const search = useSearchParams();
-  const request = useMemo(() => ({ latitude: Number(search.get("latitude")), longitude: Number(search.get("longitude")), radiusKm: Number(search.get("radiusKm") ?? 5), startAt: search.get("startAt") ?? "", endAt: search.get("endAt") ?? "", vehicleType: (search.get("vehicleType") ?? "SEDAN") as VehicleType }), [search]);
-  const valid = !!request.startAt && !!request.endAt && Number.isFinite(request.latitude) && Number.isFinite(request.longitude);
-  const results = useQuery({ queryKey: queryKeys.parkingSearch.results(request), queryFn: () => parkingSearchApi.search(request), enabled: valid });
-  const property = results.data?.find((item) => item.id === spotId);
+  const request = useMemo(() => ({ startAt: search.get("startAt") ?? "", endAt: search.get("endAt") ?? "", vehicleType: (search.get("vehicleType") ?? "SEDAN") as VehicleType }), [search]);
+  const valid = !!request.startAt && !!request.endAt;
+  const results = useQuery({ queryKey: queryKeys.parkingSearch.property(spotId, request), queryFn: () => parkingSearchApi.propertyDetail(spotId, request), enabled: valid });
+  const property = results.data;
   if (!valid) return <PageState title="Search context is missing" action={<Link href="/parking"><Button>Return to search</Button></Link>} />;
   if (results.isPending) return <PageState title="Loading live parking offers" loading />;
   if (results.isError) return <PageState title={getApiErrorMessage(results.error)} action={<Button variant="outline" onClick={() => results.refetch()}><RefreshCw className="size-4" />Retry</Button>} />;
   if (!property) return <PageState title="This Property is no longer available for the selected time." action={<Link href="/parking"><Button>Choose another option</Button></Link>} />;
-  return <main className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6"><Link href="/parking" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600"><ArrowLeft className="size-4" />Search results</Link><header><p className="flex items-center gap-2 text-sm text-slate-500"><MapPin className="size-4" />{property.publicArea} · {property.distanceKm} km</p><h1 className="mt-2 text-3xl font-extrabold">{property.name}</h1><p className="mt-2 text-sm text-slate-600">{property.approximateAddress}</p><p className="mt-3 text-sm font-semibold text-emerald-800">{property.availableUnits} unit(s) currently available</p></header><div className="grid gap-6 lg:grid-cols-[1fr_24rem]"><section className="space-y-3"><h2 className="text-lg font-bold">Available offers</h2>{property.offers.map((offer) => <Offer key={offer.listingId} offer={offer} />)}</section><BookingCheckout offers={property.offers} startAt={request.startAt} endAt={request.endAt} /></div></main>;
+  const availableUnits = property.offers.reduce((total, offer) => total + offer.availableUnits, 0);
+  return <main className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6"><Link href="/parking" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600"><ArrowLeft className="size-4" />Search results</Link>{property.images[0] && <div className="relative aspect-[16/6] overflow-hidden rounded-lg bg-slate-100"><Image src={property.images[0].url} alt={property.name} fill unoptimized className="object-cover" /></div>}<header><p className="flex items-center gap-2 text-sm text-slate-500"><MapPin className="size-4" />{property.publicArea}</p><h1 className="mt-2 text-3xl font-extrabold">{property.name}</h1><p className="mt-2 text-sm text-slate-600">{property.approximateAddress}</p>{property.description && <p className="mt-3 max-w-3xl text-sm text-slate-600">{property.description}</p>}<p className="mt-3 text-sm font-semibold text-emerald-800">{availableUnits} unit(s) currently available</p></header><div className="grid gap-6 lg:grid-cols-[1fr_24rem]"><section className="space-y-3"><h2 className="text-lg font-bold">Available offers</h2>{property.offers.map((offer) => <Offer key={offer.listingId} offer={offer} />)}{property.offers.length === 0 && <p className="rounded-lg border bg-white p-6 text-sm text-slate-600">No compatible space is available for this period.</p>}</section>{property.offers.length > 0 && <BookingCheckout offers={property.offers} startAt={request.startAt} endAt={request.endAt} />}</div></main>;
 }
 
-function Offer({ offer }: { offer: ParkingOfferDto }) { return <article className="rounded-lg border bg-white p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-bold">{offer.title}</h3><p className="mt-1 text-xs text-slate-500">{offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits} available</p></div><strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong></div><div className="mt-3 flex flex-wrap gap-2">{offer.allowedVehicleTypes.map((type) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>)}{offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}</div></article>; }
+function Offer({ offer }: { offer: PublicPropertyOfferDto }) { return <article className="rounded-lg border bg-white p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-bold">{offer.title}</h3><p className="mt-1 text-xs text-slate-500">{offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits} available</p>{offer.description && <p className="mt-2 text-sm text-slate-600">{offer.description}</p>}</div><strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong></div><div className="mt-3 flex flex-wrap gap-2">{offer.allowedVehicleTypes.map((type) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>)}{offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}{offer.hasCctv && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">CCTV</span>}{offer.hasGuard && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">Guard</span>}{offer.facilities.map((facility) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={facility.code}>{facility.displayName}</span>)}</div></article>; }
 
-function BookingCheckout({ offers, startAt, endAt }: { offers: ParkingOfferDto[]; startAt: string; endAt: string }) {
+function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOfferDto[]; startAt: string; endAt: string }) {
   const router = useRouter(); const client = useQueryClient(); const keys = useRef({ hold: crypto.randomUUID(), booking: crypto.randomUUID(), payment: crypto.randomUUID() });
   const [listingId, setListingId] = useState(offers[0]?.listingId ?? ""); const [vehicleId, setVehicleId] = useState("");
   const [quote, setQuote] = useState<BookingQuoteDto | null>(null); const [hold, setHold] = useState<ReservationHoldDto | null>(null); const [booking, setBooking] = useState<BookingDto | null>(null); const [payment, setPayment] = useState<PaymentCaptureResult | null>(null);
@@ -56,7 +58,7 @@ function BookingCheckout({ offers, startAt, endAt }: { offers: ParkingOfferDto[]
     {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-xs text-red-700">{getApiErrorMessage(error)}</p>}
   </aside>;
 }
-function useCurrentTime(active: boolean) { const [now, setNow] = useState(0); useEffect(() => { if (!active) return; setNow(Date.now()); const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, [active]); return now; }
+function useCurrentTime(active: boolean) { const [now, setNow] = useState(() => Date.now()); useEffect(() => { if (!active) return; const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, [active]); return now; }
 function Countdown({ expiresAt, now }: { expiresAt: string; now: number }) { if (!now) return <>calculating...</>; const remaining = Math.max(0, new Date(expiresAt).getTime() - now); const minutes = Math.floor(remaining / 60000); const seconds = Math.floor((remaining % 60000) / 1000); return <>{minutes}:{seconds.toString().padStart(2, "0")}</>; }
 function Price({ label, value, strong }: { label: string; value: string; strong?: boolean }) { return <div className={`flex justify-between text-sm ${strong ? "border-t pt-2 font-bold" : ""}`}><span>{label}</span><span>{formatBDTFromPaisa(value)}</span></div>; }
 function PageState({ title, loading, action }: { title: string; loading?: boolean; action?: React.ReactNode }) { return <div className="mx-auto max-w-xl px-4 py-24 text-center">{loading && <Loader2 className="mx-auto mb-3 size-7 animate-spin" />}<h1 className="font-bold">{title}</h1>{action && <div className="mt-4">{action}</div>}</div>; }

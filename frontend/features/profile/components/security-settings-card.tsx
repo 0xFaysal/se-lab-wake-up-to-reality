@@ -6,7 +6,7 @@ import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordModal } from "./change-password-modal";
 
-export function SecuritySettingsCard() {
+export function SecuritySettingsCard({ sessionsHref = "/account/sessions" }: { sessionsHref?: string }) {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   return (
@@ -51,14 +51,14 @@ export function SecuritySettingsCard() {
               Remembered Devices
             </span>
             <Link
-              href="/account/sessions"
+              href={sessionsHref}
               className="text-xs font-bold text-primary hover:underline cursor-pointer font-heading"
             >
               Manage Devices
             </Link>
           </div>
 
-          <p className="rounded-xl border bg-muted/30 p-3.5 text-xs text-muted-foreground">Open Manage Devices to view the live server session list. Device names are not guessed locally.</p>
+          <p className="rounded-lg border bg-muted/30 p-3.5 text-xs text-muted-foreground">Review where your account is signed in and revoke any session you do not recognize.</p>
         </div>
 
         {/* Security Alert Banner */}

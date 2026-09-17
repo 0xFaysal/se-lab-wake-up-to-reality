@@ -23,7 +23,7 @@ export function OwnerHeader({
   const { data: currentUser } = useCurrentUser();
   const displayName = currentUser?.fullName ?? "Provider";
   const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-  const role = currentUser?.roles.includes("MANAGER") ? "Manager" : "Provider";
+  const role = "Provider";
 
   return (
     <header className="h-20 bg-white border-b border-[#E5E7EB] px-6 sm:px-8 lg:px-10 flex items-center justify-between sticky top-0 z-20">
@@ -58,7 +58,7 @@ export function OwnerHeader({
 
         {/* Settings Icon Button */}
         <Link
-          href="/owner/settings"
+          href="/owner/security"
           className="size-10 rounded-full border border-[#E5E7EB] hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors shadow-2xs"
           aria-label="Owner settings"
         >
@@ -103,12 +103,12 @@ export function OwnerHeader({
               </div>
 
               <Link
-                href="/owner/settings"
+                href="/owner/security"
                 onClick={() => setProfileDropdownOpen(false)}
                 className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
               >
                 <User className="size-4 text-slate-400" />
-                Account Profile
+                Account Security
               </Link>
 
               <Link

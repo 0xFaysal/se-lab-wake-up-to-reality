@@ -19,6 +19,7 @@ export interface ManagerDelegationDto {
 export const managerApi = {
   listForProvider: async () => (await apiClient.get<{ delegations: ManagerDelegationDto[] }>("/provider/manager-delegations")).delegations,
   create: async (input: { propertyId: string; managerUserId: string; permissions: ManagerPermission[]; resourceIds: string[]; validUntil?: string }) => (await apiClient.post<{ delegation: ManagerDelegationDto }>("/provider/manager-delegations", input)).delegation,
+  createByIdentifier: async (input: { propertyId: string; managerIdentifier: string; permissions: ManagerPermission[]; resourceIds: string[]; validUntil?: string }) => (await apiClient.post<{ delegation: ManagerDelegationDto }>("/provider/manager-delegations/by-identifier", input)).delegation,
   detail: async (id: string) => (await apiClient.get<{ delegation: ManagerDelegationDto }>(`/provider/manager-delegations/${id}`)).delegation,
   updatePermissions: async (id: string, input: { permissions: ManagerPermission[]; resourceIds: string[] }) => (await apiClient.patch<{ delegation: ManagerDelegationDto }>(`/provider/manager-delegations/${id}/permissions`, input)).delegation,
   end: async (id: string) => (await apiClient.delete<{ delegation: ManagerDelegationDto }>(`/provider/manager-delegations/${id}`)).delegation,

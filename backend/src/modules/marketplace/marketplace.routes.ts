@@ -27,6 +27,7 @@ const providerOrManager = requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGE
  *     responses: { 200: { description: Available Property summaries and offers. } }
  */
 marketplaceRouter.get("/parking/search", validate(schema.searchParkingSchema), controller.searchParking);
+marketplaceRouter.get("/parking/properties/:propertyId", validate(schema.publicPropertyDetailSchema), controller.getPublicPropertyDetail);
 
 marketplaceRouter.use(authenticate, requireAccountReady);
 
@@ -93,6 +94,8 @@ marketplaceRouter.delete("/provider/listings/:listingId", providerOrManager, val
  * /api/v1/admin/listings/{listingId}/suspend:
  *   post: { tags: [Parking Listings], summary: Suspend a marketplace listing with an audited reason, security: [{ accessCookie: [] }], responses: { 200: { description: Listing suspended. } } }
  */
+marketplaceRouter.get("/admin/listings", requireRole(UserRoleType.ADMIN), validate(schema.adminListingQuerySchema), controller.listAdminListings);
+marketplaceRouter.get("/admin/listings/:listingId", requireRole(UserRoleType.ADMIN), validate(schema.listingParamsSchema), controller.getAdminListing);
 marketplaceRouter.post("/admin/listings/:listingId/suspend", requireRole(UserRoleType.ADMIN), validate(schema.adminListingSuspensionSchema), controller.suspendListing);
 
 /**
@@ -106,6 +109,8 @@ marketplaceRouter.post("/admin/listings/:listingId/suspend", requireRole(UserRol
 marketplaceRouter.get("/provider/parking-resources/:resourceId/availability", providerOrManager, validate(schema.resourceParamsSchema), controller.listAvailability);
 marketplaceRouter.put("/provider/parking-resources/:resourceId/availability", providerOrManager, validate(schema.replaceAvailabilitySchema), controller.replaceAvailability);
 marketplaceRouter.post("/provider/parking-resources/:resourceId/availability/exceptions", providerOrManager, validate(schema.createAvailabilityExceptionSchema), controller.createAvailabilityException);
+marketplaceRouter.patch("/provider/availability/exceptions/:exceptionId", providerOrManager, validate(schema.updateAvailabilityExceptionSchema), controller.updateAvailabilityException);
+marketplaceRouter.delete("/provider/availability/exceptions/:exceptionId", providerOrManager, validate(schema.availabilityExceptionParamsSchema), controller.deleteAvailabilityException);
 
 /**
  * @openapi
@@ -128,6 +133,12 @@ marketplaceRouter.get("/bookings/:bookingId", requireRole(UserRoleType.DRIVER), 
 marketplaceRouter.post("/bookings/:bookingId/cancel", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.cancelBooking);
 marketplaceRouter.post("/bookings/:bookingId/checkout-request", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.requestCheckout);
 marketplaceRouter.get("/provider/bookings", providerOrManager, controller.listProviderBookings);
+marketplaceRouter.get(
+  "/provider/bookings/:bookingId",
+  providerOrManager,
+  validate(schema.bookingParamsSchema),
+  controller.getProviderBooking,
+);
 
 /**
  * @openapi
@@ -138,6 +149,8 @@ marketplaceRouter.get("/provider/bookings", providerOrManager, controller.listPr
  */
 marketplaceRouter.post("/payments/simulated/capture", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.capturePaymentSchema), controller.capturePayment);
 marketplaceRouter.post("/guard/access/verify", requireRole(UserRoleType.GUARD), validate(schema.verifyCredentialSchema), controller.verifyCredential);
+marketplaceRouter.get("/guard/bookings", requireRole(UserRoleType.GUARD), validate(schema.guardBookingQuerySchema), controller.listGuardBookings);
+marketplaceRouter.get("/guard/bookings/:bookingId", requireRole(UserRoleType.GUARD), validate(schema.bookingParamsSchema), controller.getGuardBooking);
 marketplaceRouter.post("/guard/bookings/:bookingId/check-in", requireRole(UserRoleType.GUARD), validate(schema.bookingParamsSchema.merge(schema.verifyCredentialSchema)), controller.checkIn);
 marketplaceRouter.post("/guard/bookings/:bookingId/check-out", requireRole(UserRoleType.GUARD), validate(schema.bookingParamsSchema), controller.checkOut);
 
@@ -153,7 +166,11 @@ marketplaceRouter.get("/wallet/transactions", controller.listWalletTransactions)
 marketplaceRouter.get("/provider/earnings/summary", providerOrManager, controller.earningsSummary);
 marketplaceRouter.get("/provider/earnings/transactions", providerOrManager, controller.listEarningsTransactions);
 marketplaceRouter.post("/payments/:paymentId/refunds", requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.refundSchema), controller.createRefund);
+marketplaceRouter.get("/refunds", requireRole(UserRoleType.DRIVER), validate(schema.driverRefundQuerySchema), controller.listDriverRefunds);
+marketplaceRouter.get("/refunds/:refundId", requireRole(UserRoleType.DRIVER), validate(schema.refundParamsSchema), controller.getDriverRefund);
 marketplaceRouter.post("/provider/payouts", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutSchema), controller.createPayout);
+marketplaceRouter.get("/provider/payouts", requireRole(UserRoleType.PROVIDER), validate(schema.providerPayoutQuerySchema), controller.listProviderPayouts);
+marketplaceRouter.get("/provider/payouts/:payoutId", requireRole(UserRoleType.PROVIDER), validate(schema.payoutParamsSchema), controller.getProviderPayout);
 /**
  * @openapi
  * /api/v1/admin/payouts:
@@ -180,6 +197,10 @@ marketplaceRouter.post("/bookings/:bookingId/reviews", requireRole(UserRoleType.
 marketplaceRouter.get("/provider/reviews", providerOrManager, controller.listProviderReviews);
 marketplaceRouter.post("/provider/reviews/:reviewId/reply", providerOrManager, validate(schema.replyReviewSchema), controller.replyReview);
 marketplaceRouter.post("/bookings/:bookingId/disputes", requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER), validate(schema.createDisputeSchema), controller.createDispute);
+marketplaceRouter.get("/disputes", requireRole(UserRoleType.DRIVER), validate(schema.disputeListQuerySchema), controller.listDriverDisputes);
+marketplaceRouter.get("/disputes/:disputeId", requireRole(UserRoleType.DRIVER), validate(schema.disputeParamsSchema), controller.getDriverDispute);
+marketplaceRouter.get("/provider/disputes", providerOrManager, validate(schema.disputeListQuerySchema), controller.listProviderDisputes);
+marketplaceRouter.get("/provider/disputes/:disputeId", providerOrManager, validate(schema.disputeParamsSchema), controller.getProviderDispute);
 /**
  * @openapi
  * /api/v1/admin/disputes:
@@ -189,6 +210,39 @@ marketplaceRouter.post("/bookings/:bookingId/disputes", requireRole(UserRoleType
  */
 marketplaceRouter.get("/admin/disputes", requireRole(UserRoleType.ADMIN), validate(schema.adminDisputeQuerySchema), controller.listDisputes);
 marketplaceRouter.patch("/admin/disputes/:disputeId", requireRole(UserRoleType.ADMIN), validate(schema.resolveDisputeSchema), controller.resolveDispute);
+
+/**
+ * @openapi
+ * /api/v1/parking/properties/{propertyId}:
+ *   get: { tags: [Parking Marketplace], summary: Get a public-safe Property and available offers for a requested period, responses: { 200: { description: Public Property detail. }, 404: { description: Property unavailable. } } }
+ * /api/v1/guard/bookings:
+ *   get: { tags: [Guard Booking Operations], summary: List active bookings in the authenticated Guard assignment scope, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated Guard booking operations. } } }
+ * /api/v1/guard/bookings/{bookingId}:
+ *   get: { tags: [Guard Booking Operations], summary: Get a booking in Guard scope without financial fields, security: [{ accessCookie: [] }], responses: { 200: { description: Guard-safe booking detail. }, 404: { description: Booking not found in Guard scope. } } }
+ * /api/v1/provider/payouts:
+ *   get: { tags: [Wallet], summary: List authenticated Provider payout requests, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated Provider payout history. } } }
+ * /api/v1/provider/payouts/{payoutId}:
+ *   get: { tags: [Wallet], summary: Get one authenticated Provider payout request, security: [{ accessCookie: [] }], responses: { 200: { description: Provider payout detail. }, 404: { description: Payout not found in Provider scope. } } }
+ * /api/v1/refunds:
+ *   get: { tags: [Payments], summary: List refunds linked to authenticated Driver payments, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated Driver refund history. } } }
+ * /api/v1/refunds/{refundId}:
+ *   get: { tags: [Payments], summary: Get a refund linked to an authenticated Driver payment, security: [{ accessCookie: [] }], responses: { 200: { description: Driver refund detail. }, 404: { description: Refund not found in Driver scope. } } }
+ * /api/v1/disputes:
+ *   get: { tags: [Disputes], summary: List authenticated Driver disputes, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated Driver disputes. } } }
+ * /api/v1/disputes/{disputeId}:
+ *   get: { tags: [Disputes], summary: Get one authenticated Driver dispute, security: [{ accessCookie: [] }], responses: { 200: { description: Driver dispute detail. }, 404: { description: Dispute not found in Driver scope. } } }
+ * /api/v1/provider/disputes:
+ *   get: { tags: [Disputes], summary: List disputes in Provider or delegated Manager booking scope, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated Provider disputes. } } }
+ * /api/v1/provider/disputes/{disputeId}:
+ *   get: { tags: [Disputes], summary: Get a dispute in Provider or delegated Manager booking scope, security: [{ accessCookie: [] }], responses: { 200: { description: Provider dispute detail. }, 404: { description: Dispute not found in Provider scope. } } }
+ * /api/v1/admin/listings:
+ *   get: { tags: [Parking Listings], summary: List marketplace listings for Admin review, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated listing review queue. } } }
+ * /api/v1/admin/listings/{listingId}:
+ *   get: { tags: [Parking Listings], summary: Get full Admin listing review detail, security: [{ accessCookie: [] }], responses: { 200: { description: Listing review detail. }, 404: { description: Listing not found. } } }
+ * /api/v1/provider/availability/exceptions/{exceptionId}:
+ *   patch: { tags: [Availability], summary: Update an availability exception within Provider or Manager scope, security: [{ accessCookie: [] }], responses: { 200: { description: Exception updated. }, 409: { description: Overlapping exception or booking conflict. } } }
+ *   delete: { tags: [Availability], summary: Delete an availability exception within Provider or Manager scope, security: [{ accessCookie: [] }], responses: { 200: { description: Exception deleted. } } }
+ */
 
 /**
  * @openapi
@@ -211,6 +265,8 @@ marketplaceRouter.patch("/admin/disputes/:disputeId", requireRole(UserRoleType.A
  *   post: { tags: [Booking], summary: Request Guard-confirmed checkout, security: [{ accessCookie: [] }], responses: { 200: { description: Checkout requested. } } }
  * /api/v1/provider/bookings:
  *   get: { tags: [Booking], summary: List Provider or delegated Manager bookings, security: [{ accessCookie: [] }], responses: { 200: { description: Scoped booking list. } } }
+ * /api/v1/provider/bookings/{bookingId}:
+ *   get: { tags: [Booking], summary: Get one Provider or delegated Manager booking within scope, security: [{ accessCookie: [] }], responses: { 200: { description: Scoped booking detail. }, 404: { description: Booking absent or outside the caller scope. } } }
  * /api/v1/guard/bookings/{bookingId}/check-in:
  *   post: { tags: [Guard Booking Operations], summary: Check in using a valid one-time credential, security: [{ accessCookie: [] }], responses: { 200: { description: Booking checked in. } } }
  * /api/v1/guard/bookings/{bookingId}/check-out:
