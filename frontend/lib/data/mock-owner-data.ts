@@ -129,11 +129,39 @@ export const MOCK_OWNER_PROPERTIES: OwnerProperty[] = [
     area: "Dhanmondi",
     totalSpaces: 4,
     availableSpaces: 4,
-    ratePerHour: null,
-    managerName: undefined,
+    ratePerHour: 40,
+    managerName: "Nabila Ahmed",
     guardName: undefined,
     guardStatus: "Not Assigned",
     imageUrl: undefined,
+  },
+  {
+    id: "prop-uttara-4",
+    title: "Commercial Complex, Uttara",
+    status: "ACTIVE",
+    address: "Sector 7, Road 14, Uttara, Dhaka",
+    area: "Uttara",
+    totalSpaces: 12,
+    availableSpaces: 9,
+    ratePerHour: 60,
+    managerName: undefined,
+    guardName: "Mizanur Rahman",
+    guardStatus: "On Duty",
+    imageUrl: "/assets/safety-garage.jpg",
+  },
+  {
+    id: "prop-motijheel-5",
+    title: "City Center Tower, Motijheel",
+    status: "ACTIVE",
+    address: "Dilkusha Commercial Area, Motijheel, Dhaka",
+    area: "Motijheel",
+    totalSpaces: 20,
+    availableSpaces: 14,
+    ratePerHour: 80,
+    managerName: undefined,
+    guardName: "Abdur Rashid",
+    guardStatus: "On Duty",
+    imageUrl: "/assets/garage-entrance.jpg",
   },
 ];
 
@@ -1159,16 +1187,101 @@ export const MOCK_FAQS: FAQItem[] = [
   },
 ];
 
-// ==========================================
-// PROPERTY MANAGERS DELEGATION DATA
-// ==========================================
+// ============================================================================
+// MANAGER DELEGATION MOCK DATA
+// ============================================================================
 
 export interface ManagerPermissions {
-  canManageListings: boolean;
+  canViewProperty: boolean;
+  canEditProperty: boolean;
+  canManageParkingSpaces: boolean;
+  canManageAvailability: boolean;
+  canManagePricing: boolean;
+  canViewBookings: boolean;
   canManageBookings: boolean;
+  canManageActiveSessions: boolean;
   canManageGuards: boolean;
   canRespondReviews: boolean;
-  canAccessFinancials: boolean;
+}
+
+export interface OwnerManager {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  status: "ACTIVE" | "INVITED" | "SUSPENDED";
+  assignedPropertyIds: string[];
+  assignedPropertyTitles: string[];
+  permissions: ManagerPermissions;
+  joinedDate?: string;
+  lastActive?: string;
+}
+
+export const MOCK_OWNER_MANAGERS: OwnerManager[] = [
+  {
+    id: "mgr-1",
+    name: "Rahim Uddin",
+    email: "rahim.manager@parkease.com",
+    phone: "+880 1711-234567",
+    status: "ACTIVE",
+    assignedPropertyIds: ["prop-gulshan-1", "prop-banani-2"],
+    assignedPropertyTitles: [
+      "Residential Building, Gulshan",
+      "Office Parking, Banani",
+    ],
+    permissions: {
+      canViewProperty: true,
+      canEditProperty: false,
+      canManageParkingSpaces: false,
+      canManageAvailability: false,
+      canManagePricing: false,
+      canViewBookings: true,
+      canManageBookings: true,
+      canManageActiveSessions: true,
+      canManageGuards: true,
+      canRespondReviews: true,
+    },
+    joinedDate: "15 Jan 2026",
+    lastActive: "Active now",
+  },
+  {
+    id: "mgr-2",
+    name: "Shahidul Alam",
+    email: "shahidul.alam@parkease.com",
+    phone: "+880 1812-987654",
+    status: "ACTIVE",
+    assignedPropertyIds: ["prop-dhanmondi-3"],
+    assignedPropertyTitles: ["Commercial Hub, Dhanmondi"],
+    permissions: {
+      canViewProperty: true,
+      canEditProperty: true,
+      canManageParkingSpaces: true,
+      canManageAvailability: true,
+      canManagePricing: false,
+      canViewBookings: true,
+      canManageBookings: true,
+      canManageActiveSessions: false,
+      canManageGuards: false,
+      canRespondReviews: false,
+    },
+    joinedDate: "02 Feb 2026",
+    lastActive: "2 hours ago",
+  },
+];
+
+
+export interface ManagerPermissions {
+  canViewProperty: boolean;
+  canEditProperty: boolean;
+  canManageParkingSpaces: boolean;
+  canManageAvailability: boolean;
+  canManagePricing: boolean;
+  canViewBookings: boolean;
+  canManageBookings: boolean;
+  canManageActiveSessions: boolean;
+  canManageGuards: boolean;
+  canRespondReviews: boolean;
 }
 
 export interface OwnerManager {
@@ -1178,13 +1291,37 @@ export interface OwnerManager {
   phone: string;
   email: string;
   avatarUrl?: string;
+  role: string;
   assignedPropertyIds: string[];
   assignedPropertyTitles: string[];
   permissions: ManagerPermissions;
-  status: "ACTIVE" | "PENDING_ACTIVATION" | "SUSPENDED";
+  status: "ACTIVE" | "PENDING_INVITATION" | "SUSPENDED";
   joinedDate: string;
   lastActive?: string;
+  inviteSentAt?: string;
+  inviteExpiresIn?: string;
   notes?: string;
+}
+
+export const DEFAULT_MANAGER_PERMISSIONS: ManagerPermissions = {
+  canViewProperty: true,
+  canEditProperty: true,
+  canManageParkingSpaces: true,
+  canManageAvailability: true,
+  canManagePricing: false,
+  canViewBookings: true,
+  canManageBookings: true,
+  canManageActiveSessions: true,
+  canManageGuards: false,
+  canRespondReviews: false,
+};
+
+export function countEnabledPermissions(p: ManagerPermissions): number {
+  return Object.values(p).filter(Boolean).length;
+}
+
+export function countRestrictedPermissions(p: ManagerPermissions): number {
+  return Object.values(p).filter((v) => !v).length;
 }
 
 export const MOCK_OWNER_MANAGERS: OwnerManager[] = [
@@ -1192,60 +1329,80 @@ export const MOCK_OWNER_MANAGERS: OwnerManager[] = [
     id: "mgr-1",
     name: "Rahim Uddin",
     initials: "RU",
-    phone: "+880 1712-345678",
-    email: "rahim.uddin@parkease.bd",
+    phone: "+880 17XX-XXXXXX",
+    email: "rahim@example.com",
+    role: "Property Manager",
     assignedPropertyIds: ["prop-gulshan-1", "prop-banani-2"],
     assignedPropertyTitles: ["Residential Building, Gulshan", "Office Parking, Banani"],
     permissions: {
-      canManageListings: true,
+      canViewProperty: true,
+      canEditProperty: true,
+      canManageParkingSpaces: true,
+      canManageAvailability: true,
+      canManagePricing: false,
+      canViewBookings: true,
       canManageBookings: true,
+      canManageActiveSessions: true,
       canManageGuards: true,
       canRespondReviews: true,
-      canAccessFinancials: false,
     },
     status: "ACTIVE",
-    joinedDate: "15 Jan 2026",
-    lastActive: "12 mins ago",
+    joinedDate: "Aug 12, 2026",
+    lastActive: "Today, 2:15 PM",
     notes: "Senior site manager supervising Gulshan & Banani hubs.",
   },
   {
     id: "mgr-2",
-    name: "Kazi Farhan",
-    initials: "KF",
-    phone: "+880 1819-876543",
-    email: "kazi.farhan@gmail.com",
-    assignedPropertyIds: ["prop-dhanmondi-3"],
-    assignedPropertyTitles: ["Apartment Parking, Dhanmondi"],
+    name: "Nabila Ahmed",
+    initials: "NA",
+    phone: "+880 18XX-XXXXXX",
+    email: "nabila.ahmed@example.com",
+    role: "Property Manager",
+    assignedPropertyIds: ["prop-dhanmondi-3", "prop-gulshan-1"],
+    assignedPropertyTitles: ["Apartment Parking, Dhanmondi", "Residential Building, Gulshan"],
     permissions: {
-      canManageListings: true,
+      canViewProperty: true,
+      canEditProperty: true,
+      canManageParkingSpaces: true,
+      canManageAvailability: true,
+      canManagePricing: true,
+      canViewBookings: true,
       canManageBookings: true,
+      canManageActiveSessions: true,
       canManageGuards: true,
-      canRespondReviews: false,
-      canAccessFinancials: true,
+      canRespondReviews: true,
     },
     status: "ACTIVE",
-    joinedDate: "02 Feb 2026",
-    lastActive: "1 hour ago",
-    notes: "Entrusted with financial overview and monthly settlement reconciliation.",
+    joinedDate: "Oct 04, 2026",
+    lastActive: "Today, 1:45 PM",
+    notes: "Full operational access to assigned permissions.",
   },
   {
     id: "mgr-3",
-    name: "Nasir Chowdhury",
-    initials: "NC",
-    phone: "+880 1911-223344",
-    email: "nasir.chowdhury@outlook.com",
-    assignedPropertyIds: [],
-    assignedPropertyTitles: [],
+    name: "Samiul Hasan",
+    initials: "SH",
+    phone: "+880 19XX-XXXXXX",
+    email: "samiul@example.com",
+    role: "Property Manager",
+    assignedPropertyIds: ["prop-banani-2"],
+    assignedPropertyTitles: ["Office Parking, Banani"],
     permissions: {
-      canManageListings: true,
-      canManageBookings: true,
+      canViewProperty: true,
+      canEditProperty: false,
+      canManageParkingSpaces: false,
+      canManageAvailability: false,
+      canManagePricing: false,
+      canViewBookings: true,
+      canManageBookings: false,
+      canManageActiveSessions: false,
       canManageGuards: false,
       canRespondReviews: false,
-      canAccessFinancials: false,
     },
-    status: "PENDING_ACTIVATION",
-    joinedDate: "10 Mar 2026",
-    lastActive: "Never",
-    notes: "Invitation code sent. Awaiting initial password creation.",
+    status: "PENDING_INVITATION",
+    joinedDate: "Sep 13, 2026",
+    lastActive: undefined,
+    inviteSentAt: "Sent today",
+    inviteExpiresIn: "Expires in 48h",
+    notes: "Invitation code sent. Awaiting initial account activation.",
   },
 ];

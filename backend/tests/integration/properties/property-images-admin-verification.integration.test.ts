@@ -521,12 +521,19 @@ integration("Property images and Admin verification integration", () => {
   });
 
   it("returns a rejected Property to PENDING after an Owner edit", async () => {
+    const current = await prisma.property.findUniqueOrThrow({
+      where: { id: rejectedPropertyId },
+      select: { version: true },
+    });
     const response = await request(
       `/api/v1/owner/properties/${rejectedPropertyId}`,
       {
         method: "PATCH",
         cookie: cookies.get("owner-a"),
-        body: JSON.stringify({ approximateAddress: "Beside Gulshan market" }),
+        body: JSON.stringify({
+          version: current.version,
+          approximateAddress: "Beside Gulshan market",
+        }),
       },
     );
     assert.equal(response.status, 200);

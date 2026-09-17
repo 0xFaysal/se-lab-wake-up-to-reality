@@ -1,0 +1,34 @@
+@baseUrl = http://localhost:4000/api/v1
+@guardEmail = guard@example.com
+@guardPassword = StrongGuard123!
+@bookingId = replace-booking-id
+@credential = paste-one-time-access-credential
+
+### Login as assigned Guard
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{guardEmail}}",
+  "password": "{{guardPassword}}"
+}
+
+### Verify credential without changing booking state
+POST {{baseUrl}}/guard/access/verify
+Content-Type: application/json
+
+{
+  "credential": "{{credential}}"
+}
+
+### Check Driver in (idempotent after first success)
+POST {{baseUrl}}/guard/bookings/{{bookingId}}/check-in
+Content-Type: application/json
+
+{
+  "credential": "{{credential}}"
+}
+
+### Complete checkout and release settlement
+POST {{baseUrl}}/guard/bookings/{{bookingId}}/check-out
+

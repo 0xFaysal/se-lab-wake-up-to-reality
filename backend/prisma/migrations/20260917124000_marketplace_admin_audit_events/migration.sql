@@ -1,0 +1,2 @@
+ALTER TYPE "domain_audit_event_type" ADD VALUE IF NOT EXISTS 'LISTING_SUSPENDED';
+ALTER TYPE "domain_audit_event_type" ADD VALUE IF NOT EXISTS 'PAYOUT_REVIEWED';

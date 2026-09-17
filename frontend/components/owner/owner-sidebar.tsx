@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Radio,
   Scale,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Live Sessions", href: "/owner/sessions", icon: Radio, badge: 4 },
   { label: "Guards", href: "/owner/guards", icon: ShieldCheck },
   { label: "Managers", href: "/owner/managers", icon: Users },
+  { label: "Approvals", href: "/owner/approvals", icon: ClipboardCheck, badge: 2 },
   { label: "Earnings", href: "/owner/earnings", icon: Banknote },
   { label: "Disputes", href: "/owner/disputes", icon: Scale, badge: 2 },
   { label: "Reviews", href: "/owner/reviews", icon: MessageSquareQuote },
