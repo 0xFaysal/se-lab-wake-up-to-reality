@@ -30,6 +30,10 @@ export default function PayoutPage() {
     queryKey: queryKeys.payouts.provider(),
     queryFn: () => financeApi.providerPayouts(),
   });
+  const methods = useQuery({ queryKey: ["provider", "payout-methods"], queryFn: financeApi.payoutMethods });
+  const [payoutMethodId, setPayoutMethodId] = useState("");
+  const activeMethods = (methods.data ?? []).filter((method) => method.status === "ACTIVE");
+  const selectedMethodId = payoutMethodId || activeMethods.find((method) => method.isDefault)?.id || activeMethods[0]?.id || "";
   const availablePaisa = BigInt(earnings.data?.availableBalancePaisa ?? "0");
   const requestedPaisa = useMemo(
     () => Number.isFinite(Number(amount)) ? BigInt(Math.max(0, Math.round(Number(amount) * 100))) : BigInt(0),
@@ -37,7 +41,7 @@ export default function PayoutPage() {
   );
   const exceedsBalance = requestedPaisa > availablePaisa;
   const payout = useMutation({
-    mutationFn: () => financeApi.requestPayout(requestedPaisa.toString(), key.current),
+    mutationFn: () => financeApi.requestPayout(requestedPaisa.toString(), selectedMethodId, key.current),
     onSuccess: async () => {
       toast.success("Simulated payout request submitted");
       setAmount("");
@@ -50,12 +54,12 @@ export default function PayoutPage() {
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });
 
-  if (earnings.isError || history.isError) {
+  if (earnings.isError || history.isError || methods.isError) {
     return (
       <ProviderPage>
         <PageErrorState
-          message={getApiErrorMessage(earnings.error ?? history.error)}
-          retry={() => void Promise.all([earnings.refetch(), history.refetch()])}
+          message={getApiErrorMessage(earnings.error ?? history.error ?? methods.error)}
+          retry={() => void Promise.all([earnings.refetch(), history.refetch(), methods.refetch()])}
         />
       </ProviderPage>
     );
@@ -78,15 +82,17 @@ export default function PayoutPage() {
             <span>Amount in BDT</span>
             <Input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={availablePaisa === BigInt(0)} />
           </label>
+          <label className="mt-4 block space-y-2 text-sm font-semibold"><span>Payout destination</span><select className="h-10 w-full border bg-white px-3 text-sm" value={selectedMethodId} onChange={(event) => setPayoutMethodId(event.target.value)} disabled={activeMethods.length === 0}><option value="">Select payout method</option>{activeMethods.map((method) => <option key={method.id} value={method.id}>{method.type.replaceAll("_", " ")} · {method.maskedAccountIdentifier}</option>)}</select></label>
+          {activeMethods.length === 0 && <p className="mt-2 text-xs text-amber-800">Add an active payout method before requesting a payout. <Link className="font-bold underline" href="/owner/settings/payout-methods">Manage payout methods</Link></p>}
           {availablePaisa === BigInt(0) && <p className="mt-2 text-xs text-amber-800">A completed, settled booking is required before you can request a payout.</p>}
           {exceedsBalance && <p role="alert" className="mt-2 text-xs text-red-700">The payout amount cannot exceed your available balance.</p>}
           <Button
             className="mt-5"
-            disabled={requestedPaisa <= BigInt(0) || exceedsBalance || payout.isPending || availablePaisa === BigInt(0)}
+            disabled={requestedPaisa <= BigInt(0) || exceedsBalance || payout.isPending || availablePaisa === BigInt(0) || !selectedMethodId}
             onClick={() => payout.mutate()}
           >
             {payout.isPending && <Loader2 className="size-4 animate-spin" />}
-            Request simulated payout
+            Request payout review
           </Button>
         </div>
         <aside className="border-l-4 border-amber-500 bg-amber-50 p-5 text-sm text-amber-950">

@@ -42,6 +42,11 @@ export const mergeAdminPropertyByIdSchema = z.object({
   body: mergeAdminPropertyBodySchema,
 });
 
+export const mergeAdminPropertyPreviewSchema = z.object({
+  params: z.object({ duplicateId: z.uuid() }).strict(),
+  query: z.object({ canonicalPropertyId: z.uuid() }).strict(),
+});
+
 export const mergeAdminPropertiesSchema = z.object({
   body: mergeAdminPropertyBodySchema
     .extend({ duplicatePropertyId: z.uuid() })

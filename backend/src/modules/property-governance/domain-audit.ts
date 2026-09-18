@@ -9,11 +9,12 @@ export function createDomainAuditEvent(
   tx: Prisma.TransactionClient,
   input: {
     eventType: DomainAuditEventType;
-    actorUserId?: string;
-    propertyId?: string;
+    actorUserId?: string | undefined;
+    propertyId?: string | undefined;
     entityType: string;
     entityId: string;
-    metadata?: Record<string, string | number | boolean | null>;
+    metadata?: Record<string, string | number | boolean | null> | undefined;
+    requestId?: string | undefined;
   },
 ) {
   if (input.metadata) {
@@ -23,5 +24,15 @@ export function createDomainAuditEvent(
       }
     }
   }
-  return tx.domainAuditEvent.create({ data: input });
+  return tx.domainAuditEvent.create({
+    data: {
+      eventType: input.eventType,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      ...(input.actorUserId ? { actorUserId: input.actorUserId } : {}),
+      ...(input.propertyId ? { propertyId: input.propertyId } : {}),
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+      ...(input.requestId ? { requestId: input.requestId } : {}),
+    },
+  });
 }

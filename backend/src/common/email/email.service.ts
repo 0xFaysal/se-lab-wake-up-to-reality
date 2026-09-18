@@ -2,6 +2,9 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { AppError } from "../errors/app-error.js";
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
+import { ContentStatus, EmailTemplateType } from "../../../generated/prisma/client.js";
+import { prisma } from "../../config/prisma.js";
+import { renderEmailTemplate } from "./email-template.js";
 
 type EmailConfiguration = {
   host: string;
@@ -12,6 +15,16 @@ type EmailConfiguration = {
 };
 
 let emailTransporter: Transporter | undefined;
+
+async function managedTemplate(type: EmailTemplateType, values: Record<string, string>) {
+  try {
+    const template = await prisma.emailTemplate.findFirst({ where: { type, status: ContentStatus.PUBLISHED }, orderBy: { version: "desc" } });
+    return template ? renderEmailTemplate({ ...template, values }) : null;
+  } catch (error) {
+    logger.warn({ templateType: type, errorType: error instanceof Error ? error.name : "UnknownError" }, "Managed email template lookup failed; using the built-in transactional fallback");
+    return null;
+  }
+}
 
 function getEmailConfiguration(): EmailConfiguration {
   const host = env.EMAIL_HOST;
@@ -174,10 +187,11 @@ export async function sendEmailVerificationCode(input: {
   code: string;
   expiresInMinutes: number;
 }): Promise<void> {
+  const managed = await managedTemplate(EmailTemplateType.EMAIL_VERIFICATION_OTP, { userName: input.fullName, otp: input.code, expiresIn: String(input.expiresInMinutes) });
   await sendTransactionalEmail({
     to: input.to,
-    subject: `${input.code} is your ParkEase BD verification code`,
-    text: [
+    subject: managed?.subject ?? `${input.code} is your ParkEase BD verification code`,
+    text: managed?.text ?? [
       `Hello ${input.fullName},`,
       "",
       `Your ParkEase BD email verification code is: ${input.code}`,
@@ -185,7 +199,7 @@ export async function sendEmailVerificationCode(input: {
       "",
       "If you did not request this code, ignore this email.",
     ].join("\n"),
-    html: emailLayout({
+    html: managed?.html ?? emailLayout({
       fullName: input.fullName,
       heading: "Verify your email address",
       content: "Use this code to verify your ParkEase BD email address.",
@@ -205,10 +219,11 @@ export async function sendPasswordResetEmail(input: {
   expiresInMinutes: number;
 }): Promise<void> {
   const safeUrl = escapeHtml(input.resetUrl);
+  const managed = await managedTemplate(EmailTemplateType.PASSWORD_RESET, { userName: input.fullName, resetUrl: input.resetUrl, expiresIn: String(input.expiresInMinutes) });
   await sendTransactionalEmail({
     to: input.to,
-    subject: "Reset your ParkEase BD password",
-    text: [
+    subject: managed?.subject ?? "Reset your ParkEase BD password",
+    text: managed?.text ?? [
       `Hello ${input.fullName},`,
       "",
       "Use this link to reset your ParkEase BD password:",
@@ -217,7 +232,7 @@ export async function sendPasswordResetEmail(input: {
       `This link expires in ${input.expiresInMinutes} minutes.`,
       "If you did not request a reset, ignore this email.",
     ].join("\n"),
-    html: emailLayout({
+    html: managed?.html ?? emailLayout({
       fullName: input.fullName,
       heading: "Reset your password",
       content: "A password reset was requested for your ParkEase BD account.",
@@ -230,6 +245,53 @@ export async function sendPasswordResetEmail(input: {
   });
 }
 
+export async function sendManagedEmail(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<void> {
+  await sendTransactionalEmail({
+    ...input,
+    failureCode: "MANAGED_EMAIL_DELIVERY_FAILED",
+    failureMessage: "The email could not be delivered right now",
+  });
+}
+
+export async function sendAccountSetupEmail(input: {
+  to: string;
+  fullName: string;
+  role: string;
+  setupUrl: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const safeUrl = escapeHtml(input.setupUrl);
+  const roleName = input.role.toLowerCase().replaceAll("_", " ");
+  const managed = await managedTemplate(EmailTemplateType.ACCOUNT_SETUP, { userName: input.fullName, setupUrl: input.setupUrl, expiresIn: String(input.expiresInMinutes), status: roleName });
+  await sendTransactionalEmail({
+    to: input.to,
+    subject: managed?.subject ?? "Complete your ParkEase BD account setup",
+    text: managed?.text ?? [
+      `Hello ${input.fullName},`,
+      "",
+      `A ParkEase BD ${roleName} account has been created for you by an administrator.`,
+      `Set your private password using this link: ${input.setupUrl}`,
+      `This one-time link expires in ${input.expiresInMinutes} minutes.`,
+      "",
+      "If you were not expecting this account, contact ParkEase BD support.",
+    ].join("\n"),
+    html: managed?.html ?? emailLayout({
+      fullName: input.fullName,
+      heading: "Complete your account setup",
+      content: `A ParkEase BD ${roleName} account has been created for you by an administrator.`,
+      actionHtml: `<a href="${safeUrl}" style="display:inline-block;padding:12px 18px;background:#116466;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700">Set private password</a><p style="margin:16px 0 0;line-height:1.6">This one-time link expires in <strong>${input.expiresInMinutes} minutes</strong>.</p>`,
+      footer: "If you were not expecting this account, contact ParkEase BD support.",
+    }),
+    failureCode: "ACCOUNT_SETUP_DELIVERY_FAILED",
+    failureMessage: "The account setup email could not be delivered",
+  });
+}
+
 export async function sendGuardInvitationEmail(input: {
   to: string;
   fullName: string;
@@ -237,17 +299,18 @@ export async function sendGuardInvitationEmail(input: {
   expiresInMinutes: number;
 }): Promise<void> {
   const safeUrl = escapeHtml(input.setupUrl);
+  const managed = await managedTemplate(EmailTemplateType.GUARD_INVITATION, { userName: input.fullName, setupUrl: input.setupUrl, expiresIn: String(input.expiresInMinutes) });
   await sendTransactionalEmail({
     to: input.to,
-    subject: "You have been invited to ParkEase BD",
-    text: [
+    subject: managed?.subject ?? "You have been invited to ParkEase BD",
+    text: managed?.text ?? [
       `Hello ${input.fullName},`,
       "",
       "A ParkEase BD Guard account has been created for you.",
       `Set your password using this link: ${input.setupUrl}`,
       `This link expires in ${input.expiresInMinutes} minutes.`,
     ].join("\n"),
-    html: emailLayout({
+    html: managed?.html ?? emailLayout({
       fullName: input.fullName,
       heading: "Complete your Guard account",
       content:
@@ -268,17 +331,18 @@ export async function sendManagerInvitationEmail(input: {
   expiresInMinutes: number;
 }): Promise<void> {
   const safeUrl = escapeHtml(input.setupUrl);
+  const managed = await managedTemplate(EmailTemplateType.MANAGER_INVITATION, { userName: input.fullName, setupUrl: input.setupUrl, expiresIn: String(input.expiresInMinutes) });
   await sendTransactionalEmail({
     to: input.to,
-    subject: "You have been invited to manage ParkEase BD operations",
-    text: [
+    subject: managed?.subject ?? "You have been invited to manage ParkEase BD operations",
+    text: managed?.text ?? [
       `Hello ${input.fullName},`,
       "",
       "A ParkEase BD Manager account has been created for you.",
       `Set your password using this link: ${input.setupUrl}`,
       `This link expires in ${input.expiresInMinutes} minutes.`,
     ].join("\n"),
-    html: emailLayout({
+    html: managed?.html ?? emailLayout({
       fullName: input.fullName,
       heading: "Complete your Manager account",
       content: "A controlled ParkEase BD Manager account has been created for you.",

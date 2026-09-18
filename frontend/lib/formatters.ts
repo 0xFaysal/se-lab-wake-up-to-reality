@@ -22,10 +22,12 @@ export function formatPhone(value: string) { return value.startsWith("+880") ? `
 export function formatBdt(value: number) { return new Intl.NumberFormat("en-BD", { style: "currency", currency: "BDT", maximumFractionDigits: 0 }).format(value); }
 export function formatBDTFromPaisa(value: string | number | bigint) {
   const paisa = typeof value === "bigint" ? value : BigInt(value || 0);
+  const negative = paisa < BigInt(0);
+  const absolutePaisa = negative ? -paisa : paisa;
   const hundred = BigInt(100);
-  const whole = paisa / hundred;
-  const fraction = paisa % hundred;
-  return `৳${new Intl.NumberFormat("en-BD").format(whole)}${fraction === BigInt(0) ? "" : `.${fraction.toString().padStart(2, "0")}`}`;
+  const whole = absolutePaisa / hundred;
+  const fraction = absolutePaisa % hundred;
+  return `${negative ? "-" : ""}৳${new Intl.NumberFormat("en-BD").format(whole)}${fraction === BigInt(0) ? "" : `.${fraction.toString().padStart(2, "0")}`}`;
 }
 export const vehicleLabels: Record<VehicleType, string> = { MOTORCYCLE: "Motorcycle", SEDAN: "Sedan", SUV: "SUV", MICROBUS: "Microbus" };
 export const guardStatus: Record<GuardAssignmentStatus, { label: string; className: string }> = {

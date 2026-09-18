@@ -9,6 +9,7 @@ import { normalizeBangladeshPhone } from "../../common/auth/phone.js";
 import { hashPassword } from "../../common/auth/password.js";
 import { hashToken } from "../../common/auth/token-hash.js";
 import {
+  sendAccountSetupEmail,
   sendGuardInvitationEmail,
   sendManagerInvitationEmail,
 } from "../../common/email/email.service.js";
@@ -26,13 +27,21 @@ type CreatedWorkforceAccount = {
 async function createWorkforceAccount(input: {
   actorUserId: string;
   actorRoles: UserRoleType[];
-  targetRole: typeof UserRoleType.GUARD | typeof UserRoleType.MANAGER;
+  targetRole:
+    | typeof UserRoleType.DRIVER
+    | typeof UserRoleType.PROVIDER
+    | typeof UserRoleType.GUARD
+    | typeof UserRoleType.MANAGER;
   fullName: string;
   email: string;
   phone: string;
 }) {
-  const accountOrigin =
-    input.targetRole === UserRoleType.GUARD
+  const createdByAdmin = input.actorRoles.includes(UserRoleType.ADMIN);
+  const accountOrigin = createdByAdmin &&
+      input.targetRole !== UserRoleType.GUARD &&
+      input.targetRole !== UserRoleType.MANAGER
+    ? AccountOrigin.ADMIN_CREATED_USER
+    : input.targetRole === UserRoleType.GUARD
       ? input.actorRoles.includes(UserRoleType.ADMIN)
         ? AccountOrigin.ADMIN_CREATED_GUARD
         : AccountOrigin.PROVIDER_CREATED_GUARD
@@ -109,16 +118,26 @@ async function createWorkforceAccount(input: {
   setupUrl.searchParams.set("token", setupToken);
 
   try {
-    const sendInvitation =
-      input.targetRole === UserRoleType.GUARD
-        ? sendGuardInvitationEmail
-        : sendManagerInvitationEmail;
-    await sendInvitation({
-      to: created.user.email,
-      fullName: created.user.fullName,
-      setupUrl: setupUrl.toString(),
-      expiresInMinutes: env.PASSWORD_RESET_EXPIRES_MINUTES,
-    });
+    if (createdByAdmin) {
+      await sendAccountSetupEmail({
+        to: created.user.email,
+        fullName: created.user.fullName,
+        role: input.targetRole,
+        setupUrl: setupUrl.toString(),
+        expiresInMinutes: env.PASSWORD_RESET_EXPIRES_MINUTES,
+      });
+    } else {
+      const sendInvitation =
+        input.targetRole === UserRoleType.GUARD
+          ? sendGuardInvitationEmail
+          : sendManagerInvitationEmail;
+      await sendInvitation({
+        to: created.user.email,
+        fullName: created.user.fullName,
+        setupUrl: setupUrl.toString(),
+        expiresInMinutes: env.PASSWORD_RESET_EXPIRES_MINUTES,
+      });
+    }
   } catch (error) {
     try {
       await prisma.$transaction([
@@ -165,4 +184,85 @@ export function createManagerAccount(
   input: Omit<Parameters<typeof createWorkforceAccount>[0], "targetRole">,
 ) {
   return createWorkforceAccount({ ...input, targetRole: UserRoleType.MANAGER });
+}
+
+export function createAdminManagedAccount(input: {
+  actorUserId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  targetRole:
+    | typeof UserRoleType.DRIVER
+    | typeof UserRoleType.PROVIDER
+    | typeof UserRoleType.MANAGER
+    | typeof UserRoleType.GUARD;
+}) {
+  return createWorkforceAccount({
+    ...input,
+    actorRoles: [UserRoleType.ADMIN],
+  });
+}
+
+export async function resendAdminAccountSetup(userId: string) {
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      deletedAt: null,
+      status: UserStatus.PENDING,
+      createdByUserId: { not: null },
+      accountOrigin: {
+        in: [
+          AccountOrigin.ADMIN_CREATED_USER,
+          AccountOrigin.ADMIN_CREATED_GUARD,
+          AccountOrigin.ADMIN_CREATED_MANAGER,
+        ],
+      },
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      roles: { select: { role: true }, take: 1 },
+    },
+  });
+  if (!user || !user.roles[0]) {
+    throw new AppError({
+      statusCode: 409,
+      code: "ACCOUNT_SETUP_RESEND_NOT_ALLOWED",
+      message: "A setup link can only be resent for a pending Admin-created account",
+    });
+  }
+
+  const setupToken = randomBytes(32).toString("base64url");
+  const tokenHash = hashToken(setupToken);
+  const expiresAt = new Date(
+    Date.now() + env.PASSWORD_RESET_EXPIRES_MINUTES * 60 * 1000,
+  );
+  await prisma.$transaction(async (tx) => {
+    await tx.passwordResetToken.deleteMany({ where: { userId: user.id } });
+    await tx.passwordResetToken.create({
+      data: { userId: user.id, tokenHash, expiresAt },
+    });
+  });
+
+  const setupUrl = new URL(
+    env.PASSWORD_RESET_URL ?? "/reset-password",
+    env.CORS_ORIGIN,
+  );
+  setupUrl.searchParams.set("token", setupToken);
+  await sendAccountSetupEmail({
+    to: user.email,
+    fullName: user.fullName,
+    role: user.roles[0].role,
+    setupUrl: setupUrl.toString(),
+    expiresInMinutes: env.PASSWORD_RESET_EXPIRES_MINUTES,
+  });
+
+  return {
+    userId: user.id,
+    expiresAt,
+    ...(env.EXPOSE_DEVELOPMENT_AUTH_CODES
+      ? { developmentSetupToken: setupToken }
+      : {}),
+  };
 }

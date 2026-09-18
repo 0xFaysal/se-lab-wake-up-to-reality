@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   claimRightSchema,
+  createBulkResourcesSchema,
+  createRightClaimBatchSchema,
   createListingSchema,
   createResourceSchema,
   createReviewSchema,
   guardBookingQuerySchema,
   publicPropertyDetailSchema,
+  reviewRightClaimBatchSchema,
   searchParkingSchema,
   updateAvailabilityExceptionSchema,
 } from "../../../src/modules/marketplace/marketplace.schema.js";
@@ -56,6 +59,42 @@ describe("Marketplace validation invariants", () => {
 
   it("limits reviews to the 1-5 rating scale", () => {
     assert.equal(createReviewSchema.safeParse({ params: { bookingId: resourceId }, body: { rating: 6 } }).success, false);
+  });
+
+  it("requires unique resources and bounded batch claims", () => {
+    const body = { resourceIds: [resourceId, rightId], rightType: "OWNERSHIP", quantity: 1, canUse: true, canList: true, canSetPrice: true, canManageBookings: true, canDelegateManager: false };
+    assert.equal(createRightClaimBatchSchema.safeParse({ params: { propertyId }, body }).success, true);
+    assert.equal(createRightClaimBatchSchema.safeParse({ params: { propertyId }, body: { ...body, resourceIds: [resourceId, resourceId] } }).success, false);
+  });
+
+  it("bounds bulk fixed-space creation and preserves per-row validation", () => {
+    const sharedDefaults = {
+      floor: "B1",
+      zone: "A",
+      supportedVehicleTypes: ["SEDAN"],
+      isCovered: true,
+      hasCctv: true,
+      hasGuard: true,
+    };
+    assert.equal(createBulkResourcesSchema.safeParse({
+      params: { propertyId },
+      body: { spaces: [{ displayName: "A-01", spotCode: "A-01" }], sharedDefaults },
+    }).success, true);
+    assert.equal(createBulkResourcesSchema.safeParse({
+      params: { propertyId },
+      body: { spaces: [{ displayName: "A", spotCode: "" }], sharedDefaults },
+    }).success, false);
+  });
+
+  it("rejects duplicate claims in one Admin batch decision", () => {
+    const body = {
+      decision: "VERIFIED",
+      rights: [
+        { rightId: resourceId, expectedVersion: 1 },
+        { rightId: resourceId, expectedVersion: 1 },
+      ],
+    };
+    assert.equal(reviewRightClaimBatchSchema.safeParse({ params: { batchId: propertyId }, body }).success, false);
   });
 
   it("coerces bounded pagination for Guard booking queries", () => {

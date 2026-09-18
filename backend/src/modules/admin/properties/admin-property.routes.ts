@@ -3,6 +3,7 @@ import { UserRoleType } from "../../../../generated/prisma/client.js";
 import { authenticate } from "../../../common/middleware/auth.js";
 import { requireAccountReady } from "../../../common/middleware/require-account-ready.js";
 import { requireRole } from "../../../common/middleware/require-role.js";
+import { sensitiveAccountRateLimit } from "../../../common/middleware/rate-limit.js";
 import { validate } from "../../../common/middleware/validate.js";
 import {
   getAdminPropertyController,
@@ -10,6 +11,7 @@ import {
   verifyAdminPropertyController,
   mergeAdminPropertiesController,
   mergeAdminPropertyByIdController,
+  previewAdminPropertyMergeController,
 } from "./admin-property.controller.js";
 import {
   adminPropertyIdSchema,
@@ -17,6 +19,7 @@ import {
   verifyAdminPropertySchema,
   mergeAdminPropertiesSchema,
   mergeAdminPropertyByIdSchema,
+  mergeAdminPropertyPreviewSchema,
 } from "./admin-property.schema.js";
 
 export const adminPropertyRouter = Router();
@@ -83,8 +86,15 @@ adminPropertyRouter.get(
  */
 adminPropertyRouter.post(
   "/merge",
+  sensitiveAccountRateLimit,
   validate(mergeAdminPropertiesSchema),
   mergeAdminPropertiesController,
+);
+
+adminPropertyRouter.get(
+  "/:duplicateId/merge-preview",
+  validate(mergeAdminPropertyPreviewSchema),
+  previewAdminPropertyMergeController,
 );
 
 /** @openapi
@@ -107,6 +117,7 @@ adminPropertyRouter.post(
  */
 adminPropertyRouter.post(
   "/:duplicateId/merge",
+  sensitiveAccountRateLimit,
   validate(mergeAdminPropertyByIdSchema),
   mergeAdminPropertyByIdController,
 );
@@ -189,6 +200,7 @@ adminPropertyRouter.get(
  */
 adminPropertyRouter.patch(
   "/:propertyId/verification",
+  sensitiveAccountRateLimit,
   validate(verifyAdminPropertySchema),
   verifyAdminPropertyController,
 );

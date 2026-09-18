@@ -9,7 +9,7 @@ export type HoldStatus = "ACTIVE" | "CONSUMED" | "EXPIRED" | "RELEASED";
 export type MarketplaceBookingStatus = "PAYMENT_PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED" | "PAYMENT_DUE" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "NO_SHOW" | "DISPUTED";
 export type PaymentStatus = "PENDING" | "CAPTURED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
 export type RefundStatus = "PENDING" | "SUCCEEDED" | "FAILED";
-export type PayoutStatus = "PENDING" | "APPROVED" | "REJECTED" | "PAID";
+export type PayoutStatus = "PENDING" | "ON_HOLD" | "APPROVED" | "REJECTED" | "PAID";
 export type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
 export interface PaginationDto { page: number; limit: number; total: number; totalPages: number }
 
@@ -29,17 +29,68 @@ export interface CreateParkingResourceInput {
   maxHeightCm?: number; maxWidthCm?: number; maxLengthCm?: number;
 }
 
+export interface BulkParkingResourceInput {
+  spaces: Array<{ displayName: string; spotCode: string }>;
+  sharedDefaults: Omit<CreateParkingResourceInput, "type" | "displayName" | "spotCode" | "capacity">;
+}
+
 export interface ParkingRightDto {
   id: string; parkingSpotId: string; holderUserId: string; providerMembershipId: string | null;
   rightType: ParkingRightType; quantity: number; canUse: boolean; canList: boolean; canSetPrice: boolean;
   canManageBookings: boolean; canDelegateManager: boolean; validFrom: string; validUntil: string | null;
-  status: ParkingRightStatus; rejectionReason: string | null; verifiedAt: string | null; createdAt: string; updatedAt: string;
+  status: ParkingRightStatus; version: number; rejectionReason: string | null; verifiedAt: string | null; createdAt: string; updatedAt: string;
   parkingSpot?: ParkingResourceDto;
+  documents?: ParkingRightDocumentDto[];
+}
+
+export interface ParkingRightDocumentDto {
+  id: string;
+  category: "OWNERSHIP_DOCUMENT" | "LEASE_AGREEMENT" | "OWNER_CONSENT" | "AUTHORIZATION_LETTER" | "PARKING_ALLOCATION" | "OTHER";
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface ParkingRightClaimBatchDto {
+  id: string;
+  providerUserId: string;
+  propertyId: string;
+  rightType: ParkingRightType;
+  status: "PENDING" | "COMPLETED" | "PARTIALLY_RESOLVED" | "CANCELLED";
+  submittedAt: string;
+  rights: Array<ParkingRightDto & { parkingSpot: Pick<ParkingResourceDto, "id" | "displayName" | "spotCode"> }>;
+  documents: ParkingRightDocumentDto[];
+}
+
+export interface AdminParkingRightDto extends Omit<ParkingRightDto, "parkingSpot"> {
+  holder: { id: string; fullName: string; email: string; phone: string; status: string };
+  verifiedByAdmin: { id: string; fullName: string; email: string } | null;
+  providerMembership: { id: string; status: string; verificationStatus: string; propertyId: string } | null;
+  parkingSpot: {
+    id: string;
+    displayName: string | null;
+    spotCode: string | null;
+    resourceType: ParkingResourceType;
+    capacity: number;
+    status: ParkingResourceStatus;
+    property: { id: string; name: string; publicArea: string; verificationStatus: string; status: string };
+  };
+  documents: ParkingRightDocumentDto[];
 }
 
 export interface ParkingRightClaimInput {
   rightType: ParkingRightType; quantity: number; canUse: boolean; canList: boolean; canSetPrice: boolean;
   canManageBookings: boolean; canDelegateManager: boolean; validFrom?: string; validUntil?: string;
+}
+
+export type ParkingRightChangeInput = Partial<Omit<ParkingRightClaimInput, "validUntil">> & { validUntil?: string | null };
+export type ParkingRightAmendmentStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+export interface ParkingRightAmendmentDto {
+  id: string; parkingRightId: string; requestedByUserId: string; reviewedByAdminId: string | null;
+  baseRightVersion: number; proposedChanges: ParkingRightChangeInput; status: ParkingRightAmendmentStatus;
+  submittedAt: string | null; resolvedAt: string | null; reason: string | null; createdAt: string; updatedAt: string;
+  documents?: ParkingRightDocumentDto[];
 }
 
 export interface ParkingListingDto {
@@ -124,8 +175,9 @@ export interface WalletDto { id: string; userId: string; currency: string; statu
 export interface LedgerEntryDto { id: string; accountCode: string; entrySide: "DEBIT" | "CREDIT"; amountPaisa: string; createdAt: string; ledgerTransaction: { id: string; referenceType: string; referenceId: string; description: string; createdAt: string } }
 export interface EarningsSummaryDto { currency: string; availableBalancePaisa: string; pendingBalancePaisa: string; heldBalancePaisa: string; providerCount: number }
 export interface RefundDto { id: string; paymentId: string; requestedByUserId: string; amountPaisa: string; reason: string; status: RefundStatus; processedAt: string | null; createdAt: string; payment?: { id: string; amountPaisa: string; currency: string; status: PaymentStatus; capturedAt: string | null; booking: { id: string; bookingCode: string; status: MarketplaceBookingStatus; property: { id: string; name: string; publicArea: string } } } }
-export interface PayoutDto { id: string; providerUserId: string; walletAccountId: string; amountPaisa: string; status: PayoutStatus; reviewNote: string | null; reviewedAt: string | null; paidAt: string | null; createdAt: string; updatedAt?: string; provider?: { id: string; fullName: string; email: string } }
+export interface PayoutMethodDto { id: string; type: "BANK" | "BKASH" | "NAGAD" | "OTHER_MFS"; accountHolderName: string; maskedAccountIdentifier: string; bankName: string | null; branchName: string | null; routingNumber: string | null; isDefault: boolean; status: "ACTIVE" | "INACTIVE"; createdAt: string; updatedAt: string }
+export interface PayoutDto { id: string; providerUserId: string; walletAccountId: string; payoutMethodId: string | null; amountPaisa: string; status: PayoutStatus; destinationSnapshot: { type: string; accountHolderName: string; maskedAccountIdentifier: string; bankName: string | null; branchName: string | null; routingNumber: string | null } | null; externalReference: string | null; reviewNote: string | null; reviewedAt: string | null; paidAt: string | null; heldAt?: string | null; holdReason?: string | null; createdAt: string; updatedAt?: string; payoutMethod?: PayoutMethodDto | null; provider?: { id: string; fullName: string; email: string } }
 export interface NotificationDto { id: string; type: string; title: string; message: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string }
 export interface ReviewDto { id: string; bookingId: string; driverUserId: string; rating: number; comment: string | null; providerReply: string | null; providerRepliedAt: string | null; createdAt: string; booking?: { bookingCode: string; propertyId: string; parkingSpotId: string }; driver?: { id: string; fullName: string } }
-export interface DisputeDto { id: string; bookingId: string; openedByUserId: string; category: string; description: string; evidence: Array<{ url: string; type: string }> | null; status: DisputeStatus; resolution: string | null; resolvedAt: string | null; createdAt: string; updatedAt?: string; booking?: { id: string; bookingCode: string; status?: MarketplaceBookingStatus; propertyId?: string; driverUserId?: string; providerUserId?: string; startAt?: string; scheduledEndAt?: string; property?: { id: string; name: string; publicArea: string }; parkingSpot?: { id: string; displayName: string | null; spotCode: string | null }; driver?: { id: string; fullName: string }; provider?: { id: string; fullName: string } }; openedBy?: { id: string; fullName: string; email?: string }; resolvedBy?: { id: string; fullName: string } | null }
+export interface DisputeDto { id: string; bookingId: string; openedByUserId: string; category: string; description: string; evidence: Array<{ url: string; type: string }> | null; status: DisputeStatus; resolution: string | null; resolvedAt: string | null; reviewStartedAt?: string | null; slaDueAt?: string | null; escalatedAt?: string | null; createdAt: string; updatedAt?: string; booking?: { id: string; bookingCode: string; status?: MarketplaceBookingStatus; propertyId?: string; driverUserId?: string; providerUserId?: string; startAt?: string; scheduledEndAt?: string; property?: { id: string; name: string; publicArea: string }; parkingSpot?: { id: string; displayName: string | null; spotCode: string | null }; driver?: { id: string; fullName: string }; provider?: { id: string; fullName: string } }; openedBy?: { id: string; fullName: string; email?: string }; resolvedBy?: { id: string; fullName: string } | null }
 export interface GuardCredentialResult { valid: true; booking: GuardBookingDto }

@@ -2,6 +2,7 @@ import {
   AccountOrigin,
   LegalAcceptanceSource,
   LegalDocumentType,
+  LegalDocumentStatus,
   Prisma,
   UserRoleType,
   UserStatus,
@@ -220,6 +221,8 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
       const legalDocuments = await tx.legalDocument.findMany({
         where: {
           isActive: true,
+          status: LegalDocumentStatus.PUBLISHED,
+          effectiveAt: { lte: new Date() },
           type: {
             in: [
               LegalDocumentType.TERMS_OF_SERVICE,

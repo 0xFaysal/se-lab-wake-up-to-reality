@@ -86,6 +86,7 @@ export const verifyAdminPropertyController: RequestHandler = async (
       requireAdminUserId(req),
       requirePropertyId(req),
       req.body,
+      req.requestId,
     );
     res.status(200).json({
       success: true,
@@ -106,6 +107,7 @@ export const mergeAdminPropertiesController: RequestHandler = async (
     const merge = await adminPropertyService.mergeDuplicateProperties(
       requireAdminUserId(req),
       req.body,
+      req.requestId,
     );
     res.status(200).json({
       success: true,
@@ -129,12 +131,25 @@ export const mergeAdminPropertyByIdController: RequestHandler = async (
         ...req.body,
         duplicatePropertyId: requireDuplicatePropertyId(req),
       },
+      req.requestId,
     );
     res.status(200).json({
       success: true,
       data: { merge },
       meta: responseMeta(req),
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const previewAdminPropertyMergeController: RequestHandler = async (req, res, next) => {
+  try {
+    const preview = await adminPropertyService.previewPropertyMerge(
+      String(req.query.canonicalPropertyId),
+      requireDuplicatePropertyId(req),
+    );
+    res.status(200).json({ success: true, data: { preview }, meta: responseMeta(req) });
   } catch (error) {
     next(error);
   }

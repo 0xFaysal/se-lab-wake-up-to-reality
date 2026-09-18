@@ -18,6 +18,7 @@ integration("marketplace end-to-end and concurrency", () => {
   let managerId = "";
   let providerMembershipId = "";
   let managerDelegationId = "";
+  let payoutMethodId = "";
   const driverIds: string[] = [];
   const vehicleIds: string[] = [];
 
@@ -119,6 +120,13 @@ integration("marketplace end-to-end and concurrency", () => {
       createdByUserId: providerId,
       status: "ACTIVE",
     } });
+    const payoutMethod = await marketplace.createProviderPayoutMethod(providerId, {
+      type: generated.PayoutMethodType.BKASH,
+      accountHolderName: "Marketplace Provider",
+      accountIdentifier: "+8801712345678",
+      isDefault: true,
+    });
+    payoutMethodId = payoutMethod.id;
   });
 
   after(async () => {
@@ -132,6 +140,7 @@ integration("marketplace end-to-end and concurrency", () => {
       await prisma.ledgerTransaction.deleteMany({ where: { OR: [{ actorUserId: { in: userIds } }, { referenceType: "BOOKING_PAYMENT" }] } });
       await prisma.payment.deleteMany({ where: { booking: { propertyId } } });
       await prisma.payoutRequest.deleteMany({ where: { providerUserId: providerId } });
+      await prisma.providerPayoutMethod.deleteMany({ where: { providerUserId: providerId } });
       await prisma.booking.deleteMany({ where: { propertyId } });
       await prisma.reservationHold.deleteMany({ where: { parkingSpot: { propertyId } } });
       await prisma.parkingAllocation.deleteMany({ where: { parkingSpot: { propertyId } } });
@@ -172,7 +181,7 @@ integration("marketplace end-to-end and concurrency", () => {
       rightType: generated.ParkingRightType.OWNERSHIP,
       quantity, canUse: true, canList: true, canSetPrice: true, canManageBookings: true, canDelegateManager: true,
     });
-    await marketplace.verifyParkingRight(adminId, right.id, { decision: generated.ParkingRightStatus.VERIFIED });
+    await marketplace.verifyParkingRight(adminId, right.id, { decision: generated.ParkingRightStatus.VERIFIED, expectedVersion: right.version });
     if (!managerDelegationId) {
       const delegation = await prisma.providerManagerDelegation.create({ data: {
         grantorProviderMembershipId: providerMembershipId,
@@ -311,10 +320,12 @@ integration("marketplace end-to-end and concurrency", () => {
     const walletAfterRefund = await prisma.walletAccount.findUniqueOrThrow({ where: { id: wallet.id } });
     await assert.rejects(() => marketplace.createPayout(providerId, {
       amountPaisa: walletAfterRefund.availableBalancePaisa + 1n,
+      payoutMethodId,
       idempotencyKey: `payout-over-${randomUUID()}`,
     }));
     const payout = await marketplace.createPayout(providerId, {
       amountPaisa: 1_000n,
+      payoutMethodId,
       idempotencyKey: `payout-${randomUUID()}`,
     });
     const payouts = await marketplace.listProviderPayouts(providerId, { page: 1, limit: 20 });
@@ -354,6 +365,7 @@ integration("marketplace end-to-end and concurrency", () => {
     });
     await marketplace.verifyParkingRight(adminId, secondRight.id, {
       decision: generated.ParkingRightStatus.VERIFIED,
+      expectedVersion: secondRight.version,
     });
     const secondListing = await marketplace.createListing(secondProviderId, {
       parkingRightId: secondRight.id,

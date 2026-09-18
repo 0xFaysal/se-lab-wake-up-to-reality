@@ -34,7 +34,7 @@ export const refundStatus: Record<RefundStatus, StatusPresentation> = {
   PENDING: { label: "Pending", className: amber }, SUCCEEDED: { label: "Refunded", className: green }, FAILED: { label: "Failed", className: red },
 };
 export const payoutStatus: Record<PayoutStatus, StatusPresentation> = {
-  PENDING: { label: "Pending", className: amber }, APPROVED: { label: "Approved", className: blue }, REJECTED: { label: "Rejected", className: red }, PAID: { label: "Simulated paid", className: green },
+  PENDING: { label: "Pending", className: amber }, ON_HOLD: { label: "On hold", className: red }, APPROVED: { label: "Approved", className: blue }, REJECTED: { label: "Rejected", className: red }, PAID: { label: "Simulated paid", className: green },
 };
 export const disputeStatus: Record<DisputeStatus, StatusPresentation> = {
   OPEN: { label: "Open", className: amber }, UNDER_REVIEW: { label: "Under review", className: blue }, RESOLVED: { label: "Resolved", className: green }, REJECTED: { label: "Rejected", className: red },

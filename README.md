@@ -178,6 +178,101 @@ npm run build              # create a production build
 npm run start              # run the production build
 ```
 
+## Continuous Integration
+
+`ParkEase BD CI` runs for pushes and pull requests targeting `develop` or
+`main`. Stale runs for the same branch are cancelled. All jobs use read-only
+repository access except CodeQL, which receives `security-events: write` only
+for publishing its analysis results.
+
+| Job | Purpose | Services | Blocking | Commands |
+|---|---|---|---|---|
+| Repository Whitespace | Reject whitespace errors | None | Yes | `git diff --check` |
+| Backend Quality & Build | Validate Prisma, formatting, types, and compilation | None | Yes | `prisma format`, `prisma validate`, `prisma generate`, `npm run format:check`, `npm run typecheck`, `npm run build` |
+| Backend Unit Tests | Run the backend unit suite | None | Yes | `prisma generate`, `npm test` |
+| Backend Integration Tests | Apply migrations to a clean database and run integration tests | PostgreSQL 18, Redis 8 | Yes | `prisma generate`, `prisma migrate deploy`, `prisma migrate status`, `npm run test:integration` |
+| Frontend Quality | Check TypeScript and ESLint | None | Yes | `npm run typecheck`, `npm run lint` |
+| Frontend Production Build | Verify the optimized Next.js build | None | Yes | `npm run build` |
+| Dependency Audit | Block high or critical npm vulnerabilities | None | Yes | `npm audit --audit-level=high` in both applications |
+| CodeQL SAST | Analyze JavaScript and TypeScript security and quality | None | Yes | GitHub CodeQL `security-and-quality` queries |
+| Secret Scan | Scan the full Git history and current tree for credentials | None | Yes | Gitleaks |
+| CI Success | Provide one aggregate branch-protection check | None | Yes | Verifies every required job succeeded |
+
+The frontend currently has no test script, and the backend currently has no
+lint script, so CI does not invent those commands. Add the corresponding CI
+steps when those scripts are introduced. Test output is kept in the Actions
+log; the current test runner does not generate coverage or JUnit files to
+upload. CodeQL findings appear in GitHub code scanning.
+
+### CI environment
+
+Integration tests use only disposable service containers and deterministic
+CI-only credentials. They receive `DATABASE_URL`, `TEST_DATABASE_URL`,
+`REDIS_URL`, `CORS_ORIGIN`, `API_PUBLIC_URL`, `PASSWORD_RESET_URL`, distinct
+dummy authentication secrets, and a dummy encryption key. A guard refuses to
+run migrations unless the database URL points to the known local
+`parkease_ci` database. The frontend build receives only the public,
+non-secret `NEXT_PUBLIC_API_BASE_URL`. SMTP, Cloudinary, and Twilio are omitted
+because they are optional outside production and the integration suite does
+not make those external calls.
+
+### Local pre-push checklist
+
+Start the backend PostgreSQL and Redis containers before the integration suite:
+
+```bash
+docker compose -f backend/docker-compose.yml up -d
+```
+
+Then run the same application checks as CI:
+
+```bash
+cd backend
+npm ci
+npx prisma format
+npx prisma validate
+npx prisma generate
+npm run format:check
+npm run typecheck
+npm run build
+npm test
+export TEST_DATABASE_URL="postgresql://parkease:parkease_dev_password@localhost:5432/parkease_test?schema=public"
+DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
+npm run test:integration
+
+cd ../frontend
+npm ci
+npm run typecheck
+npm run lint
+NEXT_PUBLIC_API_BASE_URL="https://api.parkease.invalid/api/v1" npm run build
+
+cd ..
+git diff --check
+```
+
+On PowerShell, set `TEST_DATABASE_URL` and `NEXT_PUBLIC_API_BASE_URL` with
+`$env:NAME = "value"` before running the relevant command.
+
+When `npm audit` fails, inspect the advisory and update the direct dependency
+or lockfile rather than suppressing the job. When CodeQL or Gitleaks fails,
+review the GitHub annotation, remove the vulnerable pattern or exposed value,
+and rotate any credential that may have been real. Do not add broad exclusions
+or commit secrets to silence a finding.
+
+### Branch protection
+
+Configure `CI Success` as a required status check for both protected branches.
+For `develop`, require a pull request and block force pushes. For `main`, also
+require approving reviews, and block force pushes and branch deletion. Keep
+the existing source-branch check for pull requests into `main`. These settings
+must be configured in GitHub; the workflow does not change repository policy.
+
+The dependency graph is: backend quality → backend integration; frontend
+quality → frontend build. Whitespace, unit tests, dependency audit, CodeQL, and
+Gitleaks run in parallel. `CI Success` waits for every required job. Weekly
+Dependabot checks cover both npm lockfiles and GitHub Actions; updates are never
+automatically merged.
+
 ## Project Scope
 
 The semester version will not integrate real banking, bKash, Nagad, or card payments. It will also exclude IoT parking sensors, automated barriers, license-plate recognition, and government traffic-system integration. These boundaries keep the project focused on demonstrating a reliable shared-parking workflow.

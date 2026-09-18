@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CircleParking,
   Clock3,
+  CreditCard,
   LayoutGrid,
   ListChecks,
   LockKeyhole,
@@ -60,6 +61,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { label: "Earnings", href: "/owner/earnings", icon: Banknote },
       { label: "Payouts", href: "/owner/payouts", icon: Clock3 },
+      { label: "Payout methods", href: "/owner/settings/payout-methods", icon: CreditCard },
     ],
   },
   {
@@ -73,7 +75,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: "Account",
     items: [
-      { label: "Security", href: "/owner/security", icon: LockKeyhole },
+      { label: "Security", href: "/owner/account/security", icon: LockKeyhole },
       { label: "Sessions", href: "/owner/account/sessions", icon: MonitorSmartphone },
     ],
   },

@@ -15,15 +15,35 @@ const action = (handler: (req: Request) => Promise<unknown>, status = 200) =>
   };
 
 export const createResource = action((req) => service.createResource(userId(req), param(req, "propertyId"), req.body), 201);
+export const createBulkResources = action((req) => service.createBulkFixedResources(userId(req), param(req, "propertyId"), req.body), 201);
 export const listResources = action((req) => service.listResources(userId(req), param(req, "propertyId")));
 export const getResource = action((req) => service.getResource(userId(req), param(req, "resourceId")));
 export const updateResource = action((req) => service.updateResource(userId(req), param(req, "resourceId"), req.body));
 export const deleteResource = action(async (req) => { await service.deleteResource(userId(req), param(req, "resourceId")); return { deleted: true }; });
 export const claimRight = action((req) => service.claimParkingRight(userId(req), param(req, "resourceId"), req.body), 201);
+export const createRightClaimBatch = action((req) => service.createParkingRightClaimBatch(userId(req), param(req, "propertyId"), req.body), 201);
+export const listProviderRightClaimBatches = action((req) => service.listProviderRightClaimBatches(userId(req)));
+export const listAdminRightClaimBatches = action((req) => service.listAdminRightClaimBatches(req.query as never));
+export const reviewRightClaimBatch = action((req) => service.reviewParkingRightClaimBatch(userId(req), param(req, "batchId"), req.body));
+export const uploadRightDocuments = action((req) => service.uploadParkingRightDocuments(userId(req), { parkingRightId: param(req, "rightId") }, req.body.category, (req.files as Express.Multer.File[] | undefined) ?? []), 201);
+export const listRightDocuments = action((req) => service.listParkingRightDocuments(userId(req), { parkingRightId: param(req, "rightId") }));
+export const uploadAmendmentDocuments = action((req) => service.uploadParkingRightDocuments(userId(req), { amendmentId: param(req, "amendmentId") }, req.body.category, (req.files as Express.Multer.File[] | undefined) ?? []), 201);
+export const listAmendmentDocuments = action((req) => service.listParkingRightDocuments(userId(req), { amendmentId: param(req, "amendmentId") }));
+export const uploadBatchDocuments = action((req) => service.uploadParkingRightDocuments(userId(req), { claimBatchId: param(req, "batchId") }, req.body.category, (req.files as Express.Multer.File[] | undefined) ?? []), 201);
+export const listBatchDocuments = action((req) => service.listParkingRightDocuments(userId(req), { claimBatchId: param(req, "batchId") }));
+export const deleteRightDocument = action((req) => service.deleteParkingRightDocument(userId(req), param(req, "documentId")));
+export const downloadRightDocument = action((req) => service.getParkingRightDocumentDownload(userId(req), param(req, "documentId")));
 export const listRights = action((req) => service.listParkingRights(userId(req)));
 export const getRight = action((req) => service.getParkingRight(userId(req), param(req, "rightId")));
+export const updatePendingRight = action((req) => service.updatePendingParkingRight(userId(req), param(req, "rightId"), req.body));
+export const createRightAmendment = action((req) => service.createParkingRightAmendment(userId(req), param(req, "rightId"), req.body), 201);
+export const listRightAmendments = action((req) => service.listParkingRightAmendments(userId(req), param(req, "rightId")));
+export const cancelRightAmendment = action((req) => service.cancelParkingRightAmendment(userId(req), param(req, "amendmentId")));
 export const listPendingRights = action(() => service.listPendingRights());
+export const listAdminParkingRights = action((req) => service.listAdminParkingRights(req.query as never));
 export const verifyRight = action((req) => service.verifyParkingRight(userId(req), param(req, "rightId"), req.body));
+export const listAdminRightAmendments = action((req) => service.listAdminParkingRightAmendments(req.query as never));
+export const reviewRightAmendment = action((req) => service.reviewParkingRightAmendment(userId(req), param(req, "amendmentId"), req.body));
 
 export const createListing = action((req) => service.createListing(userId(req), req.body), 201);
 export const listListings = action((req) => service.listListings(userId(req)));
@@ -33,6 +53,8 @@ export const activateListing = action((req) => service.activateListing(userId(re
 export const pauseListing = action((req) => service.pauseListing(userId(req), param(req, "listingId")));
 export const endListing = action((req) => service.endListing(userId(req), param(req, "listingId")));
 export const suspendListing = action((req) => service.suspendListing(userId(req), param(req, "listingId"), req.body.reason));
+export const resumeListing = action((req) => service.resumeListing(userId(req), param(req, "listingId"), req.body.reason));
+export const reportListing = action((req) => service.reportListing(userId(req), param(req, "listingId"), req.body), 201);
 
 export const replaceAvailability = action((req) => service.replaceAvailability(userId(req), param(req, "resourceId"), req.body.rules));
 export const createAvailabilityException = action((req) => service.createAvailabilityException(userId(req), param(req, "resourceId"), req.body), 201);
@@ -70,13 +92,17 @@ export const getWallet = action((req) => service.getWallet(userId(req)));
 export const listWalletTransactions = action((req) => service.listWalletTransactions(userId(req)));
 export const earningsSummary = action((req) => service.getEarningsSummary(userId(req)));
 export const listEarningsTransactions = action((req) => service.listEarningsTransactions(userId(req)));
+export const listPayoutMethods = action((req) => service.listProviderPayoutMethods(userId(req)));
+export const createPayoutMethod = action((req) => service.createProviderPayoutMethod(userId(req), req.body), 201);
+export const setDefaultPayoutMethod = action((req) => service.setDefaultProviderPayoutMethod(userId(req), param(req, "payoutMethodId")));
+export const deactivatePayoutMethod = action((req) => service.deactivateProviderPayoutMethod(userId(req), param(req, "payoutMethodId")));
 export const createRefund = action((req) => service.createRefund(userId(req), param(req, "paymentId"), req.body), 201);
 export const listDriverRefunds = action((req) => service.listDriverRefunds(userId(req), req.query as never));
 export const getDriverRefund = action((req) => service.getDriverRefund(userId(req), param(req, "refundId")));
 export const createPayout = action((req) => service.createPayout(userId(req), req.body), 201);
 export const listProviderPayouts = action((req) => service.listProviderPayouts(userId(req), req.query as never));
 export const getProviderPayout = action((req) => service.getProviderPayout(userId(req), param(req, "payoutId")));
-export const listPayouts = action((req) => service.listPayouts(req.query.status as never));
+export const listPayouts = action((req) => service.listPayouts(req.query as never));
 export const reviewPayout = action((req) => service.reviewPayout(userId(req), param(req, "payoutId"), req.body));
 
 export const listNotifications = action((req) => service.listNotifications(userId(req)));
@@ -91,6 +117,6 @@ export const getDriverDispute = action((req) => service.getDriverDispute(userId(
 export const listProviderDisputes = action((req) => service.listProviderDisputes(userId(req), req.query as never));
 export const getProviderDispute = action((req) => service.getProviderDispute(userId(req), param(req, "disputeId")));
 export const resolveDispute = action((req) => service.resolveDispute(userId(req), param(req, "disputeId"), req.body));
-export const listDisputes = action((req) => service.listDisputes(req.query.status as never));
+export const listDisputes = action((req) => service.listDisputes(req.query as never));
 export const listAdminListings = action((req) => service.listAdminListings(req.query as never));
 export const getAdminListing = action((req) => service.getAdminListing(param(req, "listingId")));

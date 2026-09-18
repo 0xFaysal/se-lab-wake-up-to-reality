@@ -37,6 +37,7 @@ export function toAdminPropertyDetail(
 ) {
   return {
     id: property.id,
+    version: property.version,
     name: property.name,
     description: property.description,
     publicArea: property.publicArea,
