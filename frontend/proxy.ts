@@ -107,7 +107,7 @@ function getProtectedRoute(
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip static assets and internal Next.js routes
