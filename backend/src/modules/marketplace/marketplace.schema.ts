@@ -323,10 +323,50 @@ export const searchParkingSchema = z.object({
     minPricePaisa: z.coerce.bigint().min(0n).optional(),
     maxPricePaisa: z.coerce.bigint().min(0n).optional(),
     covered: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+    hasCctv: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+    hasGuard: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+    resourceType: z.enum(["FIXED_SPACE", "SHARED_POOL"]).optional(),
+    facilityCodes: z.string().trim().max(300).transform((value) => value.split(",").map((item) => item.trim()).filter(Boolean)).optional(),
+    minAvailableUnits: z.coerce.number().int().min(1).max(100).optional(),
   }).strict().refine((value) => new Date(value.endAt) > new Date(value.startAt), {
     path: ["endAt"], message: "endAt must be later than startAt",
   }),
 });
+
+export const driverFavoriteParamsSchema = z.object({ params: z.object({ propertyId: uuid }) });
+
+export const createSavedLocationSchema = z.object({
+  body: z.object({
+    label: z.string().trim().min(1).max(60),
+    displayName: z.string().trim().min(2).max(255),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }).strict(),
+});
+
+export const savedLocationParamsSchema = z.object({ params: z.object({ locationId: uuid }) });
+
+export const updateSavedLocationSchema = z.object({
+  params: z.object({ locationId: uuid }),
+  body: z.object({
+    label: z.string().trim().min(1).max(60).optional(),
+    displayName: z.string().trim().min(2).max(255).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+  }).strict().refine((value) => Object.keys(value).length > 0, "At least one field is required"),
+});
+
+export const createSearchHistorySchema = z.object({
+  body: z.object({
+    displayName: z.string().trim().min(2).max(255),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    radiusKm: z.number().positive().max(100),
+    vehicleType,
+  }).strict(),
+});
+
+export const searchHistoryParamsSchema = z.object({ params: z.object({ searchId: uuid }) });
 
 export const publicPropertyDetailSchema = z.object({
   params: z.object({ propertyId: uuid }),

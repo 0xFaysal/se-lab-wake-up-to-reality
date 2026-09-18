@@ -55,6 +55,11 @@ const schema = z
     EMAIL_PORT: z.coerce.number().int().positive().max(65535).optional(),
     EMAIL_USERNAME: z.email().optional(),
     EMAIL_PASSWORD: z.string().min(1).optional(),
+    EMAIL_WORKER_ENABLED: z
+      .enum(["true", "false"])
+      .default(process.env.NODE_ENV === "development" ? "true" : "false")
+      .transform((value) => value === "true"),
+    EMAIL_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).max(60000).default(5000),
     CLOUDINARY_CLOUD_NAME: optionalNonEmptyString,
     CLOUDINARY_API_KEY: optionalNonEmptyString,
     CLOUDINARY_API_SECRET: optionalNonEmptyString,

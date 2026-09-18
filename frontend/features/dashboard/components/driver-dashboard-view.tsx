@@ -1,55 +1,59 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, Car, ChevronRight, Clock, Compass, MapPin, Search, ShieldCheck } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Bell, CalendarDays, Car, CheckCircle2, Clock3, Heart, MapPin, Search, ShieldCheck } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useVehicles } from "@/hooks/use-vehicles";
-import { getApiErrorMessage } from "@/lib/api/api-error";
-import { vehicleLabels } from "@/lib/formatters";
-
-function DashboardSkeleton() {
-  return <div className="mx-auto max-w-7xl animate-pulse space-y-8 px-4 sm:px-6 lg:px-8"><div className="h-28 rounded-xl bg-muted" /><div className="grid gap-8 lg:grid-cols-3"><div className="h-72 rounded-xl bg-muted lg:col-span-2" /><div className="h-72 rounded-xl bg-muted" /></div></div>;
-}
+import { bookingsApi } from "@/lib/api/bookings-api";
+import { driverDiscoveryApi } from "@/lib/api/driver-discovery-api";
+import { notificationsApi } from "@/lib/api/notifications-api";
+import { formatBDTFromPaisa, formatDateTime, vehicleLabels } from "@/lib/formatters";
+import { queryKeys } from "@/lib/query-keys";
 
 export function DriverDashboardView() {
-  const router = useRouter();
   const user = useCurrentUser();
-  const vehicles = useVehicles();
-  const [searchLocation, setSearchLocation] = useState("");
-  const [startTime, setStartTime] = useState("10:00 AM");
-  const [endTime, setEndTime] = useState("04:00 PM");
-
-  if (user.isPending || vehicles.query.isPending) return <DashboardSkeleton />;
-  if (user.isError) return <div className="mx-auto max-w-3xl px-4"><div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6"><h1 className="text-xl font-bold">We could not load your account</h1><p className="mt-2 text-sm text-muted-foreground">{getApiErrorMessage(user.error)}</p><button onClick={() => user.refetch()} className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Try again</button></div></div>;
-
-  const currentUser = user.data;
-  const savedVehicles = vehicles.query.data ?? [];
+  const vehicles = useVehicles().query;
+  const bookings = useQuery({ queryKey: queryKeys.bookings.driver(), queryFn: bookingsApi.driverList });
+  const notifications = useQuery({ queryKey: queryKeys.notifications.all(), queryFn: notificationsApi.list });
+  const favorites = useQuery({ queryKey: queryKeys.driverDiscovery.favorites, queryFn: driverDiscoveryApi.favorites });
+  const recent = useQuery({ queryKey: queryKeys.driverDiscovery.recentSearches, queryFn: driverDiscoveryApi.recentSearches });
+  const firstName = user.data?.fullName.trim().split(/\s+/)[0] ?? "Driver";
+  const savedVehicles = vehicles.data ?? [];
   const defaultVehicle = savedVehicles.find((vehicle) => vehicle.isDefault) ?? savedVehicles[0];
-  const firstName = currentUser?.fullName.trim().split(/\s+/)[0] || "Driver";
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const now = Date.now();
+  const allBookings = bookings.data ?? [];
+  const activeBooking = allBookings.find((booking) => ["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED"].includes(booking.status) && new Date(booking.scheduledEndAt).getTime() >= now);
+  const upcoming = allBookings.filter((booking) => booking.status === "CONFIRMED" && new Date(booking.startAt).getTime() > now).slice(0, 3);
+  const unread = notifications.data?.filter((item) => !item.readAt).length ?? 0;
 
-  function search(event: React.FormEvent) {
-    event.preventDefault();
-    const query = searchLocation.trim();
-    router.push(query ? `/parking?query=${encodeURIComponent(query)}` : "/parking");
-  }
+  return <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+    <header className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-end"><div><p className="text-sm font-semibold text-emerald-700">Welcome back</p><h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">{firstName}, where are you parking today?</h1><p className="mt-1 text-sm text-muted-foreground">Your live bookings, vehicles, and account activity in one place.</p></div><Link href="/driver/parking" className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-bold text-white"><Search className="size-4" />Find parking</Link></header>
 
-  return <div className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
-    <section className="flex flex-col gap-4 border-b border-border/60 pb-6 md:flex-row md:items-center md:justify-between">
-      <div><div className="flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-[#064E3B]"><span className="h-2 w-2 rounded-full bg-[#064E3B]" />Active Driver</span><span className="text-xs text-muted-foreground">Account data synced with ParkEase BD</span></div><h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">{greeting}, {firstName}</h1><p className="mt-1 text-sm text-muted-foreground">{new Intl.DateTimeFormat("en-BD", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date())}</p></div>
-      <div className="flex gap-3"><Link href="/parking" className="inline-flex items-center gap-2 rounded-lg bg-[#064E3B] px-4 py-2.5 text-sm font-bold text-white"><Compass className="h-4 w-4" />Find Parking</Link><Link href="/driver/vehicles" className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-semibold">My Vehicles<ChevronRight className="h-4 w-4" /></Link></div>
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Metric icon={CalendarDays} label="Upcoming" value={String(upcoming.length)} href="/driver/bookings" />
+      <Metric icon={Car} label="Vehicles" value={String(savedVehicles.length)} href="/driver/vehicles" />
+      <Metric icon={Heart} label="Favorites" value={String(favorites.data?.length ?? 0)} href="/driver/favorites" />
+      <Metric icon={Bell} label="Unread alerts" value={String(unread)} href="/driver/notifications" />
     </section>
 
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2">
-      <section className="rounded-xl border bg-card p-6 shadow-xs"><div className="mb-4 flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-[#064E3B]"><Search className="h-4 w-4" /></div><div><h2 className="font-bold">Quick Parking Finder</h2><p className="text-xs text-muted-foreground">Search parking by location</p></div></div><form onSubmit={search} className="space-y-4"><div className="relative"><MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input value={searchLocation} onChange={(event) => setSearchLocation(event.target.value)} placeholder="Where are you heading?" className="w-full rounded-lg border bg-background py-3 pl-10 pr-4 text-sm focus:border-[#064E3B] focus:outline-none" /></div><div className="grid gap-3 sm:grid-cols-3"><label className="text-xs font-semibold">ENTRY TIME<select value={startTime} onChange={(event) => setStartTime(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2.5"><option>09:00 AM</option><option>10:00 AM</option><option>11:00 AM</option><option>12:00 PM</option><option>02:00 PM</option></select></label><label className="text-xs font-semibold">EXIT TIME<select value={endTime} onChange={(event) => setEndTime(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2.5"><option>01:00 PM</option><option>02:00 PM</option><option>04:00 PM</option><option>06:00 PM</option><option>08:00 PM</option></select></label><button className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#064E3B] p-2.5 text-xs font-bold text-white">Find Parking<ArrowRight className="h-4 w-4" /></button></div></form></section>
-      <section className="rounded-xl border bg-card p-6 shadow-xs"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#064E3B]" /><div><h2 className="font-bold">Bookings will appear here when the booking API is available</h2><p className="mt-1 text-sm text-muted-foreground">Your account is connected correctly. The backend currently exposes authentication and vehicle management for Drivers, but it does not yet expose booking, payment, or refund endpoints. No demo booking is being shown.</p></div></div></section>
-    </div><aside className="space-y-6">
-      <section className="rounded-xl border bg-card p-5 shadow-xs"><div className="flex items-center justify-between"><h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Default Vehicle</h2>{defaultVehicle?.isDefault && <span className="rounded border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-[#064E3B]">Primary</span>}</div>{vehicles.query.isError ? <div className="mt-4 rounded-lg bg-destructive/5 p-3 text-sm"><div className="flex gap-2"><AlertCircle className="h-4 w-4 shrink-0 text-destructive" />{getApiErrorMessage(vehicles.query.error)}</div><button onClick={() => vehicles.query.refetch()} className="mt-2 font-semibold text-primary">Try again</button></div> : defaultVehicle ? <div className="mt-4 space-y-3"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50"><Car className="h-5 w-5 text-[#064E3B]" /></div><div><p className="font-bold">{defaultVehicle.brand} {defaultVehicle.model}</p><p className="text-xs text-muted-foreground">{defaultVehicle.color} · {vehicleLabels[defaultVehicle.vehicleType]}</p></div></div><div className="rounded-lg border bg-muted/40 p-2.5 text-center font-mono text-xs font-extrabold tracking-widest">{defaultVehicle.registrationNumber}</div></div> : <div className="mt-4 rounded-lg border border-dashed p-4 text-center"><Car className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-2 text-sm font-semibold">No vehicle added yet</p><p className="text-xs text-muted-foreground">Add a vehicle to use it for future parking.</p></div>}<Link href="/driver/vehicles" className="mt-4 flex items-center justify-between rounded-lg border p-2.5 text-xs font-semibold">Manage Saved Vehicles ({savedVehicles.length})<ChevronRight className="h-4 w-4" /></Link></section>
-      <section className="rounded-xl border bg-card p-5"><h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Account</h2><div className="mt-3 space-y-2 text-sm"><p className="font-semibold">{currentUser?.fullName}</p><p className="text-muted-foreground">{currentUser?.email}</p><p className="text-muted-foreground">{currentUser?.phone}</p></div><Link href="/driver/profile" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-primary">View profile<ChevronRight className="h-3.5 w-3.5" /></Link></section>
-      <section className="rounded-xl border bg-card p-5 text-xs text-muted-foreground"><div className="flex gap-2"><Clock className="h-4 w-4 shrink-0" /><p>Booking and financial alerts are hidden until their backend APIs are implemented.</p></div></section>
-    </aside></div>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      <div className="space-y-6">
+        {activeBooking ? <section className="border-l-4 border-emerald-700 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">Active parking</p><h2 className="mt-1 text-xl font-bold">{activeBooking.property?.name ?? activeBooking.listing?.title}</h2><p className="mt-1 text-sm text-muted-foreground"><MapPin className="mr-1 inline size-4" />{activeBooking.property?.publicArea} · {activeBooking.vehicle?.registrationNumber}</p><p className="mt-2 text-xs text-muted-foreground">{formatDateTime(activeBooking.startAt)} to {formatDateTime(activeBooking.scheduledEndAt)}</p></div><Link href={`/driver/bookings/${activeBooking.id}`} className="inline-flex items-center gap-1 text-sm font-bold text-emerald-800">Open session<ArrowRight className="size-4" /></Link></div></section> : <section className="border bg-white p-6"><MapPin className="size-6 text-emerald-700" /><h2 className="mt-3 font-bold">No active parking session</h2><p className="mt-1 text-sm text-muted-foreground">Search verified spaces and reserve one with a server-backed hold.</p><Link href="/driver/parking" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-emerald-800">Search parking<ArrowRight className="size-4" /></Link></section>}
+
+        <section><div className="mb-3 flex items-center justify-between"><h2 className="font-bold">Upcoming bookings</h2><Link href="/driver/bookings" className="text-xs font-semibold text-emerald-800">View all</Link></div><div className="divide-y border bg-white">{bookings.isPending ? <p className="p-5 text-sm text-muted-foreground">Loading bookings...</p> : upcoming.length === 0 ? <p className="p-5 text-sm text-muted-foreground">No upcoming bookings. Your next confirmed reservation will appear here.</p> : upcoming.map((booking) => <Link key={booking.id} href={`/driver/bookings/${booking.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-slate-50"><div><p className="font-semibold">{booking.property?.name}</p><p className="mt-1 text-xs text-muted-foreground">{formatDateTime(booking.startAt)} · {booking.vehicle?.registrationNumber}</p></div><span className="text-sm font-bold">{formatBDTFromPaisa(booking.totalAmountPaisa)}</span></Link>)}</div></section>
+
+        <section><div className="mb-3 flex items-center justify-between"><h2 className="font-bold">Recent searches</h2><Link href="/driver/recent-searches" className="text-xs font-semibold text-emerald-800">Manage</Link></div><div className="grid gap-3 sm:grid-cols-2">{recent.data?.slice(0, 4).map((item) => <Link key={item.id} href={`/driver/parking?location=${encodeURIComponent(item.displayName)}&latitude=${item.latitude}&longitude=${item.longitude}&radiusKm=${item.radiusKm}&vehicleType=${item.vehicleType}`} className="border bg-white p-4 hover:border-emerald-700"><p className="line-clamp-1 font-semibold">{item.displayName}</p><p className="mt-1 text-xs text-muted-foreground">{item.radiusKm} km · {vehicleLabels[item.vehicleType]}</p></Link>)}{recent.data?.length === 0 && <p className="text-sm text-muted-foreground">Your successful parking searches will appear here.</p>}</div></section>
+      </div>
+
+      <aside className="space-y-5">
+        <section className="border bg-white p-5"><h2 className="text-sm font-bold">Account setup</h2><div className="mt-4 space-y-3"><Checklist done={!!user.data?.emailVerified} label="Email verified" href="/driver/profile" /><Checklist done={savedVehicles.length > 0} label="Vehicle added" href="/driver/vehicles" /><Checklist done={!!defaultVehicle} label="Default vehicle selected" href="/driver/vehicles" /></div></section>
+        <section className="border bg-white p-5"><div className="flex items-center justify-between"><h2 className="text-sm font-bold">Default vehicle</h2><Car className="size-4 text-emerald-700" /></div>{defaultVehicle ? <div className="mt-3"><p className="font-semibold">{defaultVehicle.brand} {defaultVehicle.model}</p><p className="mt-1 text-xs text-muted-foreground">{defaultVehicle.registrationNumber} · {vehicleLabels[defaultVehicle.vehicleType]}</p></div> : <p className="mt-3 text-sm text-muted-foreground">Add a vehicle before creating a quote.</p>}<Link href="/driver/vehicles" className="mt-4 inline-flex text-xs font-bold text-emerald-800">Manage vehicles</Link></section>
+        <section className="border bg-white p-5"><div className="flex items-center gap-2"><ShieldCheck className="size-4 text-emerald-700" /><h2 className="text-sm font-bold">Verified marketplace</h2></div><p className="mt-2 text-xs leading-5 text-muted-foreground">Search results only include active, admin-verified properties and currently available offers.</p></section>
+      </aside>
+    </div>
   </div>;
 }
+
+function Metric({ icon: Icon, label, value, href }: { icon: typeof Clock3; label: string; value: string; href: string }) { return <Link href={href} className="flex items-center gap-3 border bg-white p-4 hover:border-emerald-700"><div className="grid size-9 place-items-center rounded-md bg-emerald-50 text-emerald-800"><Icon className="size-4" /></div><div><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-extrabold">{value}</p></div></Link>; }
+function Checklist({ done, label, href }: { done: boolean; label: string; href: string }) { return <Link href={href} className="flex items-center gap-2 text-sm"><CheckCircle2 className={`size-4 ${done ? "text-emerald-700" : "text-slate-300"}`} /><span className={done ? "text-slate-700" : "font-medium"}>{label}</span></Link>; }

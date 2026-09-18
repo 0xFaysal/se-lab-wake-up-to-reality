@@ -3,6 +3,7 @@ import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 import { connectRedis, redis } from "./config/redis.js";
+import { startEmailDeliveryWorker } from "./workers/email-delivery.runner.js";
 
 async function bootstrap() {
   await prisma.$connect();
@@ -12,6 +13,10 @@ async function bootstrap() {
   await connectRedis();
 
   logger.info("Redis connected");
+
+  const emailWorker = env.EMAIL_WORKER_ENABLED
+    ? startEmailDeliveryWorker(env.EMAIL_WORKER_POLL_INTERVAL_MS)
+    : null;
 
   const server = app.listen(env.PORT, () => {
     logger.info(
@@ -36,6 +41,7 @@ async function bootstrap() {
 
     logger.info({ signal }, "Graceful shutdown started");
     server.close(async (closeError) => {
+      if (emailWorker) await emailWorker.stop();
       await Promise.allSettled([
         prisma.$disconnect(),
         redis.isOpen ? redis.quit() : Promise.resolve(),

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function PaymentMethodsPage() {
+export default function WalletPage() {
   redirect("/driver/payments");
 }

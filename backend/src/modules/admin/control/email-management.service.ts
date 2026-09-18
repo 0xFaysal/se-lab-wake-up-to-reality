@@ -431,6 +431,16 @@ async function reconcileCampaign(campaignId: string) {
 }
 
 export async function processEmailDeliveryBatch(limit = 25) {
+  const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
+  const recovered = await prisma.emailDelivery.updateMany({
+    where: { status: EmailDeliveryStatus.PROCESSING, processingAt: { lt: staleBefore } },
+    data: {
+      status: EmailDeliveryStatus.QUEUED,
+      availableAt: new Date(),
+      processingAt: null,
+      providerMessage: "Recovered after an interrupted delivery attempt",
+    },
+  });
   const candidates = await prisma.emailDelivery.findMany({
     where: { status: EmailDeliveryStatus.QUEUED, availableAt: { lte: new Date() } },
     orderBy: { createdAt: "asc" },
@@ -451,11 +461,14 @@ export async function processEmailDeliveryBatch(limit = 25) {
       await sendManagedEmail({ to: delivery.recipientEmail, subject: delivery.subject, html: delivery.htmlBody, text: delivery.textBody });
       await prisma.emailDelivery.update({ where: { id: delivery.id }, data: { status: EmailDeliveryStatus.SENT, sentAt: new Date(), providerMessage: "Accepted by configured SMTP transport" } });
       sent += 1;
-    } catch {
-      await prisma.emailDelivery.update({ where: { id: delivery.id }, data: { status: EmailDeliveryStatus.FAILED, failedAt: new Date(), providerMessage: "SMTP delivery failed" } });
+    } catch (error) {
+      const providerMessage = error instanceof Error
+        ? `SMTP delivery failed: ${error.message}`.slice(0, 500)
+        : "SMTP delivery failed";
+      await prisma.emailDelivery.update({ where: { id: delivery.id }, data: { status: EmailDeliveryStatus.FAILED, failedAt: new Date(), providerMessage } });
       failed += 1;
     }
     if (delivery.campaignId) await reconcileCampaign(delivery.campaignId);
   }
-  return { processed: sent + failed, sent, failed };
+  return { processed: sent + failed, sent, failed, recovered: recovered.count };
 }
