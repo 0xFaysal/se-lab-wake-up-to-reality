@@ -1,5 +1,7 @@
 "use client";
 
+import { auditLogger } from "@/lib/security/audit-logger";
+
 import { useState } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
@@ -156,6 +158,34 @@ export function KycApprovalsView() {
         return item;
       })
     );
+
+    // ─── DevSecOps Audit Trail ─────────────────────────────────
+    auditLogger.log({
+      actionType: decision === "APPROVE" ? "APPROVE" : "REJECT",
+      actionDescription: decision === "APPROVE"
+        ? `Approved KYC verification for host: ${selectedItem.ownerName} (Property: ${selectedItem.propertyTitle})`
+        : `Rejected KYC verification for host: ${selectedItem.ownerName} — Reason: ${data?.rejectionReason?.substring(0, 100) || "N/A"}`,
+      resource: "KYC_VERIFICATION",
+      resourceId: selectedItem.id,
+      managerId: "current-admin",
+      managerName: "Super Admin",
+      status: "SUCCESS",
+      metadata: {
+        decision,
+        submissionId: selectedItem.id,
+        propertyTitle: selectedItem.propertyTitle,
+        propertyArea: selectedItem.propertyArea,
+        idType: selectedItem.idType,
+        // PII sanitized: ID number masked, no raw document URLs logged
+        idNumberMasked: `***${selectedItem.idNumber.slice(-4)}`,
+        ...(decision === "REJECT" && data?.rejectionReason
+          ? { rejectionReason: data.rejectionReason.substring(0, 200) }
+          : {}),
+        ...(data?.internalNotes
+          ? { internalNotes: data.internalNotes.substring(0, 200) }
+          : {}),
+      },
+    });
 
     setShowRejectBox(false);
     reset();

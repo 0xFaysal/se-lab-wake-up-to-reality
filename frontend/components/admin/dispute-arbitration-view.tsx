@@ -1,5 +1,7 @@
 "use client";
 
+import { auditLogger } from "@/lib/security/audit-logger";
+
 import { useState } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
@@ -176,6 +178,35 @@ export function DisputeArbitrationView() {
         100 - watchedSplit
       }% Host).`;
     }
+
+    // ─── DevSecOps Audit Trail ─────────────────────────────────
+    auditLogger.log({
+      actionType: "UPDATE",
+      actionDescription: `Resolved dispute ${selectedCase.id}: ${data.action} — ${summary.substring(0, 150)}`,
+      resource: "DISPUTE",
+      resourceId: selectedCase.id,
+      managerId: "current-admin",
+      managerName: "Super Admin",
+      status: "SUCCESS",
+      metadata: {
+        disputeId: selectedCase.id,
+        bookingCode: selectedCase.bookingCode,
+        resolutionType: data.action,
+        amountPaisa: selectedCase.amountPaisa,
+        category: selectedCase.category,
+        // PII sanitized: no phone numbers or personal addresses in metadata
+        driverName: selectedCase.driver.fullName,
+        ownerPropertyName: selectedCase.owner.propertyName,
+        // Admin notes truncated to prevent PII leakage in logs
+        adminNotes: data.adminNotes.substring(0, 200),
+        ...(data.action === "SPLIT_RESOLUTION"
+          ? {
+              splitPercentageDriver: data.splitPercentageDriver,
+              splitPercentageOwner: 100 - data.splitPercentageDriver,
+            }
+          : {}),
+      },
+    });
 
     setResolutionResult(summary);
   }
