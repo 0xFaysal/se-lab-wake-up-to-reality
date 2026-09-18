@@ -10,10 +10,10 @@ function params(filters: object) {
 export const guardApi = {
   invite: async (propertyId: string, identifier: string) => (await apiClient.post<{ membership: PropertyGuardMembershipDto }>(`/properties/${propertyId}/guards`, { identifier })).membership,
   propertyMemberships: async (propertyId: string) => (await apiClient.get<{ memberships: PropertyGuardMembershipDto[] }>(`/properties/${propertyId}/guards`)).memberships,
-  createAssignment: async (propertyId: string, input: { guardMembershipId: string; shiftStart: string; shiftEnd: string }) => (await apiClient.post<{ assignment: GuardAssignmentDto }>(`/provider/properties/${propertyId}/guard-assignments`, input)).assignment,
+  createAssignment: async (propertyId: string, input: { guardMembershipId: string; shiftStart: string; shiftEnd: string }) => (await apiClient.post<{ assignment: GuardAssignmentDto }>(`/provider/properties/${propertyId}/guard-assignments`, input, { skipAuditFallback: true })).assignment,
   listForProvider: (filters: GuardFilters = {}) => apiClient.get<{ assignments: GuardAssignmentDto[]; pagination: PaginationDto }>(`/provider/guard-assignments${params(filters)}`),
-  update: async (id: string, body: { action: "UPDATE_SHIFT"; shiftStart: string; shiftEnd: string } | { action: "SUSPEND" | "RESUME" }) => (await apiClient.patch<{ assignment: GuardAssignmentDto }>(`/provider/guard-assignments/${id}`, body)).assignment,
-  end: (id: string) => apiClient.delete(`/provider/guard-assignments/${id}`),
+  update: async (id: string, body: { action: "UPDATE_SHIFT"; shiftStart: string; shiftEnd: string } | { action: "SUSPEND" | "RESUME" }) => (await apiClient.patch<{ assignment: GuardAssignmentDto }>(`/provider/guard-assignments/${id}`, body, { skipAuditFallback: body.action === "UPDATE_SHIFT" })).assignment,
+  end: (id: string) => apiClient.delete(`/provider/guard-assignments/${id}`, { skipAuditFallback: true }),
   listMemberships: (filters: { propertyId?: string; status?: PropertyGuardMembershipDto["status"]; page?: number; limit?: number } = {}) => apiClient.get<{ memberships: PropertyGuardMembershipDto[]; pagination: PaginationDto }>(`/guard/property-memberships${params(filters)}`),
   listForGuard: (filters: GuardFilters = {}) => apiClient.get<{ assignments: GuardAssignmentDto[]; pagination: PaginationDto }>(`/guard/provider-assignments${params(filters)}`),
   accept: async (id: string) => (await apiClient.post<{ membership: PropertyGuardMembershipDto }>(`/guard/property-memberships/${id}/accept`, {})).membership,
