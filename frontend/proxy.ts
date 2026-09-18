@@ -369,8 +369,6 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export default proxy;
-
 function applySecurityHeaders(response: NextResponse): void {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);

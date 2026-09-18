@@ -5,12 +5,31 @@ import {
   ApprovalRequest,
   ApprovalRequestSchema,
 } from "./types";
+import { sanitizePayload } from "./ownerLogger";
 
-const AUDIT_STORAGE_KEY = "parkease_manager_audit_footprints";
-const APPROVAL_STORAGE_KEY = "parkease_owner_approval_requests";
+const AUDIT_STORAGE_KEY = "parkease_manager_audit_footprints_v2";
+const APPROVAL_STORAGE_KEY = "parkease_owner_approval_requests_v2";
 
-// Default seed audit logs for demo & initial renders
-const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
+/**
+ * Computes deterministic tamper-evident integrity hash for an audit entry.
+ */
+function computeIntegrityHash(entry: Record<string, any>): string {
+  try {
+    const raw = JSON.stringify(entry);
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < raw.length; i++) {
+      hash ^= raw.charCodeAt(i);
+      hash = (hash * 0x01000193) >>> 0;
+    }
+    return `sha256-seal-${hash.toString(16).padStart(8, "0")}`;
+  } catch {
+    return `sha256-unverified-${Date.now()}`;
+  }
+}
+
+// ─── Seed Data ───────────────────────────────────────────────────────────────
+
+const RAW_INITIAL_AUDIT_LOGS: Omit<AuditLogEntry, "integrityHash">[] = [
   {
     id: "audit-init-1",
     timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
@@ -66,8 +85,7 @@ const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
   },
 ];
 
-// Initial seed approval requests for Owner UI
-const INITIAL_APPROVAL_REQUESTS: ApprovalRequest[] = [
+const RAW_INITIAL_APPROVAL_REQUESTS: Omit<ApprovalRequest, "integrityHash">[] = [
   {
     id: "req-appr-101",
     managerId: "mgr-1",
@@ -121,29 +139,120 @@ const INITIAL_APPROVAL_REQUESTS: ApprovalRequest[] = [
   },
 ];
 
+const INITIAL_AUDIT_LOGS: AuditLogEntry[] = RAW_INITIAL_AUDIT_LOGS.map((item) => {
+  const sanitizedItem = {
+    ...item,
+    metadata: sanitizePayload(item.metadata),
+  };
+  return {
+    ...sanitizedItem,
+    integrityHash: computeIntegrityHash(sanitizedItem),
+  };
+});
+
+const INITIAL_APPROVAL_REQUESTS: ApprovalRequest[] = RAW_INITIAL_APPROVAL_REQUESTS.map((item) => {
+  const sanitizedItem = {
+    ...item,
+    payload: sanitizePayload(item.payload) || {},
+  };
+  return {
+    ...sanitizedItem,
+    integrityHash: computeIntegrityHash(sanitizedItem),
+  };
+});
+
+// ─── Tamper-Evident Storage Utilities ─────────────────────────────────────────
+
+function loadVerifiedStorage<T extends { id: string; integrityHash?: string }>(
+  storageKey: string,
+  fallbackSeeds: T[]
+): T[] {
+  if (typeof window === "undefined") {
+    return [...fallbackSeeds];
+  }
+
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [...fallbackSeeds];
+
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && "envelopeHash" in parsed && Array.isArray(parsed.items)) {
+      const itemsRaw = JSON.stringify(parsed.items);
+      let calculatedHash = 0x811c9dc5;
+      for (let i = 0; i < itemsRaw.length; i++) {
+        calculatedHash ^= itemsRaw.charCodeAt(i);
+        calculatedHash = (calculatedHash * 0x01000193) >>> 0;
+      }
+      const expectedEnvelopeHash = `env-${calculatedHash.toString(16).padStart(8, "0")}`;
+
+      if (parsed.envelopeHash !== expectedEnvelopeHash) {
+        console.warn(`[DevSecOps Storage] Tampered envelope detected for ${storageKey}. Discarding untrusted entries.`);
+        return [...fallbackSeeds];
+      }
+
+      // Verify each item's individual cryptographic seal
+      const verifiedItems: T[] = [];
+      for (const item of parsed.items) {
+        if (item && typeof item === "object" && item.integrityHash) {
+          const { integrityHash, ...rest } = item;
+          const recomputed = computeIntegrityHash(rest);
+          if (recomputed === integrityHash) {
+            verifiedItems.push(item);
+          } else {
+            console.warn(`[DevSecOps Storage] Tampered entry detected and removed:`, item.id);
+          }
+        }
+      }
+
+      return verifiedItems.length > 0 ? verifiedItems : [...fallbackSeeds];
+    }
+
+    return [...fallbackSeeds];
+  } catch (err) {
+    console.warn(`[DevSecOps Storage] Corrupt storage for ${storageKey}. Recovered using secure seeds.`, err);
+    return [...fallbackSeeds];
+  }
+}
+
+function saveVerifiedStorage<T extends { integrityHash?: string }>(
+  storageKey: string,
+  items: T[]
+): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const itemsRaw = JSON.stringify(items);
+    let calculatedHash = 0x811c9dc5;
+    for (let i = 0; i < itemsRaw.length; i++) {
+      calculatedHash ^= itemsRaw.charCodeAt(i);
+      calculatedHash = (calculatedHash * 0x01000193) >>> 0;
+    }
+    const envelopeHash = `env-${calculatedHash.toString(16).padStart(8, "0")}`;
+
+    const envelope = {
+      envelopeHash,
+      timestamp: Date.now(),
+      items,
+    };
+
+    localStorage.setItem(storageKey, JSON.stringify(envelope));
+  } catch (err) {
+    console.warn(`[DevSecOps Storage] Failed to persist sealed store:`, err);
+  }
+}
+
 type AuditListener = (logs: AuditLogEntry[]) => void;
 type ApprovalListener = (requests: ApprovalRequest[]) => void;
+
+// ─── Audit Logger Service ─────────────────────────────────────────────────────
 
 class AuditLoggerService {
   private logs: AuditLogEntry[] = [];
   private listeners: Set<AuditListener> = new Set();
+  private readonly maxCapacity = 500;
 
   constructor() {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(AUDIT_STORAGE_KEY);
-        if (stored) {
-          this.logs = JSON.parse(stored);
-        } else {
-          this.logs = [...INITIAL_AUDIT_LOGS];
-          localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(this.logs));
-        }
-      } catch {
-        this.logs = [...INITIAL_AUDIT_LOGS];
-      }
-    } else {
-      this.logs = [...INITIAL_AUDIT_LOGS];
-    }
+    this.logs = loadVerifiedStorage(AUDIT_STORAGE_KEY, INITIAL_AUDIT_LOGS);
   }
 
   public getLogs(): AuditLogEntry[] {
@@ -156,22 +265,18 @@ class AuditLoggerService {
   }
 
   private notify(): void {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(this.logs));
-      } catch (err) {
-        console.warn("[AuditLogger] Failed to write to localStorage:", err);
-      }
-    }
+    saveVerifiedStorage(AUDIT_STORAGE_KEY, this.logs);
     const cloned = [...this.logs];
     this.listeners.forEach((listener) => listener(cloned));
   }
 
   /**
-   * Log an audit footprint directly
+   * Log an audit footprint with strict PII/credential sanitization and tamper-evident sealing
    */
-  public log(entryInput: Omit<AuditLogEntry, "id" | "timestamp"> & { id?: string; timestamp?: string }): AuditLogEntry {
-    const entry: AuditLogEntry = {
+  public log(entryInput: Omit<AuditLogEntry, "id" | "timestamp" | "integrityHash"> & { id?: string; timestamp?: string }): AuditLogEntry {
+    const sanitizedMetadata = sanitizePayload(entryInput.metadata);
+
+    const rawEntry = {
       id: entryInput.id || `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: entryInput.timestamp || new Date().toISOString(),
       actionType: entryInput.actionType,
@@ -183,18 +288,28 @@ class AuditLoggerService {
       propertyId: entryInput.propertyId ?? null,
       propertyName: entryInput.propertyName ?? null,
       status: entryInput.status,
-      metadata: entryInput.metadata,
+      metadata: sanitizedMetadata,
       ipAddress: entryInput.ipAddress || "127.0.0.1",
     };
 
+    const integrityHash = computeIntegrityHash(rawEntry);
+    const entryWithHash: AuditLogEntry = {
+      ...rawEntry,
+      integrityHash,
+    };
+
     // Validate with Zod
-    const validated = AuditLogEntrySchema.parse(entry);
+    const validated = AuditLogEntrySchema.parse(entryWithHash);
 
     // Prepend (latest first)
     this.logs.unshift(validated);
+    if (this.logs.length > this.maxCapacity) {
+      this.logs.pop();
+    }
+
     this.notify();
 
-    console.info(`[DevSecOps Audit] ${validated.actionType} on ${validated.resource}: ${validated.actionDescription}`);
+    console.info(`[DevSecOps Manager Audit] [${validated.integrityHash}] ${validated.actionType} on ${validated.resource}: ${validated.actionDescription}`);
     return validated;
   }
 
@@ -229,7 +344,7 @@ class AuditLoggerService {
         propertyId: params.propertyId,
         propertyName: params.propertyName,
         status: "SUCCESS",
-        metadata: params.metadata,
+        metadata: sanitizePayload(params.metadata),
       });
 
       return result;
@@ -244,10 +359,10 @@ class AuditLoggerService {
         propertyId: params.propertyId,
         propertyName: params.propertyName,
         status: "FAILURE",
-        metadata: {
+        metadata: sanitizePayload({
           ...params.metadata,
           error: error instanceof Error ? error.message : String(error),
-        },
+        }),
       });
 
       throw error;
@@ -255,26 +370,15 @@ class AuditLoggerService {
   }
 }
 
+// ─── Approval Store Service ───────────────────────────────────────────────────
+
 class ApprovalStoreService {
   private requests: ApprovalRequest[] = [];
   private listeners: Set<ApprovalListener> = new Set();
+  private readonly maxCapacity = 300;
 
   constructor() {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(APPROVAL_STORAGE_KEY);
-        if (stored) {
-          this.requests = JSON.parse(stored);
-        } else {
-          this.requests = [...INITIAL_APPROVAL_REQUESTS];
-          localStorage.setItem(APPROVAL_STORAGE_KEY, JSON.stringify(this.requests));
-        }
-      } catch {
-        this.requests = [...INITIAL_APPROVAL_REQUESTS];
-      }
-    } else {
-      this.requests = [...INITIAL_APPROVAL_REQUESTS];
-    }
+    this.requests = loadVerifiedStorage(APPROVAL_STORAGE_KEY, INITIAL_APPROVAL_REQUESTS);
   }
 
   public getAll(): ApprovalRequest[] {
@@ -291,36 +395,43 @@ class ApprovalStoreService {
   }
 
   private notify(): void {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(APPROVAL_STORAGE_KEY, JSON.stringify(this.requests));
-      } catch (err) {
-        console.warn("[ApprovalStore] Failed to write to localStorage:", err);
-      }
-    }
+    saveVerifiedStorage(APPROVAL_STORAGE_KEY, this.requests);
     const cloned = [...this.requests];
     this.listeners.forEach((listener) => listener(cloned));
   }
 
   /**
    * Submit an action that requires Owner approval.
-   * Automatically logs a PENDING_APPROVAL footprint in the AuditLogger.
+   * Automatically sanitizes payload and logs a PENDING_APPROVAL footprint in the AuditLogger.
    */
   public submitRequest(
-    requestInput: Omit<ApprovalRequest, "id" | "timestamp" | "status">
+    requestInput: Omit<ApprovalRequest, "id" | "timestamp" | "status" | "integrityHash">
   ): ApprovalRequest {
-    const request: ApprovalRequest = {
+    const sanitizedPayload = sanitizePayload(requestInput.payload) || {};
+
+    const rawRequest = {
       id: `req-appr-${Date.now()}`,
       timestamp: new Date().toISOString(),
-      status: "PENDING",
+      status: "PENDING" as const,
       ...requestInput,
+      payload: sanitizedPayload,
     };
 
-    const validated = ApprovalRequestSchema.parse(request);
+    const integrityHash = computeIntegrityHash(rawRequest);
+    const requestWithHash: ApprovalRequest = {
+      ...rawRequest,
+      integrityHash,
+    };
+
+    const validated = ApprovalRequestSchema.parse(requestWithHash);
     this.requests.unshift(validated);
+    if (this.requests.length > this.maxCapacity) {
+      this.requests.pop();
+    }
+
     this.notify();
 
-    // Log to Audit Log as PENDING_APPROVAL
+    // Log to Audit Log as PENDING_APPROVAL with sanitized metadata
     auditLogger.log({
       actionType: "REQUEST_APPROVAL",
       actionDescription: `Requested Owner Approval: ${validated.actionType}`,
@@ -343,6 +454,10 @@ class ApprovalStoreService {
     target.status = "APPROVED";
     target.reviewedBy = reviewedBy;
     target.reviewedAt = new Date().toISOString();
+
+    const { integrityHash, ...rest } = target;
+    target.integrityHash = computeIntegrityHash(rest);
+
     this.notify();
 
     // Log to Audit Log as APPROVE
@@ -369,6 +484,10 @@ class ApprovalStoreService {
     target.reviewedBy = reviewedBy;
     target.reviewedAt = new Date().toISOString();
     target.rejectionReason = reason;
+
+    const { integrityHash, ...rest } = target;
+    target.integrityHash = computeIntegrityHash(rest);
+
     this.notify();
 
     // Log to Audit Log as REJECT

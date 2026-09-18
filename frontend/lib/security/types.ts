@@ -82,6 +82,7 @@ export const AuditLogEntrySchema = z.object({
   status: z.enum(["SUCCESS", "FAILURE", "PENDING_APPROVAL"]),
   metadata: z.record(z.string(), z.unknown()).optional(),
   ipAddress: z.string().optional(),
+  integrityHash: z.string().optional(),
 });
 
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
@@ -107,6 +108,7 @@ export const ApprovalRequestSchema = z.object({
   reviewedBy: z.string().optional().nullable(),
   reviewedAt: z.string().optional().nullable(),
   rejectionReason: z.string().optional().nullable(),
+  integrityHash: z.string().optional(),
 });
 
 export type ApprovalRequest = z.infer<typeof ApprovalRequestSchema>;
