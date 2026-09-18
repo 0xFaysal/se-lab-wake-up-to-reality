@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CreditCard, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { PageEmptyState, PageErrorState, ProviderPage, ProviderPageHeader } from "@/components/owner/provider-page";
+import { ReAuthModal } from "@/components/security/re-auth-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { financeApi } from "@/lib/api/finance-api";
@@ -32,10 +33,33 @@ export default function PayoutMethodsPage() {
 
 function PayoutMethodForm({ pending, submit, cancel }: { pending: boolean; submit: (input: Parameters<typeof financeApi.createPayoutMethod>[0]) => void; cancel: () => void }) {
   const [type, setType] = useState<PayoutMethodDto["type"]>("BANK");
+  const [isReAuthOpen, setIsReAuthOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<any>(null);
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    submit({ type, accountHolderName: String(data.get("accountHolderName")), accountIdentifier: String(data.get("accountIdentifier")), ...(type === "BANK" ? { bankName: String(data.get("bankName")), branchName: String(data.get("branchName") || "") || undefined, routingNumber: String(data.get("routingNumber") || "") || undefined } : {}), isDefault: data.get("isDefault") === "on" });
+    const payload = { type, accountHolderName: String(data.get("accountHolderName")), accountIdentifier: String(data.get("accountIdentifier")), ...(type === "BANK" ? { bankName: String(data.get("bankName")), branchName: String(data.get("branchName") || "") || undefined, routingNumber: String(data.get("routingNumber") || "") || undefined } : {}), isDefault: data.get("isDefault") === "on" };
+    
+    setPendingPayload(payload);
+    setIsReAuthOpen(true);
   }
-  return <form onSubmit={onSubmit} className="grid gap-4 border border-emerald-200 bg-emerald-50 p-5 sm:grid-cols-2"><label className="space-y-1 text-sm font-semibold">Destination type<select className="h-10 w-full border bg-white px-3" value={type} onChange={(event) => setType(event.target.value as PayoutMethodDto["type"])}><option value="BANK">Bank account</option><option value="BKASH">bKash</option><option value="NAGAD">Nagad</option><option value="OTHER_MFS">Other mobile wallet</option></select></label><label className="space-y-1 text-sm font-semibold">Account holder name<Input name="accountHolderName" minLength={2} maxLength={120} required /></label><label className="space-y-1 text-sm font-semibold">{type === "BANK" ? "Account number" : "Mobile wallet number"}<Input name="accountIdentifier" minLength={6} maxLength={100} required autoComplete="off" /></label>{type === "BANK" && <><label className="space-y-1 text-sm font-semibold">Bank name<Input name="bankName" minLength={2} maxLength={120} required /></label><label className="space-y-1 text-sm font-semibold">Branch name<Input name="branchName" maxLength={120} /></label><label className="space-y-1 text-sm font-semibold">Routing number<Input name="routingNumber" maxLength={40} /></label></>}<label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2"><input type="checkbox" name="isDefault" />Use as default payout method</label><p className="text-xs leading-5 text-emerald-900 sm:col-span-2">The identifier is encrypted before storage. After creation, only a masked value is returned.</p><div className="flex gap-2 sm:col-span-2"><Button type="submit" disabled={pending}>{pending && <Loader2 className="size-4 animate-spin" />}Save payout method</Button><Button type="button" variant="outline" onClick={cancel} disabled={pending}>Cancel</Button></div></form>;
+
+  return (
+    <>
+      <form onSubmit={onSubmit} className="grid gap-4 border border-emerald-200 bg-emerald-50 p-5 sm:grid-cols-2"><label className="space-y-1 text-sm font-semibold">Destination type<select className="h-10 w-full border bg-white px-3" value={type} onChange={(event) => setType(event.target.value as PayoutMethodDto["type"])}><option value="BANK">Bank account</option><option value="BKASH">bKash</option><option value="NAGAD">Nagad</option><option value="OTHER_MFS">Other mobile wallet</option></select></label><label className="space-y-1 text-sm font-semibold">Account holder name<Input name="accountHolderName" minLength={2} maxLength={120} required /></label><label className="space-y-1 text-sm font-semibold">{type === "BANK" ? "Account number" : "Mobile wallet number"}<Input name="accountIdentifier" minLength={6} maxLength={100} required autoComplete="off" /></label>{type === "BANK" && <><label className="space-y-1 text-sm font-semibold">Bank name<Input name="bankName" minLength={2} maxLength={120} required /></label><label className="space-y-1 text-sm font-semibold">Branch name<Input name="branchName" maxLength={120} /></label><label className="space-y-1 text-sm font-semibold">Routing number<Input name="routingNumber" maxLength={40} /></label></>}<label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2"><input type="checkbox" name="isDefault" />Use as default payout method</label><p className="text-xs leading-5 text-emerald-900 sm:col-span-2">The identifier is encrypted before storage. After creation, only a masked value is returned.</p><div className="flex gap-2 sm:col-span-2"><Button type="submit" disabled={pending}>{pending && <Loader2 className="size-4 animate-spin" />}Save payout method</Button><Button type="button" variant="outline" onClick={cancel} disabled={pending}>Cancel</Button></div></form>
+      
+      {isReAuthOpen && (
+        <ReAuthModal 
+          isOpen={isReAuthOpen} 
+          onClose={() => setIsReAuthOpen(false)} 
+          onSuccess={() => {
+            setIsReAuthOpen(false);
+            submit(pendingPayload);
+          }} 
+          actionPayload={pendingPayload} 
+        />
+      )}
+    </>
+  );
 }

@@ -12,6 +12,8 @@ export const OwnerActionTypeSchema = z.enum([
   "REMOVE_GUARD",
   "UPDATE_GUARD_SHIFT",
   "ISSUED_TEMPORARY_CREDENTIALS",
+  "PRICING_MUTATION",
+  "CAPACITY_MUTATION",
   // Catch-all
   "GENERIC_OWNER_MUTATION",
 ]);
