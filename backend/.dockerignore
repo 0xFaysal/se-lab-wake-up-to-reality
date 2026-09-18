@@ -1,0 +1,17 @@
+node_modules
+dist
+generated
+.env
+.env.*
+!.env.example
+*.log
+*.dump
+coverage
+.git
+.github
+.vscode
+test-api
+tests
+docs
+README.md
+docker-compose.yml

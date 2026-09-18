@@ -13,7 +13,7 @@ if (!["http:", "https:"].includes(parsedApiBaseUrl.protocol)) {
 }
 
 if (configuredApiBaseUrl && process.env.NODE_ENV === "production" && parsedApiBaseUrl.protocol !== "https:") {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL must use HTTPS in production");
+  throw new Error("NEXT_PUBLIC_API_BASE_URL must use the deployed backend's HTTPS URL in production (for example, https://api.example.com/api/v1)");
 }
 
 export const publicEnv = {

@@ -9,6 +9,7 @@ import { HostShowcaseSection } from "@/components/landing/host-showcase-section"
 import { FeaturedLocationsGrid } from "@/components/landing/featured-locations-grid";
 import { JourneyTimelineBar } from "@/components/landing/journey-timeline-bar";
 import { CtaSection } from "@/components/landing/cta-section";
+import { BrandIcon } from "@/components/common/app-logo";
 
 import heroDevicesImg from "@/assets/hero-devices.jpg";
 import garageEntranceImg from "@/assets/garage-entrance.jpg";
@@ -69,9 +70,7 @@ export default function LandingPage() {
                   />
 
                   {/* Floating Emerald Parking Marker */}
-                  <div className="absolute top-10 left-12 hidden sm:flex size-9 items-center justify-center rounded-full bg-primary text-white font-bold text-xs shadow-lg border-2 border-white animate-bounce duration-1000">
-                    P
-                  </div>
+                  <BrandIcon size={36} className="absolute left-12 top-10 hidden size-9 animate-bounce rounded-full border-2 border-white shadow-lg duration-1000 sm:block" />
                 </div>
 
                 {/* Floating Spotlight Card */}

@@ -60,6 +60,8 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
   PARKING_RESOURCE_CAPACITY_IN_USE: "Capacity cannot be reduced below the verified parking-right entitlement.",
   PARKING_RESOURCE_DELETE_BLOCKED: "This resource has an unfinished booking and cannot be deleted.",
   PARKING_RESOURCE_NOT_LISTABLE: "This parking resource is not eligible for a commercial listing.",
+  PARKING_RESOURCE_UNIT_INVALID: "A fixed parking unit cannot be used with this resource.",
+  PARKING_RESOURCE_UNIT_NOT_FOUND: "That fixed parking unit no longer exists.",
   PARKING_RESOURCE_STATUS_UNCHANGED: "This parking resource already has the selected status.",
   PARKING_RIGHT_NOT_FOUND: "That parking right could not be found.",
   PARKING_RIGHT_NOT_LISTABLE: "This parking right is not currently eligible for commercial listing.",
