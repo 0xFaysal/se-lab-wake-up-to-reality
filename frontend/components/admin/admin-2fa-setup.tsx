@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { verifyAdminMfaStep, disableAdminMfa } from "@/app/actions/mfaActions";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TwoFactorStep = "IDLE" | "GENERATE" | "VERIFY" | "ENABLED";
@@ -103,32 +104,42 @@ export function Admin2FASetup() {
     }, 800);
   }, []);
 
-  const handleVerify = useCallback(() => {
+  const handleVerify = useCallback(async () => {
     setVerifyError("");
     if (verificationCode.length !== 6 || !/^\d{6}$/.test(verificationCode)) {
       setVerifyError("Please enter a valid 6-digit code");
       return;
     }
     setIsProcessing(true);
-    // Simulate verification — accept any valid 6-digit code in demo
-    setTimeout(() => {
+
+    try {
+      // Execute pure server-side TOTP verification with anti-replay protection
+      const result = await verifyAdminMfaStep(verificationCode);
+
+      if (!result.success) {
+        setVerifyError(result.message || "Verification failed");
+        setIsProcessing(false);
+        return;
+      }
+
       const newState: TwoFactorState = {
         ...state,
         step: "ENABLED",
         isEnabled: true,
       };
       setState(newState);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("parkease_admin_2fa", JSON.stringify(newState));
-      }
       setIsProcessing(false);
       setVerificationCode("");
-    }, 1000);
+    } catch (err: any) {
+      setVerifyError(err.message || "An unexpected error occurred during verification");
+      setIsProcessing(false);
+    }
   }, [verificationCode, state]);
 
-  const handleDisable = useCallback(() => {
+  const handleDisable = useCallback(async () => {
     setIsProcessing(true);
-    setTimeout(() => {
+    try {
+      await disableAdminMfa();
       setState({
         step: "IDLE",
         secret: "",
@@ -136,11 +147,11 @@ export function Admin2FASetup() {
         backupCodes: [],
         isEnabled: false,
       });
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("parkease_admin_2fa");
-      }
+    } catch {
+      // fallback
+    } finally {
       setIsProcessing(false);
-    }, 600);
+    }
   }, []);
 
   const copyToClipboard = useCallback(

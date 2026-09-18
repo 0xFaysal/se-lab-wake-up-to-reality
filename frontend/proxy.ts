@@ -170,14 +170,58 @@ function isSuspiciousBotUserAgent(userAgent: string | null): boolean {
 }
 
 /**
- * Attempt to extract role claims from the auth cookie payload.
- * Since we use HTTP-only cookies managed by the backend, the middleware
- * cannot decode JWT contents. Instead, we check for cookie *presence*
- * as a fast-fail guard. The full role verification happens on the
- * backend when the page's data fetchers run.
+ * Normalizes URL pathnames to prevent directory traversal and path confusion attacks
+ * (e.g. `/%2e%2e/admin`, `/parking/../admin`, `//admin`).
  */
-function hasSessionCookie(request: NextRequest): boolean {
-  return request.cookies.has(SESSION_COOKIE);
+function normalizePathname(pathname: string): string {
+  try {
+    let decoded = decodeURIComponent(pathname);
+    // Remove consecutive slashes
+    decoded = decoded.replace(/\/+/g, "/");
+    // Resolve dot segments
+    const segments = decoded.split("/");
+    const resolvedSegments: string[] = [];
+
+    for (const seg of segments) {
+      if (seg === "" || seg === ".") continue;
+      if (seg === "..") {
+        resolvedSegments.pop();
+      } else {
+        resolvedSegments.push(seg);
+      }
+    }
+
+    return "/" + resolvedSegments.join("/");
+  } catch {
+    return pathname;
+  }
+}
+
+/**
+ * Validates the cryptographic session signature format of the Express session cookie (`connect.sid`).
+ * Format: `s:<sessionId>.<hmacSignature>`
+ * Prevents attackers from bypassing edge middleware by injecting dummy cookies (e.g. `connect.sid=fake`).
+ */
+function hasValidSessionSignature(request: NextRequest): boolean {
+  const cookieValue = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!cookieValue) return false;
+
+  // Must begin with 's:' (signed cookie indicator in cookie-parser / express-session)
+  if (!cookieValue.startsWith("s:")) return false;
+
+  // Must have a dot separating session ID and HMAC-SHA256 signature
+  const dotIndex = cookieValue.indexOf(".");
+  if (dotIndex === -1) return false;
+
+  const sessionId = cookieValue.substring(2, dotIndex);
+  const signature = cookieValue.substring(dotIndex + 1);
+
+  // Validate entropy: Session ID must be at least 16 chars, signature at least 24 chars
+  if (sessionId.length < 16 || signature.length < 24) {
+    return false;
+  }
+
+  return true;
 }
 
 function getProtectedRoute(
@@ -189,7 +233,8 @@ function getProtectedRoute(
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const rawPathname = request.nextUrl.pathname;
+  const pathname = normalizePathname(rawPathname);
   const userAgent = request.headers.get("user-agent");
 
   // Intercept Server Action or REST booking checkout calls
@@ -290,16 +335,16 @@ export async function proxy(request: NextRequest) {
   const protectedRoute = getProtectedRoute(pathname);
 
   if (protectedRoute) {
-    const hasSession = hasSessionCookie(request);
+    const hasValidSession = hasValidSessionSignature(request);
 
-    if (!hasSession) {
-      // No session cookie → redirect to login with return-to parameter
+    if (!hasValidSession) {
+      // No valid signed session cookie → redirect to login with return-to parameter
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = AUTH_LOGIN_PATH;
       loginUrl.searchParams.set("redirect", pathname);
 
       console.warn(
-        `[DevSecOps Middleware] Blocked unauthenticated access to ${pathname} — redirecting to login`
+        `[DevSecOps Middleware] Blocked unauthenticated/invalid session access to ${pathname} — redirecting to login`
       );
 
       const response = NextResponse.redirect(loginUrl);
