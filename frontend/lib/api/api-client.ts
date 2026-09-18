@@ -1,6 +1,7 @@
 import { ApiError, type ApiErrorPayload } from "./api-error";
 import type { ApiSuccess } from "./api-types";
 import { publicEnv } from "@/lib/config/public-env";
+import { ownerLogger } from "@/lib/security/ownerLogger";
 
 const API_BASE_URL = publicEnv.API_BASE_URL;
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -11,6 +12,7 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   timeoutMs?: number;
   skipAuthRefresh?: boolean;
+  skipAuditFallback?: boolean;
 }
 
 async function refreshSession(): Promise<boolean> {
@@ -64,6 +66,24 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
     if (!response.ok) throw await parseError(response);
+    
+    // DevSecOps Catch-All Audit Verification
+    const method = options.method || "GET";
+    if (
+      ["POST", "PUT", "PATCH", "DELETE"].includes(method) &&
+      !options.skipAuditFallback &&
+      (path.startsWith("/provider") || path.startsWith("/owner"))
+    ) {
+      ownerLogger.logOwnerAction({
+        ownerId: "current-owner",
+        actionType: "GENERIC_OWNER_MUTATION",
+        actionDescription: `Automatic footprint: ${method} ${path}`,
+        resource: "API_ENDPOINT",
+        status: "SUCCESS",
+        payload: { path, method, body: options.body },
+      });
+    }
+
     if (response.status === 204) return undefined as T;
     const payload = await response.json() as ApiSuccess<T>;
     return payload.data;

@@ -27,6 +27,7 @@ import {
   Compass,
   Zap,
 } from "lucide-react";
+import { ownerLogger } from "@/lib/security/ownerLogger";
 
 interface EditListingViewProps {
   propertyId: string;
@@ -102,6 +103,21 @@ export function OwnerEditListingView({ propertyId }: EditListingViewProps) {
   const handleSave = () => {
     setIsSaving(true);
     showToast("Saving listing updates...");
+
+    if (hourlyRate !== 50 || peakPricing !== "+20%") {
+      ownerLogger.logOwnerAction({
+        ownerId: "current-owner",
+        actionType: "PRICING_MUTATION",
+        actionDescription: `Modified pricing settings`,
+        resource: "PROPERTY_PRICING",
+        status: "SUCCESS",
+        payload: {
+          previousValue: { hourlyRate: 50, peakPricing: "+20%" },
+          newValue: { hourlyRate, peakPricing }
+        }
+      });
+    }
+
     setTimeout(() => {
       setIsSaving(false);
       setIsPricingModified(false);

@@ -11,6 +11,7 @@ import { getApiErrorMessage } from "@/lib/api/api-error";
 import { managerApi, type ManagerDelegationDto, type ManagerPermission } from "@/lib/api/manager-api";
 import { parkingResourcesApi } from "@/lib/api/parking-resources-api";
 import { queryKeys } from "@/lib/query-keys";
+import { ownerLogger } from "@/lib/security/ownerLogger";
 
 const ALL: ManagerPermission[] = [
   "RESOURCE_VIEW", "LISTING_VIEW", "LISTING_MANAGE", "PRICE_MANAGE",
@@ -46,6 +47,30 @@ function PermissionForm({ delegation }: { delegation: ManagerDelegationDto }) {
       resourceIds: wholeProperty ? [] : resourceIds,
     }),
     onSuccess: async () => {
+      const added = permissions.filter(p => !delegation.permissions.includes(p));
+      const removed = delegation.permissions.filter(p => !permissions.includes(p));
+      
+      const details = [];
+      if (added.length) details.push(`Added [${added.map(p => p.replaceAll("_", " ")).join(", ")}]`);
+      if (removed.length) details.push(`Removed [${removed.map(p => p.replaceAll("_", " ")).join(", ")}]`);
+      
+      if (details.length > 0) {
+        ownerLogger.logOwnerAction({
+          ownerId: "current-owner",
+          actionType: "DELEGATE_MANAGER",
+          actionDescription: `Updated permissions for ${delegation.manager.fullName}`,
+          resource: "MANAGER_DELEGATION",
+          resourceId: delegation.id,
+          propertyId: delegation.property.id,
+          status: "SUCCESS",
+          payload: { 
+            delta: details.join(", "),
+            added,
+            removed,
+          }
+        });
+      }
+
       await client.invalidateQueries({ queryKey: queryKeys.managerDelegations.provider });
       router.push(`/owner/managers/${delegation.id}`);
     },

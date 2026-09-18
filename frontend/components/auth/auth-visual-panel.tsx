@@ -35,7 +35,7 @@ export function AuthVisualPanel() {
         src={authGateImg}
         alt="ParkEase BD Residential Gate Security"
         fill
-        sizes="50vw"
+        sizes="(max-width: 1024px) 100vw, 50vw"
         className="object-cover object-center"
         priority
       />
