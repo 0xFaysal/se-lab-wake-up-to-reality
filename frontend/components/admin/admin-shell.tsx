@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { BrandIcon } from "@/components/common/app-logo";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 type NavItem = { label: string; href: string; icon: typeof Home };
@@ -123,7 +124,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:flex lg:flex-col">
         <Link href="/admin" className="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
-          <span className="flex size-9 items-center justify-center bg-emerald-800 text-sm font-black text-white">P</span>
+          <BrandIcon size={36} className="size-9" />
           <span><strong className="block text-sm">ParkEase BD</strong><small className="block text-[11px] text-slate-500">Admin Console</small></span>
         </Link>
         <div className="flex-1 overflow-y-auto px-3 py-5"><Navigation pathname={pathname} /></div>
@@ -140,7 +141,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="flex size-8 items-center justify-center bg-emerald-800 text-xs font-black text-white lg:hidden">P</span>
+            <BrandIcon size={32} className="size-8 lg:hidden" />
             <div><p className="text-[10px] font-bold uppercase text-slate-400">Admin Console</p><p className="text-sm font-bold">{current?.label ?? "Operations"}</p></div>
           </div>
           <div className="flex items-center gap-2">

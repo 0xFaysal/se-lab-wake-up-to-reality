@@ -6,6 +6,7 @@ import { OwnerFooter } from "@/components/owner/owner-footer";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { RoleGuard } from "@/components/auth/role-guard";
+import { BrandIcon } from "@/components/common/app-logo";
 
 export default function ManagerPortalLayout({
   children,
@@ -24,9 +25,7 @@ export default function ManagerPortalLayout({
         {/* Mobile Top Bar */}
         <div className="lg:hidden sticky top-0 z-40 bg-white border-b border-[#E5E7EB] px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-lg bg-[#064E3B] text-white flex items-center justify-center font-bold text-sm">
-              P
-            </div>
+            <BrandIcon size={32} className="size-8" />
             <div>
               <span className="font-heading font-extrabold text-sm text-slate-900 block leading-tight">
                 ParkEase BD
