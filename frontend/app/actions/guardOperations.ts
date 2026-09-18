@@ -13,8 +13,8 @@ export async function processVehicleEntry(
   // Note: We explicitly DO NOT accept a client-side timestamp parameter
 ) {
   try {
-    // 1. Shift Validator - Strict Boundary Check
-    await verifyGuardShift(guardId, propertyId);
+    // 1. Shift Validator - Strict Boundary & Object Ownership Check
+    await verifyGuardShift(guardId, propertyId, bookingId);
 
     // 2. Enforce Server-Side UTC Clock
     const serverTimestamp = new Date().toISOString();
@@ -73,8 +73,8 @@ export async function processVehicleExit(
   // Note: We explicitly DO NOT accept a client-side timestamp parameter
 ) {
   try {
-    // 1. Shift Validator - Strict Boundary Check
-    await verifyGuardShift(guardId, propertyId);
+    // 1. Shift Validator - Strict Boundary & Object Ownership Check
+    await verifyGuardShift(guardId, propertyId, bookingId);
 
     // 2. Enforce Server-Side UTC Clock
     const serverTimestamp = new Date().toISOString();

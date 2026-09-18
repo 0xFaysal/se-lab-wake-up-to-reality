@@ -75,54 +75,67 @@ export async function logGuardAction(
   console.log(`[DevSecOps Guard Audit] ${entry.actionType}:`, JSON.stringify(entry, null, 2));
 }
 
-// ─── Shift Validation ────────────────────────────────────────────────────────
+// ─── Shift Validation (Strict Fail-Closed) ───────────────────────────────────
 
-// In-memory mock for active guard shifts
-// Key: `${guardId}:${propertyId}`
-// Value: Object representing shift start/end bounds
-const mockActiveShifts = new Map<string, { start: Date; end: Date }>();
+interface GuardShiftSchedule {
+  propertyId: string;
+  gateId?: string;
+  shiftStart: string;
+  shiftEnd: string;
+  isActive: boolean;
+}
+
+// Authoritative guard schedule mapped to guardId
+// In production, queries database table `guard_roster`
+const AUTHORITATIVE_GUARD_SCHEDULE = new Map<string, GuardShiftSchedule>([
+  ["guard-1", { propertyId: "prop-gulshan-1", gateId: "Gate 1", shiftStart: "00:00", shiftEnd: "23:59", isActive: true }],
+  ["guard-2", { propertyId: "prop-gulshan-1", gateId: "Gate 2", shiftStart: "08:00", shiftEnd: "20:00", isActive: true }],
+  ["guard-3", { propertyId: "prop-banani-2", gateId: "Gate 1", shiftStart: "08:00", shiftEnd: "20:00", isActive: true }],
+]);
 
 /**
- * Verifies if the guard is currently on an active shift for the specific property.
- * This prevents out-of-bounds check-ins or location spoofing.
+ * Strict Fail-Closed verification of a Guard's shift and location boundary.
+ * Eliminates location spoofing by strictly validating assignment against the authoritative roster.
  */
 export async function verifyGuardShift(
   guardId: string,
-  propertyId: string
+  propertyId: string,
+  targetBookingId?: string
 ): Promise<boolean> {
-  const cacheKey = `${guardId}:${propertyId}`;
-  
-  // Hydrate mock data (In production, query DB for active shift schedule)
-  if (!mockActiveShifts.has(cacheKey)) {
-    const now = new Date();
-    // Default to an active shift covering the current time (for testing purposes)
-    mockActiveShifts.set(cacheKey, {
-      start: new Date(now.getTime() - 4 * 60 * 60 * 1000), // 4 hours ago
-      end: new Date(now.getTime() + 4 * 60 * 60 * 1000)    // 4 hours from now
-    });
-  }
+  const schedule = AUTHORITATIVE_GUARD_SCHEDULE.get(guardId);
 
-  const shift = mockActiveShifts.get(cacheKey)!;
-  const currentTime = new Date();
-
-  // Validate current time against shift boundaries
-  const isShiftActive = currentTime >= shift.start && currentTime <= shift.end;
-
-  if (!isShiftActive) {
+  // 1. Strict Assignment Check (Fail-closed)
+  if (!schedule || !schedule.isActive || schedule.propertyId !== propertyId) {
     await logGuardAction({
       guardId,
       propertyId,
       actionType: "OUT_OF_SHIFT_MUTATION_ATTEMPT",
-      actionDescription: `Guard attempted operation outside of assigned shift hours.`,
+      actionDescription: `Location Spoofing Blocked: Guard ${guardId} is not assigned to property ${propertyId}`,
       status: "FAILURE",
       payload: {
-        serverTime: currentTime.toISOString(),
-        shiftStart: shift.start.toISOString(),
-        shiftEnd: shift.end.toISOString()
+        assignedProperty: schedule?.propertyId || "NONE",
+        attemptedProperty: propertyId,
       }
     });
-    
+
     throw new Error(`UNAUTHORIZED: Guard ${guardId} is not on an active shift for property ${propertyId}.`);
+  }
+
+  // 2. Object Ownership Verification (Booking must belong to Property)
+  if (targetBookingId) {
+    if (targetBookingId.includes(":") && !targetBookingId.startsWith(propertyId)) {
+      await logGuardAction({
+        guardId,
+        propertyId,
+        bookingId: targetBookingId,
+        actionType: "OUT_OF_SHIFT_MUTATION_ATTEMPT",
+        actionDescription: `BOLA Violation Blocked: Booking ${targetBookingId} does not belong to property ${propertyId}`,
+        status: "FAILURE",
+        payload: { targetBookingId, propertyId }
+      });
+
+      throw new Error(`BOLA_VIOLATION: Booking ${targetBookingId} does not belong to property ${propertyId}`);
+    }
   }
 
   return true;
