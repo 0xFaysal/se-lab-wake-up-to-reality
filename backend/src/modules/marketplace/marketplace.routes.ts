@@ -34,6 +34,32 @@ marketplaceRouter.use(authenticate, requireAccountReady);
 
 /**
  * @openapi
+ * /api/v1/driver/favorites:
+ *   get: { tags: [Driver Discovery], summary: List the authenticated Driver's favorite verified properties, security: [{ accessCookie: [] }], responses: { 200: { description: Favorite properties. } } }
+ * /api/v1/driver/favorites/{propertyId}:
+ *   post: { tags: [Driver Discovery], summary: Add a verified property to favorites, security: [{ accessCookie: [] }], responses: { 201: { description: Favorite saved idempotently. } } }
+ *   delete: { tags: [Driver Discovery], summary: Remove a property from favorites, security: [{ accessCookie: [] }], responses: { 200: { description: Favorite removed. } } }
+ * /api/v1/driver/saved-locations:
+ *   get: { tags: [Driver Discovery], summary: List private saved search locations, security: [{ accessCookie: [] }], responses: { 200: { description: Saved locations. } } }
+ *   post: { tags: [Driver Discovery], summary: Save a private search location, security: [{ accessCookie: [] }], responses: { 201: { description: Location saved. } } }
+ * /api/v1/driver/recent-searches:
+ *   get: { tags: [Driver Discovery], summary: List bounded recent parking searches, security: [{ accessCookie: [] }], responses: { 200: { description: Recent searches. } } }
+ *   post: { tags: [Driver Discovery], summary: Record a privacy-rounded parking search, security: [{ accessCookie: [] }], responses: { 201: { description: Search recorded. } } }
+ *   delete: { tags: [Driver Discovery], summary: Clear parking search history, security: [{ accessCookie: [] }], responses: { 200: { description: Search history cleared. } } }
+ */
+marketplaceRouter.get("/driver/favorites", requireRole(UserRoleType.DRIVER), controller.listDriverFavorites);
+marketplaceRouter.post("/driver/favorites/:propertyId", requireRole(UserRoleType.DRIVER), validate(schema.driverFavoriteParamsSchema), controller.addDriverFavorite);
+marketplaceRouter.delete("/driver/favorites/:propertyId", requireRole(UserRoleType.DRIVER), validate(schema.driverFavoriteParamsSchema), controller.removeDriverFavorite);
+marketplaceRouter.get("/driver/saved-locations", requireRole(UserRoleType.DRIVER), controller.listDriverSavedLocations);
+marketplaceRouter.post("/driver/saved-locations", requireRole(UserRoleType.DRIVER), validate(schema.createSavedLocationSchema), controller.createDriverSavedLocation);
+marketplaceRouter.patch("/driver/saved-locations/:locationId", requireRole(UserRoleType.DRIVER), validate(schema.updateSavedLocationSchema), controller.updateDriverSavedLocation);
+marketplaceRouter.delete("/driver/saved-locations/:locationId", requireRole(UserRoleType.DRIVER), validate(schema.savedLocationParamsSchema), controller.deleteDriverSavedLocation);
+marketplaceRouter.get("/driver/recent-searches", requireRole(UserRoleType.DRIVER), controller.listDriverSearchHistory);
+marketplaceRouter.post("/driver/recent-searches", requireRole(UserRoleType.DRIVER), validate(schema.createSearchHistorySchema), controller.addDriverSearchHistory);
+marketplaceRouter.delete("/driver/recent-searches", requireRole(UserRoleType.DRIVER), controller.clearDriverSearchHistory);
+
+/**
+ * @openapi
  * /api/v1/provider/properties/{propertyId}/parking-resources:
  *   post:
  *     tags: [Parking Resources]
@@ -223,6 +249,7 @@ marketplaceRouter.get("/notifications", controller.listNotifications);
 marketplaceRouter.patch("/notifications/:notificationId/read", validate(schema.notificationParamsSchema), controller.readNotification);
 marketplaceRouter.post("/notifications/read-all", controller.readAllNotifications);
 marketplaceRouter.post("/bookings/:bookingId/reviews", requireRole(UserRoleType.DRIVER), validate(schema.createReviewSchema), controller.createReview);
+marketplaceRouter.get("/reviews", requireRole(UserRoleType.DRIVER), controller.listDriverReviews);
 marketplaceRouter.get("/provider/reviews", providerOrManager, controller.listProviderReviews);
 marketplaceRouter.post("/provider/reviews/:reviewId/reply", providerOrManager, validate(schema.replyReviewSchema), controller.replyReview);
 marketplaceRouter.post("/bookings/:bookingId/disputes", requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER), validate(schema.createDisputeSchema), controller.createDispute);

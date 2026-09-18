@@ -1532,7 +1532,8 @@ async function availableUnitsForListings(
 
 export async function searchParking(input: {
   latitude: number; longitude: number; radiusKm: number; startAt: string; endAt: string; vehicleType: VehicleType;
-  minPricePaisa?: bigint; maxPricePaisa?: bigint; covered?: boolean;
+  minPricePaisa?: bigint; maxPricePaisa?: bigint; covered?: boolean; hasCctv?: boolean; hasGuard?: boolean;
+  resourceType?: ParkingResourceType; facilityCodes?: string[]; minAvailableUnits?: number;
 }) {
   const startAt = new Date(input.startAt);
   const endAt = new Date(input.endAt);
@@ -1548,6 +1549,10 @@ export async function searchParking(input: {
         deletedAt: null,
         status: ParkingSpotStatus.ACTIVE,
         ...(input.covered === undefined ? {} : { isCovered: input.covered }),
+        ...(input.hasCctv === undefined ? {} : { hasCctv: input.hasCctv }),
+        ...(input.hasGuard === undefined ? {} : { hasGuard: input.hasGuard }),
+        ...(input.resourceType === undefined ? {} : { resourceType: input.resourceType }),
+        ...(input.facilityCodes?.length ? { facilities: { some: { facility: { code: { in: input.facilityCodes } } } } } : {}),
         property: { deletedAt: null, canonicalPropertyId: null, status: PropertyStatus.ACTIVE, verificationStatus: VerificationStatus.VERIFIED },
       },
     },
@@ -1569,10 +1574,12 @@ export async function searchParking(input: {
   const unitsByListing = await availableUnitsForListings(listings, startAt, endAt);
   for (const listing of listings) {
     const property = listing.parkingSpot.property;
+    const facilityCodes = new Set(listing.parkingSpot.facilities.map((item) => item.facility.code));
+    if (input.facilityCodes?.some((code) => !facilityCodes.has(code))) continue;
     const distanceKm = haversineKm(input.latitude, input.longitude, Number(property.latitude), Number(property.longitude));
     if (distanceKm > input.radiusKm || !(await isResourceAvailable(listing.parkingSpot, startAt, endAt))) continue;
-    const availableUnits = await availableListingUnits(listing, startAt, endAt);
-    if (availableUnits === 0) continue;
+    const availableUnits = unitsByListing.get(listing.id) ?? 0;
+    if (availableUnits === 0 || (input.minAvailableUnits !== undefined && availableUnits < input.minAvailableUnits)) continue;
     const group = groups.get(property.id) ?? {
       property: {
         id: property.id,
@@ -1735,6 +1742,94 @@ export async function getPublicPropertyDetail(propertyId: string, input: {
     requestedPeriod: { startAt, endAt, vehicleType: input.vehicleType },
     offers,
   });
+}
+
+export async function listDriverFavorites(driverUserId: string) {
+  const favorites = await prisma.driverFavoriteProperty.findMany({
+    where: {
+      userId: driverUserId,
+      property: { deletedAt: null, canonicalPropertyId: null, status: PropertyStatus.ACTIVE, verificationStatus: VerificationStatus.VERIFIED },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      property: {
+        select: {
+          id: true, name: true, publicArea: true, approximateAddress: true, latitude: true, longitude: true,
+          images: { where: { isCover: true }, select: { url: true }, take: 1 },
+        },
+      },
+    },
+  });
+  return favorites.map(({ property, ...favorite }) => {
+    const { images, ...details } = property;
+    return {
+      ...favorite,
+      property: { ...details, latitude: Number(property.latitude), longitude: Number(property.longitude), coverImageUrl: images[0]?.url ?? null },
+    };
+  });
+}
+
+export async function addDriverFavorite(driverUserId: string, propertyId: string) {
+  const property = await prisma.property.findFirst({
+    where: { id: propertyId, deletedAt: null, canonicalPropertyId: null, status: PropertyStatus.ACTIVE, verificationStatus: VerificationStatus.VERIFIED },
+    select: { id: true },
+  });
+  if (!property) fail(404, "PROPERTY_NOT_FOUND", "Property was not found");
+  return prisma.driverFavoriteProperty.upsert({
+    where: { userId_propertyId: { userId: driverUserId, propertyId } },
+    update: {},
+    create: { userId: driverUserId, propertyId },
+  });
+}
+
+export async function removeDriverFavorite(driverUserId: string, propertyId: string) {
+  await prisma.driverFavoriteProperty.deleteMany({ where: { userId: driverUserId, propertyId } });
+  return { deleted: true };
+}
+
+export async function listDriverSavedLocations(driverUserId: string) {
+  const locations = await prisma.driverSavedLocation.findMany({ where: { userId: driverUserId }, orderBy: { updatedAt: "desc" } });
+  return locations.map((location) => ({ ...location, latitude: Number(location.latitude), longitude: Number(location.longitude) }));
+}
+
+export async function createDriverSavedLocation(driverUserId: string, input: { label: string; displayName: string; latitude: number; longitude: number }) {
+  const location = await prisma.driverSavedLocation.create({ data: { userId: driverUserId, ...input } });
+  return { ...location, latitude: Number(location.latitude), longitude: Number(location.longitude) };
+}
+
+export async function updateDriverSavedLocation(driverUserId: string, locationId: string, input: { label?: string; displayName?: string; latitude?: number; longitude?: number }) {
+  const result = await prisma.driverSavedLocation.updateMany({ where: { id: locationId, userId: driverUserId }, data: input });
+  if (result.count === 0) fail(404, "SAVED_LOCATION_NOT_FOUND", "Saved location was not found");
+  const location = await prisma.driverSavedLocation.findUniqueOrThrow({ where: { id: locationId } });
+  return { ...location, latitude: Number(location.latitude), longitude: Number(location.longitude) };
+}
+
+export async function deleteDriverSavedLocation(driverUserId: string, locationId: string) {
+  const result = await prisma.driverSavedLocation.deleteMany({ where: { id: locationId, userId: driverUserId } });
+  if (result.count === 0) fail(404, "SAVED_LOCATION_NOT_FOUND", "Saved location was not found");
+  return { deleted: true };
+}
+
+export async function listDriverSearchHistory(driverUserId: string) {
+  const history = await prisma.driverSearchHistory.findMany({ where: { userId: driverUserId }, orderBy: { searchedAt: "desc" }, take: 12 });
+  return history.map((item) => ({ ...item, latitude: Number(item.latitude), longitude: Number(item.longitude), radiusKm: Number(item.radiusKm) }));
+}
+
+export async function addDriverSearchHistory(driverUserId: string, input: { displayName: string; latitude: number; longitude: number; radiusKm: number; vehicleType: VehicleType }) {
+  const rounded = { ...input, latitude: Number(input.latitude.toFixed(5)), longitude: Number(input.longitude.toFixed(5)) };
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.driverSearchHistory.create({ data: { userId: driverUserId, ...rounded } });
+    const stale = await tx.driverSearchHistory.findMany({ where: { userId: driverUserId }, orderBy: { searchedAt: "desc" }, skip: 12, select: { id: true } });
+    if (stale.length) await tx.driverSearchHistory.deleteMany({ where: { id: { in: stale.map(({ id }) => id) } } });
+    return { ...item, latitude: Number(item.latitude), longitude: Number(item.longitude), radiusKm: Number(item.radiusKm) };
+  });
+}
+
+export async function clearDriverSearchHistory(driverUserId: string) {
+  const result = await prisma.driverSearchHistory.deleteMany({ where: { userId: driverUserId } });
+  return { deleted: result.count };
 }
 
 export async function createQuote(driverUserId: string, input: { listingId: string; vehicleId: string; startAt: string; endAt: string }) {
@@ -2825,6 +2920,23 @@ export async function resolveDispute(adminUserId: string, disputeId: string, inp
     await notification(tx, { userId: dispute.openedByUserId, type: "DISPUTE_UPDATE", title: "Dispute updated", message: `Your dispute for booking ${dispute.booking.bookingCode} was ${input.decision.toLowerCase()}.`, entityType: "Dispute", entityId: dispute.id, idempotencyKey: `dispute:${dispute.id}:${input.decision}` });
     await audit(tx, DomainAuditEventType.DISPUTE_RESOLVED, adminUserId, dispute.booking.propertyId, "Dispute", dispute.id, { decision: input.decision });
     return updated;
+  });
+}
+
+export async function listDriverReviews(driverUserId: string) {
+  return prisma.review.findMany({
+    where: { driverUserId },
+    include: {
+      booking: {
+        select: {
+          bookingCode: true,
+          propertyId: true,
+          parkingSpotId: true,
+          property: { select: { id: true, name: true, publicArea: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
   });
 }
 

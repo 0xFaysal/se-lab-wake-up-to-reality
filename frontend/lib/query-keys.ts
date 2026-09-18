@@ -23,7 +23,13 @@ export const queryKeys = {
   refunds: { root: ["refunds"] as const, driver: (filters: object = {}) => ["refunds", "driver", filters] as const, detail: (id: string) => ["refunds", id] as const },
   disputes: { root: ["disputes"] as const, driver: (filters: object = {}) => ["disputes", "driver", filters] as const, provider: (filters: object = {}) => ["disputes", "provider", filters] as const, detail: (scope: string, id: string) => ["disputes", scope, id] as const },
   notifications: { root: ["notifications"] as const, all: (filters: object = {}) => ["notifications", filters] as const },
-  reviews: { root: ["reviews"] as const, provider: (filters: object = {}) => ["reviews", "provider", filters] as const },
+  driverDiscovery: {
+    root: ["driver-discovery"] as const,
+    favorites: ["driver-discovery", "favorites"] as const,
+    savedLocations: ["driver-discovery", "saved-locations"] as const,
+    recentSearches: ["driver-discovery", "recent-searches"] as const,
+  },
+  reviews: { root: ["reviews"] as const, driver: ["reviews", "driver"] as const, provider: (filters: object = {}) => ["reviews", "provider", filters] as const },
   adminMarketplace: { rights: (filters: object = {}) => ["admin", "marketplace", "rights", filters] as const, listings: (filters: object = {}) => ["admin", "marketplace", "listings", filters] as const, listing: (id: string) => ["admin", "marketplace", "listings", id] as const, payouts: (filters: object = {}) => ["admin", "marketplace", "payouts", filters] as const, disputes: (filters: object = {}) => ["admin", "marketplace", "disputes", filters] as const },
   admin: {
     dashboard: ["admin", "dashboard"] as const,
