@@ -1,0 +1,48 @@
+@baseUrl = http://localhost:4000/api/v1
+@paymentId = replace-payment-id
+@bookingId = replace-booking-id
+@notificationId = replace-notification-id
+
+### Wallet summary
+GET {{baseUrl}}/wallet
+
+### Safe wallet-facing transactions
+GET {{baseUrl}}/wallet/transactions
+
+### Provider earnings
+GET {{baseUrl}}/provider/earnings/summary
+
+### Request partial refund
+POST {{baseUrl}}/payments/{{paymentId}}/refunds
+Content-Type: application/json
+
+{
+  "amountPaisa": "5000",
+  "reason": "Approved partial cancellation refund",
+  "idempotencyKey": "rest-refund-{{$guid}}"
+}
+
+### Request simulated Provider payout
+POST {{baseUrl}}/provider/payouts
+Content-Type: application/json
+
+{
+  "amountPaisa": "10000",
+  "idempotencyKey": "rest-payout-{{$guid}}"
+}
+
+### Persistent notifications
+GET {{baseUrl}}/notifications
+
+### Mark notification read
+PATCH {{baseUrl}}/notifications/{{notificationId}}/read
+
+### Open booking dispute
+POST {{baseUrl}}/bookings/{{bookingId}}/disputes
+Content-Type: application/json
+
+{
+  "category": "ACCESS",
+  "description": "The access point was unavailable during the confirmed arrival window."
+}
+

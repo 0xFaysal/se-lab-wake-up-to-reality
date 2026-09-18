@@ -1,0 +1,82 @@
+@baseUrl = http://localhost:4000/api/v1
+@providerEmail = provider@example.com
+@providerPassword = Password123!
+@guardEmail = guard@example.com
+@guardPassword = GuardPassword123!
+@propertyId = replace-with-verified-property-id
+
+### Provider login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Add a known Guard to the shared Property pool
+# @name addPropertyGuard
+POST {{baseUrl}}/properties/{{propertyId}}/guards
+Content-Type: application/json
+
+{ "identifier": "{{guardEmail}}" }
+
+### List the Property Guard pool
+GET {{baseUrl}}/properties/{{propertyId}}/guards
+
+### Guard login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{guardEmail}}", "password": "{{guardPassword}}" }
+
+### Guard lists Property membership invitations
+GET {{baseUrl}}/guard/property-memberships?status=PENDING_ACCEPTANCE&page=1&limit=20
+
+### Guard accepts Property membership
+POST {{baseUrl}}/guard/property-memberships/{{addPropertyGuard.response.body.$.data.membership.id}}/accept
+
+### Provider login again
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{providerEmail}}", "password": "{{providerPassword}}" }
+
+### Provider assigns the accepted Property Guard to its own operation
+# @name assignProviderGuard
+POST {{baseUrl}}/provider/properties/{{propertyId}}/guard-assignments
+Content-Type: application/json
+
+{
+  "guardMembershipId": "{{addPropertyGuard.response.body.$.data.membership.id}}",
+  "shiftStart": "08:00",
+  "shiftEnd": "20:00"
+}
+
+### Provider lists only its authorized assignments
+GET {{baseUrl}}/provider/guard-assignments?propertyId={{propertyId}}&status=ACTIVE&page=1&limit=20
+
+### Suspend provider assignment
+PATCH {{baseUrl}}/provider/guard-assignments/{{assignProviderGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{ "action": "SUSPEND" }
+
+### Resume provider assignment
+PATCH {{baseUrl}}/provider/guard-assignments/{{assignProviderGuard.response.body.$.data.assignment.id}}
+Content-Type: application/json
+
+{ "action": "RESUME" }
+
+### End provider assignment
+DELETE {{baseUrl}}/provider/guard-assignments/{{assignProviderGuard.response.body.$.data.assignment.id}}
+
+### Guard login and inspect provider assignments
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{ "identifier": "{{guardEmail}}", "password": "{{guardPassword}}" }
+
+### Guard's provider-specific assignments
+GET {{baseUrl}}/guard/provider-assignments?propertyId={{propertyId}}&page=1&limit=20
+
+### Admin-only: remove shared Guard after every provider assignment is terminal
+# Log in as Admin first. Active assignments make this return 409.
+DELETE {{baseUrl}}/admin/properties/{{propertyId}}/guards/{{addPropertyGuard.response.body.$.data.membership.id}}

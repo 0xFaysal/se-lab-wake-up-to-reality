@@ -1,0 +1,54 @@
+@baseUrl = http://localhost:4000/api/v1
+@providerEmail = provider@example.com
+@providerPassword = StrongProvider123!
+@propertyId = replace-with-canonical-property-id
+
+# Enable REST Client cookie persistence before running this file.
+
+### Provider login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{providerEmail}}",
+  "password": "{{providerPassword}}"
+}
+
+### Search for a canonical Property before creating another record
+POST {{baseUrl}}/provider/properties/possible-matches
+Content-Type: application/json
+
+{
+  "name": "Gulshan Residential Parking",
+  "publicArea": "Gulshan 2, Dhaka",
+  "exactAddress": "House 12, Road 45, Gulshan 2, Dhaka",
+  "latitude": 23.7949,
+  "longitude": 90.4143
+}
+
+### Create a new canonical Property and initial pending Provider membership
+POST {{baseUrl}}/provider/properties
+Content-Type: application/json
+
+{
+  "name": "Gulshan Residential Parking",
+  "publicArea": "Gulshan 2, Dhaka",
+  "approximateAddress": "Near Gulshan 2 circle",
+  "exactAddress": "House 12, Road 45, Gulshan 2, Dhaka",
+  "latitude": 23.7949,
+  "longitude": 90.4143,
+  "accessInstructions": "Use the south gate"
+}
+
+### Request Provider membership in an existing canonical Property
+POST {{baseUrl}}/provider/properties/{{propertyId}}/membership
+
+### List membership-scoped Properties with governance context
+GET {{baseUrl}}/provider/properties
+
+### Read one membership-scoped Property
+GET {{baseUrl}}/provider/properties/{{propertyId}}
+
+### Leave Provider membership and end dependent live delegations/assignments
+DELETE {{baseUrl}}/provider/properties/{{propertyId}}/membership
+

@@ -1,0 +1,2 @@
+backend/prisma/migrations/**/migration.sql text eol=lf
+backend/prisma/scripts/**/*.sql text eol=lf

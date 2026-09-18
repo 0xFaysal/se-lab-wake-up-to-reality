@@ -1,0 +1,60 @@
+@startuml context-diagram
+!theme plain
+title ParkEase BD: System Context Diagram (DFD Level 0)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 13
+skinparam rectangle {
+  BackgroundColor #FFF8E1
+  BorderColor #E65100
+  FontStyle bold
+}
+skinparam actor {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+
+left to right direction
+
+actor "Driver" as Driver
+actor "Parking Owner" as Owner
+actor "Building Manager" as Manager
+actor "Security Guard" as Guard
+actor "Administrator" as Admin
+
+rectangle "0.0\nParkEase BD\nShared Parking Platform" as System
+
+rectangle "SSLCOMMERZ\nPayment Gateway (Sandbox)" as SSL #E3F2FD
+rectangle "OpenStreetMap\nTile Service" as OSM #E3F2FD
+
+Driver --> System : Search filters, vehicle data,\nquote/hold/payment requests,\ncheckout requests, reviews, disputes
+System --> Driver : Search results, quotes, booking\nstatus, QR/OTP credential,\npayment & refund status, notifications
+
+Owner --> System : Property & spot data, availability\nrules, Manager & Guard invitations,\npayout account & payout requests
+System --> Owner : Verification & building-approval\nstatus, bookings, active sessions,\nearnings, payout status, notifications
+
+Manager --> System : Link acceptance, building-approval\ndecisions, spot & availability updates,\nGuard assignments, dispute responses
+System --> Manager : Link invitations, pending approvals,\nbookings & sessions (no amounts),\nincident reports, notifications
+
+Guard --> System : Assignment acceptance, verification\ncredential, check-in/out confirmation,\nincident reports
+System --> Guard : Assigned properties, expected\narrivals, active vehicles
+
+Admin --> System : Verification decisions, approval\nwaivers, account actions, dispute\nresolutions, payout approvals, settings
+System --> Admin : Pending reviews, disputes,\nreconciliation data, audit logs
+
+System --> SSL : Payment session request
+SSL --> System : IPN payment validation callback
+
+System --> OSM : Map tile requests
+OSM --> System : Map tile images
+
+note bottom of System
+  The system is the single authority for
+  booking availability, price, payment
+  validation, refunds, owner earnings,
+  and role- and property-scoped authorization.
+  Managers never receive financial data.
+end note
+
+@enduml

@@ -1,0 +1,13 @@
+import Link from "next/link";
+import { ArrowRight, MapPin, Shield, Warehouse } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import type { ParkingSearchParams, ParkingSearchResultDto } from "@/lib/api/marketplace-types";
+import { formatBDTFromPaisa } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
+
+export function parkingDetailsHref(spot: ParkingSearchResultDto, search: ParkingSearchParams) { const params = new URLSearchParams({ latitude: String(search.latitude), longitude: String(search.longitude), radiusKm: String(search.radiusKm), startAt: search.startAt, endAt: search.endAt, vehicleType: search.vehicleType }); return `/parking/${spot.id}?${params}`; }
+export function ParkingCard({ spot, search, isSelected, onSelect }: { spot: ParkingSearchResultDto; search: ParkingSearchParams; isSelected?: boolean; onSelect?: () => void }) {
+  const facilities = new Set(spot.offers.flatMap((offer) => offer.facilities));
+  return <article tabIndex={0} onClick={onSelect} onKeyDown={(event) => { if (event.key === "Enter") onSelect?.(); }} className={cn("rounded-lg border bg-card p-5 shadow-sm transition hover:shadow-md", isSelected && "border-primary ring-2 ring-primary/20")}><div className="flex items-start justify-between gap-3"><div><p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="size-3.5 text-primary" />{spot.publicArea} · {spot.distanceKm} km</p><h3 className="mt-1 font-bold">{spot.name}</h3><p className="mt-1 text-xs text-muted-foreground">{spot.approximateAddress}</p></div><Badge>{spot.availableUnits} available</Badge></div><div className="mt-3 flex flex-wrap gap-1.5">{spot.offers.some((offer) => offer.isCovered) && <Badge variant="secondary"><Warehouse className="size-3" />Covered</Badge>}{facilities.has("CCTV") && <Badge variant="secondary"><Shield className="size-3" />CCTV</Badge>}<Badge variant="secondary">{spot.offers.length} offer(s)</Badge></div><div className="mt-5 flex items-center justify-between border-t pt-3"><div><span className="text-xl font-extrabold">{formatBDTFromPaisa(spot.minimumPricePaisa)}</span><span className="text-xs text-muted-foreground"> / hour</span>{spot.minimumPricePaisa !== spot.maximumPricePaisa && <p className="text-[10px] text-muted-foreground">up to {formatBDTFromPaisa(spot.maximumPricePaisa)}</p>}</div><Link href={parkingDetailsHref(spot, search)} onClick={(event) => event.stopPropagation()} className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>View offers<ArrowRight className="size-3.5" /></Link></div></article>;
+}

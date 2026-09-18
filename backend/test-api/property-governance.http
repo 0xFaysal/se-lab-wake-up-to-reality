@@ -1,0 +1,87 @@
+@baseUrl = http://localhost:4000/api/v1
+@propertyId = replace-with-verified-property-id
+@providerMembershipId = replace-with-pending-membership-id
+@managerUserId = replace-with-manager-user-id
+@assignmentId = replace-with-building-manager-assignment-id
+@proposalId = replace-with-change-proposal-id
+
+### Find possible duplicate Property records before creating one
+POST {{baseUrl}}/provider/properties/possible-matches
+Content-Type: application/json
+
+{
+  "name": "Gulshan Residential Parking",
+  "publicArea": "Gulshan 2, Dhaka",
+  "exactAddress": "House 12, Road 45, Gulshan 2, Dhaka",
+  "latitude": 23.7949,
+  "longitude": 90.4143
+}
+
+### Provider requests membership in an existing canonical Property
+POST {{baseUrl}}/provider/properties/{{propertyId}}/membership
+
+### Admin approves pending Provider membership
+PATCH {{baseUrl}}/admin/properties/{{propertyId}}/providers/{{providerMembershipId}}/verification
+Content-Type: application/json
+
+{ "decision": "APPROVE" }
+
+### Nominate a Building Manager
+POST {{baseUrl}}/properties/{{propertyId}}/building-manager/nominations
+Content-Type: application/json
+
+{ "candidateUserId": "{{managerUserId}}" }
+
+### Vote on the nomination (each verified Provider votes once)
+POST {{baseUrl}}/properties/{{propertyId}}/building-manager/nominations/{{assignmentId}}/vote
+Content-Type: application/json
+
+{ "decision": "APPROVE" }
+
+### Read current Building Manager state
+GET {{baseUrl}}/properties/{{propertyId}}/building-manager
+
+### Sole Provider or active Building Manager updates common rules
+PATCH {{baseUrl}}/properties/{{propertyId}}/common-rules
+Content-Type: application/json
+
+{
+  "version": 1,
+  "visitorIdentificationRequired": true,
+  "vehicleHeightLimitCm": 220,
+  "generalParkingRules": "No overnight parking without prior approval"
+}
+
+### Multi-provider shared change proposal
+# @name createProposal
+POST {{baseUrl}}/properties/{{propertyId}}/change-proposals
+Content-Type: application/json
+
+{
+  "changeType": "COMMON_RULES",
+  "baseVersion": 1,
+  "changes": {
+    "visitorIdentificationRequired": true,
+    "generalParkingRules": "No overnight parking without prior approval"
+  }
+}
+
+### List proposals (exact access instructions are revealed only to verified Providers)
+GET {{baseUrl}}/properties/{{propertyId}}/change-proposals
+
+### Vote on proposal
+POST {{baseUrl}}/properties/{{propertyId}}/change-proposals/{{proposalId}}/vote
+Content-Type: application/json
+
+{ "decision": "APPROVE" }
+
+### Admin merges duplicate into canonical Property using optimistic versions
+POST {{baseUrl}}/admin/properties/replace-with-duplicate-property-id/merge
+Content-Type: application/json
+
+{
+  "canonicalPropertyId": "{{propertyId}}",
+  "canonicalVersion": 1,
+  "duplicateVersion": 1,
+  "reason": "Confirmed duplicate after address and document review"
+}

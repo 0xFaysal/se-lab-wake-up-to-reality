@@ -1,0 +1,66 @@
+@rootUrl = http://localhost:4000
+@baseUrl = {{rootUrl}}/api/v1
+@propertyId = replace-with-an-owned-property-uuid
+@otherOwnerEmail = owner-b@example.com
+@otherOwnerPassword = PropertyPassword123!
+
+# Run while authenticated as the ready owner of propertyId.
+# Add real JPEG/PNG files at test-api/fixtures/parking-1.jpg and parking-2.png.
+
+### Upload two Property images
+# @name uploadPropertyImages
+POST {{baseUrl}}/properties/{{propertyId}}/images
+Content-Type: multipart/form-data; boundary=ParkEaseBoundary
+
+--ParkEaseBoundary
+Content-Disposition: form-data; name="images"; filename="parking-1.jpg"
+Content-Type: image/jpeg
+
+< ./fixtures/parking-1.jpg
+--ParkEaseBoundary
+Content-Disposition: form-data; name="images"; filename="parking-2.png"
+Content-Type: image/png
+
+< ./fixtures/parking-2.png
+--ParkEaseBoundary--
+
+### List ordered images
+GET {{baseUrl}}/properties/{{propertyId}}/images
+
+### Reorder and make the second uploaded image the cover
+PATCH {{baseUrl}}/properties/{{propertyId}}/images/reorder
+Content-Type: application/json
+
+{
+  "imageIds": [
+    "{{uploadPropertyImages.response.body.$.data.images[1].id}}",
+    "{{uploadPropertyImages.response.body.$.data.images[0].id}}"
+  ],
+  "coverImageId": "{{uploadPropertyImages.response.body.$.data.images[1].id}}"
+}
+
+### Delete the selected cover and promote the remaining image
+DELETE {{baseUrl}}/properties/{{propertyId}}/images/{{uploadPropertyImages.response.body.$.data.images[1].id}}
+
+### Login another ready owner
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{otherOwnerEmail}}",
+  "password": "{{otherOwnerPassword}}"
+}
+
+### Cross-owner list should return 404
+GET {{baseUrl}}/properties/{{propertyId}}/images
+
+### Cross-owner upload should return 404
+POST {{baseUrl}}/properties/{{propertyId}}/images
+Content-Type: multipart/form-data; boundary=ParkEaseBoundary
+
+--ParkEaseBoundary
+Content-Disposition: form-data; name="images"; filename="parking-1.jpg"
+Content-Type: image/jpeg
+
+< ./fixtures/parking-1.jpg
+--ParkEaseBoundary--
