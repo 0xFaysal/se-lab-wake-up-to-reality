@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "parking_allocations_parking_resource_unit_id_start_at_end_at_st" RENAME TO "parking_allocations_parking_resource_unit_id_start_at_end_a_idx";

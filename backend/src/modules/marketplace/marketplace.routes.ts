@@ -28,6 +28,7 @@ const providerOrManager = requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGE
  *     responses: { 200: { description: Available Property summaries and offers. } }
  */
 marketplaceRouter.get("/parking/search", validate(schema.searchParkingSchema), controller.searchParking);
+marketplaceRouter.get("/parking/browse", validate(schema.browseParkingSchema), controller.browseParking);
 marketplaceRouter.get("/parking/properties/:propertyId", validate(schema.publicPropertyDetailSchema), controller.getPublicPropertyDetail);
 
 marketplaceRouter.use(authenticate, requireAccountReady);

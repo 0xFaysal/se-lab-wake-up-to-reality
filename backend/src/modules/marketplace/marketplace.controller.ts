@@ -66,6 +66,7 @@ export const deleteAvailabilityException = action(async (req) => {
 export const listAvailability = action((req) => service.listAvailability(userId(req), param(req, "resourceId")));
 
 export const searchParking = action((req) => service.searchParking(req.query as never));
+export const browseParking = action((req) => service.browseParking(req.query as never));
 export const getPublicPropertyDetail = action((req) => service.getPublicPropertyDetail(param(req, "propertyId"), req.query as never));
 export const listDriverFavorites = action((req) => service.listDriverFavorites(userId(req)));
 export const addDriverFavorite = action((req) => service.addDriverFavorite(userId(req), param(req, "propertyId")), 201);

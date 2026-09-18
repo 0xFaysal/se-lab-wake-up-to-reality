@@ -80,7 +80,7 @@ export async function getAdminProperty(propertyId: string) {
       prisma.property.findMany({ where: { id: { not: propertyId }, deletedAt: null, canonicalPropertyId: null, OR: [ ...(property.addressFingerprint ? [{ addressFingerprint: property.addressFingerprint }] : []), { normalizedName: property.normalizedName, publicArea: property.publicArea } ] }, take: 20, select: { id: true, name: true, publicArea: true, approximateAddress: true, verificationStatus: true, status: true, version: true, createdAt: true } }),
       prisma.booking.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, bookingCode: true, status: true, startAt: true, scheduledEndAt: true, driver: { select: { id: true, fullName: true } }, provider: { select: { id: true, fullName: true } } } }),
       prisma.propertyChangeProposal.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 50, include: { proposedBy: { select: { id: true, fullName: true } }, votes: { select: { decision: true, reason: true, createdAt: true, voter: { select: { id: true, fullName: true } } } } } }),
-      prisma.parkingSpot.findMany({ where: { propertyId, deletedAt: null }, orderBy: { createdAt: "desc" }, select: { id: true, displayName: true, spotCode: true, resourceType: true, floor: true, zone: true, capacity: true, status: true, supportedVehicleTypes: true, _count: { select: { parkingRights: true, listings: true, bookings: true } } } }),
+      prisma.parkingSpot.findMany({ where: { propertyId, deletedAt: null }, orderBy: { createdAt: "desc" }, select: { id: true, displayName: true, spotCode: true, resourceType: true, floor: true, zone: true, capacity: true, status: true, supportedVehicleTypes: true, units: { where: { deletedAt: null }, orderBy: { normalizedSpotCode: "asc" }, select: { id: true, spotCode: true, displayName: true, status: true } }, _count: { select: { parkingRights: true, listings: true, bookings: true, units: true } } } }),
       prisma.parkingRight.findMany({ where: { parkingSpot: { propertyId } }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, rightType: true, quantity: true, status: true, canUse: true, canList: true, canSetPrice: true, canManageBookings: true, validFrom: true, validUntil: true, createdAt: true, holder: { select: { id: true, fullName: true } }, parkingSpot: { select: { id: true, displayName: true, spotCode: true } } } }),
       prisma.parkingListing.findMany({ where: { parkingSpot: { propertyId } }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, title: true, status: true, pricePerHourPaisa: true, createdAt: true, provider: { select: { id: true, fullName: true } }, parkingSpot: { select: { id: true, displayName: true, spotCode: true } } } }),
       prisma.propertyGuardMembership.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, status: true, invitedAt: true, joinedAt: true, endedAt: true, guard: { select: { id: true, fullName: true, email: true, phone: true, status: true } }, assignments: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, status: true, shiftStart: true, shiftEnd: true, assignedAt: true, endedAt: true } } } }),
@@ -281,11 +281,11 @@ export async function mergeDuplicateProperties(
       throw adminPropertyErrors.mergeConflict("The same Guard has memberships in both Properties");
     }
     const [canonicalSpotCodes, duplicateSpotCodes] = await Promise.all([
-      tx.parkingSpot.findMany({ where: { propertyId: canonical.id }, select: { spotCode: true } }),
-      tx.parkingSpot.findMany({ where: { propertyId: duplicate.id }, select: { spotCode: true } }),
+      tx.parkingResourceUnit.findMany({ where: { parkingSpot: { propertyId: canonical.id }, deletedAt: null }, select: { normalizedSpotCode: true } }),
+      tx.parkingResourceUnit.findMany({ where: { parkingSpot: { propertyId: duplicate.id }, deletedAt: null }, select: { normalizedSpotCode: true } }),
     ]);
-    const canonicalSpotCodeSet = new Set(canonicalSpotCodes.map((spot) => spot.spotCode));
-    if (duplicateSpotCodes.some((spot) => canonicalSpotCodeSet.has(spot.spotCode))) {
+    const canonicalSpotCodeSet = new Set(canonicalSpotCodes.map((spot) => spot.normalizedSpotCode));
+    if (duplicateSpotCodes.some((spot) => canonicalSpotCodeSet.has(spot.normalizedSpotCode))) {
       throw adminPropertyErrors.mergeConflict("Parking spot codes overlap and require manual resolution");
     }
 
