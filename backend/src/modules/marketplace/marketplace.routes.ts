@@ -46,6 +46,8 @@ marketplaceRouter.use(authenticate, requireAccountReady);
  *   get: { tags: [Driver Discovery], summary: List bounded recent parking searches, security: [{ accessCookie: [] }], responses: { 200: { description: Recent searches. } } }
  *   post: { tags: [Driver Discovery], summary: Record a privacy-rounded parking search, security: [{ accessCookie: [] }], responses: { 201: { description: Search recorded. } } }
  *   delete: { tags: [Driver Discovery], summary: Clear parking search history, security: [{ accessCookie: [] }], responses: { 200: { description: Search history cleared. } } }
+ * /api/v1/driver/recent-searches/{searchId}:
+ *   delete: { tags: [Driver Discovery], summary: Remove one parking search from history, security: [{ accessCookie: [] }], responses: { 200: { description: Search history item removed. } } }
  */
 marketplaceRouter.get("/driver/favorites", requireRole(UserRoleType.DRIVER), controller.listDriverFavorites);
 marketplaceRouter.post("/driver/favorites/:propertyId", requireRole(UserRoleType.DRIVER), validate(schema.driverFavoriteParamsSchema), controller.addDriverFavorite);
@@ -57,6 +59,7 @@ marketplaceRouter.delete("/driver/saved-locations/:locationId", requireRole(User
 marketplaceRouter.get("/driver/recent-searches", requireRole(UserRoleType.DRIVER), controller.listDriverSearchHistory);
 marketplaceRouter.post("/driver/recent-searches", requireRole(UserRoleType.DRIVER), validate(schema.createSearchHistorySchema), controller.addDriverSearchHistory);
 marketplaceRouter.delete("/driver/recent-searches", requireRole(UserRoleType.DRIVER), controller.clearDriverSearchHistory);
+marketplaceRouter.delete("/driver/recent-searches/:searchId", requireRole(UserRoleType.DRIVER), validate(schema.searchHistoryParamsSchema), controller.deleteDriverSearchHistoryItem);
 
 /**
  * @openapi

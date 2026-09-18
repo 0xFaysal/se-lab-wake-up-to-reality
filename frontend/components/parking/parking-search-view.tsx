@@ -1,10 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { motion, type PanInfo } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, List, Loader2, Map as MapIcon, RefreshCw, SearchX } from "lucide-react";
+import { AlertCircle, GripHorizontal, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { ParkingCard } from "@/components/parking/parking-card";
 import { SearchFilters, type FilterState } from "@/components/parking/search-filters";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import type { ParkingSearchParams } from "@/lib/api/marketplace-types";
 import { parkingSearchApi } from "@/lib/api/parking-search-api";
 import { toUtcFromBangladeshLocal } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
-import { cn } from "@/lib/utils";
 
 const ParkingMap = dynamic(() => import("@/components/parking/parking-map"), {
   ssr: false,
@@ -76,7 +76,7 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   const [filters, setFilters] = useState<FilterState>(initial);
   const [request, setRequest] = useState<ParkingSearchParams>(() => toRequest(initial));
   const [selectedSpotId, setSelectedSpotId] = useState<string>();
-  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [mobileSheet, setMobileSheet] = useState<"collapsed" | "half" | "expanded">("half");
   const valid = Number.isFinite(request.latitude) && Number.isFinite(request.longitude) && new Date(request.endAt) > new Date(request.startAt);
 
   const query = useQuery({ queryKey: queryKeys.parkingSearch.results(request), queryFn: () => parkingSearchApi.search(request), enabled: valid, staleTime: 20_000 });
@@ -118,21 +118,33 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   function searchMapArea(center: { latitude: number; longitude: number }) {
     submit({ ...filters, locationName: "Selected map area", latitude: String(center.latitude), longitude: String(center.longitude) });
   }
+  function settleMobileSheet(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
+    if (info.offset.y > 90 || info.velocity.y > 700) setMobileSheet("collapsed");
+    else if (info.offset.y < -90 || info.velocity.y < -700) setMobileSheet("expanded");
+    else setMobileSheet("half");
+  }
+  const mobileSheetHeight = mobileSheet === "collapsed" ? "6rem" : mobileSheet === "expanded" ? "78dvh" : "48dvh";
 
   return <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
     <SearchFilters filters={filters} onFilterChange={(next) => setFilters((current) => ({ ...current, ...next }))} onReset={reset} onSearch={() => submit()} savedLocations={savedLocations.data ?? []} />
     {!valid && <div role="alert" className="m-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Choose a valid location and make sure the end time is later than the start time.</div>}
-    <div className="flex items-center justify-between border-b bg-white px-4 py-3 lg:hidden">
-      <span className="text-xs font-semibold text-muted-foreground">{results.length} properties found</span>
-      <div className="flex gap-1 rounded-md border bg-muted p-1"><Button size="sm" variant={mobileView === "list" ? "default" : "ghost"} onClick={() => setMobileView("list")}><List className="size-4" />List</Button><Button size="sm" variant={mobileView === "map" ? "default" : "ghost"} onClick={() => setMobileView("map")}><MapIcon className="size-4" />Map</Button></div>
-    </div>
     {query.isError && <div className="m-6 border bg-white p-10 text-center"><AlertCircle className="mx-auto size-7 text-red-600" /><p className="mt-3 text-sm">{getApiErrorMessage(query.error)}</p><Button className="mt-4" variant="outline" onClick={() => query.refetch()}><RefreshCw className="size-4" />Retry</Button></div>}
-    {!query.isError && <div className="grid items-start lg:grid-cols-12">
-      <div className={cn("space-y-4 p-4 lg:col-span-5 lg:h-[calc(100vh-13rem)] lg:overflow-y-auto lg:p-5", mobileView === "map" && "hidden lg:block")}>
+    {!query.isError && <div className="relative h-[calc(100dvh-5.25rem)] min-h-[560px] overflow-hidden lg:hidden">
+      <div className="absolute inset-0"><ParkingMap spots={results} search={request} driverMode={driverMode} selectedSpotId={selectedSpotId} onSpotSelect={setSelectedSpotId} onSearchArea={searchMapArea} /></div>
+      <motion.section drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.08} onDragEnd={settleMobileSheet} animate={{ height: mobileSheetHeight }} transition={{ type: "spring", stiffness: 360, damping: 34 }} className="absolute inset-x-0 bottom-0 z-10 overflow-hidden rounded-t-2xl border-t bg-white shadow-[0_-12px_30px_rgba(15,23,42,0.16)]">
+        <button type="button" onClick={() => setMobileSheet((current) => current === "collapsed" ? "half" : current === "half" ? "expanded" : "half")} className="flex h-12 w-full items-center justify-center" aria-label={`Parking results sheet is ${mobileSheet}`}><GripHorizontal className="size-7 text-slate-400" /></button>
+        <div className="flex items-center justify-between border-b px-4 pb-3"><div><h2 className="text-sm font-extrabold">Parking near {filters.locationName.split(",")[0]}</h2><p className="mt-0.5 text-xs text-slate-500">{results.length} verified properties</p></div></div>
+        <div className="h-[calc(100%-5.5rem)] space-y-3 overflow-y-auto overscroll-contain p-4 pb-8">
+          {query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-52 animate-pulse rounded-md border bg-slate-100" />) : results.length === 0 ? <div className="bg-white py-8 text-center"><SearchX className="mx-auto size-7 text-slate-400" /><p className="mt-3 text-sm font-semibold">No parking matches this search</p><p className="mt-1 text-xs text-muted-foreground">Try a larger radius or fewer filters.</p><Button type="button" variant="outline" className="mt-4" onClick={() => submit({ ...filters, covered: false, hasCctv: false, hasGuard: false, evCharging: false, wheelchairAccess: false, resourceType: "ALL", radiusKm: "10" })}>Broaden filters</Button></div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={request} driverMode={driverMode} favorite={favoriteIds.has(spot.id)} onFavorite={() => favorite.mutate({ propertyId: spot.id, remove: favoriteIds.has(spot.id) })} isSelected={spot.id === selectedSpotId} onSelect={() => setSelectedSpotId(spot.id)} />)}
+        </div>
+      </motion.section>
+    </div>}
+    {!query.isError && <div className="hidden items-start lg:grid lg:grid-cols-12">
+      <div className="space-y-4 p-4 lg:col-span-5 lg:h-[calc(100vh-13rem)] lg:overflow-y-auto lg:p-5">
         <div className="hidden items-center justify-between lg:flex"><h2 className="text-sm font-bold">Parking near {filters.locationName.split(",")[0]}</h2><span className="text-xs text-muted-foreground">{results.length} verified properties</span></div>
         {query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-52 animate-pulse border bg-slate-100" />) : results.length === 0 ? <div className="border bg-white p-10 text-center"><SearchX className="mx-auto size-7 text-slate-400" /><p className="mt-3 text-sm font-semibold">No parking matches this search</p><p className="mt-1 text-xs text-muted-foreground">Try a larger radius, a different time, or fewer filters.</p><Button type="button" variant="outline" className="mt-4" onClick={() => submit({ ...filters, covered: false, hasCctv: false, hasGuard: false, evCharging: false, wheelchairAccess: false, resourceType: "ALL", radiusKm: "10" })}>Broaden filters</Button></div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={request} driverMode={driverMode} favorite={favoriteIds.has(spot.id)} onFavorite={() => favorite.mutate({ propertyId: spot.id, remove: favoriteIds.has(spot.id) })} isSelected={spot.id === selectedSpotId} onSelect={() => setSelectedSpotId(spot.id)} />)}
       </div>
-      <div className={cn("h-[calc(100vh-13rem)] min-h-[480px] lg:sticky lg:top-16 lg:col-span-7", mobileView === "list" && "hidden lg:block")}><ParkingMap spots={results} search={request} driverMode={driverMode} selectedSpotId={selectedSpotId} onSpotSelect={setSelectedSpotId} onSearchArea={searchMapArea} /></div>
+      <div className="h-[calc(100vh-13rem)] min-h-[480px] lg:sticky lg:top-16 lg:col-span-7"><ParkingMap spots={results} search={request} driverMode={driverMode} selectedSpotId={selectedSpotId} onSpotSelect={setSelectedSpotId} onSearchArea={searchMapArea} /></div>
     </div>}
   </div>;
 }

@@ -41,11 +41,11 @@ export default function ManageVehiclesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
       {/* Header Section */}
       <div className="space-y-2">
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground font-heading">
-          Manage Vehicles
+        <h1 className="text-2xl font-extrabold text-foreground sm:text-3xl">
+          Vehicles
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground max-w-2xl leading-relaxed">
           Keep your vehicles ready for faster and more accurate parking reservations.
