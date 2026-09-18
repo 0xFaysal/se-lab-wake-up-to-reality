@@ -67,6 +67,16 @@ export const listAvailability = action((req) => service.listAvailability(userId(
 
 export const searchParking = action((req) => service.searchParking(req.query as never));
 export const getPublicPropertyDetail = action((req) => service.getPublicPropertyDetail(param(req, "propertyId"), req.query as never));
+export const listDriverFavorites = action((req) => service.listDriverFavorites(userId(req)));
+export const addDriverFavorite = action((req) => service.addDriverFavorite(userId(req), param(req, "propertyId")), 201);
+export const removeDriverFavorite = action((req) => service.removeDriverFavorite(userId(req), param(req, "propertyId")));
+export const listDriverSavedLocations = action((req) => service.listDriverSavedLocations(userId(req)));
+export const createDriverSavedLocation = action((req) => service.createDriverSavedLocation(userId(req), req.body), 201);
+export const updateDriverSavedLocation = action((req) => service.updateDriverSavedLocation(userId(req), param(req, "locationId"), req.body));
+export const deleteDriverSavedLocation = action((req) => service.deleteDriverSavedLocation(userId(req), param(req, "locationId")));
+export const listDriverSearchHistory = action((req) => service.listDriverSearchHistory(userId(req)));
+export const addDriverSearchHistory = action((req) => service.addDriverSearchHistory(userId(req), req.body), 201);
+export const clearDriverSearchHistory = action((req) => service.clearDriverSearchHistory(userId(req)));
 export const createQuote = action((req) => service.createQuote(userId(req), req.body), 201);
 export const getQuote = action((req) => service.getQuote(userId(req), param(req, "quoteId")));
 export const createHold = action((req) => service.createHold(userId(req), req.body), 201);
@@ -109,6 +119,7 @@ export const listNotifications = action((req) => service.listNotifications(userI
 export const readNotification = action(async (req) => { await service.markNotificationRead(userId(req), param(req, "notificationId")); return { read: true }; });
 export const readAllNotifications = action((req) => service.markAllNotificationsRead(userId(req)));
 export const createReview = action((req) => service.createReview(userId(req), param(req, "bookingId"), req.body), 201);
+export const listDriverReviews = action((req) => service.listDriverReviews(userId(req)));
 export const listProviderReviews = action((req) => service.listProviderReviews(userId(req)));
 export const replyReview = action((req) => service.replyReview(userId(req), param(req, "reviewId"), req.body.reply));
 export const createDispute = action((req) => service.createDispute(userId(req), param(req, "bookingId"), req.body), 201);

@@ -7,6 +7,8 @@ import {
   createListingSchema,
   createResourceSchema,
   createReviewSchema,
+  createSavedLocationSchema,
+  createSearchHistorySchema,
   guardBookingQuerySchema,
   publicPropertyDetailSchema,
   reviewRightClaimBatchSchema,
@@ -59,6 +61,34 @@ describe("Marketplace validation invariants", () => {
 
   it("limits reviews to the 1-5 rating scale", () => {
     assert.equal(createReviewSchema.safeParse({ params: { bookingId: resourceId }, body: { rating: 6 } }).success, false);
+  });
+
+  it("accepts supported parking discovery filters and rejects unknown query fields", () => {
+    const query = {
+      latitude: "23.8103", longitude: "90.4125", radiusKm: "5",
+      startAt: "2026-09-20T09:00:00.000Z", endAt: "2026-09-20T10:00:00.000Z",
+      vehicleType: "SEDAN", covered: "true", hasCctv: "true", hasGuard: "false",
+      resourceType: "FIXED_SPACE", facilityCodes: "EV_CHARGING,WHEELCHAIR_ACCESS", minAvailableUnits: "2",
+    };
+    const parsed = searchParkingSchema.safeParse({ query });
+    assert.equal(parsed.success, true);
+    if (parsed.success) assert.deepEqual(parsed.data.query.facilityCodes, ["EV_CHARGING", "WHEELCHAIR_ACCESS"]);
+    assert.equal(searchParkingSchema.safeParse({ query: { ...query, unsupportedFilter: "true" } }).success, false);
+  });
+
+  it("validates Driver saved places and bounded recent-search coordinates", () => {
+    assert.equal(createSavedLocationSchema.safeParse({ body: {
+      label: "Office", displayName: "Gulshan 1, Dhaka", latitude: 23.7808, longitude: 90.4167,
+    } }).success, true);
+    assert.equal(createSavedLocationSchema.safeParse({ body: {
+      label: "Office", displayName: "Gulshan 1, Dhaka", latitude: 123, longitude: 90.4167,
+    } }).success, false);
+    assert.equal(createSearchHistorySchema.safeParse({ body: {
+      displayName: "Dhanmondi, Dhaka", latitude: 23.7465, longitude: 90.376, radiusKm: 5, vehicleType: "SEDAN",
+    } }).success, true);
+    assert.equal(createSearchHistorySchema.safeParse({ body: {
+      displayName: "Dhanmondi, Dhaka", latitude: 23.7465, longitude: 90.376, radiusKm: 101, vehicleType: "SEDAN",
+    } }).success, false);
   });
 
   it("requires unique resources and bounded batch claims", () => {

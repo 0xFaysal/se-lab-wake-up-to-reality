@@ -723,6 +723,9 @@ model User {
   emailDeliveries                 EmailDelivery[]                     @relation("EmailDeliveryRecipient")
   uploadedParkingRightDocuments   ParkingRightDocument[]              @relation("ParkingRightDocumentUploader")
   createdPlatformFeeRules         PlatformFeeRule[]                   @relation("PlatformFeeRuleCreator")
+  favoriteProperties              DriverFavoriteProperty[]
+  savedLocations                  DriverSavedLocation[]
+  parkingSearchHistory            DriverSearchHistory[]
 
   @@index([status])
   @@index([accountOrigin])
@@ -897,6 +900,7 @@ model Property {
   parkingSpots               ParkingSpot[]
   parkingRightClaimBatches   ParkingRightClaimBatch[]
   bookings                   Booking[]
+  favoritedBy                DriverFavoriteProperty[]
 
   @@index([createdByUserId])
   @@index([normalizedName, publicArea])
@@ -905,6 +909,53 @@ model Property {
   @@index([verificationStatus, status, publicArea])
   @@index([latitude, longitude])
   @@map("properties")
+}
+
+model DriverFavoriteProperty {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("driver_favorite_properties")
+}
+
+model DriverSavedLocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  label       String   @db.VarChar(60)
+  displayName String   @map("display_name") @db.VarChar(255)
+  latitude    Decimal  @db.Decimal(9, 6)
+  longitude   Decimal  @db.Decimal(9, 6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, label])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("driver_saved_locations")
+}
+
+model DriverSearchHistory {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  displayName String      @map("display_name") @db.VarChar(255)
+  latitude    Decimal     @db.Decimal(9, 6)
+  longitude   Decimal     @db.Decimal(9, 6)
+  radiusKm    Decimal     @map("radius_km") @db.Decimal(5, 2)
+  vehicleType VehicleType @map("vehicle_type")
+  searchedAt  DateTime    @default(now()) @map("searched_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, searchedAt(sort: Desc)])
+  @@map("driver_search_history")
 }
 
 model PropertyProvider {
