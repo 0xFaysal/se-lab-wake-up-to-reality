@@ -1,0 +1,81 @@
+# Render Blueprint for the ParkEase API. Secrets are entered in Render and
+# never stored in this repository.
+services:
+  - type: web
+    name: parkease-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    branch: develop
+    autoDeployTrigger: commit
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npm start
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_NAME
+        value: ParkEase API
+      - key: LOG_LEVEL
+        value: info
+      - key: CORS_ORIGIN
+        value: https://parkease-bd.vercel.app
+      - key: API_PUBLIC_URL
+        value: https://parkease-api.onrender.com
+      - key: PASSWORD_RESET_URL
+        value: https://parkease-bd.vercel.app/reset-password
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: ENABLE_API_DOCS
+        value: "false"
+      - key: EMAIL_WORKER_ENABLED
+        value: "true"
+      - key: EXPOSE_DEVELOPMENT_AUTH_CODES
+        value: "false"
+      - key: JWT_ISSUER
+        value: parkease-api
+      - key: JWT_AUDIENCE
+        value: parkease-client
+      - key: JWT_ACCESS_EXPIRES_MINUTES
+        value: "15"
+      - key: JWT_REFRESH_SHORT_DAYS
+        value: "1"
+      - key: JWT_REFRESH_LONG_DAYS
+        value: "30"
+      - key: PASSWORD_RESET_EXPIRES_MINUTES
+        value: "15"
+      - key: VERIFICATION_CODE_EXPIRES_MINUTES
+        value: "10"
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_USERNAME
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: VERIFICATION_CODE_SECRET
+        generateValue: true
+      - key: AUTH_METADATA_HASH_SECRET
+        generateValue: true
+      - key: PROPERTY_ADDRESS_FINGERPRINT_SECRET
+        generateValue: true
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
