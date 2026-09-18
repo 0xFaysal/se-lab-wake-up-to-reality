@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePathname } from "next/navigation";
 import { OwnerSidebar } from "@/components/owner/owner-sidebar";
 import { OwnerFooter } from "@/components/owner/owner-footer";
 import { Menu, X } from "lucide-react";
@@ -13,15 +12,7 @@ export default function OwnerPortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // If on listing onboarding wizard routes, allow wizard layout to take over
-  const isWizardRoute = pathname?.startsWith("/owner/properties/new");
-
-  if (isWizardRoute) {
-    return <RoleGuard roles={["PROVIDER", "PARKING_OWNER", "MANAGER"]}>{children}</RoleGuard>;
-  }
 
   return (
     <div className="min-h-screen bg-[#f9f9ff] text-slate-800 flex flex-col">
@@ -65,7 +56,7 @@ export default function OwnerPortalLayout({
 
       {/* Main Workspace Column */}
       <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
-        <main className="flex-1 pb-12"><RoleGuard roles={["PROVIDER", "PARKING_OWNER", "MANAGER"]}>{children}</RoleGuard></main>
+        <main className="flex-1 pb-8"><RoleGuard roles={["PROVIDER", "PARKING_OWNER"]}>{children}</RoleGuard></main>
         <OwnerFooter />
       </div>
     </div>

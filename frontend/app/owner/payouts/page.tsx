@@ -1,13 +1,117 @@
-import React from "react";
-import type { Metadata } from "next";
-import { OwnerPayoutHistoryView } from "@/features/owner/components/owner-payout-history-view";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Payout History | ParkEase BD Owner Portal",
-  description:
-    "Review historical disbursements, pending transfers, and weekly settlement statements for all your parking listings.",
-};
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Banknote, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  PageEmptyState,
+  PageErrorState,
+  ProviderPage,
+  ProviderPageHeader,
+} from "@/components/owner/provider-page";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import { financeApi } from "@/lib/api/finance-api";
+import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters";
+import { queryKeys } from "@/lib/query-keys";
 
-export default function OwnerPayoutsPage() {
-  return <OwnerPayoutHistoryView />;
+export default function PayoutPage() {
+  const client = useQueryClient();
+  const [amount, setAmount] = useState("");
+  const key = useRef(crypto.randomUUID());
+  const earnings = useQuery({
+    queryKey: queryKeys.earnings.summary(),
+    queryFn: financeApi.earnings,
+  });
+  const history = useQuery({
+    queryKey: queryKeys.payouts.provider(),
+    queryFn: () => financeApi.providerPayouts(),
+  });
+  const availablePaisa = BigInt(earnings.data?.availableBalancePaisa ?? "0");
+  const requestedPaisa = useMemo(
+    () => Number.isFinite(Number(amount)) ? BigInt(Math.max(0, Math.round(Number(amount) * 100))) : BigInt(0),
+    [amount],
+  );
+  const exceedsBalance = requestedPaisa > availablePaisa;
+  const payout = useMutation({
+    mutationFn: () => financeApi.requestPayout(requestedPaisa.toString(), key.current),
+    onSuccess: async () => {
+      toast.success("Simulated payout request submitted");
+      setAmount("");
+      key.current = crypto.randomUUID();
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.earnings.root }),
+        client.invalidateQueries({ queryKey: queryKeys.payouts.root }),
+      ]);
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+
+  if (earnings.isError || history.isError) {
+    return (
+      <ProviderPage>
+        <PageErrorState
+          message={getApiErrorMessage(earnings.error ?? history.error)}
+          retry={() => void Promise.all([earnings.refetch(), history.refetch()])}
+        />
+      </ProviderPage>
+    );
+  }
+
+  return (
+    <ProviderPage className="max-w-5xl">
+      <ProviderPageHeader
+        title="Payouts"
+        description="Request a payout from settled available earnings and review its processing status."
+        breadcrumbs={[{ label: "Finance" }, { label: "Payouts" }]}
+      />
+      <section className="grid gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="border bg-white p-6">
+          <p className="text-sm text-slate-500">Available balance</p>
+          <p className="mt-2 text-3xl font-bold">
+            {earnings.isPending ? <Loader2 className="size-6 animate-spin" /> : formatBDTFromPaisa(earnings.data?.availableBalancePaisa ?? "0")}
+          </p>
+          <label className="mt-6 block space-y-2 text-sm font-semibold">
+            <span>Amount in BDT</span>
+            <Input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={availablePaisa === BigInt(0)} />
+          </label>
+          {availablePaisa === BigInt(0) && <p className="mt-2 text-xs text-amber-800">A completed, settled booking is required before you can request a payout.</p>}
+          {exceedsBalance && <p role="alert" className="mt-2 text-xs text-red-700">The payout amount cannot exceed your available balance.</p>}
+          <Button
+            className="mt-5"
+            disabled={requestedPaisa <= BigInt(0) || exceedsBalance || payout.isPending || availablePaisa === BigInt(0)}
+            onClick={() => payout.mutate()}
+          >
+            {payout.isPending && <Loader2 className="size-4 animate-spin" />}
+            Request simulated payout
+          </Button>
+        </div>
+        <aside className="border-l-4 border-amber-500 bg-amber-50 p-5 text-sm text-amber-950">
+          <Banknote className="size-5" />
+          <h2 className="mt-3 font-bold">Simulation notice</h2>
+          <p className="mt-2 leading-6">This environment records and reviews payout state, but does not transfer money to a bank or mobile wallet.</p>
+        </aside>
+      </section>
+      <section>
+        <h2 className="mb-3 text-lg font-bold">Payout history</h2>
+        {history.isPending ? (
+          <div className="border bg-white p-8 text-center"><Loader2 className="mx-auto size-5 animate-spin" /></div>
+        ) : history.data.payouts.length === 0 ? (
+          <PageEmptyState title="No payout requests yet" description="Approved payout requests and their processing status will appear here." />
+        ) : (
+          <div className="divide-y border bg-white">
+            {history.data.payouts.map((item) => (
+              <Link key={item.id} href={`/owner/payouts/${item.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-slate-50">
+                <div><strong>{formatBDTFromPaisa(item.amountPaisa)}</strong><p className="mt-1 text-xs text-slate-500">{formatDateTime(item.createdAt)}</p></div>
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold">{item.status}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </ProviderPage>
+  );
 }

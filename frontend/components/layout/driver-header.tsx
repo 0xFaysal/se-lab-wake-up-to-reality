@@ -78,7 +78,8 @@ export function DriverHeader() {
         {/* Right: Notifications & User Profile Dropdown */}
         <div className="hidden md:flex items-center justify-end flex-1 gap-3.5">
           {/* Notification Button */}
-          <button
+          <Link
+            href="/driver/notifications"
             aria-label="View notifications"
             className="relative flex size-10 items-center justify-center rounded-full text-foreground/80 hover:bg-muted transition-colors cursor-pointer"
           >
@@ -86,7 +87,7 @@ export function DriverHeader() {
             {hasNotifications && (
               <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-primary ring-2 ring-background" />
             )}
-          </button>
+          </Link>
 
           {/* User Profile Dropdown */}
           <div className="relative">

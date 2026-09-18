@@ -32,11 +32,10 @@ import {
 } from "./property-governance.schema.js";
 
 export const propertyGovernanceRouter = Router();
-propertyGovernanceRouter.use(authenticate, requireAccountReady);
-propertyGovernanceRouter.use((_req, res, next) => {
+const noStore = (_req: Parameters<typeof authenticate>[0], res: Parameters<typeof authenticate>[1], next: Parameters<typeof authenticate>[2]) => {
   res.setHeader("Cache-Control", "no-store");
   next();
-});
+};
 
 /** @openapi
  * /api/v1/provider/properties/{propertyId}/membership:
@@ -153,18 +152,27 @@ propertyGovernanceRouter.use((_req, res, next) => {
 
 propertyGovernanceRouter.post(
   "/provider/properties/:propertyId/membership",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(propertyGovernanceIdSchema),
   requestProviderMembershipController,
 );
 propertyGovernanceRouter.delete(
   "/provider/properties/:propertyId/membership",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(propertyGovernanceIdSchema),
   leaveProviderMembershipController,
 );
 propertyGovernanceRouter.patch(
   "/admin/properties/:propertyId/providers/:membershipId/verification",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.ADMIN),
   validate(membershipVerificationSchema),
   verifyProviderMembershipController,
@@ -172,22 +180,34 @@ propertyGovernanceRouter.patch(
 
 propertyGovernanceRouter.post(
   "/properties/:propertyId/building-manager/nominations",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(buildingManagerNominationSchema),
   nominateBuildingManagerController,
 );
 propertyGovernanceRouter.get(
   "/properties/:propertyId/building-manager",
+  authenticate,
+  requireAccountReady,
+  noStore,
   validate(propertyGovernanceIdSchema),
   getBuildingManagerController,
 );
 propertyGovernanceRouter.get(
   "/properties/:propertyId/building-manager/nominations",
+  authenticate,
+  requireAccountReady,
+  noStore,
   validate(propertyGovernanceIdSchema),
   listBuildingManagerNominationsController,
 );
 propertyGovernanceRouter.post(
   "/properties/:propertyId/building-manager/nominations/:assignmentId/vote",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(buildingManagerVoteSchema),
   voteBuildingManagerController,
@@ -195,34 +215,52 @@ propertyGovernanceRouter.post(
 
 propertyGovernanceRouter.patch(
   "/properties/:propertyId/common-rules",
+  authenticate,
+  requireAccountReady,
+  noStore,
   validate(commonRulesSchema),
   updateCommonRulesController,
 );
 propertyGovernanceRouter.patch(
   "/properties/:propertyId/temporary-closure",
+  authenticate,
+  requireAccountReady,
+  noStore,
   validate(temporaryClosureSchema),
   updateTemporaryClosureController,
 );
 propertyGovernanceRouter.post(
   "/properties/:propertyId/change-proposals",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(propertyChangeProposalSchema),
   createPropertyChangeProposalController,
 );
 propertyGovernanceRouter.get(
   "/properties/:propertyId/change-proposals",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(propertyGovernanceIdSchema),
   listPropertyChangeProposalsController,
 );
 propertyGovernanceRouter.get(
   "/properties/:propertyId/change-proposals/:proposalId",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(propertyChangeProposalIdSchema),
   getPropertyChangeProposalController,
 );
 propertyGovernanceRouter.post(
   "/properties/:propertyId/change-proposals/:proposalId/vote",
+  authenticate,
+  requireAccountReady,
+  noStore,
   requireRole(UserRoleType.PROVIDER),
   validate(propertyChangeVoteSchema),
   votePropertyChangeProposalController,

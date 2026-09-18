@@ -143,6 +143,10 @@ app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/vehicles", vehicleRouter);
+// Marketplace owns the nested parking-resource routes below /provider/properties.
+// Mount it before the Property router so delegated Managers reach its scoped
+// permission checks instead of being rejected by the Provider-only router.
+app.use("/api/v1", marketplaceRouter);
 app.use("/api/v1/provider/properties", propertyRouter);
 app.use("/api/v1/owner/properties", propertyRouter);
 app.use(
@@ -156,7 +160,6 @@ app.use("/api/v1", guardAssignmentRouter);
 app.use("/api/v1/admin/properties", adminPropertyRouter);
 app.use("/api/v1", propertyGovernanceRouter);
 app.use("/api/v1", managerDelegationRouter);
-app.use("/api/v1", marketplaceRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

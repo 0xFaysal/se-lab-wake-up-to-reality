@@ -1218,6 +1218,8 @@ model Booking {
   @@index([driverUserId, createdAt(sort: Desc)])
   @@index([providerUserId, status, startAt])
   @@index([propertyId, status, startAt])
+  @@index([listingId, status, createdAt(sort: Desc)])
+  @@index([propertyId, providerUserId, status, startAt])
   @@map("bookings")
 }
 

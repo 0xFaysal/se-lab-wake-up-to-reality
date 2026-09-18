@@ -5,7 +5,10 @@ import {
   createListingSchema,
   createResourceSchema,
   createReviewSchema,
+  guardBookingQuerySchema,
+  publicPropertyDetailSchema,
   searchParkingSchema,
+  updateAvailabilityExceptionSchema,
 } from "../../../src/modules/marketplace/marketplace.schema.js";
 
 const propertyId = "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56";
@@ -53,6 +56,31 @@ describe("Marketplace validation invariants", () => {
 
   it("limits reviews to the 1-5 rating scale", () => {
     assert.equal(createReviewSchema.safeParse({ params: { bookingId: resourceId }, body: { rating: 6 } }).success, false);
+  });
+
+  it("coerces bounded pagination for Guard booking queries", () => {
+    const result = guardBookingQuerySchema.safeParse({ query: { page: "2", limit: "25", status: "CONFIRMED" } });
+    assert.equal(result.success, true);
+    if (!result.success) return;
+    assert.equal(result.data.query.page, 2);
+    assert.equal(result.data.query.limit, 25);
+    assert.equal(guardBookingQuerySchema.safeParse({ query: { limit: "101" } }).success, false);
+  });
+
+  it("requires public Property detail search context", () => {
+    assert.equal(publicPropertyDetailSchema.safeParse({
+      params: { propertyId },
+      query: { startAt: "2026-09-20T09:00:00.000Z", endAt: "2026-09-20T10:00:00.000Z", vehicleType: "SEDAN" },
+    }).success, true);
+    assert.equal(publicPropertyDetailSchema.safeParse({ params: { propertyId }, query: {} }).success, false);
+  });
+
+  it("rejects empty or internally reversed availability exception updates", () => {
+    assert.equal(updateAvailabilityExceptionSchema.safeParse({ params: { exceptionId: resourceId }, body: {} }).success, false);
+    assert.equal(updateAvailabilityExceptionSchema.safeParse({
+      params: { exceptionId: resourceId },
+      body: { startsAt: "2026-09-20T10:00:00.000Z", endsAt: "2026-09-20T09:00:00.000Z" },
+    }).success, false);
   });
 });
 

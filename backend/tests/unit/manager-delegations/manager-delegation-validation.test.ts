@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createManagerDelegationSchema } from "../../../src/modules/manager-delegations/manager-delegation.schema.js";
+import {
+  createManagerDelegationByIdentifierSchema,
+  createManagerDelegationSchema,
+} from "../../../src/modules/manager-delegations/manager-delegation.schema.js";
 import { ManagerDelegationPermission } from "../../../generated/prisma/client.js";
 import type { GovernanceClient } from "../../../src/modules/property-governance/property-governance.repository.js";
 import "../../helpers/test-env.js";
@@ -19,6 +22,16 @@ const valid = {
 describe("Manager delegation validation", () => {
   it("accepts a unique least-privilege permission set", () => {
     assert.equal(createManagerDelegationSchema.safeParse({ body: valid }).success, true);
+  });
+
+  it("accepts an exact-identifier invitation without a client-visible Manager id", () => {
+    const { managerUserId: _managerUserId, ...delegation } = valid;
+    assert.equal(
+      createManagerDelegationByIdentifierSchema.safeParse({
+        body: { ...delegation, managerIdentifier: "manager@example.com" },
+      }).success,
+      true,
+    );
   });
 
   it("rejects duplicate permissions and inverted validity windows", () => {

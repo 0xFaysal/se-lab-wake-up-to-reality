@@ -201,11 +201,11 @@ integration("marketplace end-to-end and concurrency", () => {
     })));
     const startAt = new Date(Date.now() + 30 * 60 * 1000);
     const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
-    await marketplace.createAvailabilityException(managerId, resource.id, {
+    const availabilityException = await marketplace.createAvailabilityException(managerId, resource.id, {
       startsAt: startAt.toISOString(), endsAt: endAt.toISOString(), exceptionType: "SPECIAL_AVAILABLE",
     });
     await marketplace.activateListing(managerId, listing.id);
-    return { resource, right, listing, startAt, endAt };
+    return { resource, right, listing, availabilityException, startAt, endAt };
   }
 
   it("runs fixed-space booking/payment/Guard/settlement/review and admits one concurrent hold", async () => {
@@ -238,12 +238,30 @@ integration("marketplace end-to-end and concurrency", () => {
     assert.equal(typeof paid.accessCredential, "string");
     assert.equal(booking.settlementRecipientUserId, providerId);
     assert.notEqual(booking.settlementRecipientUserId, managerId);
+    const providerBooking = await marketplace.getProviderBooking(providerId, booking.id);
+    assert.equal(providerBooking.id, booking.id);
+    const delegatedManagerBooking = await marketplace.getProviderBooking(managerId, booking.id);
+    assert.equal(delegatedManagerBooking.id, booking.id);
+    await assert.rejects(
+      () => marketplace.getProviderBooking(driverIds[(winnerIndex + 1) % 2]!, booking.id),
+    );
     const retriedPayment = await marketplace.captureSimulatedPayment(driverIds[winnerIndex]!, {
       bookingId: booking.id, idempotencyKey: paymentIdempotencyKey,
     });
     assert.equal(retriedPayment.payment.id, paid.payment.id);
     assert.equal(retriedPayment.credentialAlreadyIssued, true);
     assert.equal(await prisma.payment.count({ where: { bookingId: booking.id } }), 1);
+    const publicDetail = await marketplace.getPublicPropertyDetail(propertyId, {
+      startAt: offer.startAt.toISOString(), endAt: offer.endAt.toISOString(), vehicleType: generated.VehicleType.SEDAN,
+    });
+    assert.equal(publicDetail.id, propertyId);
+    assert.equal("exactAddressCiphertext" in publicDetail, false);
+    const guardQueue = await marketplace.listGuardBookings(guardId, { page: 1, limit: 20 });
+    assert.ok(guardQueue.bookings.some((item) => item.id === booking.id));
+    const guardBooking = await marketplace.getGuardBooking(guardId, booking.id);
+    assert.equal(guardBooking.bookingCode, booking.bookingCode);
+    assert.equal("totalAmountPaisa" in guardBooking, false);
+    await assert.rejects(() => marketplace.getDriverBooking(driverIds[(winnerIndex + 1) % 2]!, booking.id));
     await marketplace.verifyAccessCredential(guardId, paid.accessCredential!);
     const checkedIn = await marketplace.checkInBooking(guardId, booking.id, paid.accessCredential!);
     assert.equal(checkedIn.status, "CHECKED_IN");
@@ -252,6 +270,21 @@ integration("marketplace end-to-end and concurrency", () => {
     assert.equal(completed.status, "COMPLETED");
     const review = await marketplace.createReview(driverIds[winnerIndex]!, booking.id, { rating: 5, comment: "Smooth entry" });
     assert.equal(review.rating, 5);
+    const dispute = await marketplace.createDispute(driverIds[winnerIndex]!, booking.id, {
+      category: "ACCESS", description: "Integration test dispute description",
+    });
+    const driverDisputes = await marketplace.listDriverDisputes(driverIds[winnerIndex]!, { page: 1, limit: 20 });
+    const providerDisputes = await marketplace.listProviderDisputes(providerId, { page: 1, limit: 20 });
+    assert.ok(driverDisputes.disputes.some((item) => item.id === dispute.id));
+    assert.ok(providerDisputes.disputes.some((item) => item.id === dispute.id));
+    await assert.rejects(() => marketplace.getDriverDispute(driverIds[(winnerIndex + 1) % 2]!, dispute.id));
+    const adminListings = await marketplace.listAdminListings({ page: 1, limit: 20, propertyId });
+    assert.ok(adminListings.listings.some((item) => item.id === offer.listing.id));
+    assert.equal((await marketplace.getAdminListing(offer.listing.id)).id, offer.listing.id);
+    const updatedException = await marketplace.updateAvailabilityException(managerId, offer.availabilityException.id, { reason: "Updated integration exception" });
+    assert.equal(updatedException.reason, "Updated integration exception");
+    await marketplace.deleteAvailabilityException(managerId, offer.availabilityException.id);
+    assert.equal(await prisma.availabilityException.count({ where: { id: offer.availabilityException.id } }), 0);
 
     const transaction = await prisma.ledgerTransaction.findFirstOrThrow({
       where: { referenceType: "BOOKING_PAYMENT", referenceId: paid.payment.id }, include: { entries: true },
@@ -267,6 +300,9 @@ integration("marketplace end-to-end and concurrency", () => {
       idempotencyKey: `refund-${randomUUID()}`,
     });
     assert.equal(refund.status, "SUCCEEDED");
+    const refunds = await marketplace.listDriverRefunds(driverIds[winnerIndex]!, { page: 1, limit: 20 });
+    assert.ok(refunds.refunds.some((item) => item.id === refund.id));
+    await assert.rejects(() => marketplace.getDriverRefund(driverIds[(winnerIndex + 1) % 2]!, refund.id));
     await assert.rejects(() => marketplace.createRefund(driverIds[winnerIndex]!, paid.payment.id, {
       amountPaisa: BigInt(paid.payment.amountPaisa),
       reason: "Must exceed remaining refundable amount",
@@ -281,6 +317,9 @@ integration("marketplace end-to-end and concurrency", () => {
       amountPaisa: 1_000n,
       idempotencyKey: `payout-${randomUUID()}`,
     });
+    const payouts = await marketplace.listProviderPayouts(providerId, { page: 1, limit: 20 });
+    assert.ok(payouts.payouts.some((item) => item.id === payout.id));
+    await assert.rejects(() => marketplace.getProviderPayout(secondProviderId, payout.id));
     const approvedPayout = await marketplace.reviewPayout(adminId, payout.id, {
       decision: "APPROVED",
       note: "Verified for simulated payout",

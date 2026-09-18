@@ -6,13 +6,13 @@ import { requireRole } from "../../common/middleware/require-role.js";
 import { validate } from "../../common/middleware/validate.js";
 import * as controller from "./manager-delegation.controller.js";
 import {
+  createManagerDelegationByIdentifierSchema,
   createManagerDelegationSchema,
   managerDelegationIdSchema,
   updateManagerDelegationPermissionsSchema,
 } from "./manager-delegation.schema.js";
 
 export const managerDelegationRouter = Router();
-managerDelegationRouter.use(authenticate);
 
 /** @openapi
  * /api/v1/provider/manager-delegations:
@@ -26,6 +26,16 @@ managerDelegationRouter.use(authenticate);
  *     summary: List delegations granted by the authenticated Provider
  *     security: [{ accessCookie: [] }]
  *     responses: { 200: { description: Provider-scoped delegation list. } }
+ * /api/v1/provider/manager-delegations/by-identifier:
+ *   post:
+ *     tags: [Manager Delegations]
+ *     summary: Invite an existing Manager by exact email or Bangladesh phone
+ *     description: Resolves one eligible existing Manager account, then creates a Provider-scoped delegation with explicit permissions and resource scope.
+ *     security: [{ accessCookie: [] }]
+ *     responses:
+ *       201: { description: Delegation invitation created. }
+ *       404: { description: No eligible Manager account matched the identifier. }
+ *       409: { description: A current delegation already exists for this Manager and Provider scope. }
  * /api/v1/manager/delegations:
  *   get:
  *     tags: [Manager Delegations]
@@ -36,13 +46,23 @@ managerDelegationRouter.use(authenticate);
 
 managerDelegationRouter.post(
   "/provider/manager-delegations",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER),
   validate(createManagerDelegationSchema),
   controller.createManagerDelegationController,
 );
+managerDelegationRouter.post(
+  "/provider/manager-delegations/by-identifier",
+  authenticate,
+  requireAccountReady,
+  requireRole(UserRoleType.PROVIDER),
+  validate(createManagerDelegationByIdentifierSchema),
+  controller.createManagerDelegationByIdentifierController,
+);
 managerDelegationRouter.get(
   "/provider/manager-delegations",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER),
   controller.listProviderDelegationsController,
@@ -86,6 +106,7 @@ managerDelegationRouter.get(
  */
 managerDelegationRouter.get(
   "/provider/manager-delegations/:delegationId",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER),
   validate(managerDelegationIdSchema),
@@ -93,6 +114,7 @@ managerDelegationRouter.get(
 );
 managerDelegationRouter.patch(
   "/provider/manager-delegations/:delegationId/permissions",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER),
   validate(updateManagerDelegationPermissionsSchema),
@@ -100,6 +122,7 @@ managerDelegationRouter.patch(
 );
 managerDelegationRouter.delete(
   "/provider/manager-delegations/:delegationId",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.PROVIDER),
   validate(managerDelegationIdSchema),
@@ -107,17 +130,20 @@ managerDelegationRouter.delete(
 );
 managerDelegationRouter.get(
   "/manager/delegations",
+  authenticate,
   requireRole(UserRoleType.MANAGER),
   controller.listManagerDelegationsController,
 );
 managerDelegationRouter.get(
   "/manager/delegations/:delegationId",
+  authenticate,
   requireRole(UserRoleType.MANAGER),
   validate(managerDelegationIdSchema),
   controller.getManagerDelegationController,
 );
 managerDelegationRouter.post(
   "/manager/delegations/:delegationId/accept",
+  authenticate,
   requireAccountReady,
   requireRole(UserRoleType.MANAGER),
   validate(managerDelegationIdSchema),
@@ -125,6 +151,7 @@ managerDelegationRouter.post(
 );
 managerDelegationRouter.post(
   "/manager/delegations/:delegationId/reject",
+  authenticate,
   requireRole(UserRoleType.MANAGER),
   validate(managerDelegationIdSchema),
   controller.rejectManagerDelegationController,

@@ -3,10 +3,9 @@
 import React, { useState } from "react";
 import { ManagerSidebar } from "@/components/manager/manager-sidebar";
 import { OwnerFooter } from "@/components/owner/owner-footer";
-import { Menu, X, ShieldAlert } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { RoleGuard } from "@/components/auth/role-guard";
-import { PermissionsProvider } from "@/lib/security/use-permissions";
 
 export default function ManagerPortalLayout({
   children,
@@ -16,11 +15,6 @@ export default function ManagerPortalLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <PermissionsProvider
-      initialManagerId="mgr-1"
-      initialPropertyId="prop-gulshan-1"
-      enforceManagerScope={true}
-    >
       <div className="min-h-screen bg-[#f9f9ff] text-slate-800 flex flex-col">
         {/* Desktop Fixed Left Sidebar */}
         <div className="hidden lg:block fixed left-0 top-0 bottom-0 z-30">
@@ -63,13 +57,12 @@ export default function ManagerPortalLayout({
         {/* Main Workspace Column */}
         <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
           <main className="flex-1 pb-12">
-            <RoleGuard roles={["MANAGER", "PROVIDER", "PARKING_OWNER", "ADMIN"]}>
+            <RoleGuard roles={["MANAGER"]}>
               {children}
             </RoleGuard>
           </main>
           <OwnerFooter />
         </div>
       </div>
-    </PermissionsProvider>
   );
 }

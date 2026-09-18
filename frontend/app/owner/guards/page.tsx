@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   description: "Manage security guards, duty schedules, gate assignments, and temporary credential onboarding across your parking properties in Dhaka.",
 };
 
-export default function OwnerGuardsPage() {
-  return <OwnerGuardsLiveView />;
+export default async function OwnerGuardsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ propertyId?: string }>;
+}) {
+  const { propertyId } = await searchParams;
+  return <OwnerGuardsLiveView initialPropertyId={propertyId} />;
 }

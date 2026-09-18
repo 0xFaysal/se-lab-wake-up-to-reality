@@ -22,6 +22,9 @@ const respond = (req: Request, res: Response, data: unknown, status = 200) =>
 export const createManagerDelegationController: RequestHandler = async (req, res, next) => {
   try { respond(req, res, { delegation: await service.createManagerDelegation(userId(req), req.body) }, 201); } catch (error) { next(error); }
 };
+export const createManagerDelegationByIdentifierController: RequestHandler = async (req, res, next) => {
+  try { respond(req, res, { delegation: await service.createManagerDelegationByIdentifier(userId(req), req.body) }, 201); } catch (error) { next(error); }
+};
 export const listProviderDelegationsController: RequestHandler = async (req, res, next) => {
   try { respond(req, res, { delegations: await service.listProviderDelegations(userId(req)) }); } catch (error) { next(error); }
 };

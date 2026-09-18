@@ -1,17 +1,14 @@
-import React from "react";
-import type { Metadata } from "next";
-import { DriverHoldCheckoutView } from "@/features/payments/components/driver-hold-checkout-view";
+"use client";
+import { use, useRef, useState } from "react";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import QRCode from "react-qr-code";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { bookingsApi } from "@/lib/api/bookings-api";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import type { PaymentCaptureResult } from "@/lib/api/marketplace-types";
+import { formatBDTFromPaisa } from "@/lib/formatters";
+import { queryKeys } from "@/lib/query-keys";
 
-interface PageProps {
-  params: Promise<{ bookingId: string }>;
-}
-
-export const metadata: Metadata = {
-  title: "Secure Hold & Checkout | ParkEase BD",
-  description: "Complete payment to confirm your 5-minute reserved parking slot in Dhaka.",
-};
-
-export default async function DriverHoldPaymentPage({ params }: PageProps) {
-  const { bookingId } = await params;
-  return <DriverHoldCheckoutView bookingId={bookingId} />;
-}
+export default function PaymentPage({ params }: { params: Promise<{ bookingId: string }> }) { const { bookingId } = use(params); const client = useQueryClient(); const key = useRef(crypto.randomUUID()); const [result, setResult] = useState<PaymentCaptureResult | null>(null); const booking = useQuery({ queryKey: queryKeys.bookings.detail(bookingId), queryFn: () => bookingsApi.driverDetail(bookingId) }); const pay = useMutation({ mutationFn: () => bookingsApi.captureSimulatedPayment(bookingId, key.current), onSuccess: async (data) => { setResult(data); await Promise.all([booking.refetch(), client.invalidateQueries({ queryKey: queryKeys.bookings.root }), client.invalidateQueries({ queryKey: queryKeys.wallet.current })]); } }); if (booking.isPending) return <div className="py-24 text-center"><Loader2 className="mx-auto size-6 animate-spin" /></div>; if (booking.isError) return <div className="py-24 text-center">{getApiErrorMessage(booking.error)}</div>; const item = booking.data; return <div className="mx-auto max-w-lg space-y-5 px-4"><h1 className="text-2xl font-extrabold">Simulated payment</h1><div className="rounded-lg border bg-white p-6"><p className="font-mono font-bold">{item.bookingCode}</p><p className="mt-3 text-3xl font-extrabold">{formatBDTFromPaisa(item.totalAmountPaisa)}</p><p className="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-800">Sandbox payment only. No real bank or mobile financial service transfer occurs.</p>{item.status === "PAYMENT_PENDING" && !result && <Button className="mt-5 w-full" disabled={pay.isPending} onClick={() => pay.mutate()}>{pay.isPending && <Loader2 className="size-4 animate-spin" />}Complete simulated payment</Button>}{pay.isError && <p role="alert" className="mt-3 text-sm text-red-700">{getApiErrorMessage(pay.error)}</p>}{result && <div className="mt-5 space-y-4 text-center"><CheckCircle2 className="mx-auto size-8 text-emerald-700" /><strong>Booking confirmed</strong>{result.accessCredential ? <><div className="mx-auto w-fit bg-white p-2"><QRCode value={result.accessCredential} size={180} /></div><code className="block break-all text-[10px]">{result.accessCredential}</code><p className="text-xs text-slate-500">This one-time credential exists only on this screen and is not persisted.</p></> : <p className="text-xs text-amber-700">The credential was already issued and cannot be shown again.</p>}</div>}{item.status !== "PAYMENT_PENDING" && !result && <p className="mt-5 text-sm text-emerald-800">This booking is no longer awaiting payment.</p>}<Link href={`/driver/bookings/${bookingId}`}><Button className="mt-5 w-full" variant="outline">View booking</Button></Link></div></div>; }

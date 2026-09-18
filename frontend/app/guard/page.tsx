@@ -1,6 +1,3 @@
-import React from "react";
-import { GuardDashboardView } from "@/features/guard/components/guard-dashboard-view";
-
-export default function GuardDashboardPage() {
-  return <GuardDashboardView />;
-}
+"use client";
+import Link from "next/link"; import { useQuery } from "@tanstack/react-query"; import { Loader2, QrCode, ShieldCheck } from "lucide-react"; import { Button } from "@/components/ui/button"; import { guardApi } from "@/lib/api/guard-api"; import { queryKeys } from "@/lib/query-keys";
+export default function GuardDashboardPage() { const assignments = useQuery({ queryKey: queryKeys.guardAssignments.all({limit:100}), queryFn:()=>guardApi.listForGuard({limit:100}) }); return <div className="space-y-5 pb-24"><div><h1 className="text-2xl font-extrabold text-slate-900">Guard operations</h1><p className="mt-1 text-xs text-slate-500">Your active Provider assignments and credential verification.</p></div><Link href="/guard/scan"><Button className="w-full py-6"><QrCode className="size-5" />Verify Driver credential</Button></Link><section className="rounded-lg border bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><ShieldCheck className="size-4 text-emerald-700" />Assignments</h2>{assignments.isPending?<Loader2 className="mt-4 size-5 animate-spin"/>:<div className="mt-3 space-y-3">{assignments.data?.assignments.map(item=><div key={item.id} className="border-t pt-3"><strong className="text-sm">{item.property.name}</strong><p className="text-xs text-slate-500">Provider {item.provider?.fullName} · {item.status}</p></div>)}{assignments.data?.assignments.length===0&&<p className="text-xs text-slate-500">No Provider assignment is active.</p>}</div>}</section></div>; }

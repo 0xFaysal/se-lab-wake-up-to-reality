@@ -42,16 +42,41 @@ async function main(): Promise<void> {
     );
   }
 
-  const existingAdmin = await prisma.user.findUnique({
-    where: { email },
+  const matchingUsers = await prisma.user.findMany({
+    where: {
+      OR: [{ email }, { phone }],
+    },
     include: { roles: { select: { role: true } } },
   });
+
+  const emailOwner = matchingUsers.find((user) => user.email === email);
+  const phoneOwner = matchingUsers.find((user) => user.phone === phone);
+
+  if (emailOwner && phoneOwner && emailOwner.id !== phoneOwner.id) {
+    throw new Error(
+      "SEED_ADMIN_EMAIL and SEED_ADMIN_PHONE belong to different existing accounts. Use a unique phone number for the seed admin; no accounts were modified.",
+    );
+  }
+
+  if (phoneOwner && !emailOwner) {
+    throw new Error(
+      "SEED_ADMIN_PHONE already belongs to another account. Set SEED_ADMIN_PHONE to an unused Bangladesh phone number; the existing account will not be promoted or overwritten.",
+    );
+  }
+
+  const existingAdmin = emailOwner;
 
   let admin = existingAdmin;
   if (existingAdmin) {
     if (!existingAdmin.roles.some((role) => role.role === UserRoleType.ADMIN)) {
       throw new Error(
         "SEED_ADMIN_EMAIL already belongs to a non-admin account; refusing privilege escalation",
+      );
+    }
+
+    if (existingAdmin.phone !== phone) {
+      throw new Error(
+        "SEED_ADMIN_PHONE does not match the existing admin account. Use that admin's current phone number; the seed will not replace identity data automatically.",
       );
     }
   } else {

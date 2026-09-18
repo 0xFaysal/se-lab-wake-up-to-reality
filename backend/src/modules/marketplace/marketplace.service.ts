@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
   BookingStatus,
+  DisputeStatus,
   DomainAuditEventType,
   ManagerDelegationPermission,
   ParkingAllocationStatus,
@@ -11,6 +12,7 @@ import {
   ParkingSpotStatus,
   PayoutStatus,
   PropertyStatus,
+  RefundStatus,
   UserStatus,
   VerificationStatus,
   type Prisma,
@@ -57,6 +59,10 @@ function timeValue(value: string): Date {
 
 function overlaps(startA: Date, endA: Date, startB: Date, endB: Date) {
   return startA < endB && startB < endA;
+}
+
+function pagination(page: number, limit: number, total: number) {
+  return { page, limit, total, totalPages: Math.ceil(total / limit) };
 }
 
 function dhakaParts(date: Date) {
@@ -522,7 +528,10 @@ async function changeListingStatus(actorUserId: string, listingId: string, activ
     await lockEntity(tx, "parking-listing", listingId);
     const listing = await tx.parkingListing.findUnique({
       where: { id: listingId },
-      include: { parkingSpot: { include: { property: true } }, parkingRight: true },
+      include: {
+        parkingSpot: { include: { property: true, availabilityRules: true } },
+        parkingRight: true,
+      },
     });
     if (!listing) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
     await requireAuthority(actorUserId, listing.parkingSpot.propertyId, ManagerDelegationPermission.LISTING_MANAGE, listing.parkingSpotId, tx);
@@ -538,6 +547,19 @@ async function changeListingStatus(actorUserId: string, listingId: string, activ
           listing.parkingSpot.property.status !== PropertyStatus.ACTIVE ||
           listing.parkingSpot.property.verificationStatus !== VerificationStatus.VERIFIED) {
         fail(409, "PARKING_LISTING_NOT_ELIGIBLE", "Property, resource, or parking right is not eligible");
+      }
+      const hasCurrentAvailability = listing.parkingSpot.availabilityRules.some(
+        (rule) =>
+          rule.isActive &&
+          rule.validFrom <= now &&
+          (!rule.validUntil || rule.validUntil >= now),
+      );
+      if (!hasCurrentAvailability) {
+        fail(
+          409,
+          "PARKING_LISTING_AVAILABILITY_REQUIRED",
+          "Configure current weekly availability before activating this listing",
+        );
       }
       if (listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE) {
         const conflict = await tx.parkingListing.findFirst({
@@ -569,6 +591,56 @@ export async function endListing(actorUserId: string, listingId: string) {
   return serialize(await prisma.parkingListing.update({
     where: { id: listingId }, data: { status: ParkingListingStatus.ENDED, deactivatedAt: new Date() },
   }));
+}
+
+const adminListingInclude = {
+  provider: { select: { id: true, fullName: true, email: true, status: true } },
+  providerMembership: { select: { id: true, status: true, verificationStatus: true } },
+  parkingRight: {
+    select: { id: true, rightType: true, status: true, quantity: true, validFrom: true, validUntil: true },
+  },
+  parkingSpot: {
+    select: {
+      id: true,
+      displayName: true,
+      spotCode: true,
+      resourceType: true,
+      status: true,
+      property: {
+        select: { id: true, name: true, publicArea: true, verificationStatus: true, status: true },
+      },
+    },
+  },
+} satisfies Prisma.ParkingListingInclude;
+
+export async function listAdminListings(input: {
+  page: number; limit: number; status?: ParkingListingStatus; providerUserId?: string; propertyId?: string;
+}) {
+  const where: Prisma.ParkingListingWhereInput = {
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.providerUserId ? { providerUserId: input.providerUserId } : {}),
+    ...(input.propertyId ? { parkingSpot: { propertyId: input.propertyId } } : {}),
+  };
+  const [listings, total] = await Promise.all([
+    prisma.parkingListing.findMany({
+      where,
+      include: adminListingInclude,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.parkingListing.count({ where }),
+  ]);
+  return serialize({ listings, pagination: pagination(input.page, input.limit, total) });
+}
+
+export async function getAdminListing(listingId: string) {
+  const listing = await prisma.parkingListing.findUnique({
+    where: { id: listingId },
+    include: adminListingInclude,
+  });
+  if (!listing) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
+  return serialize(listing);
 }
 
 export async function suspendListing(adminUserId: string, listingId: string, reason: string) {
@@ -628,13 +700,91 @@ export async function replaceAvailability(actorUserId: string, resourceId: strin
 export async function createAvailabilityException(actorUserId: string, resourceId: string, input: {
   startsAt: string; endsAt: string; exceptionType: "BLOCKED" | "SPECIAL_AVAILABLE"; reason?: string;
 }) {
-  const resource = await prisma.parkingSpot.findFirst({ where: { id: resourceId, deletedAt: null } });
-  if (!resource) fail(404, "PARKING_RESOURCE_NOT_FOUND", "Parking resource was not found");
-  await requireAuthority(actorUserId, resource.propertyId, ManagerDelegationPermission.AVAILABILITY_MANAGE, resourceId);
-  return prisma.availabilityException.create({ data: {
-    parkingSpotId: resourceId, startsAt: new Date(input.startsAt), endsAt: new Date(input.endsAt),
-    exceptionType: input.exceptionType, reason: input.reason ?? null, createdByUserId: actorUserId,
-  } });
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-resource", resourceId);
+    const resource = await tx.parkingSpot.findFirst({ where: { id: resourceId, deletedAt: null } });
+    if (!resource) fail(404, "PARKING_RESOURCE_NOT_FOUND", "Parking resource was not found");
+    await requireAuthority(actorUserId, resource.propertyId, ManagerDelegationPermission.AVAILABILITY_MANAGE, resourceId, tx);
+    const startsAt = new Date(input.startsAt);
+    const endsAt = new Date(input.endsAt);
+    await ensureAvailabilityExceptionAllowed(tx, resourceId, startsAt, endsAt, input.exceptionType);
+    return tx.availabilityException.create({ data: {
+      parkingSpotId: resourceId, startsAt, endsAt,
+      exceptionType: input.exceptionType, reason: input.reason ?? null, createdByUserId: actorUserId,
+    } });
+  });
+}
+
+async function ensureAvailabilityExceptionAllowed(
+  tx: MarketplaceDb,
+  resourceId: string,
+  startsAt: Date,
+  endsAt: Date,
+  exceptionType: "BLOCKED" | "SPECIAL_AVAILABLE",
+  excludeId?: string,
+) {
+  const existing = await tx.availabilityException.findFirst({
+    where: {
+      parkingSpotId: resourceId,
+      startsAt: { lt: endsAt },
+      endsAt: { gt: startsAt },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (existing) fail(409, "AVAILABILITY_EXCEPTION_OVERLAP", "An availability exception already overlaps this period");
+  if (exceptionType !== "BLOCKED") return;
+  const booking = await tx.booking.findFirst({
+    where: {
+      parkingSpotId: resourceId,
+      status: { in: [BookingStatus.PAYMENT_PENDING, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE, BookingStatus.DISPUTED] },
+      startAt: { lt: endsAt },
+      effectiveEndAt: { gt: startsAt },
+    },
+    select: { id: true },
+  });
+  if (booking) fail(409, "AVAILABILITY_EXCEPTION_BOOKING_CONFLICT", "This blocked period conflicts with an active booking");
+}
+
+export async function updateAvailabilityException(actorUserId: string, exceptionId: string, input: {
+  startsAt?: string; endsAt?: string; exceptionType?: "BLOCKED" | "SPECIAL_AVAILABLE"; reason?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "availability-exception", exceptionId);
+    const existing = await tx.availabilityException.findUnique({
+      where: { id: exceptionId },
+      include: { parkingSpot: { select: { propertyId: true, deletedAt: true } } },
+    });
+    if (!existing || existing.parkingSpot.deletedAt) fail(404, "AVAILABILITY_EXCEPTION_NOT_FOUND", "Availability exception was not found");
+    await requireAuthority(actorUserId, existing.parkingSpot.propertyId, ManagerDelegationPermission.AVAILABILITY_MANAGE, existing.parkingSpotId, tx);
+    const startsAt = input.startsAt ? new Date(input.startsAt) : existing.startsAt;
+    const endsAt = input.endsAt ? new Date(input.endsAt) : existing.endsAt;
+    if (endsAt <= startsAt) fail(400, "AVAILABILITY_EXCEPTION_PERIOD_INVALID", "endsAt must be later than startsAt");
+    const exceptionType = input.exceptionType ?? existing.exceptionType;
+    await ensureAvailabilityExceptionAllowed(tx, existing.parkingSpotId, startsAt, endsAt, exceptionType, existing.id);
+    return tx.availabilityException.update({
+      where: { id: existing.id },
+      data: {
+        ...(input.startsAt ? { startsAt } : {}),
+        ...(input.endsAt ? { endsAt } : {}),
+        ...(input.exceptionType ? { exceptionType } : {}),
+        ...(input.reason !== undefined ? { reason: input.reason } : {}),
+      },
+    });
+  });
+}
+
+export async function deleteAvailabilityException(actorUserId: string, exceptionId: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "availability-exception", exceptionId);
+    const existing = await tx.availabilityException.findUnique({
+      where: { id: exceptionId },
+      include: { parkingSpot: { select: { propertyId: true, deletedAt: true } } },
+    });
+    if (!existing || existing.parkingSpot.deletedAt) fail(404, "AVAILABILITY_EXCEPTION_NOT_FOUND", "Availability exception was not found");
+    await requireAuthority(actorUserId, existing.parkingSpot.propertyId, ManagerDelegationPermission.AVAILABILITY_MANAGE, existing.parkingSpotId, tx);
+    await tx.availabilityException.delete({ where: { id: existing.id } });
+  });
 }
 
 export async function listAvailability(actorUserId: string, resourceId: string) {
@@ -699,6 +849,37 @@ async function availableListingUnits(
   ));
 }
 
+async function availableUnitsForListings(
+  listings: Array<NonNullable<Awaited<ReturnType<typeof loadBookableListing>>>>,
+  startAt: Date,
+  endAt: Date,
+) {
+  if (listings.length === 0) return new Map<string, number>();
+  const allocations = await prisma.parkingAllocation.findMany({
+    where: {
+      parkingSpotId: { in: [...new Set(listings.map((listing) => listing.parkingSpotId))] },
+      status: { in: [ParkingAllocationStatus.HELD, ParkingAllocationStatus.BOOKED] },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+      OR: [{ status: ParkingAllocationStatus.BOOKED }, { expiresAt: { gt: new Date() } }],
+    },
+    select: { parkingSpotId: true, parkingRightId: true },
+  });
+  const resourceCounts = new Map<string, number>();
+  const rightCounts = new Map<string, number>();
+  for (const allocation of allocations) {
+    resourceCounts.set(allocation.parkingSpotId, (resourceCounts.get(allocation.parkingSpotId) ?? 0) + 1);
+    const key = `${allocation.parkingSpotId}:${allocation.parkingRightId}`;
+    rightCounts.set(key, (rightCounts.get(key) ?? 0) + 1);
+  }
+  return new Map(listings.map((listing) => {
+    const rightCapacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE ? 1 : listing.parkingRight.quantity;
+    const rightCount = rightCounts.get(`${listing.parkingSpotId}:${listing.parkingRightId}`) ?? 0;
+    const resourceCount = resourceCounts.get(listing.parkingSpotId) ?? 0;
+    return [listing.id, Math.max(0, Math.min(rightCapacity - rightCount, listing.parkingSpot.capacity - resourceCount))];
+  }));
+}
+
 export async function searchParking(input: {
   latitude: number; longitude: number; radiusKm: number; startAt: string; endAt: string; vehicleType: VehicleType;
   minPricePaisa?: bigint; maxPricePaisa?: bigint; covered?: boolean;
@@ -735,6 +916,7 @@ export async function searchParking(input: {
     distanceKm: number;
     availableUnits: number;
   }>();
+  const unitsByListing = await availableUnitsForListings(listings, startAt, endAt);
   for (const listing of listings) {
     const property = listing.parkingSpot.property;
     const distanceKm = haversineKm(input.latitude, input.longitude, Number(property.latitude), Number(property.longitude));
@@ -779,6 +961,130 @@ export async function searchParking(input: {
       offers: group.offers,
     };
   }).sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+export async function getPublicPropertyDetail(propertyId: string, input: {
+  startAt: string; endAt: string; vehicleType: VehicleType;
+}) {
+  const [property, listings, reviewSummary] = await Promise.all([
+    prisma.property.findFirst({
+      where: {
+        id: propertyId,
+        deletedAt: null,
+        canonicalPropertyId: null,
+        status: PropertyStatus.ACTIVE,
+        verificationStatus: VerificationStatus.VERIFIED,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        publicArea: true,
+        approximateAddress: true,
+        latitude: true,
+        longitude: true,
+        visitorIdentificationRequired: true,
+        vehicleHeightLimitCm: true,
+        entryCutoffLocalTime: true,
+        generalParkingRules: true,
+        commonSafetyRules: true,
+        temporaryClosureReason: true,
+        temporaryClosedAt: true,
+        temporaryClosedUntil: true,
+        images: {
+          select: { id: true, url: true, imageType: true, sortOrder: true, isCover: true },
+          orderBy: [{ isCover: "desc" }, { sortOrder: "asc" }],
+        },
+      },
+    }),
+    prisma.parkingListing.findMany({
+      where: {
+        status: ParkingListingStatus.ACTIVE,
+        allowedVehicleTypes: { has: input.vehicleType },
+        provider: { status: UserStatus.ACTIVE, deletedAt: null },
+        parkingRight: activeRightWhere(),
+        parkingSpot: {
+          propertyId,
+          deletedAt: null,
+          status: ParkingSpotStatus.ACTIVE,
+          property: {
+            deletedAt: null,
+            canonicalPropertyId: null,
+            status: PropertyStatus.ACTIVE,
+            verificationStatus: VerificationStatus.VERIFIED,
+          },
+        },
+      },
+      include: {
+        parkingRight: true,
+        parkingSpot: {
+          include: {
+            property: true,
+            availabilityRules: true,
+            availabilityExceptions: true,
+            facilities: { include: { facility: true } },
+          },
+        },
+      },
+      orderBy: { pricePerHourPaisa: "asc" },
+    }),
+    prisma.review.aggregate({
+      where: { booking: { propertyId } },
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
+  ]);
+  if (!property) fail(404, "PROPERTY_NOT_FOUND", "Property was not found");
+
+  const startAt = new Date(input.startAt);
+  const endAt = new Date(input.endAt);
+  const offers: JsonObject[] = [];
+  const facilities = new Map<string, string>();
+  const unitsByListing = await availableUnitsForListings(listings, startAt, endAt);
+  for (const listing of listings) {
+    if (!(await isResourceAvailable(listing.parkingSpot, startAt, endAt))) continue;
+    const availableUnits = unitsByListing.get(listing.id) ?? 0;
+    if (availableUnits === 0) continue;
+    for (const item of listing.parkingSpot.facilities) {
+      facilities.set(item.facility.code, item.facility.displayName);
+    }
+    offers.push({
+      listingId: listing.id,
+      title: listing.title,
+      description: listing.description,
+      resourceType: listing.parkingSpot.resourceType,
+      displayName: listing.parkingSpot.displayName,
+      floor: listing.parkingSpot.floor,
+      zone: listing.parkingSpot.zone,
+      pricePerHourPaisa: listing.pricePerHourPaisa.toString(),
+      securityDepositPaisa: listing.securityDepositPaisa.toString(),
+      minDurationMinutes: listing.minDurationMinutes,
+      maxDurationMinutes: listing.maxDurationMinutes,
+      allowedVehicleTypes: listing.allowedVehicleTypes,
+      isCovered: listing.parkingSpot.isCovered,
+      hasCctv: listing.parkingSpot.hasCctv,
+      hasGuard: listing.parkingSpot.hasGuard,
+      maxHeightCm: listing.parkingSpot.maxHeightCm,
+      maxWidthCm: listing.parkingSpot.maxWidthCm,
+      maxLengthCm: listing.parkingSpot.maxLengthCm,
+      facilities: listing.parkingSpot.facilities.map((item) => ({
+        code: item.facility.code,
+        displayName: item.facility.displayName,
+      })),
+      availableUnits,
+    });
+  }
+
+  return serialize({
+    ...property,
+    latitude: Number(property.latitude),
+    longitude: Number(property.longitude),
+    rating: reviewSummary._avg.rating,
+    reviewCount: reviewSummary._count._all,
+    facilities: [...facilities].map(([code, displayName]) => ({ code, displayName })),
+    requestedPeriod: { startAt, endAt, vehicleType: input.vehicleType },
+    offers,
+  });
 }
 
 export async function createQuote(driverUserId: string, input: { listingId: string; vehicleId: string; startAt: string; endAt: string }) {
@@ -1026,6 +1332,119 @@ export async function listProviderBookings(actorUserId: string) {
   }));
 }
 
+export async function getProviderBooking(actorUserId: string, bookingId: string) {
+  const scopes = await listProviderAccessScopes(
+    actorUserId,
+    ManagerDelegationPermission.BOOKING_VIEW,
+  );
+  const scopeByMembership = new Map(
+    scopes.map((scope) => [scope.providerMembershipId, scope]),
+  );
+  const booking = await prisma.booking.findFirst({
+    where: {
+      id: bookingId,
+      listing: {
+        providerMembershipId: { in: scopes.map((scope) => scope.providerMembershipId) },
+      },
+    },
+    include: {
+      ...bookingInclude,
+      listing: { select: { id: true, title: true, providerMembershipId: true } },
+    },
+  });
+
+  if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
+  const resourceIds = scopeByMembership.get(booking.listing.providerMembershipId)?.resourceIds;
+  if (resourceIds !== null && !resourceIds?.includes(booking.parkingSpotId)) {
+    fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
+  }
+  return serialize(booking);
+}
+
+const guardBookingSelect = {
+  id: true,
+  bookingCode: true,
+  status: true,
+  startAt: true,
+  scheduledEndAt: true,
+  effectiveEndAt: true,
+  confirmedAt: true,
+  checkedInAt: true,
+  checkoutRequestedAt: true,
+  checkedOutAt: true,
+  createdAt: true,
+  driver: { select: { id: true, fullName: true } },
+  vehicle: {
+    select: {
+      id: true,
+      vehicleType: true,
+      registrationNumber: true,
+      brand: true,
+      model: true,
+      color: true,
+    },
+  },
+  property: { select: { id: true, name: true, publicArea: true, approximateAddress: true } },
+  parkingSpot: {
+    select: { id: true, displayName: true, spotCode: true, resourceType: true, floor: true, zone: true },
+  },
+  listing: { select: { id: true, title: true } },
+} satisfies Prisma.BookingSelect;
+
+async function guardBookingScope(guardUserId: string) {
+  const memberships = await prisma.propertyGuardMembership.findMany({
+    where: { guardUserId, status: "ACTIVE" },
+    select: {
+      propertyId: true,
+      assignments: {
+        where: { status: "ACTIVE" },
+        select: { providerMembership: { select: { providerUserId: true } } },
+      },
+    },
+  });
+  return memberships.flatMap((membership) => membership.assignments.map((assignment) => ({
+    propertyId: membership.propertyId,
+    providerUserId: assignment.providerMembership.providerUserId,
+  })));
+}
+
+export async function listGuardBookings(guardUserId: string, input: {
+  page: number; limit: number; status?: BookingStatus;
+}) {
+  const scope = await guardBookingScope(guardUserId);
+  if (scope.length === 0) return { bookings: [], pagination: pagination(input.page, input.limit, 0) };
+  const statuses = input.status
+    ? [input.status]
+    : [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED];
+  const now = Date.now();
+  const where: Prisma.BookingWhereInput = {
+    OR: scope,
+    status: { in: statuses },
+    startAt: { lte: new Date(now + 24 * 60 * 60 * 1000) },
+    effectiveEndAt: { gte: new Date(now - 12 * 60 * 60 * 1000) },
+  };
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      select: guardBookingSelect,
+      orderBy: { startAt: "asc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
+  return { bookings, pagination: pagination(input.page, input.limit, total) };
+}
+
+export async function getGuardBooking(guardUserId: string, bookingId: string) {
+  if (!(await isGuardAuthorizedForBooking(guardUserId, bookingId))) {
+    fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
+  }
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: guardBookingSelect });
+  if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
+  return booking;
+}
+
 export async function cancelBooking(driverUserId: string, bookingId: string) {
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "booking", bookingId);
@@ -1107,7 +1526,13 @@ export async function verifyAccessCredential(guardUserId: string, credential: st
   const tokenHash = createHash("sha256").update(credential).digest("hex");
   const record = await prisma.accessCredential.findUnique({
     where: { tokenHash },
-    include: { booking: { include: { vehicle: true, property: { select: { id: true, name: true } }, parkingSpot: true } } },
+    select: {
+      id: true,
+      bookingId: true,
+      status: true,
+      expiresAt: true,
+      booking: { select: guardBookingSelect },
+    },
   });
   if (!record || record.status !== "ACTIVE" || record.expiresAt <= new Date()) {
     fail(404, "ACCESS_CREDENTIAL_INVALID", "Access credential is invalid or expired");
@@ -1289,6 +1714,55 @@ export async function createRefund(requestedByUserId: string, paymentId: string,
   }, { isolationLevel: "Serializable" });
 }
 
+const driverRefundInclude = {
+  payment: {
+    select: {
+      id: true,
+      amountPaisa: true,
+      currency: true,
+      status: true,
+      capturedAt: true,
+      booking: {
+        select: {
+          id: true,
+          bookingCode: true,
+          status: true,
+          property: { select: { id: true, name: true, publicArea: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.RefundInclude;
+
+export async function listDriverRefunds(driverUserId: string, input: {
+  page: number; limit: number; status?: RefundStatus;
+}) {
+  const where: Prisma.RefundWhereInput = {
+    payment: { payerUserId: driverUserId },
+    ...(input.status ? { status: input.status } : {}),
+  };
+  const [refunds, total] = await Promise.all([
+    prisma.refund.findMany({
+      where,
+      include: driverRefundInclude,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.refund.count({ where }),
+  ]);
+  return serialize({ refunds, pagination: pagination(input.page, input.limit, total) });
+}
+
+export async function getDriverRefund(driverUserId: string, refundId: string) {
+  const refund = await prisma.refund.findFirst({
+    where: { id: refundId, payment: { payerUserId: driverUserId } },
+    include: driverRefundInclude,
+  });
+  if (!refund) fail(404, "REFUND_NOT_FOUND", "Refund was not found");
+  return serialize(refund);
+}
+
 export async function createPayout(providerUserId: string, input: { amountPaisa: bigint; idempotencyKey: string }) {
   const previous = await prisma.payoutRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
   if (previous) return serialize(previous);
@@ -1313,6 +1787,31 @@ export async function createPayout(providerUserId: string, input: { amountPaisa:
       membership?.propertyId, "PayoutRequest", payout.id);
     return serialize(payout);
   }, { isolationLevel: "Serializable" });
+}
+
+export async function listProviderPayouts(providerUserId: string, input: {
+  page: number; limit: number; status?: PayoutStatus;
+}) {
+  const where: Prisma.PayoutRequestWhereInput = {
+    providerUserId,
+    ...(input.status ? { status: input.status } : {}),
+  };
+  const [payouts, total] = await Promise.all([
+    prisma.payoutRequest.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.payoutRequest.count({ where }),
+  ]);
+  return serialize({ payouts, pagination: pagination(input.page, input.limit, total) });
+}
+
+export async function getProviderPayout(providerUserId: string, payoutId: string) {
+  const payout = await prisma.payoutRequest.findFirst({ where: { id: payoutId, providerUserId } });
+  if (!payout) fail(404, "PAYOUT_NOT_FOUND", "Payout request was not found");
+  return serialize(payout);
 }
 
 export async function listPayouts(status?: PayoutStatus) {
@@ -1491,6 +1990,96 @@ export async function resolveDispute(adminUserId: string, disputeId: string, inp
     await audit(tx, DomainAuditEventType.DISPUTE_RESOLVED, adminUserId, dispute.booking.propertyId, "Dispute", dispute.id, { decision: input.decision });
     return updated;
   });
+}
+
+const disputeInclude = {
+  booking: {
+    select: {
+      id: true,
+      bookingCode: true,
+      status: true,
+      startAt: true,
+      scheduledEndAt: true,
+      property: { select: { id: true, name: true, publicArea: true } },
+      parkingSpot: { select: { id: true, displayName: true, spotCode: true } },
+      driver: { select: { id: true, fullName: true } },
+      provider: { select: { id: true, fullName: true } },
+    },
+  },
+  openedBy: { select: { id: true, fullName: true } },
+  resolvedBy: { select: { id: true, fullName: true } },
+} satisfies Prisma.DisputeInclude;
+
+export async function listDriverDisputes(driverUserId: string, input: {
+  page: number; limit: number; status?: DisputeStatus;
+}) {
+  const where: Prisma.DisputeWhereInput = {
+    booking: { driverUserId },
+    ...(input.status ? { status: input.status } : {}),
+  };
+  const [disputes, total] = await Promise.all([
+    prisma.dispute.findMany({
+      where,
+      include: disputeInclude,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.dispute.count({ where }),
+  ]);
+  return { disputes, pagination: pagination(input.page, input.limit, total) };
+}
+
+export async function getDriverDispute(driverUserId: string, disputeId: string) {
+  const dispute = await prisma.dispute.findFirst({
+    where: { id: disputeId, booking: { driverUserId } },
+    include: disputeInclude,
+  });
+  if (!dispute) fail(404, "DISPUTE_NOT_FOUND", "Dispute was not found");
+  return dispute;
+}
+
+async function providerDisputeScope(actorUserId: string): Promise<Prisma.DisputeWhereInput[]> {
+  const scopes = await listProviderAccessScopes(actorUserId, ManagerDelegationPermission.BOOKING_VIEW);
+  return scopes.map((scope) => ({
+    booking: {
+      listing: { providerMembershipId: scope.providerMembershipId },
+      ...(scope.resourceIds === null ? {} : { parkingSpotId: { in: scope.resourceIds } }),
+    },
+  }));
+}
+
+export async function listProviderDisputes(actorUserId: string, input: {
+  page: number; limit: number; status?: DisputeStatus;
+}) {
+  const scope = await providerDisputeScope(actorUserId);
+  if (scope.length === 0) return { disputes: [], pagination: pagination(input.page, input.limit, 0) };
+  const where: Prisma.DisputeWhereInput = {
+    OR: scope,
+    ...(input.status ? { status: input.status } : {}),
+  };
+  const [disputes, total] = await Promise.all([
+    prisma.dispute.findMany({
+      where,
+      include: disputeInclude,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.dispute.count({ where }),
+  ]);
+  return { disputes, pagination: pagination(input.page, input.limit, total) };
+}
+
+export async function getProviderDispute(actorUserId: string, disputeId: string) {
+  const scope = await providerDisputeScope(actorUserId);
+  if (scope.length === 0) fail(404, "DISPUTE_NOT_FOUND", "Dispute was not found");
+  const dispute = await prisma.dispute.findFirst({
+    where: { id: disputeId, OR: scope },
+    include: disputeInclude,
+  });
+  if (!dispute) fail(404, "DISPUTE_NOT_FOUND", "Dispute was not found");
+  return dispute;
 }
 
 export async function listDisputes(status?: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED") {

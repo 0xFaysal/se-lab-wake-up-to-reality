@@ -1,188 +1,44 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { List, Map as MapIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, List, Loader2, Map as MapIcon, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchFilters, type FilterState } from "@/components/parking/search-filters";
 import { ParkingCard } from "@/components/parking/parking-card";
-import { MOCK_PARKING_SPOTS, type VehicleType } from "@/lib/data/mock-parking";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import type { VehicleType } from "@/lib/api/api-types";
+import { parkingSearchApi } from "@/lib/api/parking-search-api";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
+import { toUtcFromBangladeshLocal } from "@/lib/formatters";
 
-// Dynamically import map with ssr: false
-const ParkingMap = dynamic(
-  () => import("@/components/parking/parking-map"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full min-h-[420px] w-full items-center justify-center rounded-2xl border bg-muted/40 text-sm text-muted-foreground">
-        Loading Dhaka Map…
-      </div>
-    ),
-  }
-);
+const ParkingMap = dynamic(() => import("@/components/parking/parking-map"), { ssr: false, loading: () => <div className="flex h-full min-h-[420px] items-center justify-center rounded-lg border bg-muted/40"><Loader2 className="size-6 animate-spin" /></div> });
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 
 export function ParkingSearchView() {
   const searchParams = useSearchParams();
-
-  const initialLocation = searchParams.get("location") || "";
-  const initialVehicleType =
-    (searchParams.get("vehicleType") as VehicleType) || "ALL";
-
   const [filters, setFilters] = useState<FilterState>({
-    location: initialLocation,
-    startTime: "09:00",
-    endTime: "18:00",
-    vehicleType: initialVehicleType,
-    radiusKm: "5",
+    latitude: searchParams.get("latitude") ?? "23.7806", longitude: searchParams.get("longitude") ?? "90.3993",
+    date: searchParams.get("date") ?? today(), startTime: searchParams.get("startTime") ?? "09:00",
+    endTime: searchParams.get("endTime") ?? "18:00", vehicleType: (searchParams.get("vehicleType") as VehicleType) || "SEDAN",
+    radiusKm: searchParams.get("radiusKm") ?? "5", covered: false,
   });
-
-  const [selectedSpotId, setSelectedSpotId] = useState<string | undefined>(
-    undefined
-  );
+  const [selectedSpotId, setSelectedSpotId] = useState<string>();
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const request = useMemo(() => ({ latitude: Number(filters.latitude), longitude: Number(filters.longitude), radiusKm: Number(filters.radiusKm), startAt: toUtcFromBangladeshLocal(filters.date, filters.startTime), endAt: toUtcFromBangladeshLocal(filters.date, filters.endTime), vehicleType: filters.vehicleType, ...(filters.covered ? { covered: true } : {}) }), [filters]);
+  const valid = Number.isFinite(request.latitude) && Number.isFinite(request.longitude) && new Date(request.endAt) > new Date(request.startAt);
+  const query = useQuery({ queryKey: queryKeys.parkingSearch.results(request), queryFn: () => parkingSearchApi.search(request), enabled: valid, staleTime: 20_000 });
+  const results = query.data ?? [];
+  const reset = () => setFilters({ latitude: "23.7806", longitude: "90.3993", date: today(), startTime: "09:00", endTime: "18:00", vehicleType: "SEDAN", radiusKm: "5", covered: false });
 
-  function handleFilterChange(updated: Partial<FilterState>) {
-    setFilters((prev) => ({ ...prev, ...updated }));
-  }
-
-  function handleReset() {
-    setFilters({
-      location: "",
-      startTime: "09:00",
-      endTime: "18:00",
-      vehicleType: "ALL",
-      radiusKm: "5",
-    });
-    setSelectedSpotId(undefined);
-  }
-
-  // Filter spots based on search criteria
-  const filteredSpots = useMemo(() => {
-    return MOCK_PARKING_SPOTS.filter((spot) => {
-      // Filter by location query
-      if (filters.location.trim()) {
-        const query = filters.location.toLowerCase();
-        const matchesArea = spot.area.toLowerCase().includes(query);
-        const matchesName = spot.propertyName.toLowerCase().includes(query);
-        if (!matchesArea && !matchesName) return false;
-      }
-
-      // Filter by vehicle type
-      if (filters.vehicleType !== "ALL") {
-        if (!spot.vehicleTypes.includes(filters.vehicleType)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [filters]);
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-      {/* Top Filter Bar */}
-      <SearchFilters
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onReset={handleReset}
-      />
-
-      {/* Mobile Toggle View Switch */}
-      <div className="flex items-center justify-between lg:hidden border-b pb-3">
-        <span className="text-xs font-semibold text-muted-foreground">
-          {filteredSpots.length} parking spots found
-        </span>
-        <div className="flex gap-1 rounded-lg bg-muted p-1 border">
-          <button
-            onClick={() => setMobileView("list")}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all",
-              mobileView === "list"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground"
-            )}
-          >
-            <List className="size-3.5" />
-            List
-          </button>
-          <button
-            onClick={() => setMobileView("map")}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all",
-              mobileView === "map"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground"
-            )}
-          >
-            <MapIcon className="size-3.5" />
-            Map
-          </button>
-        </div>
-      </div>
-
-      {/* Desktop Split Screen / Mobile Conditional */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
-        {/* Left List Section */}
-        <div
-          className={cn(
-            "lg:col-span-6 xl:col-span-5 space-y-4",
-            mobileView === "map" ? "hidden lg:block" : "block"
-          )}
-        >
-          <div className="hidden lg:flex items-center justify-between pb-1">
-            <h2 className="text-sm font-bold text-foreground">
-              Available Spaces in Dhaka
-            </h2>
-            <span className="text-xs text-muted-foreground">
-              {filteredSpots.length} results
-            </span>
-          </div>
-
-          {filteredSpots.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-10 text-center space-y-3">
-              <p className="text-sm font-medium text-foreground">
-                No parking spaces found matching your filters.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Try widening your location search or switching the vehicle type.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="mt-2 text-xs"
-              >
-                Clear all filters
-              </Button>
-            </div>
-          ) : (
-            filteredSpots.map((spot) => (
-              <ParkingCard
-                key={spot.id}
-                spot={spot}
-                isSelected={selectedSpotId === spot.id}
-                onSelect={() => setSelectedSpotId(spot.id)}
-              />
-            ))
-          )}
-        </div>
-
-        {/* Right Sticky Map Section */}
-        <div
-          className={cn(
-            "lg:col-span-6 xl:col-span-7 lg:sticky lg:top-24 h-[calc(100vh-8rem)] min-h-[480px]",
-            mobileView === "list" ? "hidden lg:block" : "block"
-          )}
-        >
-          <ParkingMap
-            spots={filteredSpots}
-            selectedSpotId={selectedSpotId}
-            onSpotSelect={(id) => setSelectedSpotId(id)}
-          />
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <SearchFilters filters={filters} onFilterChange={(next) => setFilters((current) => ({ ...current, ...next }))} onReset={reset} />
+    {!valid && <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">End time must be later than start time and coordinates must be valid.</div>}
+    <div className="flex items-center justify-between border-b pb-3 lg:hidden"><span className="text-xs font-semibold text-muted-foreground">{results.length} properties found</span><div className="flex gap-1 rounded-lg border bg-muted p-1"><Button size="sm" variant={mobileView === "list" ? "default" : "ghost"} onClick={() => setMobileView("list")}><List className="size-4" />List</Button><Button size="sm" variant={mobileView === "map" ? "default" : "ghost"} onClick={() => setMobileView("map")}><MapIcon className="size-4" />Map</Button></div></div>
+    {query.isError && <div className="rounded-lg border bg-white p-10 text-center"><AlertCircle className="mx-auto size-7 text-red-600" /><p className="mt-3 text-sm">{getApiErrorMessage(query.error)}</p><Button className="mt-4" variant="outline" onClick={() => query.refetch()}><RefreshCw className="size-4" />Retry</Button></div>}
+    {!query.isError && <div className="grid items-start gap-6 lg:grid-cols-12"><div className={cn("space-y-4 lg:col-span-5", mobileView === "map" && "hidden lg:block")}><div className="hidden items-center justify-between lg:flex"><h2 className="text-sm font-bold">Available parking in Dhaka</h2><span className="text-xs text-muted-foreground">{results.length} canonical properties</span></div>{query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-44 animate-pulse rounded-lg border bg-slate-100" />) : results.length === 0 ? <div className="rounded-lg border bg-white p-10 text-center text-sm text-muted-foreground">No parking is available for the selected time and vehicle.</div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={request} isSelected={spot.id === selectedSpotId} onSelect={() => setSelectedSpotId(spot.id)} />)}</div><div className={cn("h-[calc(100vh-8rem)] min-h-[480px] lg:sticky lg:top-24 lg:col-span-7", mobileView === "list" && "hidden lg:block")}><ParkingMap spots={results} search={request} selectedSpotId={selectedSpotId} onSpotSelect={setSelectedSpotId} /></div></div>}
+  </div>;
 }

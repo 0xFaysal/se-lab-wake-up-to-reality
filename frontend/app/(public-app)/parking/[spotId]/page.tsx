@@ -1,47 +1,64 @@
-import { use } from "react";
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ParkingDetailsView } from "@/components/parking/parking-details-view";
-import { MOCK_PARKING_SPOTS } from "@/lib/data/mock-parking";
+"use client";
 
-interface ParkingDetailsPageProps {
-  params: Promise<{
-    spotId: string;
-  }>;
+import { use, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import QRCode from "react-qr-code";
+import { ArrowLeft, CheckCircle2, Clock, Loader2, LockKeyhole, MapPin, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api/api-error";
+import type { VehicleType } from "@/lib/api/api-types";
+import { bookingsApi } from "@/lib/api/bookings-api";
+import type { BookingDto, BookingQuoteDto, PaymentCaptureResult, PublicPropertyOfferDto, ReservationHoldDto } from "@/lib/api/marketplace-types";
+import { parkingSearchApi } from "@/lib/api/parking-search-api";
+import { vehicleApi } from "@/lib/api/vehicle-api";
+import { formatBDTFromPaisa, formatDateTime, vehicleLabels } from "@/lib/formatters";
+import { queryKeys } from "@/lib/query-keys";
+
+export default function ParkingDetailsPage({ params }: { params: Promise<{ spotId: string }> }) {
+  const { spotId } = use(params); const search = useSearchParams();
+  const request = useMemo(() => ({ startAt: search.get("startAt") ?? "", endAt: search.get("endAt") ?? "", vehicleType: (search.get("vehicleType") ?? "SEDAN") as VehicleType }), [search]);
+  const valid = !!request.startAt && !!request.endAt;
+  const results = useQuery({ queryKey: queryKeys.parkingSearch.property(spotId, request), queryFn: () => parkingSearchApi.propertyDetail(spotId, request), enabled: valid });
+  const property = results.data;
+  if (!valid) return <PageState title="Search context is missing" action={<Link href="/parking"><Button>Return to search</Button></Link>} />;
+  if (results.isPending) return <PageState title="Loading live parking offers" loading />;
+  if (results.isError) return <PageState title={getApiErrorMessage(results.error)} action={<Button variant="outline" onClick={() => results.refetch()}><RefreshCw className="size-4" />Retry</Button>} />;
+  if (!property) return <PageState title="This Property is no longer available for the selected time." action={<Link href="/parking"><Button>Choose another option</Button></Link>} />;
+  const availableUnits = property.offers.reduce((total, offer) => total + offer.availableUnits, 0);
+  return <main className="mx-auto max-w-6xl space-y-7 px-4 py-8 sm:px-6"><Link href="/parking" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600"><ArrowLeft className="size-4" />Search results</Link>{property.images[0] && <div className="relative aspect-[16/6] overflow-hidden rounded-lg bg-slate-100"><Image src={property.images[0].url} alt={property.name} fill unoptimized className="object-cover" /></div>}<header><p className="flex items-center gap-2 text-sm text-slate-500"><MapPin className="size-4" />{property.publicArea}</p><h1 className="mt-2 text-3xl font-extrabold">{property.name}</h1><p className="mt-2 text-sm text-slate-600">{property.approximateAddress}</p>{property.description && <p className="mt-3 max-w-3xl text-sm text-slate-600">{property.description}</p>}<p className="mt-3 text-sm font-semibold text-emerald-800">{availableUnits} unit(s) currently available</p></header><div className="grid gap-6 lg:grid-cols-[1fr_24rem]"><section className="space-y-3"><h2 className="text-lg font-bold">Available offers</h2>{property.offers.map((offer) => <Offer key={offer.listingId} offer={offer} />)}{property.offers.length === 0 && <p className="rounded-lg border bg-white p-6 text-sm text-slate-600">No compatible space is available for this period.</p>}</section>{property.offers.length > 0 && <BookingCheckout offers={property.offers} startAt={request.startAt} endAt={request.endAt} />}</div></main>;
 }
 
-export async function generateMetadata({
-  params,
-}: ParkingDetailsPageProps): Promise<Metadata> {
-  const { spotId } = await params;
-  const spot =
-    MOCK_PARKING_SPOTS.find(
-      (s) =>
-        s.id === spotId ||
-        s.id === decodeURIComponent(spotId) ||
-        spotId === "gulshan-residential-parking"
-    ) || MOCK_PARKING_SPOTS[0];
+function Offer({ offer }: { offer: PublicPropertyOfferDto }) { return <article className="rounded-lg border bg-white p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-bold">{offer.title}</h3><p className="mt-1 text-xs text-slate-500">{offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits} available</p>{offer.description && <p className="mt-2 text-sm text-slate-600">{offer.description}</p>}</div><strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong></div><div className="mt-3 flex flex-wrap gap-2">{offer.allowedVehicleTypes.map((type) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>)}{offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}{offer.hasCctv && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">CCTV</span>}{offer.hasGuard && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">Guard</span>}{offer.facilities.map((facility) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={facility.code}>{facility.displayName}</span>)}</div></article>; }
 
-  return {
-    title: `${spot.propertyName} | ParkEase BD`,
-    description: `Verified hourly parking in ${spot.area} at ৳${spot.hourlyRate}/hr. 24/7 security, covered parking, and digital access pass.`,
-  };
+function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOfferDto[]; startAt: string; endAt: string }) {
+  const router = useRouter(); const client = useQueryClient(); const keys = useRef({ hold: crypto.randomUUID(), booking: crypto.randomUUID(), payment: crypto.randomUUID() });
+  const [listingId, setListingId] = useState(offers[0]?.listingId ?? ""); const [vehicleId, setVehicleId] = useState("");
+  const [quote, setQuote] = useState<BookingQuoteDto | null>(null); const [hold, setHold] = useState<ReservationHoldDto | null>(null); const [booking, setBooking] = useState<BookingDto | null>(null); const [payment, setPayment] = useState<PaymentCaptureResult | null>(null);
+  const vehicles = useQuery({ queryKey: queryKeys.vehicles.all, queryFn: vehicleApi.list, retry: false });
+  const selectedOffer = offers.find((offer) => offer.listingId === listingId); const compatible = vehicles.data?.filter((vehicle) => selectedOffer?.allowedVehicleTypes.includes(vehicle.vehicleType)) ?? [];
+  const quoteMutation = useMutation({ mutationFn: () => parkingSearchApi.createQuote({ listingId, vehicleId, startAt, endAt }), onSuccess: (data) => { setQuote(data); setHold(null); setBooking(null); setPayment(null); } });
+  const holdMutation = useMutation({ mutationFn: () => parkingSearchApi.createHold(quote!.id, keys.current.hold), onSuccess: setHold });
+  const releaseMutation = useMutation({ mutationFn: () => parkingSearchApi.releaseHold(hold!.id), onSuccess: async () => { setHold(null); setQuote(null); keys.current.hold = crypto.randomUUID(); keys.current.booking = crypto.randomUUID(); await client.invalidateQueries({ queryKey: queryKeys.parkingSearch.root }); } });
+  const bookingMutation = useMutation({ mutationFn: () => bookingsApi.create(hold!.id, keys.current.booking), onSuccess: setBooking });
+  const paymentMutation = useMutation({ mutationFn: () => bookingsApi.captureSimulatedPayment(booking!.id, keys.current.payment), onSuccess: async (data) => { setPayment(data); setBooking(data.booking); await Promise.all([client.invalidateQueries({ queryKey: queryKeys.bookings.root }), client.invalidateQueries({ queryKey: queryKeys.wallet.current }), client.invalidateQueries({ queryKey: queryKeys.parkingSearch.root })]); } });
+  const now = useCurrentTime(!!quote || !!hold); const quoteExpired = !!quote && now > 0 && new Date(quote.expiresAt).getTime() <= now; const holdExpired = !!hold && now > 0 && new Date(hold.expiresAt).getTime() <= now; const error = quoteMutation.error ?? holdMutation.error ?? releaseMutation.error ?? bookingMutation.error ?? paymentMutation.error;
+  const returnTo = typeof window === "undefined" ? "/parking" : window.location.pathname + window.location.search;
+
+  if (vehicles.isError) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in as a Driver to choose a registered vehicle and reserve this offer.</p><Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`}><Button className="mt-4 w-full">Sign in</Button></Link></aside>;
+  return <aside className="h-fit space-y-4 rounded-lg border bg-white p-5 shadow-sm lg:sticky lg:top-24"><div><h2 className="font-bold">Reserve parking</h2><p className="mt-1 text-xs text-slate-500">{formatDateTime(startAt)} to {formatDateTime(endAt)}</p></div>
+    {!payment && <><label className="block space-y-1 text-xs font-semibold">Offer<select className="h-10 w-full rounded-md border px-3 text-sm" value={listingId} disabled={!!quote} onChange={(event) => { setListingId(event.target.value); setVehicleId(""); }} >{offers.map((offer) => <option key={offer.listingId} value={offer.listingId}>{offer.title} · {formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</option>)}</select></label><label className="block space-y-1 text-xs font-semibold">Vehicle<select className="h-10 w-full rounded-md border px-3 text-sm" value={vehicleId} disabled={!!quote} onChange={(event) => setVehicleId(event.target.value)}><option value="">Select compatible vehicle</option>{compatible.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} · {vehicleLabels[vehicle.vehicleType]}</option>)}</select></label></>}
+    {!quote && <Button className="w-full" disabled={!vehicleId || quoteMutation.isPending} onClick={() => quoteMutation.mutate()}>{quoteMutation.isPending && <Loader2 className="size-4 animate-spin" />}Get server quote</Button>}
+    {quote && !hold && <div className="space-y-3 border-t pt-4"><Price label="Parking" value={quote.baseAmountPaisa} /><Price label="Platform fee" value={quote.platformFeePaisa} /><Price label="Security deposit" value={quote.depositPaisa} /><Price label="Total" value={quote.totalAmountPaisa} strong /><p className="flex items-center gap-1 text-xs text-slate-500"><Clock className="size-3" />Quote expires in <Countdown expiresAt={quote.expiresAt} now={now} /></p>{quoteExpired ? <Button className="w-full" variant="outline" onClick={() => { setQuote(null); keys.current.hold = crypto.randomUUID(); }}>Price quote expired. Refresh quote.</Button> : <Button className="w-full" disabled={holdMutation.isPending} onClick={() => holdMutation.mutate()}>{holdMutation.isPending && <Loader2 className="size-4 animate-spin" />}Hold this parking</Button>}</div>}
+    {hold && !booking && <div className="space-y-3 border-t pt-4"><p className="rounded-md bg-blue-50 p-3 text-xs text-blue-800">Parking held for <Countdown expiresAt={hold.expiresAt} now={now} /></p><Button className="w-full" disabled={holdExpired || bookingMutation.isPending || releaseMutation.isPending} onClick={() => bookingMutation.mutate()}>{bookingMutation.isPending && <Loader2 className="size-4 animate-spin" />}Create booking</Button>{holdExpired ? <><p className="text-xs text-red-700">The hold expired. Refresh the quote to try again.</p><Button className="w-full" variant="outline" onClick={() => { setHold(null); setQuote(null); keys.current.hold = crypto.randomUUID(); keys.current.booking = crypto.randomUUID(); }}>Start again</Button></> : <Button className="w-full" variant="ghost" disabled={releaseMutation.isPending} onClick={() => releaseMutation.mutate()}>{releaseMutation.isPending && <Loader2 className="size-4 animate-spin" />}Release hold</Button>}</div>}
+    {booking && !payment && <div className="space-y-3 border-t pt-4"><p className="font-mono text-sm font-bold">{booking.bookingCode}</p><Price label="Payment amount" value={booking.totalAmountPaisa} strong /><div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">This is a sandbox payment. No bank or MFS transfer will occur.</div><Button className="w-full" disabled={paymentMutation.isPending} onClick={() => paymentMutation.mutate()}>{paymentMutation.isPending && <Loader2 className="size-4 animate-spin" />}Complete simulated payment</Button></div>}
+    {payment && <div className="space-y-4 border-t pt-4"><div className="flex items-center gap-2 text-emerald-800"><CheckCircle2 className="size-5" /><strong>Booking confirmed</strong></div><p className="text-sm">Payment completed in the ParkEase simulation environment.</p>{payment.accessCredential ? <div className="space-y-3 rounded-lg border p-4 text-center"><LockKeyhole className="mx-auto size-5 text-emerald-700" /><p className="text-xs font-semibold">One-time access credential</p><div className="mx-auto w-fit bg-white p-2"><QRCode value={payment.accessCredential} size={150} /></div><code className="block break-all text-[10px]">{payment.accessCredential}</code><p className="text-[11px] text-slate-500">Keep this screen available for the Guard. This credential is not saved in your browser.</p></div> : <p className="rounded-md bg-amber-50 p-3 text-xs text-amber-800">The one-time credential was already issued and cannot be reconstructed.</p>}<Button className="w-full" onClick={() => router.push(`/driver/bookings/${payment.booking.id}`)}>Open booking</Button></div>}
+    {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-xs text-red-700">{getApiErrorMessage(error)}</p>}
+  </aside>;
 }
-
-export default function ParkingDetailsPage({
-  params,
-}: ParkingDetailsPageProps) {
-  const resolvedParams = use(params);
-  const spotId = resolvedParams.spotId;
-
-  // Find spot or fallback to the primary Gulshan Residential Parking spot
-  const spot =
-    MOCK_PARKING_SPOTS.find(
-      (s) =>
-        s.id === spotId ||
-        s.id === decodeURIComponent(spotId) ||
-        spotId.toLowerCase().includes("gulshan")
-    ) || MOCK_PARKING_SPOTS[0];
-
-  return <ParkingDetailsView spot={spot} />;
-}
+function useCurrentTime(active: boolean) { const [now, setNow] = useState(() => Date.now()); useEffect(() => { if (!active) return; const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, [active]); return now; }
+function Countdown({ expiresAt, now }: { expiresAt: string; now: number }) { if (!now) return <>calculating...</>; const remaining = Math.max(0, new Date(expiresAt).getTime() - now); const minutes = Math.floor(remaining / 60000); const seconds = Math.floor((remaining % 60000) / 1000); return <>{minutes}:{seconds.toString().padStart(2, "0")}</>; }
+function Price({ label, value, strong }: { label: string; value: string; strong?: boolean }) { return <div className={`flex justify-between text-sm ${strong ? "border-t pt-2 font-bold" : ""}`}><span>{label}</span><span>{formatBDTFromPaisa(value)}</span></div>; }
+function PageState({ title, loading, action }: { title: string; loading?: boolean; action?: React.ReactNode }) { return <div className="mx-auto max-w-xl px-4 py-24 text-center">{loading && <Loader2 className="mx-auto mb-3 size-7 animate-spin" />}<h1 className="font-bold">{title}</h1>{action && <div className="mt-4">{action}</div>}</div>; }
