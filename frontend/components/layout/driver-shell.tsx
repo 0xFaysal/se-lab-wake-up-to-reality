@@ -8,9 +8,10 @@ import {
   Home, MapPin, Menu, MessageSquareWarning, ReceiptText, Search, ShieldCheck, Star,
   UserRound, WalletCards,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { AppLogo } from "@/components/brand/app-logo";
+import { AppLogo } from "@/components/common/app-logo";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { buttonVariants } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -18,7 +19,10 @@ import { notificationsApi } from "@/lib/api/notifications-api";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
-const groups = [
+type NavigationItem = { href: string; label: string; icon: LucideIcon };
+type NavigationGroup = { label: string; items: NavigationItem[] };
+
+const groups: NavigationGroup[] = [
   { label: "Parking", items: [
     { href: "/driver/dashboard", label: "Overview", icon: Home },
     { href: "/driver/parking", label: "Find parking", icon: Search },
@@ -43,14 +47,14 @@ const groups = [
     { href: "/driver/profile", label: "Profile", icon: UserRound },
     { href: "/driver/support", label: "Help & support", icon: CircleHelp },
   ] },
-] as const;
+];
 
-const mobileItems = [
+const mobileItems: NavigationItem[] = [
   { href: "/driver/dashboard", label: "Home", icon: Home },
   { href: "/driver/parking", label: "Search", icon: Search },
   { href: "/driver/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/driver/vehicles", label: "Vehicles", icon: Car },
-] as const;
+];
 
 function active(pathname: string, href: string) {
   return pathname === href || (href !== "/driver/dashboard" && pathname.startsWith(`${href}/`));

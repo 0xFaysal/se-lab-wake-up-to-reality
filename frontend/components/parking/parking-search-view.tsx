@@ -83,8 +83,11 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   const favorites = useQuery({ queryKey: queryKeys.driverDiscovery.favorites, queryFn: driverDiscoveryApi.favorites, enabled: driverMode });
   const savedLocations = useQuery({ queryKey: queryKeys.driverDiscovery.savedLocations, queryFn: driverDiscoveryApi.savedLocations, enabled: driverMode });
   const recent = useMutation({ mutationFn: driverDiscoveryApi.addRecentSearch, onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.driverDiscovery.recentSearches }) });
-  const favorite = useMutation({
-    mutationFn: ({ propertyId, remove }: { propertyId: string; remove: boolean }) => remove ? driverDiscoveryApi.removeFavorite(propertyId) : driverDiscoveryApi.addFavorite(propertyId),
+  const favorite = useMutation<void, Error, { propertyId: string; remove: boolean }>({
+    mutationFn: async ({ propertyId, remove }) => {
+      if (remove) await driverDiscoveryApi.removeFavorite(propertyId);
+      else await driverDiscoveryApi.addFavorite(propertyId);
+    },
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.driverDiscovery.favorites }),
   });
   const favoriteIds = useMemo(() => new Set(favorites.data?.map((item) => item.property.id) ?? []), [favorites.data]);
