@@ -28,6 +28,7 @@ enum UserRoleType {
 
 enum AccountOrigin {
   SELF_REGISTERED
+  ADMIN_CREATED_USER
   PROVIDER_CREATED_GUARD
   ADMIN_CREATED_GUARD
   PROVIDER_CREATED_MANAGER
@@ -88,6 +89,16 @@ enum ParkingRightStatus {
   EXPIRED
 
   @@map("parking_right_status")
+}
+
+enum ParkingRightAmendmentStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@map("parking_right_amendment_status")
 }
 
 enum ParkingListingStatus {
@@ -161,11 +172,28 @@ enum RefundStatus {
 
 enum PayoutStatus {
   PENDING
+  ON_HOLD
   APPROVED
   REJECTED
   PAID
 
   @@map("payout_status")
+}
+
+enum PayoutMethodType {
+  BANK
+  BKASH
+  NAGAD
+  OTHER_MFS
+
+  @@map("payout_method_type")
+}
+
+enum PayoutMethodStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("payout_method_status")
 }
 
 enum NotificationType {
@@ -178,7 +206,9 @@ enum NotificationType {
   PAYMENT_SUCCEEDED
   REFUND_PROCESSED
   PAYOUT_UPDATED
+  PARKING_RIGHT_UPDATED
   DISPUTE_UPDATE
+  ADMIN_BROADCAST
 
   @@map("notification_type")
 }
@@ -327,8 +357,15 @@ enum DomainAuditEventType {
   PROVIDER_GUARD_ASSIGNED
   PROVIDER_GUARD_ASSIGNMENT_ENDED
   PROPERTY_MERGED
+  PROPERTY_APPROVED
+  PROPERTY_REJECTED
+  PROPERTY_STATUS_OVERRIDDEN
   PARKING_RESOURCE_CREATED
   PARKING_RIGHT_CLAIMED
+  PARKING_RIGHT_CLAIM_UPDATED
+  PARKING_RIGHT_AMENDMENT_SUBMITTED
+  PARKING_RIGHT_AMENDMENT_APPROVED
+  PARKING_RIGHT_AMENDMENT_REJECTED
   PARKING_RIGHT_VERIFIED
   LISTING_ACTIVATED
   LISTING_PAUSED
@@ -345,9 +382,58 @@ enum DomainAuditEventType {
   PAYMENT_FAILED
   REFUND_CREATED
   PAYOUT_REQUESTED
+  PAYOUT_METHOD_CREATED
+  PAYOUT_METHOD_DEFAULTED
+  PAYOUT_METHOD_DEACTIVATED
   PAYOUT_REVIEWED
   DISPUTE_CREATED
   DISPUTE_RESOLVED
+  ADMIN_USER_SUSPENDED
+  ADMIN_USER_UNSUSPENDED
+  ADMIN_USER_BLOCKED
+  ADMIN_USER_UNBLOCKED
+  ADMIN_USER_SESSIONS_REVOKED
+  USER_CREATED_BY_ADMIN
+  ADMIN_USER_PROFILE_UPDATED
+  ADMIN_ACCOUNT_SETUP_RESENT
+  ADMIN_NOTE_CREATED
+  ADMIN_NOTE_UPDATED
+  ADMIN_NOTE_DELETED
+  RISK_FLAG_CREATED
+  RISK_FLAG_RESOLVED
+  PARKING_RIGHT_REJECTED
+  PARKING_RIGHT_REVOKED
+  PARKING_RIGHT_DISPUTED
+  LISTING_RESUMED
+  LISTING_REPORTED
+  LISTING_REPORT_RESOLVED
+  LISTING_REPORT_DISMISSED
+  ADMIN_BOOKING_CANCELLED
+  PAYOUT_HELD
+  PAYOUT_RELEASED
+  PAYOUT_APPROVED
+  PAYOUT_REJECTED
+  PAYOUT_PAID
+  DISPUTE_REVIEW_STARTED
+  LEGAL_DOCUMENT_DRAFT_CREATED
+  LEGAL_DOCUMENT_DRAFT_UPDATED
+  LEGAL_DOCUMENT_PUBLISHED
+  LEGAL_DOCUMENT_ARCHIVED
+  CONTENT_ARTICLE_PUBLISHED
+  BROADCAST_CREATED
+  BROADCAST_SENT
+  PLATFORM_FEE_CHANGED
+  PLATFORM_FEE_CREATED
+  PLATFORM_FEE_ACTIVATED
+  PLATFORM_FEE_DEACTIVATED
+  PLATFORM_FEE_ARCHIVED
+  PARKING_RESOURCE_STATUS_CHANGED
+  EMAIL_TEMPLATE_UPDATED
+  EMAIL_CAMPAIGN_CREATED
+  EMAIL_CAMPAIGN_SENT
+  PARKING_RESOURCE_BULK_CREATED
+  PARKING_RIGHT_RECLAIMED
+  PARKING_RIGHT_CLAIM_BATCH_CREATED
 
   @@map("domain_audit_event_type")
 }
@@ -403,6 +489,165 @@ enum ReconciliationStatus {
   @@map("reconciliation_status")
 }
 
+enum LegalDocumentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("legal_document_status")
+}
+
+enum AdminSubjectType {
+  USER
+  PROPERTY
+  PARKING_RESOURCE
+  PARKING_RIGHT
+  LISTING
+  BOOKING
+  PAYOUT
+  DISPUTE
+
+  @@map("admin_subject_type")
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@map("risk_level")
+}
+
+enum ListingReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+
+  @@map("listing_report_status")
+}
+
+enum ContentArticleKind {
+  FAQ
+  HELP_ARTICLE
+
+  @@map("content_article_kind")
+}
+
+enum ContentAudience {
+  ALL
+  DRIVER
+  PROVIDER
+  MANAGER
+  GUARD
+
+  @@map("content_audience")
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("content_status")
+}
+
+enum NotificationCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  CANCELLED
+
+  @@map("notification_campaign_status")
+}
+
+enum EmailTemplateType {
+  EMAIL_VERIFICATION_OTP
+  ACCOUNT_SETUP
+  GUARD_INVITATION
+  MANAGER_INVITATION
+  PASSWORD_RESET
+  BOOKING_CONFIRMATION
+  BOOKING_CANCELLED
+  PAYMENT_SUCCESS
+  REFUND_PROCESSED
+  PAYOUT_STATUS
+  PROPERTY_APPROVED
+  PROPERTY_REJECTED
+  PARKING_RIGHT_APPROVED
+  PARKING_RIGHT_REJECTED
+  DISPUTE_UPDATE
+  BROADCAST
+
+  @@map("email_template_type")
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  SCHEDULED
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+
+  @@map("email_campaign_status")
+}
+
+enum EmailDeliveryStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+
+  @@map("email_delivery_status")
+}
+
+enum ParkingRightDocumentCategory {
+  OWNERSHIP_DOCUMENT
+  LEASE_AGREEMENT
+  OWNER_CONSENT
+  AUTHORIZATION_LETTER
+  PARKING_ALLOCATION
+  OTHER
+
+  @@map("parking_right_document_category")
+}
+
+enum ParkingRightClaimBatchStatus {
+  PENDING
+  COMPLETED
+  PARTIALLY_RESOLVED
+  CANCELLED
+
+  @@map("parking_right_claim_batch_status")
+}
+
+enum PlatformFeeScopeType {
+  GLOBAL
+  PROVIDER
+  PROPERTY
+  LISTING
+
+  @@map("platform_fee_scope_type")
+}
+
+enum PlatformFeeType {
+  PERCENTAGE
+  FIXED
+
+  @@map("platform_fee_type")
+}
+
+enum PlatformFeeRuleStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("platform_fee_rule_status")
+}
+
 model User {
   id                 String        @id @default(uuid()) @db.Uuid
   fullName           String        @map("full_name") @db.VarChar(120)
@@ -448,6 +693,9 @@ model User {
   heldParkingRights               ParkingRight[]                      @relation("ParkingRightHolder")
   grantedParkingRights            ParkingRight[]                      @relation("ParkingRightGrantor")
   verifiedParkingRights           ParkingRight[]                      @relation("ParkingRightVerifier")
+  requestedRightAmendments        ParkingRightAmendment[]             @relation("ParkingRightAmendmentRequester")
+  reviewedRightAmendments         ParkingRightAmendment[]             @relation("ParkingRightAmendmentReviewer")
+  parkingRightClaimBatches        ParkingRightClaimBatch[]            @relation("ParkingRightClaimBatchProvider")
   parkingListings                 ParkingListing[]                    @relation("ListingProvider")
   settlementListings              ParkingListing[]                    @relation("ListingSettlementRecipient")
   bookingQuotes                   BookingQuote[]                      @relation("QuoteDriver")
@@ -458,11 +706,23 @@ model User {
   bookingPayments                 Payment[]                           @relation("PaymentPayer")
   requestedRefunds                Refund[]                            @relation("RefundRequester")
   payoutRequests                  PayoutRequest[]                     @relation("PayoutProvider")
+  payoutMethods                   ProviderPayoutMethod[]
   notifications                   Notification[]
   reviewsWritten                  Review[]                            @relation("ReviewDriver")
   reviewReplies                   Review[]                            @relation("ReviewProvider")
   disputesOpened                  Dispute[]                           @relation("DisputeOpenedBy")
   disputesResolved                Dispute[]                           @relation("DisputeResolvedBy")
+  authoredAdminNotes              AdminNote[]                         @relation("AdminNoteAuthor")
+  createdRiskFlags                RiskFlag[]                          @relation("RiskFlagCreator")
+  reportedListings                ListingReport[]                     @relation("ListingReportReporter")
+  createdLegalDocuments           LegalDocument[]                     @relation("LegalDocumentCreator")
+  createdContentArticles          HelpArticle[]                       @relation("HelpArticleCreator")
+  createdNotificationCampaigns    NotificationCampaign[]              @relation("NotificationCampaignCreator")
+  createdEmailTemplates           EmailTemplate[]                     @relation("EmailTemplateCreator")
+  createdEmailCampaigns           EmailCampaign[]                     @relation("EmailCampaignCreator")
+  emailDeliveries                 EmailDelivery[]                     @relation("EmailDeliveryRecipient")
+  uploadedParkingRightDocuments   ParkingRightDocument[]              @relation("ParkingRightDocumentUploader")
+  createdPlatformFeeRules         PlatformFeeRule[]                   @relation("PlatformFeeRuleCreator")
 
   @@index([status])
   @@index([accountOrigin])
@@ -519,18 +779,24 @@ model PasswordResetToken {
 }
 
 model LegalDocument {
-  id          String            @id @default(uuid()) @db.Uuid
-  type        LegalDocumentType
-  version     String            @db.VarChar(30)
-  title       String            @db.VarChar(150)
-  contentHash String            @map("content_hash") @db.VarChar(128)
-  effectiveAt DateTime          @map("effective_at") @db.Timestamptz(6)
-  isActive    Boolean           @default(true) @map("is_active")
-  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  id               String              @id @default(uuid()) @db.Uuid
+  type             LegalDocumentType
+  version          String              @db.VarChar(30)
+  title            String              @db.VarChar(150)
+  contentHash      String              @map("content_hash") @db.VarChar(128)
+  content          String?
+  effectiveAt      DateTime            @map("effective_at") @db.Timestamptz(6)
+  isActive         Boolean             @default(true) @map("is_active")
+  status           LegalDocumentStatus @default(PUBLISHED)
+  publishedAt      DateTime?           @map("published_at") @db.Timestamptz(6)
+  createdByAdminId String?             @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  acceptances UserLegalAcceptance[]
+  acceptances    UserLegalAcceptance[]
+  createdByAdmin User?                 @relation("LegalDocumentCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
 
   @@unique([type, version])
+  @@index([type, status, effectiveAt(sort: Desc)])
   @@index([type, isActive])
   @@map("legal_documents")
 }
@@ -629,6 +895,7 @@ model Property {
   changeProposals            PropertyChangeProposal[]
   domainAuditEvents          DomainAuditEvent[]
   parkingSpots               ParkingSpot[]
+  parkingRightClaimBatches   ParkingRightClaimBatch[]
   bookings                   Booking[]
 
   @@index([createdByUserId])
@@ -855,6 +1122,7 @@ model DomainAuditEvent {
   entityType  String               @map("entity_type") @db.VarChar(80)
   entityId    String               @map("entity_id") @db.Uuid
   metadata    Json?
+  requestId   String?              @map("request_id") @db.VarChar(64)
   createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
 
   actor    User?     @relation("DomainAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
@@ -863,6 +1131,7 @@ model DomainAuditEvent {
   @@index([propertyId, createdAt(sort: Desc)])
   @@index([entityType, entityId, createdAt(sort: Desc)])
   @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([eventType, createdAt(sort: Desc)])
   @@map("domain_audit_events")
 }
 
@@ -954,22 +1223,97 @@ model ParkingRight {
   verifiedByAdminId    String?            @map("verified_by_admin_id") @db.Uuid
   verifiedAt           DateTime?          @map("verified_at") @db.Timestamptz(6)
   rejectionReason      String?            @map("rejection_reason") @db.VarChar(500)
+  version              Int                @default(1)
+  claimBatchId         String?            @map("claim_batch_id") @db.Uuid
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  parkingSpot        ParkingSpot         @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
-  holder             User                @relation("ParkingRightHolder", fields: [holderUserId], references: [id], onDelete: Restrict)
-  providerMembership PropertyProvider?   @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
-  grantedBy          User?               @relation("ParkingRightGrantor", fields: [grantedByUserId], references: [id], onDelete: Restrict)
-  verifiedByAdmin    User?               @relation("ParkingRightVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  parkingSpot        ParkingSpot             @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+  holder             User                    @relation("ParkingRightHolder", fields: [holderUserId], references: [id], onDelete: Restrict)
+  providerMembership PropertyProvider?       @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
+  grantedBy          User?                   @relation("ParkingRightGrantor", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+  verifiedByAdmin    User?                   @relation("ParkingRightVerifier", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
   listings           ParkingListing[]
   allocations        ParkingAllocation[]
   bookings           Booking[]
+  amendments         ParkingRightAmendment[]
+  documents          ParkingRightDocument[]
+  claimBatch         ParkingRightClaimBatch? @relation(fields: [claimBatchId], references: [id], onDelete: Restrict)
 
   @@index([parkingSpotId, status, validUntil])
   @@index([holderUserId, status])
   @@index([providerMembershipId, status])
+  @@index([claimBatchId, status])
   @@map("parking_rights")
+}
+
+model ParkingRightAmendment {
+  id                String                      @id @default(uuid()) @db.Uuid
+  parkingRightId    String                      @map("parking_right_id") @db.Uuid
+  requestedByUserId String                      @map("requested_by_user_id") @db.Uuid
+  reviewedByAdminId String?                     @map("reviewed_by_admin_id") @db.Uuid
+  baseRightVersion  Int                         @map("base_right_version")
+  proposedChanges   Json                        @map("proposed_changes")
+  status            ParkingRightAmendmentStatus @default(PENDING)
+  submittedAt       DateTime?                   @map("submitted_at") @db.Timestamptz(6)
+  resolvedAt        DateTime?                   @map("resolved_at") @db.Timestamptz(6)
+  reason            String?                     @db.VarChar(500)
+  createdAt         DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  parkingRight ParkingRight           @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
+  requestedBy  User                   @relation("ParkingRightAmendmentRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  reviewedBy   User?                  @relation("ParkingRightAmendmentReviewer", fields: [reviewedByAdminId], references: [id], onDelete: Restrict)
+  documents    ParkingRightDocument[]
+
+  @@index([parkingRightId, status, createdAt(sort: Desc)])
+  @@index([requestedByUserId, status, createdAt(sort: Desc)])
+  @@map("parking_right_amendments")
+}
+
+model ParkingRightClaimBatch {
+  id             String                       @id @default(uuid()) @db.Uuid
+  providerUserId String                       @map("provider_user_id") @db.Uuid
+  propertyId     String                       @map("property_id") @db.Uuid
+  rightType      ParkingRightType             @map("right_type")
+  status         ParkingRightClaimBatchStatus @default(PENDING)
+  submittedAt    DateTime                     @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  createdAt      DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  provider  User                   @relation("ParkingRightClaimBatchProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
+  property  Property               @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  rights    ParkingRight[]
+  documents ParkingRightDocument[]
+
+  @@index([providerUserId, status, createdAt(sort: Desc)])
+  @@index([propertyId, status, createdAt(sort: Desc)])
+  @@map("parking_right_claim_batches")
+}
+
+model ParkingRightDocument {
+  id               String                       @id @default(uuid()) @db.Uuid
+  parkingRightId   String?                      @map("parking_right_id") @db.Uuid
+  amendmentId      String?                      @map("amendment_id") @db.Uuid
+  claimBatchId     String?                      @map("claim_batch_id") @db.Uuid
+  category         ParkingRightDocumentCategory
+  originalName     String                       @map("original_name") @db.VarChar(255)
+  mimeType         String                       @map("mime_type") @db.VarChar(100)
+  sizeBytes        Int                          @map("size_bytes")
+  storageKey       String                       @unique @map("storage_key")
+  secureUrl        String                       @map("secure_url")
+  uploadedByUserId String                       @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  parkingRight ParkingRight?           @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
+  amendment    ParkingRightAmendment?  @relation(fields: [amendmentId], references: [id], onDelete: Restrict)
+  claimBatch   ParkingRightClaimBatch? @relation(fields: [claimBatchId], references: [id], onDelete: Restrict)
+  uploadedBy   User                    @relation("ParkingRightDocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([parkingRightId, createdAt])
+  @@index([amendmentId, createdAt])
+  @@index([claimBatchId, createdAt])
+  @@map("parking_right_documents")
 }
 
 model ParkingListing {
@@ -1002,6 +1346,7 @@ model ParkingListing {
   quotes                  BookingQuote[]
   holds                   ReservationHold[]
   bookings                Booking[]
+  reports                 ListingReport[]
 
   @@index([parkingSpotId, status])
   @@index([providerUserId, status])
@@ -1092,29 +1437,32 @@ model WalletAccount {
 }
 
 model BookingQuote {
-  id               String   @id @default(uuid()) @db.Uuid
-  driverUserId     String   @map("driver_user_id") @db.Uuid
-  listingId        String   @map("listing_id") @db.Uuid
-  vehicleId        String   @map("vehicle_id") @db.Uuid
-  parkingSpotId    String   @map("parking_spot_id") @db.Uuid
-  startAt          DateTime @map("start_at") @db.Timestamptz(6)
-  endAt            DateTime @map("end_at") @db.Timestamptz(6)
-  durationMinutes  Int      @map("duration_minutes")
-  baseAmountPaisa  BigInt   @map("base_amount_paisa")
-  platformFeePaisa BigInt   @map("platform_fee_paisa")
-  depositPaisa     BigInt   @map("deposit_paisa")
-  totalAmountPaisa BigInt   @map("total_amount_paisa")
-  expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                String   @id @default(uuid()) @db.Uuid
+  driverUserId      String   @map("driver_user_id") @db.Uuid
+  listingId         String   @map("listing_id") @db.Uuid
+  vehicleId         String   @map("vehicle_id") @db.Uuid
+  parkingSpotId     String   @map("parking_spot_id") @db.Uuid
+  startAt           DateTime @map("start_at") @db.Timestamptz(6)
+  endAt             DateTime @map("end_at") @db.Timestamptz(6)
+  durationMinutes   Int      @map("duration_minutes")
+  baseAmountPaisa   BigInt   @map("base_amount_paisa")
+  platformFeePaisa  BigInt   @map("platform_fee_paisa")
+  platformFeeRuleId String?  @map("platform_fee_rule_id") @db.Uuid
+  depositPaisa      BigInt   @map("deposit_paisa")
+  totalAmountPaisa  BigInt   @map("total_amount_paisa")
+  expiresAt         DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  driver      User              @relation("QuoteDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
-  listing     ParkingListing    @relation(fields: [listingId], references: [id], onDelete: Restrict)
-  vehicle     Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-  parkingSpot ParkingSpot       @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
-  holds       ReservationHold[]
+  driver          User              @relation("QuoteDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
+  listing         ParkingListing    @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  vehicle         Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  parkingSpot     ParkingSpot       @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+  platformFeeRule PlatformFeeRule?  @relation(fields: [platformFeeRuleId], references: [id], onDelete: Restrict)
+  holds           ReservationHold[]
 
   @@index([driverUserId, createdAt(sort: Desc)])
   @@index([listingId, expiresAt])
+  @@index([platformFeeRuleId])
   @@map("booking_quotes")
 }
 
@@ -1281,25 +1629,57 @@ model Refund {
 }
 
 model PayoutRequest {
-  id              String       @id @default(uuid()) @db.Uuid
-  providerUserId  String       @map("provider_user_id") @db.Uuid
-  walletAccountId String       @map("wallet_account_id") @db.Uuid
-  amountPaisa     BigInt       @map("amount_paisa")
-  status          PayoutStatus @default(PENDING)
-  idempotencyKey  String       @unique @map("idempotency_key") @db.VarChar(100)
-  reviewedById    String?      @map("reviewed_by_id") @db.Uuid
-  reviewNote      String?      @map("review_note") @db.VarChar(500)
-  reviewedAt      DateTime?    @map("reviewed_at") @db.Timestamptz(6)
-  paidAt          DateTime?    @map("paid_at") @db.Timestamptz(6)
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  String       @id @default(uuid()) @db.Uuid
+  providerUserId      String       @map("provider_user_id") @db.Uuid
+  walletAccountId     String       @map("wallet_account_id") @db.Uuid
+  payoutMethodId      String?      @map("payout_method_id") @db.Uuid
+  amountPaisa         BigInt       @map("amount_paisa")
+  status              PayoutStatus @default(PENDING)
+  idempotencyKey      String       @unique @map("idempotency_key") @db.VarChar(100)
+  reviewedById        String?      @map("reviewed_by_id") @db.Uuid
+  reviewNote          String?      @map("review_note") @db.VarChar(500)
+  reviewedAt          DateTime?    @map("reviewed_at") @db.Timestamptz(6)
+  paidAt              DateTime?    @map("paid_at") @db.Timestamptz(6)
+  destinationSnapshot Json?        @map("destination_snapshot")
+  externalReference   String?      @map("external_reference") @db.VarChar(120)
+  heldAt              DateTime?    @map("held_at") @db.Timestamptz(6)
+  holdReason          String?      @map("hold_reason") @db.VarChar(500)
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  provider      User          @relation("PayoutProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
-  walletAccount WalletAccount @relation(fields: [walletAccountId], references: [id], onDelete: Restrict)
+  provider      User                  @relation("PayoutProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
+  walletAccount WalletAccount         @relation(fields: [walletAccountId], references: [id], onDelete: Restrict)
+  payoutMethod  ProviderPayoutMethod? @relation(fields: [payoutMethodId], references: [id], onDelete: Restrict)
 
   @@index([providerUserId, status, createdAt(sort: Desc)])
+  @@index([payoutMethodId])
   @@index([status, createdAt])
   @@map("payout_requests")
+}
+
+model ProviderPayoutMethod {
+  id                          String             @id @default(uuid()) @db.Uuid
+  providerUserId              String             @map("provider_user_id") @db.Uuid
+  type                        PayoutMethodType
+  accountHolderName           String             @map("account_holder_name") @db.VarChar(120)
+  accountIdentifierCiphertext String             @map("account_identifier_ciphertext")
+  accountIdentifierIv         String             @map("account_identifier_iv") @db.VarChar(64)
+  accountIdentifierTag        String             @map("account_identifier_tag") @db.VarChar(64)
+  maskedAccountIdentifier     String             @map("masked_account_identifier") @db.VarChar(80)
+  bankName                    String?            @map("bank_name") @db.VarChar(120)
+  branchName                  String?            @map("branch_name") @db.VarChar(120)
+  routingNumber               String?            @map("routing_number") @db.VarChar(40)
+  isDefault                   Boolean            @default(false) @map("is_default")
+  status                      PayoutMethodStatus @default(ACTIVE)
+  createdAt                   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  provider       User            @relation(fields: [providerUserId], references: [id], onDelete: Restrict)
+  payoutRequests PayoutRequest[]
+
+  @@index([providerUserId, status])
+  @@index([providerUserId, isDefault])
+  @@map("provider_payout_methods")
 }
 
 model Notification {
@@ -1353,6 +1733,9 @@ model Dispute {
   resolution       String?         @db.VarChar(3000)
   resolvedByUserId String?         @map("resolved_by_user_id") @db.Uuid
   resolvedAt       DateTime?       @map("resolved_at") @db.Timestamptz(6)
+  reviewStartedAt  DateTime?       @map("review_started_at") @db.Timestamptz(6)
+  slaDueAt         DateTime?       @map("sla_due_at") @db.Timestamptz(6)
+  escalatedAt      DateTime?       @map("escalated_at") @db.Timestamptz(6)
   createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -1416,4 +1799,228 @@ model WalletReconciliation {
   @@index([walletAccountId, reconciledAt(sort: Desc)])
   @@index([status])
   @@map("wallet_reconciliations")
+}
+
+model AdminNote {
+  id            String           @id @default(uuid()) @db.Uuid
+  authorAdminId String           @map("author_admin_id") @db.Uuid
+  subjectType   AdminSubjectType @map("subject_type")
+  subjectId     String           @map("subject_id") @db.Uuid
+  body          String           @db.VarChar(3000)
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  authorAdmin User @relation("AdminNoteAuthor", fields: [authorAdminId], references: [id], onDelete: Restrict)
+
+  @@index([subjectType, subjectId, createdAt(sort: Desc)])
+  @@index([authorAdminId, createdAt(sort: Desc)])
+  @@map("admin_notes")
+}
+
+model RiskFlag {
+  id               String           @id @default(uuid()) @db.Uuid
+  targetType       AdminSubjectType @map("target_type")
+  targetId         String           @map("target_id") @db.Uuid
+  level            RiskLevel
+  reason           String           @db.VarChar(1000)
+  createdByAdminId String           @map("created_by_admin_id") @db.Uuid
+  resolvedAt       DateTime?        @map("resolved_at") @db.Timestamptz(6)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  createdByAdmin User @relation("RiskFlagCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId, resolvedAt, createdAt(sort: Desc)])
+  @@index([level, resolvedAt, createdAt(sort: Desc)])
+  @@map("risk_flags")
+}
+
+model ListingReport {
+  id             String              @id @default(uuid()) @db.Uuid
+  listingId      String              @map("listing_id") @db.Uuid
+  reporterUserId String?             @map("reporter_user_id") @db.Uuid
+  reason         String              @db.VarChar(500)
+  details        String?             @db.VarChar(2000)
+  status         ListingReportStatus @default(OPEN)
+  resolvedAt     DateTime?           @map("resolved_at") @db.Timestamptz(6)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  listing  ParkingListing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  reporter User?          @relation("ListingReportReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([listingId, status])
+  @@map("listing_reports")
+}
+
+model ContentCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(120)
+  slug      String   @unique @db.VarChar(140)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  articles HelpArticle[]
+
+  @@index([sortOrder, name])
+  @@map("content_categories")
+}
+
+model HelpArticle {
+  id               String             @id @default(uuid()) @db.Uuid
+  categoryId       String?            @map("category_id") @db.Uuid
+  kind             ContentArticleKind
+  title            String             @db.VarChar(180)
+  slug             String             @unique @db.VarChar(200)
+  body             String
+  audience         ContentAudience    @default(ALL)
+  status           ContentStatus      @default(DRAFT)
+  sortOrder        Int                @default(0) @map("sort_order")
+  publishedAt      DateTime?          @map("published_at") @db.Timestamptz(6)
+  createdByAdminId String             @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  category       ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdByAdmin User             @relation("HelpArticleCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+
+  @@index([kind, status, audience, sortOrder])
+  @@index([categoryId, status, sortOrder])
+  @@map("help_articles")
+}
+
+model NotificationCampaign {
+  id               String                     @id @default(uuid()) @db.Uuid
+  title            String                     @db.VarChar(150)
+  message          String                     @db.VarChar(500)
+  audience         ContentAudience
+  status           NotificationCampaignStatus @default(DRAFT)
+  scheduledAt      DateTime?                  @map("scheduled_at") @db.Timestamptz(6)
+  sentAt           DateTime?                  @map("sent_at") @db.Timestamptz(6)
+  createdByAdminId String                     @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdByAdmin User @relation("NotificationCampaignCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+
+  @@index([status, scheduledAt, createdAt(sort: Desc)])
+  @@index([audience, status])
+  @@map("notification_campaigns")
+}
+
+model EmailTemplate {
+  id                   String            @id @default(uuid()) @db.Uuid
+  type                 EmailTemplateType
+  name                 String            @db.VarChar(150)
+  version              Int               @default(1)
+  subject              String            @db.VarChar(200)
+  preheader            String?           @db.VarChar(250)
+  htmlBody             String            @map("html_body")
+  textBody             String            @map("text_body")
+  allowedVariables     String[]          @default([]) @map("allowed_variables")
+  status               ContentStatus     @default(DRAFT)
+  supersedesTemplateId String?           @map("supersedes_template_id") @db.Uuid
+  createdByAdminId     String            @map("created_by_admin_id") @db.Uuid
+  publishedAt          DateTime?         @map("published_at") @db.Timestamptz(6)
+  archivedAt           DateTime?         @map("archived_at") @db.Timestamptz(6)
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdByAdmin User            @relation("EmailTemplateCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  supersedes     EmailTemplate?  @relation("EmailTemplateVersion", fields: [supersedesTemplateId], references: [id], onDelete: Restrict)
+  replacements   EmailTemplate[] @relation("EmailTemplateVersion")
+  campaigns      EmailCampaign[]
+  deliveries     EmailDelivery[]
+
+  @@unique([type, version])
+  @@index([type, status, version(sort: Desc)])
+  @@index([supersedesTemplateId])
+  @@map("email_templates")
+}
+
+model EmailCampaign {
+  id                      String              @id @default(uuid()) @db.Uuid
+  templateId              String              @map("template_id") @db.Uuid
+  title                   String              @db.VarChar(150)
+  audience                ContentAudience
+  status                  EmailCampaignStatus @default(DRAFT)
+  subjectOverride         String?             @map("subject_override") @db.VarChar(200)
+  htmlBodyOverride        String?             @map("html_body_override")
+  textBodyOverride        String?             @map("text_body_override")
+  estimatedRecipientCount Int                 @default(0) @map("estimated_recipient_count")
+  scheduledAt             DateTime?           @map("scheduled_at") @db.Timestamptz(6)
+  processingAt            DateTime?           @map("processing_at") @db.Timestamptz(6)
+  sentAt                  DateTime?           @map("sent_at") @db.Timestamptz(6)
+  failedAt                DateTime?           @map("failed_at") @db.Timestamptz(6)
+  cancelledAt             DateTime?           @map("cancelled_at") @db.Timestamptz(6)
+  createdByAdminId        String              @map("created_by_admin_id") @db.Uuid
+  createdAt               DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  template       EmailTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  createdByAdmin User            @relation("EmailCampaignCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  deliveries     EmailDelivery[]
+
+  @@index([status, scheduledAt, createdAt(sort: Desc)])
+  @@index([audience, status])
+  @@map("email_campaigns")
+}
+
+model EmailDelivery {
+  id              String              @id @default(uuid()) @db.Uuid
+  campaignId      String?             @map("campaign_id") @db.Uuid
+  templateId      String              @map("template_id") @db.Uuid
+  recipientUserId String?             @map("recipient_user_id") @db.Uuid
+  recipientEmail  String              @map("recipient_email") @db.Citext
+  subject         String              @db.VarChar(200)
+  htmlBody        String              @map("html_body")
+  textBody        String              @map("text_body")
+  status          EmailDeliveryStatus @default(QUEUED)
+  attemptCount    Int                 @default(0) @map("attempt_count")
+  providerMessage String?             @map("provider_message") @db.VarChar(500)
+  availableAt     DateTime            @default(now()) @map("available_at") @db.Timestamptz(6)
+  processingAt    DateTime?           @map("processing_at") @db.Timestamptz(6)
+  sentAt          DateTime?           @map("sent_at") @db.Timestamptz(6)
+  failedAt        DateTime?           @map("failed_at") @db.Timestamptz(6)
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  campaign  EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  template  EmailTemplate  @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  recipient User?          @relation("EmailDeliveryRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@unique([campaignId, recipientUserId])
+  @@index([status, availableAt, createdAt])
+  @@index([recipientEmail, createdAt(sort: Desc)])
+  @@map("email_deliveries")
+}
+
+model PlatformFeeRule {
+  id               String                @id @default(uuid()) @db.Uuid
+  scopeType        PlatformFeeScopeType  @map("scope_type")
+  scopeId          String?               @map("scope_id") @db.Uuid
+  feeType          PlatformFeeType       @map("fee_type")
+  percentageBps    Int?                  @map("percentage_bps")
+  fixedAmountPaisa BigInt?               @map("fixed_amount_paisa")
+  effectiveFrom    DateTime              @map("effective_from") @db.Timestamptz(6)
+  effectiveUntil   DateTime?             @map("effective_until") @db.Timestamptz(6)
+  status           PlatformFeeRuleStatus @default(DRAFT)
+  reason           String                @db.VarChar(500)
+  version          Int                   @default(1)
+  supersedesRuleId String?               @map("supersedes_rule_id") @db.Uuid
+  createdByAdminId String                @map("created_by_admin_id") @db.Uuid
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  activatedAt      DateTime?             @map("activated_at") @db.Timestamptz(6)
+  archivedAt       DateTime?             @map("archived_at") @db.Timestamptz(6)
+
+  createdByAdmin User              @relation("PlatformFeeRuleCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  supersedes     PlatformFeeRule?  @relation("PlatformFeeRuleVersion", fields: [supersedesRuleId], references: [id], onDelete: Restrict)
+  replacements   PlatformFeeRule[] @relation("PlatformFeeRuleVersion")
+  quotes         BookingQuote[]
+
+  @@index([scopeType, scopeId, status, effectiveFrom(sort: Desc)])
+  @@index([status, effectiveFrom, effectiveUntil])
+  @@index([supersedesRuleId])
+  @@map("platform_fee_rules")
 }

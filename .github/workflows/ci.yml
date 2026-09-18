@@ -1,35 +1,300 @@
-name: CI Pipeline
+name: ParkEase BD CI
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [develop, main]
   pull_request:
-    branches: [ develop, main ]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
 
 jobs:
-  test:
-    name: Run Tests
+  whitespace:
+    name: Repository Whitespace
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Check for whitespace errors
+        run: git diff --check
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+  backend-quality:
+    name: Backend Quality & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://parkease:parkease_ci_password@localhost:5432/parkease_ci?schema=public
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
-          python-version: '3.11'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+      - name: Check Prisma schema formatting
+        run: |
+          npx prisma format
+          git diff --exit-code -- prisma/schema.prisma
+      - name: Validate Prisma schema
+        run: npx prisma validate
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Check backend formatting
+        run: npm run format:check
+      - name: Check backend types
+        run: npm run typecheck
+      - name: Build backend
+        run: npm run build
 
-      # TODO Week 6: Replace this with actual test commands
-      - name: Placeholder - tests will be added in Week 6
-        run: echo "Tests will run here — add pytest commands in Week 6"
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/test?schema=public
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Run backend unit tests
+        run: npm test
+
+  backend-integration:
+    name: Backend Integration Tests
+    needs: backend-quality
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: parkease
+          POSTGRES_PASSWORD: parkease_ci_password
+          POSTGRES_DB: parkease_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U parkease -d parkease_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://parkease:parkease_ci_password@localhost:5432/parkease_ci?schema=public
+      TEST_DATABASE_URL: postgresql://parkease:parkease_ci_password@localhost:5432/parkease_ci?schema=public
+      REDIS_URL: redis://localhost:6379
+      CORS_ORIGIN: http://localhost:3000
+      API_PUBLIC_URL: http://localhost:4000
+      PASSWORD_RESET_URL: http://localhost:3000/reset-password
+      ENABLE_API_DOCS: "false"
+      EXPOSE_DEVELOPMENT_AUTH_CODES: "true"
+      JWT_ACCESS_SECRET: ci-access-secret-only-not-for-production-0001
+      JWT_REFRESH_SECRET: ci-refresh-secret-only-not-for-production-0002
+      VERIFICATION_CODE_SECRET: ci-verification-secret-only-not-for-production-0003
+      AUTH_METADATA_HASH_SECRET: ci-metadata-secret-only-not-for-production-0004
+      PROPERTY_ADDRESS_FINGERPRINT_SECRET: ci-property-secret-only-not-for-production-0005
+      DATA_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+      - name: Guard the disposable test database
+        shell: bash
+        run: |
+          case "$TEST_DATABASE_URL" in
+            *localhost*/*parkease_ci*) ;;
+            *) echo "Refusing to migrate a database that is not the disposable CI database." >&2; exit 1 ;;
+          esac
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Apply and verify migrations
+        run: |
+          npx prisma migrate deploy
+          npx prisma migrate status
+      - name: Run backend integration tests
+        run: npm run test:integration
+
+  frontend-quality:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Check frontend types
+        run: npm run typecheck
+      - name: Lint frontend
+        run: npm run lint
+
+  frontend-build:
+    name: Frontend Production Build
+    needs: frontend-quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_BASE_URL: https://api.parkease.invalid/api/v1
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+
+  dependency-security:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high
 
   sast:
-    name: Security Scan (SAST)
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+      - name: Analyze JavaScript and TypeScript
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
+
+  secret-scan:
+    name: Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check out full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan repository with Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
 
-      # TODO Week 6: Replace with Bandit SAST scan
-      - name: Placeholder - SAST will be added in Week 6
-        run: echo "SAST scan will run here — add Bandit in Week 6"
+  ci-success:
+    name: CI Success
+    if: always()
+    needs:
+      - whitespace
+      - backend-quality
+      - backend-unit-tests
+      - backend-integration
+      - frontend-quality
+      - frontend-build
+      - dependency-security
+      - sast
+      - secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every CI job to succeed
+        shell: bash
+        run: |
+          results=(
+            "${{ needs.whitespace.result }}"
+            "${{ needs.backend-quality.result }}"
+            "${{ needs.backend-unit-tests.result }}"
+            "${{ needs.backend-integration.result }}"
+            "${{ needs.frontend-quality.result }}"
+            "${{ needs.frontend-build.result }}"
+            "${{ needs.dependency-security.result }}"
+            "${{ needs.sast.result }}"
+            "${{ needs.secret-scan.result }}"
+          )
+          for result in "${results[@]}"; do
+            if [ "$result" != "success" ]; then
+              echo "A required CI job did not succeed." >&2
+              exit 1
+            fi
+          done
+          echo "All required ParkEase BD CI jobs succeeded."

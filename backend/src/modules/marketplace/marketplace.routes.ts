@@ -4,6 +4,7 @@ import { authenticate } from "../../common/middleware/auth.js";
 import { requireAccountReady } from "../../common/middleware/require-account-ready.js";
 import { requireRole } from "../../common/middleware/require-role.js";
 import { sensitiveAccountRateLimit } from "../../common/middleware/rate-limit.js";
+import { rightDocumentUpload } from "../../common/uploads/right-document-upload.middleware.js";
 import { validate } from "../../common/middleware/validate.js";
 import * as controller from "./marketplace.controller.js";
 import * as schema from "./marketplace.schema.js";
@@ -50,6 +51,7 @@ marketplaceRouter.use(authenticate, requireAccountReady);
  *   delete: { tags: [Parking Resources], summary: Soft-delete parking resource, security: [{ accessCookie: [] }], responses: { 200: { description: Resource deleted. } } }
  */
 marketplaceRouter.post("/provider/properties/:propertyId/parking-resources", providerOrManager, validate(schema.createResourceSchema), controller.createResource);
+marketplaceRouter.post("/provider/properties/:propertyId/parking-resources/bulk", providerOrManager, validate(schema.createBulkResourcesSchema), controller.createBulkResources);
 marketplaceRouter.get("/provider/properties/:propertyId/parking-resources", providerOrManager, validate(schema.propertyResourceParamsSchema), controller.listResources);
 marketplaceRouter.get("/provider/parking-resources/:resourceId", providerOrManager, validate(schema.resourceParamsSchema), controller.getResource);
 marketplaceRouter.patch("/provider/parking-resources/:resourceId", providerOrManager, validate(schema.updateResourceSchema), controller.updateResource);
@@ -63,14 +65,35 @@ marketplaceRouter.delete("/provider/parking-resources/:resourceId", providerOrMa
  *   get: { tags: [Parking Rights], summary: List accessible parking rights, security: [{ accessCookie: [] }], responses: { 200: { description: Parking-right list. } } }
  * /api/v1/admin/parking-rights/pending:
  *   get: { tags: [Parking Rights], summary: List pending rights for Admin verification, security: [{ accessCookie: [] }], responses: { 200: { description: Pending claims. } } }
+ * /api/v1/admin/parking-rights:
+ *   get: { tags: [Parking Rights], summary: Search all parking rights for Admin operations, security: [{ accessCookie: [] }], responses: { 200: { description: Paginated parking rights. } } }
  * /api/v1/admin/parking-rights/{rightId}/verification:
  *   patch: { tags: [Parking Rights], summary: Verify, reject, dispute, or revoke a right, security: [{ accessCookie: [] }], responses: { 200: { description: Right updated. } } }
  */
 marketplaceRouter.post("/provider/parking-resources/:resourceId/rights/claims", providerOrManager, validate(schema.claimRightSchema), controller.claimRight);
+marketplaceRouter.post("/provider/properties/:propertyId/parking-right-claim-batches", providerOrManager, validate(schema.createRightClaimBatchSchema), controller.createRightClaimBatch);
+marketplaceRouter.get("/provider/parking-right-claim-batches", providerOrManager, controller.listProviderRightClaimBatches);
 marketplaceRouter.get("/provider/parking-rights", providerOrManager, controller.listRights);
 marketplaceRouter.get("/provider/parking-rights/:rightId", providerOrManager, validate(schema.rightParamsSchema), controller.getRight);
+marketplaceRouter.patch("/provider/parking-rights/:rightId", providerOrManager, validate(schema.updatePendingRightSchema), controller.updatePendingRight);
+marketplaceRouter.post("/provider/parking-rights/:rightId/amendments", providerOrManager, validate(schema.createRightAmendmentSchema), controller.createRightAmendment);
+marketplaceRouter.post("/provider/parking-rights/:rightId/documents", providerOrManager, rightDocumentUpload, validate(schema.rightDocumentUploadByRightSchema), controller.uploadRightDocuments);
+marketplaceRouter.get("/provider/parking-rights/:rightId/documents", providerOrManager, validate(schema.rightParamsSchema), controller.listRightDocuments);
+marketplaceRouter.get("/provider/parking-rights/:rightId/amendments", providerOrManager, validate(schema.rightParamsSchema), controller.listRightAmendments);
+marketplaceRouter.post("/provider/parking-right-amendments/:amendmentId/cancel", providerOrManager, validate(schema.rightAmendmentParamsSchema), controller.cancelRightAmendment);
+marketplaceRouter.post("/provider/parking-right-amendments/:amendmentId/documents", providerOrManager, rightDocumentUpload, validate(schema.rightDocumentUploadByAmendmentSchema), controller.uploadAmendmentDocuments);
+marketplaceRouter.get("/provider/parking-right-amendments/:amendmentId/documents", providerOrManager, validate(schema.rightAmendmentParamsSchema), controller.listAmendmentDocuments);
+marketplaceRouter.post("/provider/parking-right-claim-batches/:batchId/documents", providerOrManager, rightDocumentUpload, validate(schema.rightDocumentUploadByBatchSchema), controller.uploadBatchDocuments);
+marketplaceRouter.get("/provider/parking-right-claim-batches/:batchId/documents", providerOrManager, validate(schema.rightClaimBatchParamsSchema), controller.listBatchDocuments);
+marketplaceRouter.delete("/provider/parking-right-documents/:documentId", providerOrManager, sensitiveAccountRateLimit, validate(schema.rightDocumentParamsSchema), controller.deleteRightDocument);
+marketplaceRouter.get("/parking-right-documents/:documentId/download", validate(schema.rightDocumentParamsSchema), controller.downloadRightDocument);
+marketplaceRouter.get("/admin/parking-rights", requireRole(UserRoleType.ADMIN), validate(schema.adminParkingRightQuerySchema), controller.listAdminParkingRights);
 marketplaceRouter.get("/admin/parking-rights/pending", requireRole(UserRoleType.ADMIN), controller.listPendingRights);
 marketplaceRouter.patch("/admin/parking-rights/:rightId/verification", requireRole(UserRoleType.ADMIN), validate(schema.verifyRightSchema), controller.verifyRight);
+marketplaceRouter.get("/admin/parking-right-amendments", requireRole(UserRoleType.ADMIN), validate(schema.adminRightAmendmentQuerySchema), controller.listAdminRightAmendments);
+marketplaceRouter.patch("/admin/parking-right-amendments/:amendmentId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.reviewRightAmendmentSchema), controller.reviewRightAmendment);
+marketplaceRouter.get("/admin/parking-right-claim-batches", requireRole(UserRoleType.ADMIN), validate(schema.rightClaimBatchQuerySchema), controller.listAdminRightClaimBatches);
+marketplaceRouter.patch("/admin/parking-right-claim-batches/:batchId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.reviewRightClaimBatchSchema), controller.reviewRightClaimBatch);
 
 /**
  * @openapi
@@ -97,6 +120,8 @@ marketplaceRouter.delete("/provider/listings/:listingId", providerOrManager, val
 marketplaceRouter.get("/admin/listings", requireRole(UserRoleType.ADMIN), validate(schema.adminListingQuerySchema), controller.listAdminListings);
 marketplaceRouter.get("/admin/listings/:listingId", requireRole(UserRoleType.ADMIN), validate(schema.listingParamsSchema), controller.getAdminListing);
 marketplaceRouter.post("/admin/listings/:listingId/suspend", requireRole(UserRoleType.ADMIN), validate(schema.adminListingSuspensionSchema), controller.suspendListing);
+marketplaceRouter.post("/admin/listings/:listingId/resume", requireRole(UserRoleType.ADMIN), validate(schema.adminListingSuspensionSchema), controller.resumeListing);
+marketplaceRouter.post("/listings/:listingId/reports", validate(schema.listingReportSchema), controller.reportListing);
 
 /**
  * @openapi
@@ -165,6 +190,10 @@ marketplaceRouter.get("/wallet", controller.getWallet);
 marketplaceRouter.get("/wallet/transactions", controller.listWalletTransactions);
 marketplaceRouter.get("/provider/earnings/summary", providerOrManager, controller.earningsSummary);
 marketplaceRouter.get("/provider/earnings/transactions", providerOrManager, controller.listEarningsTransactions);
+marketplaceRouter.get("/provider/payout-methods", requireRole(UserRoleType.PROVIDER), controller.listPayoutMethods);
+marketplaceRouter.post("/provider/payout-methods", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutMethodSchema), controller.createPayoutMethod);
+marketplaceRouter.post("/provider/payout-methods/:payoutMethodId/default", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.setDefaultPayoutMethod);
+marketplaceRouter.post("/provider/payout-methods/:payoutMethodId/deactivate", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.deactivatePayoutMethod);
 marketplaceRouter.post("/payments/:paymentId/refunds", requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.refundSchema), controller.createRefund);
 marketplaceRouter.get("/refunds", requireRole(UserRoleType.DRIVER), validate(schema.driverRefundQuerySchema), controller.listDriverRefunds);
 marketplaceRouter.get("/refunds/:refundId", requireRole(UserRoleType.DRIVER), validate(schema.refundParamsSchema), controller.getDriverRefund);
@@ -209,7 +238,7 @@ marketplaceRouter.get("/provider/disputes/:disputeId", providerOrManager, valida
  *   patch: { tags: [Disputes], summary: Resolve or reject a booking dispute, security: [{ accessCookie: [] }], responses: { 200: { description: Dispute resolved and user notified. } } }
  */
 marketplaceRouter.get("/admin/disputes", requireRole(UserRoleType.ADMIN), validate(schema.adminDisputeQuerySchema), controller.listDisputes);
-marketplaceRouter.patch("/admin/disputes/:disputeId", requireRole(UserRoleType.ADMIN), validate(schema.resolveDisputeSchema), controller.resolveDispute);
+marketplaceRouter.patch("/admin/disputes/:disputeId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.resolveDisputeSchema), controller.resolveDispute);
 
 /**
  * @openapi

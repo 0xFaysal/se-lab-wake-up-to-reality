@@ -1,5 +1,6 @@
 import {
   BuildingManagerAssignmentStatus,
+  BookingStatus,
   DomainAuditEventType,
   Prisma,
   PropertyChangeProposalStatus,
@@ -68,10 +69,24 @@ export async function getAdminProperty(propertyId: string) {
     await adminPropertyRepository.findAdminPropertyById(propertyId);
   if (!property) throw propertyErrors.notFound();
   try {
-    return toAdminPropertyDetail(
+    const detail = toAdminPropertyDetail(
       property,
       decryptPropertySensitiveData(property),
     );
+    const [riskFlags, adminNotes, auditTimeline, duplicateCandidates, recentBookings, governanceHistory, resources, rights, listings, guards, buildingManagers] = await Promise.all([
+      prisma.riskFlag.findMany({ where: { targetType: "PROPERTY", targetId: propertyId }, orderBy: { createdAt: "desc" }, include: { createdByAdmin: { select: { id: true, fullName: true } } } }),
+      prisma.adminNote.findMany({ where: { subjectType: "PROPERTY", subjectId: propertyId }, orderBy: { createdAt: "desc" }, include: { authorAdmin: { select: { id: true, fullName: true } } } }),
+      prisma.domainAuditEvent.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, eventType: true, entityType: true, entityId: true, requestId: true, metadata: true, createdAt: true, actor: { select: { id: true, fullName: true } } } }),
+      prisma.property.findMany({ where: { id: { not: propertyId }, deletedAt: null, canonicalPropertyId: null, OR: [ ...(property.addressFingerprint ? [{ addressFingerprint: property.addressFingerprint }] : []), { normalizedName: property.normalizedName, publicArea: property.publicArea } ] }, take: 20, select: { id: true, name: true, publicArea: true, approximateAddress: true, verificationStatus: true, status: true, version: true, createdAt: true } }),
+      prisma.booking.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, bookingCode: true, status: true, startAt: true, scheduledEndAt: true, driver: { select: { id: true, fullName: true } }, provider: { select: { id: true, fullName: true } } } }),
+      prisma.propertyChangeProposal.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 50, include: { proposedBy: { select: { id: true, fullName: true } }, votes: { select: { decision: true, reason: true, createdAt: true, voter: { select: { id: true, fullName: true } } } } } }),
+      prisma.parkingSpot.findMany({ where: { propertyId, deletedAt: null }, orderBy: { createdAt: "desc" }, select: { id: true, displayName: true, spotCode: true, resourceType: true, floor: true, zone: true, capacity: true, status: true, supportedVehicleTypes: true, _count: { select: { parkingRights: true, listings: true, bookings: true } } } }),
+      prisma.parkingRight.findMany({ where: { parkingSpot: { propertyId } }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, rightType: true, quantity: true, status: true, canUse: true, canList: true, canSetPrice: true, canManageBookings: true, validFrom: true, validUntil: true, createdAt: true, holder: { select: { id: true, fullName: true } }, parkingSpot: { select: { id: true, displayName: true, spotCode: true } } } }),
+      prisma.parkingListing.findMany({ where: { parkingSpot: { propertyId } }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, title: true, status: true, pricePerHourPaisa: true, createdAt: true, provider: { select: { id: true, fullName: true } }, parkingSpot: { select: { id: true, displayName: true, spotCode: true } } } }),
+      prisma.propertyGuardMembership.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 100, select: { id: true, status: true, invitedAt: true, joinedAt: true, endedAt: true, guard: { select: { id: true, fullName: true, email: true, phone: true, status: true } }, assignments: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, status: true, shiftStart: true, shiftEnd: true, assignedAt: true, endedAt: true } } } }),
+      prisma.propertyBuildingManagerAssignment.findMany({ where: { propertyId }, orderBy: { createdAt: "desc" }, take: 50, select: { id: true, status: true, nominatedAt: true, activatedAt: true, endedAt: true, candidate: { select: { id: true, fullName: true, email: true, phone: true, status: true } }, nominatedBy: { select: { id: true, fullName: true } }, votes: { select: { decision: true, reason: true, createdAt: true, voter: { select: { id: true, fullName: true } } } } } }),
+    ]);
+    return { ...detail, riskFlags, adminNotes, auditTimeline, duplicateCandidates, recentBookings, governanceHistory, resources, rights, listings: listings.map((listing) => ({ ...listing, pricePerHourPaisa: Number(listing.pricePerHourPaisa) })), guards, buildingManagers };
   } catch (error) {
     throwAdminDecryptionFailure(error, propertyId);
   }
@@ -112,6 +127,7 @@ export async function verifyProperty(
   adminUserId: string,
   propertyId: string,
   input: VerifyAdminPropertyInput,
+  requestId?: string,
 ) {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -192,6 +208,21 @@ export async function verifyProperty(
         });
       }
 
+      await createDomainAuditEvent(tx, {
+        eventType: input.decision === "APPROVE"
+          ? DomainAuditEventType.PROPERTY_APPROVED
+          : DomainAuditEventType.PROPERTY_REJECTED,
+        actorUserId: adminUserId,
+        propertyId,
+        entityType: "Property",
+        entityId: propertyId,
+        metadata: {
+          decision: input.decision,
+          reason: input.decision === "REJECT" ? input.reason : null,
+        },
+        requestId,
+      });
+
       const result = await adminPropertyRepository.findAdminPropertyById(
         propertyId,
         tx,
@@ -207,6 +238,7 @@ export async function verifyProperty(
 export async function mergeDuplicateProperties(
   adminUserId: string,
   input: MergeAdminPropertiesInput,
+  requestId?: string,
 ) {
   if (input.canonicalPropertyId === input.duplicatePropertyId) {
     throw adminPropertyErrors.mergeConflict(
@@ -327,6 +359,7 @@ export async function mergeDuplicateProperties(
       entityType: "Property",
       entityId: duplicate.id,
       metadata: { canonicalPropertyId: canonical.id, reason: input.reason },
+      requestId,
     });
     return {
       canonicalPropertyId: canonical.id,
@@ -343,4 +376,20 @@ export async function mergeDuplicateProperties(
     }
     throw error;
   }
+}
+
+export async function previewPropertyMerge(canonicalPropertyId: string, duplicatePropertyId: string) {
+  if (canonicalPropertyId === duplicatePropertyId) throw adminPropertyErrors.mergeConflict("Canonical and duplicate Property must be different");
+  const activeBookingStatuses = [BookingStatus.PAYMENT_PENDING, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE, BookingStatus.DISPUTED];
+  const [canonical, duplicate] = await Promise.all([
+    prisma.property.findFirst({ where: { id: canonicalPropertyId, deletedAt: null, archivedAt: null }, select: { id: true, name: true, publicArea: true, approximateAddress: true, verificationStatus: true, status: true, version: true, _count: { select: { providerMemberships: true, parkingSpots: true, images: true, guardMemberships: true, managerDelegations: true, bookings: true } } } }),
+    prisma.property.findFirst({ where: { id: duplicatePropertyId, deletedAt: null, archivedAt: null }, select: { id: true, name: true, publicArea: true, approximateAddress: true, verificationStatus: true, status: true, version: true, _count: { select: { providerMemberships: true, parkingSpots: true, images: true, guardMemberships: true, managerDelegations: true, bookings: true } } } }),
+  ]);
+  if (!canonical || !duplicate) throw propertyErrors.notFound();
+  const [rights, listings, activeBookings] = await Promise.all([
+    prisma.parkingRight.count({ where: { parkingSpot: { propertyId: duplicatePropertyId } } }),
+    prisma.parkingListing.count({ where: { parkingSpot: { propertyId: duplicatePropertyId } } }),
+    prisma.booking.count({ where: { propertyId: duplicatePropertyId, status: { in: activeBookingStatuses } } }),
+  ]);
+  return { canonical, duplicate, entitiesToMigrate: { providers: duplicate._count.providerMemberships, resources: duplicate._count.parkingSpots, rights, listings, guards: duplicate._count.guardMemberships, delegations: duplicate._count.managerDelegations, images: duplicate._count.images, activeOrFutureBookingReferences: activeBookings }, warnings: activeBookings ? ["Active or future bookings retain their immutable original Property reference while the duplicate points to the canonical Property."] : [] };
 }

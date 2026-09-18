@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
+import { basename } from "node:path";
+import { fileTypeFromBuffer } from "file-type";
 import {
   BookingStatus,
   DisputeStatus,
@@ -7,19 +9,29 @@ import {
   ParkingAllocationStatus,
   ParkingListingStatus,
   ParkingResourceType,
+  ParkingRightAmendmentStatus,
+  ParkingRightClaimBatchStatus,
+  ParkingRightDocumentCategory,
   ParkingRightStatus,
   ParkingRightType,
   ParkingSpotStatus,
+  PaymentStatus,
+  PayoutMethodStatus,
+  PayoutMethodType,
   PayoutStatus,
   PropertyStatus,
   RefundStatus,
+  UserRoleType,
   UserStatus,
   VerificationStatus,
   type Prisma,
   type VehicleType,
 } from "../../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
+import { logger } from "../../config/logger.js";
 import { AppError } from "../../common/errors/app-error.js";
+import { encryptSensitiveText } from "../../common/security/encryption.js";
+import { getRightDocumentStorage } from "../../common/uploads/right-document-storage.js";
 import { createDomainAuditEvent } from "../property-governance/domain-audit.js";
 import {
   activeRightWhere,
@@ -30,11 +42,11 @@ import {
   resolveProviderAuthority,
   type MarketplaceDb,
 } from "./marketplace.repository.js";
+import { resolvePlatformFee } from "./platform-fee.service.js";
 
 const DHAKA_TIME_ZONE = "Asia/Dhaka";
 const QUOTE_TTL_MS = 5 * 60 * 1000;
 const HOLD_TTL_MS = 5 * 60 * 1000;
-const PLATFORM_FEE_BASIS_POINTS = 1_000n;
 
 type JsonObject = Record<string, unknown>;
 type AuditMetadata = Record<string, string | number | boolean | null>;
@@ -255,6 +267,78 @@ export async function createResource(actorUserId: string, propertyId: string, in
   }, { isolationLevel: "Serializable" });
 }
 
+export async function createBulkFixedResources(actorUserId: string, propertyId: string, input: {
+  spaces: Array<{ displayName: string; spotCode: string }>;
+  sharedDefaults: {
+    floor?: string; zone?: string; supportedVehicleTypes: VehicleType[];
+    isCovered: boolean; hasCctv: boolean; hasGuard: boolean;
+    maxHeightCm?: number; maxWidthCm?: number; maxLengthCm?: number;
+  };
+}) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "property-resource", propertyId);
+    await requireEligibleProperty(propertyId, tx);
+    const authority = await requireAuthority(actorUserId, propertyId, undefined, undefined, tx);
+    const rows = input.spaces.map((space, index) => ({
+      ...space,
+      index,
+      normalizedSpotCode: normalizeSpotCode(space.spotCode),
+    }));
+    const validationErrors: Array<{ index: number; spotCode: string; code: string; message: string }> = [];
+    const seen = new Map<string, number>();
+    for (const row of rows) {
+      const previous = seen.get(row.normalizedSpotCode);
+      if (previous !== undefined) {
+        validationErrors.push({ index: row.index, spotCode: row.spotCode, code: "DUPLICATE_IN_REQUEST", message: `Duplicates row ${previous + 1} after normalization` });
+      } else {
+        seen.set(row.normalizedSpotCode, row.index);
+      }
+    }
+    const existing = await tx.parkingSpot.findMany({
+      where: { propertyId, normalizedSpotCode: { in: rows.map((row) => row.normalizedSpotCode) }, deletedAt: null },
+      select: { normalizedSpotCode: true },
+    });
+    const existingCodes = new Set(existing.map((row) => row.normalizedSpotCode));
+    for (const row of rows) {
+      if (existingCodes.has(row.normalizedSpotCode)) {
+        validationErrors.push({ index: row.index, spotCode: row.spotCode, code: "PROPERTY_CODE_CONFLICT", message: "This spot code already exists in the Property" });
+      }
+    }
+    if (validationErrors.length > 0) {
+      fail(409, "PARKING_RESOURCE_BULK_VALIDATION_FAILED", "One or more parking spaces could not be created", { errors: validationErrors });
+    }
+
+    const resources = [];
+    for (const row of rows) {
+      const resource = await tx.parkingSpot.create({
+        data: {
+          propertyId,
+          providerMembershipId: authority.membership.id,
+          resourceType: ParkingResourceType.FIXED_SPACE,
+          displayName: row.displayName,
+          spotCode: row.spotCode,
+          normalizedSpotCode: row.normalizedSpotCode,
+          floor: input.sharedDefaults.floor ?? null,
+          zone: input.sharedDefaults.zone ?? null,
+          capacity: 1,
+          supportedVehicleType: input.sharedDefaults.supportedVehicleTypes[0]!,
+          supportedVehicleTypes: input.sharedDefaults.supportedVehicleTypes,
+          status: ParkingSpotStatus.INACTIVE,
+          isCovered: input.sharedDefaults.isCovered,
+          hasCctv: input.sharedDefaults.hasCctv,
+          hasGuard: input.sharedDefaults.hasGuard,
+          maxHeightCm: input.sharedDefaults.maxHeightCm ?? null,
+          maxWidthCm: input.sharedDefaults.maxWidthCm ?? null,
+          maxLengthCm: input.sharedDefaults.maxLengthCm ?? null,
+        },
+      });
+      resources.push(resource);
+    }
+    await audit(tx, DomainAuditEventType.PARKING_RESOURCE_BULK_CREATED, actorUserId, propertyId, "Property", propertyId, { createdCount: resources.length });
+    return serialize({ resources, createdCount: resources.length });
+  }, { isolationLevel: "Serializable" });
+}
+
 export async function listResources(actorUserId: string, propertyId: string) {
   const authority = await requireAuthority(actorUserId, propertyId, ManagerDelegationPermission.RESOURCE_VIEW);
   const resources = await prisma.parkingSpot.findMany({
@@ -322,12 +406,41 @@ export async function claimParkingRight(actorUserId: string, resourceId: string,
     const resource = await tx.parkingSpot.findFirst({ where: { id: resourceId, deletedAt: null } });
     if (!resource) fail(404, "PARKING_RESOURCE_NOT_FOUND", "Parking resource was not found");
     const authority = await requireAuthority(actorUserId, resource.propertyId, undefined, resourceId, tx);
+    const existingClaim = await tx.parkingRight.findFirst({
+      where: {
+        parkingSpotId: resourceId,
+        holderUserId: authority.membership.providerUserId,
+        status: { in: [ParkingRightStatus.PENDING_VERIFICATION, ParkingRightStatus.VERIFIED, ParkingRightStatus.DISPUTED] },
+      },
+      select: { id: true, status: true },
+    });
+    if (existingClaim) {
+      fail(
+        409,
+        existingClaim.status === ParkingRightStatus.PENDING_VERIFICATION ? "PARKING_RIGHT_PENDING_CLAIM_EXISTS" : "PARKING_RIGHT_ACTIVE_CLAIM_EXISTS",
+        existingClaim.status === ParkingRightStatus.PENDING_VERIFICATION
+          ? "Edit the existing pending parking-right claim instead of creating another one"
+          : "An active parking right already exists for this Provider and resource",
+        { rightId: existingClaim.id, status: existingClaim.status },
+      );
+    }
     if (resource.resourceType === ParkingResourceType.FIXED_SPACE && input.quantity !== 1) {
       fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A fixed-space right quantity must be 1");
     }
     if (input.rightType === ParkingRightType.USE_ONLY && input.canList) {
       fail(400, "PARKING_RIGHT_COMMERCIAL_USE_FORBIDDEN", "USE_ONLY rights cannot list parking commercially");
     }
+    if ((input.canSetPrice || input.canManageBookings) && !input.canList) {
+      fail(400, "PARKING_RIGHT_PERMISSION_INVALID", "Pricing and booking management require listing permission");
+    }
+    const validFrom = input.validFrom ? new Date(input.validFrom) : new Date();
+    const validUntil = input.validUntil ? new Date(input.validUntil) : null;
+    if (validUntil && validUntil <= validFrom) fail(400, "PARKING_RIGHT_VALIDITY_INVALID", "The right end time must be later than its start time");
+    const previousResolvedClaim = await tx.parkingRight.findFirst({
+      where: { parkingSpotId: resourceId, holderUserId: authority.membership.providerUserId, status: { in: [ParkingRightStatus.REJECTED, ParkingRightStatus.REVOKED, ParkingRightStatus.EXPIRED] } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, status: true },
+    });
     const right = await tx.parkingRight.create({
       data: {
         parkingSpotId: resourceId,
@@ -340,13 +453,423 @@ export async function claimParkingRight(actorUserId: string, resourceId: string,
         canSetPrice: input.rightType === ParkingRightType.USE_ONLY ? false : input.canSetPrice,
         canManageBookings: input.rightType === ParkingRightType.USE_ONLY ? false : input.canManageBookings,
         canDelegateManager: input.canDelegateManager,
-        validFrom: input.validFrom ? new Date(input.validFrom) : new Date(),
-        validUntil: input.validUntil ? new Date(input.validUntil) : null,
+        validFrom,
+        validUntil,
         grantedByUserId: actorUserId,
       },
     });
-    await audit(tx, DomainAuditEventType.PARKING_RIGHT_CLAIMED, actorUserId, resource.propertyId, "ParkingRight", right.id);
+    await audit(tx, previousResolvedClaim ? DomainAuditEventType.PARKING_RIGHT_RECLAIMED : DomainAuditEventType.PARKING_RIGHT_CLAIMED, actorUserId, resource.propertyId, "ParkingRight", right.id, previousResolvedClaim ? { previousRightId: previousResolvedClaim.id, previousStatus: previousResolvedClaim.status } : undefined);
     return serialize(right);
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function updatePendingParkingRight(actorUserId: string, rightId: string, input: {
+  expectedVersion: number;
+  rightType?: ParkingRightType; quantity?: number; canUse?: boolean; canList?: boolean; canSetPrice?: boolean;
+  canManageBookings?: boolean; canDelegateManager?: boolean; validFrom?: string; validUntil?: string | null;
+}) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-right", rightId);
+    const right = await tx.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: true } });
+    if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
+    if (right.holderUserId !== actorUserId) fail(403, "PARKING_RIGHT_EDIT_FORBIDDEN", "Only the right holder can edit this claim");
+    if (right.status !== ParkingRightStatus.PENDING_VERIFICATION) fail(409, "PARKING_RIGHT_IMMUTABLE", "Verified or resolved parking rights cannot be edited directly");
+    if (right.version !== input.expectedVersion) {
+      fail(409, "PARKING_RIGHT_CLAIM_CHANGED", "This claim changed since it was loaded", { currentVersion: right.version });
+    }
+    const rightType = input.rightType ?? right.rightType;
+    const quantity = input.quantity ?? right.quantity;
+    const canList = rightType === ParkingRightType.USE_ONLY ? false : input.canList ?? right.canList;
+    const canSetPrice = rightType === ParkingRightType.USE_ONLY ? false : input.canSetPrice ?? right.canSetPrice;
+    const canManageBookings = rightType === ParkingRightType.USE_ONLY ? false : input.canManageBookings ?? right.canManageBookings;
+    const validFrom = input.validFrom ? new Date(input.validFrom) : right.validFrom;
+    const validUntil = input.validUntil !== undefined ? input.validUntil ? new Date(input.validUntil) : null : right.validUntil;
+    if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && quantity !== 1) {
+      fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A fixed-space right quantity must be 1");
+    }
+    if ((canSetPrice || canManageBookings) && !canList) fail(400, "PARKING_RIGHT_PERMISSION_INVALID", "Pricing and booking management require listing permission");
+    if (validUntil && validUntil <= validFrom) fail(400, "PARKING_RIGHT_VALIDITY_INVALID", "The right end time must be later than its start time");
+    const updated = await tx.parkingRight.update({
+      where: { id: rightId },
+      data: {
+        ...(input.rightType !== undefined ? { rightType } : {}),
+        ...(input.quantity !== undefined ? { quantity } : {}),
+        ...(input.canUse !== undefined ? { canUse: input.canUse } : {}),
+        ...(input.canList !== undefined || input.rightType !== undefined ? { canList } : {}),
+        ...(input.canSetPrice !== undefined || input.rightType !== undefined ? { canSetPrice } : {}),
+        ...(input.canManageBookings !== undefined || input.rightType !== undefined ? { canManageBookings } : {}),
+        ...(input.canDelegateManager !== undefined ? { canDelegateManager: input.canDelegateManager } : {}),
+        ...(input.validFrom !== undefined ? { validFrom } : {}),
+        ...(input.validUntil !== undefined ? { validUntil } : {}),
+        version: { increment: 1 },
+      },
+    });
+    await audit(tx, DomainAuditEventType.PARKING_RIGHT_CLAIM_UPDATED, actorUserId, right.parkingSpot.propertyId, "ParkingRight", right.id, { previousVersion: right.version, nextVersion: updated.version });
+    return serialize(updated);
+  }, { isolationLevel: "Serializable" });
+}
+
+type ParkingRightClaimInput = {
+  rightType: ParkingRightType; quantity: number; canUse: boolean; canList: boolean; canSetPrice: boolean;
+  canManageBookings: boolean; canDelegateManager: boolean; validFrom?: string; validUntil?: string;
+};
+
+export async function createParkingRightClaimBatch(actorUserId: string, propertyId: string, input: ParkingRightClaimInput & { resourceIds: string[] }) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-right-claim-batch", propertyId);
+    await requireEligibleProperty(propertyId, tx);
+    const resources = await tx.parkingSpot.findMany({ where: { id: { in: input.resourceIds }, propertyId, deletedAt: null }, orderBy: { id: "asc" } });
+    if (resources.length !== input.resourceIds.length) fail(404, "PARKING_RESOURCE_NOT_FOUND", "One or more selected parking resources were not found");
+    const authorities = [];
+    for (const resource of resources) authorities.push(await requireAuthority(actorUserId, propertyId, undefined, resource.id, tx));
+    const membershipId = authorities[0]?.membership.id;
+    const providerUserId = authorities[0]?.membership.providerUserId;
+    if (!membershipId || !providerUserId || authorities.some((authority) => authority.membership.id !== membershipId)) fail(403, "PARKING_RIGHT_BATCH_AUTHORITY_INVALID", "All selected resources must belong to the same Provider membership");
+    const conflicts = await tx.parkingRight.findMany({ where: { parkingSpotId: { in: input.resourceIds }, holderUserId: providerUserId, status: { in: [ParkingRightStatus.PENDING_VERIFICATION, ParkingRightStatus.VERIFIED, ParkingRightStatus.DISPUTED] } }, select: { id: true, parkingSpotId: true, status: true } });
+    if (conflicts.length) fail(409, "PARKING_RIGHT_BATCH_CONFLICT", "One or more selected resources already have an active or pending claim", { conflicts });
+    if (resources.some((resource) => resource.resourceType === ParkingResourceType.FIXED_SPACE) && input.quantity !== 1) fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "Fixed-space batch claims must use quantity 1");
+    if (input.rightType === ParkingRightType.USE_ONLY && (input.canList || input.canSetPrice || input.canManageBookings)) fail(400, "PARKING_RIGHT_COMMERCIAL_USE_FORBIDDEN", "USE_ONLY rights cannot grant commercial permissions");
+    if ((input.canSetPrice || input.canManageBookings) && !input.canList) fail(400, "PARKING_RIGHT_PERMISSION_INVALID", "Pricing and booking management require listing permission");
+    const validFrom = input.validFrom ? new Date(input.validFrom) : new Date();
+    const validUntil = input.validUntil ? new Date(input.validUntil) : null;
+    if (validUntil && validUntil <= validFrom) fail(400, "PARKING_RIGHT_VALIDITY_INVALID", "The right end time must be later than its start time");
+    const batch = await tx.parkingRightClaimBatch.create({ data: { providerUserId, propertyId, rightType: input.rightType } });
+    const rights = [];
+    for (const resource of resources) {
+      rights.push(await tx.parkingRight.create({ data: { parkingSpotId: resource.id, holderUserId: providerUserId, providerMembershipId: membershipId, claimBatchId: batch.id, rightType: input.rightType, quantity: input.quantity, canUse: input.canUse, canList: input.rightType === ParkingRightType.USE_ONLY ? false : input.canList, canSetPrice: input.rightType === ParkingRightType.USE_ONLY ? false : input.canSetPrice, canManageBookings: input.rightType === ParkingRightType.USE_ONLY ? false : input.canManageBookings, canDelegateManager: input.canDelegateManager, validFrom, validUntil, grantedByUserId: actorUserId } }));
+    }
+    await audit(tx, DomainAuditEventType.PARKING_RIGHT_CLAIM_BATCH_CREATED, actorUserId, propertyId, "ParkingRightClaimBatch", batch.id, { rightCount: rights.length, rightType: input.rightType });
+    return serialize({ batch, rights });
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function listProviderRightClaimBatches(actorUserId: string) {
+  return serialize(await prisma.parkingRightClaimBatch.findMany({ where: { providerUserId: actorUserId }, orderBy: { createdAt: "desc" }, include: { property: { select: { id: true, name: true, publicArea: true } }, rights: { include: { parkingSpot: { select: { id: true, displayName: true, spotCode: true } } } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } } }));
+}
+
+export async function listAdminRightClaimBatches(input: { page: number; limit: number; status?: ParkingRightClaimBatchStatus }) {
+  const where: Prisma.ParkingRightClaimBatchWhereInput = { ...(input.status ? { status: input.status } : {}) };
+  const [batches, total] = await Promise.all([
+    prisma.parkingRightClaimBatch.findMany({ where, orderBy: { createdAt: "desc" }, skip: (input.page - 1) * input.limit, take: input.limit, include: { provider: { select: { id: true, fullName: true, email: true } }, property: { select: { id: true, name: true, publicArea: true } }, rights: { include: { parkingSpot: { select: { id: true, displayName: true, spotCode: true } } } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } } }),
+    prisma.parkingRightClaimBatch.count({ where }),
+  ]);
+  return serialize({ batches, pagination: pagination(input.page, input.limit, total) });
+}
+
+export async function reviewParkingRightClaimBatch(adminUserId: string, batchId: string, input: { decision: "VERIFIED" | "REJECTED"; reason?: string; rights: Array<{ rightId: string; expectedVersion: number }> }) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-right-claim-batch", batchId);
+    const batch = await tx.parkingRightClaimBatch.findUnique({ where: { id: batchId }, include: { rights: { include: { parkingSpot: { select: { propertyId: true, resourceType: true, capacity: true } } } } } });
+    if (!batch) fail(404, "PARKING_RIGHT_BATCH_NOT_FOUND", "Parking Right claim batch was not found");
+    if (batch.status !== ParkingRightClaimBatchStatus.PENDING && batch.status !== ParkingRightClaimBatchStatus.PARTIALLY_RESOLVED) fail(409, "PARKING_RIGHT_BATCH_STATE_INVALID", "This batch has already been resolved");
+    const expected = new Map(input.rights.map((right) => [right.rightId, right.expectedVersion]));
+    const pendingRights = batch.rights.filter((right) => right.status === ParkingRightStatus.PENDING_VERIFICATION);
+    if (!pendingRights.length) fail(409, "PARKING_RIGHT_BATCH_STATE_INVALID", "This batch has no pending claims");
+    if (expected.size !== input.rights.length || expected.size !== pendingRights.length) {
+      fail(400, "PARKING_RIGHT_BATCH_REVIEW_INCOMPLETE", "Provide each pending claim exactly once when reviewing a batch");
+    }
+    for (const right of pendingRights) {
+      if (expected.get(right.id) !== right.version) fail(409, "PARKING_RIGHT_CLAIM_CHANGED", "A claim in this batch changed while it was being reviewed", { rightId: right.id, currentVersion: right.version });
+    }
+    if (input.decision === "REJECTED" && !input.reason) fail(400, "PARKING_RIGHT_REASON_REQUIRED", "A rejection reason is required");
+    const now = new Date();
+    for (const right of pendingRights) {
+      if (input.decision === "VERIFIED") {
+        await lockEntity(tx, "parking-resource", right.parkingSpotId);
+        if (right.rightType === ParkingRightType.USE_ONLY && right.canList) {
+          fail(409, "PARKING_RIGHT_INVALID", "A USE_ONLY right cannot be commercially verified");
+        }
+        const verified = await tx.parkingRight.aggregate({
+          where: { parkingSpotId: right.parkingSpotId, id: { not: right.id }, ...activeRightWhere() },
+          _sum: { quantity: true },
+        });
+        const alreadyEntitled = verified._sum.quantity ?? 0;
+        if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && alreadyEntitled > 0) {
+          fail(409, "PARKING_RIGHT_CONFLICT", "A resource in this batch already has a verified active right", { rightId: right.id });
+        }
+        if (alreadyEntitled + right.quantity > right.parkingSpot.capacity) {
+          fail(409, "PARKING_RIGHT_CAPACITY_EXCEEDED", "A claim in this batch would exceed physical capacity", { rightId: right.id });
+        }
+      }
+      await tx.parkingRight.update({ where: { id: right.id }, data: input.decision === "VERIFIED" ? { status: ParkingRightStatus.VERIFIED, verifiedByAdminId: adminUserId, verifiedAt: now, rejectionReason: null, version: { increment: 1 } } : { status: ParkingRightStatus.REJECTED, verifiedByAdminId: adminUserId, rejectionReason: input.reason!, version: { increment: 1 } } });
+      await audit(tx, input.decision === "VERIFIED" ? DomainAuditEventType.PARKING_RIGHT_VERIFIED : DomainAuditEventType.PARKING_RIGHT_REJECTED, adminUserId, right.parkingSpot.propertyId, "ParkingRight", right.id, { batchId });
+    }
+    const updated = await tx.parkingRightClaimBatch.update({ where: { id: batch.id }, data: { status: ParkingRightClaimBatchStatus.COMPLETED } });
+    await tx.notification.create({ data: { userId: batch.providerUserId, type: "PARKING_RIGHT_UPDATED", title: `Parking Right batch ${input.decision === "VERIFIED" ? "approved" : "rejected"}`, message: input.decision === "VERIFIED" ? `${pendingRights.length} Parking Right claims were approved.` : input.reason!, entityType: "ParkingRightClaimBatch", entityId: batch.id, idempotencyKey: `right-batch:${batch.id}:${input.decision}` } });
+    return serialize({ batch: updated, reviewedCount: pendingRights.length });
+  }, { isolationLevel: "Serializable" });
+}
+
+const acceptedRightDocumentTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+
+async function validateRightDocument(file: Express.Multer.File) {
+  const detected = await fileTypeFromBuffer(file.buffer);
+  if (!detected || !acceptedRightDocumentTypes.has(detected.mime) || detected.mime !== file.mimetype) fail(400, "RIGHT_DOCUMENT_CONTENT_INVALID", "Evidence file content does not match its declared type");
+  return { originalName: basename(file.originalname).replace(/[\x00-\x1F\x7F]/g, "").slice(0, 255), mimeType: detected.mime, sizeBytes: file.size, buffer: file.buffer };
+}
+
+type RightDocumentParent = { parkingRightId?: string; amendmentId?: string; claimBatchId?: string };
+
+async function requireRightDocumentParent(
+  actorUserId: string,
+  parent: RightDocumentParent,
+  db: MarketplaceDb | typeof prisma = prisma,
+) {
+  if (parent.parkingRightId) {
+    const right = await db.parkingRight.findUnique({ where: { id: parent.parkingRightId }, select: { holderUserId: true, status: true } });
+    if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking Right was not found");
+    if (right.holderUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the Right holder can manage evidence");
+    if (right.status !== ParkingRightStatus.PENDING_VERIFICATION) fail(409, "PARKING_RIGHT_DOCUMENT_STATE_INVALID", "Direct evidence changes are allowed only while a claim is pending");
+    return parent.parkingRightId;
+  }
+  if (parent.amendmentId) {
+    const amendment = await db.parkingRightAmendment.findUnique({ where: { id: parent.amendmentId }, select: { requestedByUserId: true, status: true } });
+    if (!amendment) fail(404, "PARKING_RIGHT_AMENDMENT_NOT_FOUND", "Parking Right change request was not found");
+    if (amendment.requestedByUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the amendment requester can manage evidence");
+    if (amendment.status !== ParkingRightAmendmentStatus.PENDING) fail(409, "PARKING_RIGHT_DOCUMENT_STATE_INVALID", "Evidence changes are allowed only while an amendment is pending");
+    return parent.amendmentId;
+  }
+  if (parent.claimBatchId) {
+    const batch = await db.parkingRightClaimBatch.findUnique({ where: { id: parent.claimBatchId }, select: { providerUserId: true, status: true } });
+    if (!batch) fail(404, "PARKING_RIGHT_BATCH_NOT_FOUND", "Parking Right claim batch was not found");
+    if (batch.providerUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the batch Provider can manage evidence");
+    if (batch.status !== ParkingRightClaimBatchStatus.PENDING) fail(409, "PARKING_RIGHT_DOCUMENT_STATE_INVALID", "Evidence changes are allowed only while a batch is pending");
+    return parent.claimBatchId;
+  }
+  fail(400, "RIGHT_DOCUMENT_PARENT_REQUIRED", "Evidence must belong to a claim, amendment, or batch");
+}
+
+async function lockAndRequireRightDocumentParent(
+  tx: MarketplaceDb,
+  actorUserId: string,
+  parent: RightDocumentParent,
+) {
+  if (parent.parkingRightId) await lockEntity(tx, "parking-right", parent.parkingRightId);
+  if (parent.amendmentId) await lockEntity(tx, "parking-right-amendment", parent.amendmentId);
+  if (parent.claimBatchId) await lockEntity(tx, "parking-right-claim-batch", parent.claimBatchId);
+  return requireRightDocumentParent(actorUserId, parent, tx);
+}
+
+export async function uploadParkingRightDocuments(actorUserId: string, parent: RightDocumentParent, category: ParkingRightDocumentCategory, files: Express.Multer.File[]) {
+  const parentId = await requireRightDocumentParent(actorUserId, parent);
+  if (!files.length) fail(400, "RIGHT_DOCUMENT_REQUIRED", "Select at least one evidence file");
+  const validated = await Promise.all(files.map(validateRightDocument));
+  const existingCount = await prisma.parkingRightDocument.count({ where: parent });
+  if (existingCount + validated.length > 5) fail(400, "RIGHT_DOCUMENT_LIMIT_EXCEEDED", "A claim, amendment, or batch can contain at most 5 evidence files");
+  const storage = getRightDocumentStorage();
+  const uploaded: Array<{ storageKey: string; secureUrl: string; mimeType: string }> = [];
+  try {
+    for (const file of validated) uploaded.push({ ...(await storage.upload(file.buffer, parentId, file.mimeType)), mimeType: file.mimeType });
+    const documents = await prisma.$transaction(async (tx) => {
+      await lockEntity(tx, "parking-right-document-parent", parentId);
+      await lockAndRequireRightDocumentParent(tx, actorUserId, parent);
+      const currentCount = await tx.parkingRightDocument.count({ where: parent });
+      if (currentCount + uploaded.length > 5) fail(400, "RIGHT_DOCUMENT_LIMIT_EXCEEDED", "A claim, amendment, or batch can contain at most 5 evidence files");
+      const created = [];
+      for (const [index, item] of uploaded.entries()) created.push(await tx.parkingRightDocument.create({ data: { ...parent, category, originalName: validated[index]!.originalName, mimeType: item.mimeType, sizeBytes: validated[index]!.sizeBytes, storageKey: item.storageKey, secureUrl: item.secureUrl, uploadedByUserId: actorUserId } }));
+      if (parent.parkingRightId) {
+        const right = await tx.parkingRight.update({ where: { id: parent.parkingRightId }, data: { version: { increment: 1 } }, include: { parkingSpot: { select: { propertyId: true } } } });
+        await audit(tx, DomainAuditEventType.PARKING_RIGHT_CLAIM_UPDATED, actorUserId, right.parkingSpot.propertyId, "ParkingRight", right.id, { action: "EVIDENCE_ADDED", documentCount: created.length, nextVersion: right.version });
+      }
+      return created;
+    }, { isolationLevel: "Serializable" });
+    return documents.map(({ storageKey: _storageKey, secureUrl: _secureUrl, ...document }) => document);
+  } catch (error) {
+    await Promise.allSettled(uploaded.map((item) => storage.delete(item.storageKey, item.mimeType)));
+    throw error;
+  }
+}
+
+export async function listParkingRightDocuments(actorUserId: string, parent: RightDocumentParent) {
+  await requireRightDocumentParent(actorUserId, parent);
+  return prisma.parkingRightDocument.findMany({ where: parent, orderBy: { createdAt: "asc" }, select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } });
+}
+
+export async function deleteParkingRightDocument(actorUserId: string, documentId: string) {
+  const document = await prisma.parkingRightDocument.findUnique({ where: { id: documentId } });
+  if (!document) fail(404, "RIGHT_DOCUMENT_NOT_FOUND", "Evidence document was not found");
+  const parent: RightDocumentParent = { ...(document.parkingRightId ? { parkingRightId: document.parkingRightId } : {}), ...(document.amendmentId ? { amendmentId: document.amendmentId } : {}), ...(document.claimBatchId ? { claimBatchId: document.claimBatchId } : {}) };
+  const deletedDocument = await prisma.$transaction(async (tx) => {
+    const parentId = document.parkingRightId ?? document.amendmentId ?? document.claimBatchId;
+    if (!parentId) fail(409, "RIGHT_DOCUMENT_PARENT_INVALID", "Evidence document has no valid parent");
+    await lockEntity(tx, "parking-right-document-parent", parentId);
+    await lockAndRequireRightDocumentParent(tx, actorUserId, parent);
+    const currentDocument = await tx.parkingRightDocument.findUnique({ where: { id: documentId } });
+    if (!currentDocument) fail(404, "RIGHT_DOCUMENT_NOT_FOUND", "Evidence document was not found");
+    await tx.parkingRightDocument.delete({ where: { id: currentDocument.id } });
+    if (currentDocument.parkingRightId) {
+      const right = await tx.parkingRight.update({ where: { id: currentDocument.parkingRightId }, data: { version: { increment: 1 } }, include: { parkingSpot: { select: { propertyId: true } } } });
+      await audit(tx, DomainAuditEventType.PARKING_RIGHT_CLAIM_UPDATED, actorUserId, right.parkingSpot.propertyId, "ParkingRight", right.id, { action: "EVIDENCE_REMOVED", nextVersion: right.version });
+    }
+    return currentDocument;
+  });
+  try {
+    await getRightDocumentStorage().delete(deletedDocument.storageKey, deletedDocument.mimeType);
+  } catch (error) {
+    logger.error({ documentId: deletedDocument.id, storageKey: deletedDocument.storageKey, errorType: error instanceof Error ? error.name : "UnknownError" }, "Parking Right evidence blob cleanup failed after metadata deletion");
+  }
+  return { deleted: true };
+}
+
+export async function getParkingRightDocumentDownload(actorUserId: string, documentId: string) {
+  const document = await prisma.parkingRightDocument.findUnique({ where: { id: documentId }, include: { parkingRight: { select: { holderUserId: true } }, amendment: { select: { requestedByUserId: true } }, claimBatch: { select: { providerUserId: true } } } });
+  if (!document) fail(404, "RIGHT_DOCUMENT_NOT_FOUND", "Evidence document was not found");
+  const admin = await prisma.userRole.findUnique({ where: { userId_role: { userId: actorUserId, role: UserRoleType.ADMIN } }, select: { userId: true } });
+  const ownerId = document.parkingRight?.holderUserId ?? document.amendment?.requestedByUserId ?? document.claimBatch?.providerUserId;
+  if (!admin && ownerId !== actorUserId) fail(403, "RIGHT_DOCUMENT_FORBIDDEN", "You cannot access this evidence document");
+  return { url: getRightDocumentStorage().signedUrl(document.storageKey, document.mimeType, Math.floor(Date.now() / 1000) + 300), expiresInSeconds: 300 };
+}
+
+type ParkingRightProposedChanges = {
+  rightType?: ParkingRightType;
+  quantity?: number;
+  canUse?: boolean;
+  canList?: boolean;
+  canSetPrice?: boolean;
+  canManageBookings?: boolean;
+  canDelegateManager?: boolean;
+  validFrom?: string;
+  validUntil?: string | null;
+};
+
+function validateRightChanges(right: {
+  rightType: ParkingRightType; quantity: number; canList: boolean; canSetPrice: boolean; canManageBookings: boolean;
+  validFrom: Date; validUntil: Date | null; parkingSpot: { resourceType: ParkingResourceType };
+}, changes: ParkingRightProposedChanges) {
+  const next = {
+    rightType: changes.rightType ?? right.rightType,
+    quantity: changes.quantity ?? right.quantity,
+    canList: changes.canList ?? right.canList,
+    canSetPrice: changes.canSetPrice ?? right.canSetPrice,
+    canManageBookings: changes.canManageBookings ?? right.canManageBookings,
+    validFrom: changes.validFrom ? new Date(changes.validFrom) : right.validFrom,
+    validUntil: changes.validUntil !== undefined ? changes.validUntil ? new Date(changes.validUntil) : null : right.validUntil,
+  };
+  if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && next.quantity !== 1) {
+    fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A fixed-space right quantity must be 1");
+  }
+  if (next.rightType === ParkingRightType.USE_ONLY && (next.canList || next.canSetPrice || next.canManageBookings)) {
+    fail(400, "PARKING_RIGHT_COMMERCIAL_USE_FORBIDDEN", "A use-only right cannot grant commercial permissions");
+  }
+  if ((next.canSetPrice || next.canManageBookings) && !next.canList) {
+    fail(400, "PARKING_RIGHT_PERMISSION_INVALID", "Pricing and booking management require listing permission");
+  }
+  if (next.validUntil && next.validUntil <= next.validFrom) {
+    fail(400, "PARKING_RIGHT_VALIDITY_INVALID", "The right end time must be later than its start time");
+  }
+  return next;
+}
+
+export async function createParkingRightAmendment(actorUserId: string, rightId: string, input: { expectedVersion: number; proposedChanges: ParkingRightProposedChanges }) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-right", rightId);
+    const right = await tx.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: { select: { propertyId: true, resourceType: true } } } });
+    if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
+    if (right.holderUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the verified right holder can request a change");
+    if (right.status !== ParkingRightStatus.VERIFIED) fail(409, "PARKING_RIGHT_AMENDMENT_NOT_ALLOWED", "Only a verified parking right can be amended");
+    if (right.version !== input.expectedVersion) fail(409, "PARKING_RIGHT_CLAIM_CHANGED", "This parking right changed since it was loaded", { currentVersion: right.version });
+    validateRightChanges(right, input.proposedChanges);
+    const pending = await tx.parkingRightAmendment.findFirst({ where: { parkingRightId: right.id, status: ParkingRightAmendmentStatus.PENDING }, select: { id: true } });
+    if (pending) fail(409, "PARKING_RIGHT_AMENDMENT_PENDING", "A pending change request already exists for this parking right", { amendmentId: pending.id });
+    const amendment = await tx.parkingRightAmendment.create({
+      data: {
+        parkingRightId: right.id,
+        requestedByUserId: actorUserId,
+        baseRightVersion: right.version,
+        proposedChanges: input.proposedChanges as unknown as Prisma.InputJsonObject,
+        status: ParkingRightAmendmentStatus.PENDING,
+        submittedAt: new Date(),
+      },
+    });
+    await audit(tx, DomainAuditEventType.PARKING_RIGHT_AMENDMENT_SUBMITTED, actorUserId, right.parkingSpot.propertyId, "ParkingRightAmendment", amendment.id, { parkingRightId: right.id, baseRightVersion: right.version, changedFields: Object.keys(input.proposedChanges).sort().join(",") });
+    return serialize(amendment);
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function listParkingRightAmendments(actorUserId: string, rightId: string) {
+  const right = await prisma.parkingRight.findUnique({ where: { id: rightId }, select: { holderUserId: true } });
+  if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
+  if (right.holderUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the right holder can view its change requests");
+  return prisma.parkingRightAmendment.findMany({
+    where: { parkingRightId: rightId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, parkingRightId: true, baseRightVersion: true, proposedChanges: true, status: true, submittedAt: true, resolvedAt: true, reason: true, createdAt: true, updatedAt: true, reviewedBy: { select: { id: true, fullName: true } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } },
+  });
+}
+
+export async function cancelParkingRightAmendment(actorUserId: string, amendmentId: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-right-amendment", amendmentId);
+    const amendment = await tx.parkingRightAmendment.findUnique({ where: { id: amendmentId } });
+    if (!amendment) fail(404, "PARKING_RIGHT_AMENDMENT_NOT_FOUND", "Parking right change request was not found");
+    if (amendment.requestedByUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the requester can cancel this change request");
+    if (amendment.status !== ParkingRightAmendmentStatus.PENDING) fail(409, "PARKING_RIGHT_AMENDMENT_STATE_INVALID", "Only a pending change request can be cancelled");
+    return tx.parkingRightAmendment.update({ where: { id: amendment.id }, data: { status: ParkingRightAmendmentStatus.CANCELLED, resolvedAt: new Date(), reason: "Cancelled by requester" } });
+  });
+}
+
+export async function listAdminParkingRightAmendments(input: { page: number; limit: number; status?: ParkingRightAmendmentStatus }) {
+  const where: Prisma.ParkingRightAmendmentWhereInput = { ...(input.status ? { status: input.status } : {}) };
+  const [amendments, total] = await Promise.all([
+    prisma.parkingRightAmendment.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+      include: {
+        requestedBy: { select: { id: true, fullName: true, email: true } },
+        reviewedBy: { select: { id: true, fullName: true } },
+        parkingRight: { include: { parkingSpot: { include: { property: { select: { id: true, name: true, publicArea: true } } } } } },
+        documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } },
+      },
+    }),
+    prisma.parkingRightAmendment.count({ where }),
+  ]);
+  return serialize({ amendments, pagination: pagination(input.page, input.limit, total) });
+}
+
+export async function reviewParkingRightAmendment(adminUserId: string, amendmentId: string, input: { decision: "APPROVED" | "REJECTED"; expectedRightVersion: number; reason?: string }) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-right-amendment", amendmentId);
+    const amendment = await tx.parkingRightAmendment.findUnique({ where: { id: amendmentId }, include: { parkingRight: { include: { parkingSpot: { select: { propertyId: true, resourceType: true } } } } } });
+    if (!amendment) fail(404, "PARKING_RIGHT_AMENDMENT_NOT_FOUND", "Parking right change request was not found");
+    if (amendment.status !== ParkingRightAmendmentStatus.PENDING) fail(409, "PARKING_RIGHT_AMENDMENT_STATE_INVALID", "This change request has already been resolved");
+    await lockEntity(tx, "parking-right", amendment.parkingRightId);
+    const right = await tx.parkingRight.findUnique({ where: { id: amendment.parkingRightId }, include: { parkingSpot: { select: { propertyId: true, resourceType: true } } } });
+    if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
+    if (right.version !== input.expectedRightVersion || right.version !== amendment.baseRightVersion) fail(409, "PARKING_RIGHT_CLAIM_CHANGED", "The parking right changed after this request was submitted", { currentVersion: right.version, baseRightVersion: amendment.baseRightVersion });
+    if (right.status !== ParkingRightStatus.VERIFIED) fail(409, "PARKING_RIGHT_AMENDMENT_NOT_ALLOWED", "The original parking right is no longer verified");
+    const now = new Date();
+    if (input.decision === "REJECTED") {
+      const rejected = await tx.parkingRightAmendment.update({ where: { id: amendment.id }, data: { status: ParkingRightAmendmentStatus.REJECTED, reason: input.reason!, reviewedByAdminId: adminUserId, resolvedAt: now } });
+      await tx.notification.create({ data: { userId: amendment.requestedByUserId, type: "PARKING_RIGHT_UPDATED", title: "Parking Right change rejected", message: input.reason!, entityType: "ParkingRightAmendment", entityId: amendment.id, idempotencyKey: `right-amendment:${amendment.id}:REJECTED` } });
+      await audit(tx, DomainAuditEventType.PARKING_RIGHT_AMENDMENT_REJECTED, adminUserId, right.parkingSpot.propertyId, "ParkingRightAmendment", amendment.id, { parkingRightId: right.id, reason: input.reason! });
+      return serialize({ amendment: rejected, parkingRight: right });
+    }
+    const changes = amendment.proposedChanges as unknown as ParkingRightProposedChanges;
+    const next = validateRightChanges(right, changes);
+    const updatedRight = await tx.parkingRight.update({
+      where: { id: right.id },
+      data: {
+        ...(changes.rightType !== undefined ? { rightType: next.rightType } : {}),
+        ...(changes.quantity !== undefined ? { quantity: next.quantity } : {}),
+        ...(changes.canUse !== undefined ? { canUse: changes.canUse } : {}),
+        ...(changes.canList !== undefined ? { canList: next.canList } : {}),
+        ...(changes.canSetPrice !== undefined ? { canSetPrice: next.canSetPrice } : {}),
+        ...(changes.canManageBookings !== undefined ? { canManageBookings: next.canManageBookings } : {}),
+        ...(changes.canDelegateManager !== undefined ? { canDelegateManager: changes.canDelegateManager } : {}),
+        ...(changes.validFrom !== undefined ? { validFrom: next.validFrom } : {}),
+        ...(changes.validUntil !== undefined ? { validUntil: next.validUntil } : {}),
+        version: { increment: 1 },
+      },
+    });
+    if (!updatedRight.canList) {
+      await tx.parkingListing.updateMany({ where: { parkingRightId: right.id, status: ParkingListingStatus.ACTIVE }, data: { status: ParkingListingStatus.SUSPENDED, deactivatedAt: now } });
+    }
+    const approved = await tx.parkingRightAmendment.update({ where: { id: amendment.id }, data: { status: ParkingRightAmendmentStatus.APPROVED, reason: input.reason ?? null, reviewedByAdminId: adminUserId, resolvedAt: now } });
+    await tx.notification.create({ data: { userId: amendment.requestedByUserId, type: "PARKING_RIGHT_UPDATED", title: "Parking Right change approved", message: "Your requested Parking Right changes were approved.", entityType: "ParkingRightAmendment", entityId: amendment.id, idempotencyKey: `right-amendment:${amendment.id}:APPROVED` } });
+    await audit(tx, DomainAuditEventType.PARKING_RIGHT_AMENDMENT_APPROVED, adminUserId, right.parkingSpot.propertyId, "ParkingRightAmendment", amendment.id, { parkingRightId: right.id, previousVersion: right.version, nextVersion: updatedRight.version, changedFields: Object.keys(changes).sort().join(",") });
+    return serialize({ amendment: approved, parkingRight: updatedRight });
   }, { isolationLevel: "Serializable" });
 }
 
@@ -354,7 +877,7 @@ export async function listParkingRights(actorUserId: string) {
   const scopes = await listProviderAccessScopes(actorUserId, ManagerDelegationPermission.RESOURCE_VIEW);
   const rights = await prisma.parkingRight.findMany({
     where: { providerMembershipId: { in: scopes.map((scope) => scope.providerMembershipId) } },
-    include: { parkingSpot: { select: { id: true, displayName: true, spotCode: true, resourceType: true, propertyId: true } } },
+    include: { parkingSpot: { select: { id: true, displayName: true, spotCode: true, resourceType: true, propertyId: true } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } },
     orderBy: { createdAt: "desc" },
   });
   const scopeByMembership = new Map(scopes.map((scope) => [scope.providerMembershipId, scope]));
@@ -366,7 +889,7 @@ export async function listParkingRights(actorUserId: string) {
 }
 
 export async function getParkingRight(actorUserId: string, rightId: string) {
-  const right = await prisma.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: true } });
+  const right = await prisma.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: true, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } } });
   if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
   if (right.holderUserId !== actorUserId) {
     await requireAuthority(actorUserId, right.parkingSpot.propertyId, ManagerDelegationPermission.RESOURCE_VIEW, right.parkingSpotId);
@@ -377,16 +900,28 @@ export async function getParkingRight(actorUserId: string, rightId: string) {
 export async function listPendingRights() {
   return serialize(await prisma.parkingRight.findMany({
     where: { status: ParkingRightStatus.PENDING_VERIFICATION },
-    include: { parkingSpot: { include: { property: { select: { id: true, name: true, publicArea: true } } } }, holder: { select: { id: true, fullName: true, email: true } } },
+    include: { parkingSpot: { include: { property: { select: { id: true, name: true, publicArea: true } } } }, holder: { select: { id: true, fullName: true, email: true } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } },
     orderBy: { createdAt: "asc" },
   }));
 }
 
-export async function verifyParkingRight(adminUserId: string, rightId: string, input: { decision: ParkingRightStatus; reason?: string }) {
+export async function verifyParkingRight(adminUserId: string, rightId: string, input: { decision: ParkingRightStatus; reason?: string; expectedVersion: number }) {
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "parking-right", rightId);
     const right = await tx.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: true } });
     if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
+    if (right.version !== input.expectedVersion) {
+      fail(409, "PARKING_RIGHT_CLAIM_CHANGED", "This claim was updated while it was being reviewed", { currentVersion: right.version });
+    }
+    if (right.status === input.decision) return serialize(right);
+    const allowedTransitions: Partial<Record<ParkingRightStatus, ParkingRightStatus[]>> = {
+      [ParkingRightStatus.PENDING_VERIFICATION]: [ParkingRightStatus.VERIFIED, ParkingRightStatus.REJECTED, ParkingRightStatus.DISPUTED],
+      [ParkingRightStatus.VERIFIED]: [ParkingRightStatus.DISPUTED, ParkingRightStatus.REVOKED],
+      [ParkingRightStatus.DISPUTED]: [ParkingRightStatus.VERIFIED, ParkingRightStatus.REJECTED, ParkingRightStatus.REVOKED],
+    };
+    if (!allowedTransitions[right.status]?.includes(input.decision)) {
+      fail(409, "RIGHT_INVALID_STATE", `A ${right.status.toLowerCase()} right cannot transition to ${input.decision.toLowerCase()}`);
+    }
     if (input.decision === ParkingRightStatus.VERIFIED) {
       await lockEntity(tx, "parking-resource", right.parkingSpotId);
       if (right.rightType === ParkingRightType.USE_ONLY && right.canList) {
@@ -411,12 +946,26 @@ export async function verifyParkingRight(adminUserId: string, rightId: string, i
         verifiedByAdminId: input.decision === ParkingRightStatus.VERIFIED ? adminUserId : null,
         verifiedAt: input.decision === ParkingRightStatus.VERIFIED ? now : null,
         rejectionReason: input.decision === ParkingRightStatus.VERIFIED ? null : input.reason ?? null,
+        version: { increment: 1 },
       },
     });
     if (input.decision !== ParkingRightStatus.VERIFIED) {
       await tx.parkingListing.updateMany({ where: { parkingRightId: rightId, status: "ACTIVE" }, data: { status: "SUSPENDED", deactivatedAt: now } });
     }
-    await audit(tx, DomainAuditEventType.PARKING_RIGHT_VERIFIED, adminUserId, right.parkingSpot.propertyId, "ParkingRight", rightId, { decision: input.decision });
+    const rightEvent = input.decision === ParkingRightStatus.VERIFIED
+      ? DomainAuditEventType.PARKING_RIGHT_VERIFIED
+      : input.decision === ParkingRightStatus.REJECTED
+        ? DomainAuditEventType.PARKING_RIGHT_REJECTED
+        : input.decision === ParkingRightStatus.REVOKED
+          ? DomainAuditEventType.PARKING_RIGHT_REVOKED
+          : DomainAuditEventType.PARKING_RIGHT_DISPUTED;
+    await audit(tx, rightEvent, adminUserId, right.parkingSpot.propertyId, "ParkingRight", rightId, { decision: input.decision, reason: input.reason ?? null });
+    await tx.notification.create({ data: { userId: right.holderUserId, type: "PARKING_RIGHT_UPDATED", title: `Parking Right ${input.decision.toLowerCase().replaceAll("_", " ")}`, message: input.decision === ParkingRightStatus.VERIFIED ? "Your Parking Right was verified." : input.reason ?? `Your Parking Right is now ${input.decision.toLowerCase()}.`, entityType: "ParkingRight", entityId: right.id, idempotencyKey: `parking-right:${right.id}:${input.decision}:${updated.version}` } });
+    if (right.claimBatchId) {
+      const grouped = await tx.parkingRight.groupBy({ by: ["status"], where: { claimBatchId: right.claimBatchId }, _count: { _all: true } });
+      const pendingCount = grouped.find((item) => item.status === ParkingRightStatus.PENDING_VERIFICATION)?._count._all ?? 0;
+      await tx.parkingRightClaimBatch.update({ where: { id: right.claimBatchId }, data: { status: pendingCount === 0 ? ParkingRightClaimBatchStatus.COMPLETED : ParkingRightClaimBatchStatus.PARTIALLY_RESOLVED } });
+    }
     return serialize(updated);
   }, { isolationLevel: "Serializable" });
 }
@@ -614,9 +1163,16 @@ const adminListingInclude = {
 } satisfies Prisma.ParkingListingInclude;
 
 export async function listAdminListings(input: {
-  page: number; limit: number; status?: ParkingListingStatus; providerUserId?: string; propertyId?: string;
+  page: number; limit: number; search?: string; status?: ParkingListingStatus; providerUserId?: string; propertyId?: string;
 }) {
   const where: Prisma.ParkingListingWhereInput = {
+    ...(input.search ? { OR: [
+      { title: { contains: input.search, mode: "insensitive" } },
+      { provider: { fullName: { contains: input.search, mode: "insensitive" } } },
+      { provider: { email: { contains: input.search, mode: "insensitive" } } },
+      { parkingSpot: { property: { name: { contains: input.search, mode: "insensitive" } } } },
+      { parkingSpot: { spotCode: { contains: input.search, mode: "insensitive" } } },
+    ] } : {}),
     ...(input.status ? { status: input.status } : {}),
     ...(input.providerUserId ? { providerUserId: input.providerUserId } : {}),
     ...(input.propertyId ? { parkingSpot: { propertyId: input.propertyId } } : {}),
@@ -632,6 +1188,53 @@ export async function listAdminListings(input: {
     prisma.parkingListing.count({ where }),
   ]);
   return serialize({ listings, pagination: pagination(input.page, input.limit, total) });
+}
+
+const adminParkingRightInclude = {
+  holder: { select: { id: true, fullName: true, email: true, phone: true, status: true } },
+  verifiedByAdmin: { select: { id: true, fullName: true, email: true } },
+  providerMembership: {
+    select: { id: true, status: true, verificationStatus: true, propertyId: true },
+  },
+  parkingSpot: {
+    select: {
+      id: true,
+      displayName: true,
+      spotCode: true,
+      resourceType: true,
+      capacity: true,
+      status: true,
+      property: {
+        select: { id: true, name: true, publicArea: true, verificationStatus: true, status: true },
+      },
+    },
+  },
+  documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } },
+} satisfies Prisma.ParkingRightInclude;
+
+export async function listAdminParkingRights(input: {
+  page: number;
+  limit: number;
+  status?: ParkingRightStatus;
+  propertyId?: string;
+  holderUserId?: string;
+}) {
+  const where: Prisma.ParkingRightWhereInput = {
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.propertyId ? { parkingSpot: { propertyId: input.propertyId } } : {}),
+    ...(input.holderUserId ? { holderUserId: input.holderUserId } : {}),
+  };
+  const [rights, total] = await Promise.all([
+    prisma.parkingRight.findMany({
+      where,
+      include: adminParkingRightInclude,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.parkingRight.count({ where }),
+  ]);
+  return serialize({ rights, pagination: pagination(input.page, input.limit, total) });
 }
 
 export async function getAdminListing(listingId: string) {
@@ -712,6 +1315,53 @@ export async function createAvailabilityException(actorUserId: string, resourceI
       parkingSpotId: resourceId, startsAt, endsAt,
       exceptionType: input.exceptionType, reason: input.reason ?? null, createdByUserId: actorUserId,
     } });
+  });
+}
+
+export async function resumeListing(adminUserId: string, listingId: string, reason: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "parking-listing", listingId);
+    const listing = await tx.parkingListing.findUnique({
+      where: { id: listingId },
+      include: {
+        provider: { select: { status: true } },
+        providerMembership: { select: { status: true, verificationStatus: true } },
+        parkingSpot: { include: { property: true, availabilityRules: true } },
+        parkingRight: true,
+      },
+    });
+    if (!listing) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
+    if (listing.status !== ParkingListingStatus.SUSPENDED) fail(409, "LISTING_NOT_SUSPENDED", "Only a suspended listing can be resumed");
+    const now = new Date();
+    const reasons: string[] = [];
+    if (listing.provider.status !== UserStatus.ACTIVE) reasons.push("PROVIDER_SUSPENDED");
+    if (listing.providerMembership.status !== "ACTIVE" || listing.providerMembership.verificationStatus !== VerificationStatus.VERIFIED) reasons.push("PROVIDER_MEMBERSHIP_INACTIVE");
+    if (listing.parkingSpot.deletedAt || listing.parkingSpot.status !== ParkingSpotStatus.ACTIVE) reasons.push("RESOURCE_INACTIVE");
+    if (listing.parkingSpot.property.status !== PropertyStatus.ACTIVE) reasons.push("PROPERTY_INACTIVE");
+    if (listing.parkingSpot.property.verificationStatus !== VerificationStatus.VERIFIED) reasons.push("PROPERTY_UNVERIFIED");
+    if (listing.parkingRight.status === ParkingRightStatus.REVOKED) reasons.push("RIGHT_REVOKED");
+    else if (listing.parkingRight.status !== ParkingRightStatus.VERIFIED) reasons.push("RIGHT_NOT_VERIFIED");
+    if (!listing.parkingRight.canList || listing.parkingRight.rightType === ParkingRightType.USE_ONLY) reasons.push("RIGHT_CANNOT_LIST");
+    if (listing.parkingRight.validFrom > now) reasons.push("RIGHT_NOT_YET_VALID");
+    if (listing.parkingRight.validUntil && listing.parkingRight.validUntil <= now) reasons.push("RIGHT_EXPIRED");
+    if (!listing.parkingSpot.availabilityRules.some((rule) => rule.isActive && rule.validFrom <= now && (!rule.validUntil || rule.validUntil >= now))) reasons.push("AVAILABILITY_MISSING");
+    if (reasons.length > 0) {
+      fail(409, "LISTING_RESUME_REQUIREMENTS_NOT_MET", "The listing cannot be resumed until all dependencies are eligible", { eligible: false, reasons });
+    }
+    const updated = await tx.parkingListing.update({ where: { id: listing.id }, data: { status: ParkingListingStatus.ACTIVE, publishedAt: listing.publishedAt ?? now, deactivatedAt: null } });
+    await notification(tx, { userId: listing.providerUserId, type: "PROPERTY_GOVERNANCE", title: "Listing resumed", message: "Your listing is active again after Admin review.", entityType: "ParkingListing", entityId: listing.id, idempotencyKey: `listing-resumed:${listing.id}:${updated.updatedAt.toISOString()}` });
+    await audit(tx, DomainAuditEventType.LISTING_RESUMED, adminUserId, listing.parkingSpot.propertyId, "ParkingListing", listing.id, { reason });
+    return serialize(updated);
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function reportListing(reporterUserId: string, listingId: string, input: { reason: string; details?: string }) {
+  return prisma.$transaction(async (tx) => {
+    const listing = await tx.parkingListing.findUnique({ where: { id: listingId }, include: { parkingSpot: { select: { propertyId: true } } } });
+    if (!listing || listing.status === ParkingListingStatus.ENDED) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
+    const report = await tx.listingReport.create({ data: { listingId, reporterUserId, reason: input.reason, details: input.details ?? null } });
+    await audit(tx, DomainAuditEventType.LISTING_REPORTED, reporterUserId, listing.parkingSpot.propertyId, "ListingReport", report.id, { listingId, reason: input.reason });
+    return report;
   });
 }
 
@@ -1104,16 +1754,21 @@ export async function createQuote(driverUserId: string, input: { listingId: stri
   }
   if (!(await ensureListingAvailable(listing, startAt, endAt))) fail(409, "PARKING_NOT_AVAILABLE", "Parking is not available for the requested time");
   const baseAmountPaisa = (listing.pricePerHourPaisa * BigInt(durationMinutes) + 59n) / 60n;
-  const platformFeePaisa = (baseAmountPaisa * PLATFORM_FEE_BASIS_POINTS + 9_999n) / 10_000n;
+  const resolvedFee = await resolvePlatformFee(listing.id, baseAmountPaisa, new Date());
+  const platformFeePaisa = resolvedFee.amountPaisa;
   const totalAmountPaisa = baseAmountPaisa + platformFeePaisa + listing.securityDepositPaisa;
   const quote = await prisma.$transaction(async (tx) => {
     const created = await tx.bookingQuote.create({ data: {
       driverUserId, listingId: listing.id, vehicleId: vehicle.id, parkingSpotId: listing.parkingSpotId,
       startAt, endAt, durationMinutes, baseAmountPaisa, platformFeePaisa,
+      platformFeeRuleId: resolvedFee.ruleId,
       depositPaisa: listing.securityDepositPaisa, totalAmountPaisa,
       expiresAt: new Date(Date.now() + QUOTE_TTL_MS),
     } });
-    await audit(tx, DomainAuditEventType.QUOTE_CREATED, driverUserId, listing.parkingSpot.propertyId, "BookingQuote", created.id);
+    await audit(tx, DomainAuditEventType.QUOTE_CREATED, driverUserId, listing.parkingSpot.propertyId, "BookingQuote", created.id, {
+      platformFeeRuleId: resolvedFee.ruleId,
+      platformFeeSource: resolvedFee.source,
+    });
     return created;
   });
   return serialize(quote);
@@ -1671,9 +2326,17 @@ export async function createRefund(requestedByUserId: string, paymentId: string,
     await lockEntity(tx, "payment", paymentId);
     const payment = await tx.payment.findUnique({ where: { id: paymentId }, include: { booking: true, refunds: { where: { status: "SUCCEEDED" } } } });
     if (!payment) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
-    const authorized = payment.payerUserId === requestedByUserId || payment.booking.providerUserId === requestedByUserId;
+    const requesterAdminRole = await tx.userRole.findUnique({
+      where: { userId_role: { userId: requestedByUserId, role: UserRoleType.ADMIN } },
+      select: { userId: true },
+    });
+    const authorized = payment.payerUserId === requestedByUserId || payment.booking.providerUserId === requestedByUserId || Boolean(requesterAdminRole);
     if (!authorized) fail(403, "REFUND_FORBIDDEN", "You cannot refund this payment");
-    if (!['CAPTURED', 'PARTIALLY_REFUNDED'].includes(payment.status)) fail(409, "PAYMENT_NOT_REFUNDABLE", "Payment is not refundable");
+    const refundablePaymentStatuses: PaymentStatus[] = [
+      PaymentStatus.CAPTURED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ];
+    if (!refundablePaymentStatuses.includes(payment.status)) fail(409, "PAYMENT_NOT_REFUNDABLE", "Payment is not refundable");
     const refunded = payment.refunds.reduce((sum, refund) => sum + refund.amountPaisa, 0n);
     const remaining = payment.amountPaisa - refunded;
     if (input.amountPaisa > remaining) fail(409, "REFUND_AMOUNT_EXCEEDED", "Refund exceeds the remaining refundable amount");
@@ -1712,6 +2375,49 @@ export async function createRefund(requestedByUserId: string, paymentId: string,
     await audit(tx, DomainAuditEventType.REFUND_CREATED, requestedByUserId, payment.booking.propertyId, "Refund", refund.id);
     return serialize(refund);
   }, { isolationLevel: "Serializable" });
+}
+
+export async function cancelBookingAsAdmin(adminUserId: string, bookingId: string, reason: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "booking", bookingId);
+    const booking = await tx.booking.findUnique({ where: { id: bookingId }, include: { payments: { select: { status: true } } } });
+    if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
+    const cancellableStatuses: BookingStatus[] = [BookingStatus.PAYMENT_PENDING, BookingStatus.CONFIRMED];
+    if (!cancellableStatuses.includes(booking.status)) fail(409, "BOOKING_INVALID_STATE", "Booking cannot be cancelled in its current state");
+    if (booking.startAt <= new Date()) fail(409, "BOOKING_CANCELLATION_WINDOW_CLOSED", "Started bookings cannot be cancelled");
+    const unsettledPaymentStatuses: PaymentStatus[] = [
+      PaymentStatus.CAPTURED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ];
+    if (booking.status === BookingStatus.CONFIRMED && booking.payments.some((payment) => unsettledPaymentStatuses.includes(payment.status))) {
+      fail(409, "ADMIN_BOOKING_REFUND_REQUIRED", "Refund all captured payment value before cancelling a confirmed booking");
+    }
+    const now = new Date();
+    const updated = await tx.booking.update({ where: { id: booking.id }, data: { status: BookingStatus.CANCELLED, cancelledAt: now } });
+    await tx.parkingAllocation.update({ where: { id: booking.allocationId }, data: { status: ParkingAllocationStatus.RELEASED } });
+    await tx.accessCredential.updateMany({ where: { bookingId }, data: { status: "REVOKED" } });
+    await notification(tx, { userId: booking.driverUserId, type: "BOOKING_CANCELLED", title: "Booking cancelled by support", message: `Booking ${booking.bookingCode} was cancelled after an Admin review.`, entityType: "Booking", entityId: booking.id, idempotencyKey: `admin-booking-cancelled:${booking.id}:driver` });
+    await notification(tx, { userId: booking.providerUserId, type: "BOOKING_CANCELLED", title: "Booking cancelled by support", message: `Booking ${booking.bookingCode} was cancelled after an Admin review.`, entityType: "Booking", entityId: booking.id, idempotencyKey: `admin-booking-cancelled:${booking.id}:provider` });
+    await audit(tx, DomainAuditEventType.ADMIN_BOOKING_CANCELLED, adminUserId, booking.propertyId, "Booking", booking.id, { reason });
+    return serialize(updated);
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function createAdminBookingRefund(
+  adminUserId: string,
+  bookingId: string,
+  input: { amountPaisa: bigint; reason: string; idempotencyKey: string },
+) {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      bookingId,
+      status: { in: [PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED] },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (!payment) fail(409, "PAYMENT_NOT_REFUNDABLE", "This booking has no refundable payment");
+  return createRefund(adminUserId, payment.id, input);
 }
 
 const driverRefundInclude = {
@@ -1763,10 +2469,107 @@ export async function getDriverRefund(driverUserId: string, refundId: string) {
   return serialize(refund);
 }
 
-export async function createPayout(providerUserId: string, input: { amountPaisa: bigint; idempotencyKey: string }) {
+const payoutMethodPublicSelect = {
+  id: true,
+  type: true,
+  accountHolderName: true,
+  maskedAccountIdentifier: true,
+  bankName: true,
+  branchName: true,
+  routingNumber: true,
+  isDefault: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ProviderPayoutMethodSelect;
+
+function maskPayoutIdentifier(value: string): string {
+  const compact = value.replace(/\s+/g, "");
+  const visible = compact.slice(-4);
+  return `${"*".repeat(Math.max(4, Math.min(12, compact.length - visible.length)))}${visible}`;
+}
+
+export async function listProviderPayoutMethods(providerUserId: string) {
+  return prisma.providerPayoutMethod.findMany({
+    where: { providerUserId },
+    select: payoutMethodPublicSelect,
+    orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+  });
+}
+
+export async function createProviderPayoutMethod(providerUserId: string, input: {
+  type: PayoutMethodType;
+  accountHolderName: string;
+  accountIdentifier: string;
+  bankName?: string;
+  branchName?: string;
+  routingNumber?: string;
+  isDefault: boolean;
+}) {
+  const encrypted = encryptSensitiveText(input.accountIdentifier);
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "provider-payout-method", providerUserId);
+    const activeCount = await tx.providerPayoutMethod.count({ where: { providerUserId, status: PayoutMethodStatus.ACTIVE } });
+    const makeDefault = input.isDefault || activeCount === 0;
+    if (makeDefault) {
+      await tx.providerPayoutMethod.updateMany({ where: { providerUserId, isDefault: true }, data: { isDefault: false } });
+    }
+    const method = await tx.providerPayoutMethod.create({
+      data: {
+        providerUserId,
+        type: input.type,
+        accountHolderName: input.accountHolderName,
+        accountIdentifierCiphertext: encrypted.ciphertext,
+        accountIdentifierIv: encrypted.iv,
+        accountIdentifierTag: encrypted.authTag,
+        maskedAccountIdentifier: maskPayoutIdentifier(input.accountIdentifier),
+        bankName: input.bankName ?? null,
+        branchName: input.branchName ?? null,
+        routingNumber: input.routingNumber ?? null,
+        isDefault: makeDefault,
+      },
+      select: payoutMethodPublicSelect,
+    });
+    await audit(tx, DomainAuditEventType.PAYOUT_METHOD_CREATED, providerUserId, undefined, "ProviderPayoutMethod", method.id, { type: method.type, isDefault: method.isDefault });
+    return method;
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function setDefaultProviderPayoutMethod(providerUserId: string, payoutMethodId: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "provider-payout-method", providerUserId);
+    const method = await tx.providerPayoutMethod.findFirst({ where: { id: payoutMethodId, providerUserId, status: PayoutMethodStatus.ACTIVE } });
+    if (!method) fail(404, "PAYOUT_METHOD_NOT_FOUND", "Active payout method was not found");
+    await tx.providerPayoutMethod.updateMany({ where: { providerUserId, isDefault: true, id: { not: method.id } }, data: { isDefault: false } });
+    const updated = await tx.providerPayoutMethod.update({ where: { id: method.id }, data: { isDefault: true }, select: payoutMethodPublicSelect });
+    await audit(tx, DomainAuditEventType.PAYOUT_METHOD_DEFAULTED, providerUserId, undefined, "ProviderPayoutMethod", method.id);
+    return updated;
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function deactivateProviderPayoutMethod(providerUserId: string, payoutMethodId: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "provider-payout-method", providerUserId);
+    const method = await tx.providerPayoutMethod.findFirst({ where: { id: payoutMethodId, providerUserId } });
+    if (!method) fail(404, "PAYOUT_METHOD_NOT_FOUND", "Payout method was not found");
+    if (method.status === PayoutMethodStatus.INACTIVE) return tx.providerPayoutMethod.findUniqueOrThrow({ where: { id: method.id }, select: payoutMethodPublicSelect });
+    const pendingPayout = await tx.payoutRequest.findFirst({ where: { payoutMethodId: method.id, status: { in: [PayoutStatus.PENDING, PayoutStatus.ON_HOLD, PayoutStatus.APPROVED] } }, select: { id: true } });
+    if (pendingPayout) fail(409, "PAYOUT_METHOD_IN_USE", "This payout method has an unfinished payout request");
+    const updated = await tx.providerPayoutMethod.update({ where: { id: method.id }, data: { status: PayoutMethodStatus.INACTIVE, isDefault: false }, select: payoutMethodPublicSelect });
+    await audit(tx, DomainAuditEventType.PAYOUT_METHOD_DEACTIVATED, providerUserId, undefined, "ProviderPayoutMethod", method.id);
+    return updated;
+  }, { isolationLevel: "Serializable" });
+}
+
+export async function createPayout(providerUserId: string, input: { amountPaisa: bigint; payoutMethodId: string; idempotencyKey: string }) {
   const previous = await prisma.payoutRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
   if (previous) return serialize(previous);
   return prisma.$transaction(async (tx) => {
+    const payoutMethod = await tx.providerPayoutMethod.findFirst({
+      where: { id: input.payoutMethodId, providerUserId, status: PayoutMethodStatus.ACTIVE },
+      select: payoutMethodPublicSelect,
+    });
+    if (!payoutMethod) fail(409, "PAYOUT_METHOD_INACTIVE", "Select an active payout method");
     const wallet = await tx.walletAccount.findUnique({ where: { userId_currency: { userId: providerUserId, currency: "BDT" } } });
     if (!wallet) fail(404, "WALLET_NOT_FOUND", "Wallet was not found");
     await lockEntity(tx, "wallet", wallet.id);
@@ -1775,7 +2578,19 @@ export async function createPayout(providerUserId: string, input: { amountPaisa:
       fail(409, "PAYOUT_BALANCE_INSUFFICIENT", "Available balance is insufficient for payout");
     }
     const payout = await tx.payoutRequest.create({ data: {
-      providerUserId, walletAccountId: wallet.id, amountPaisa: input.amountPaisa, idempotencyKey: input.idempotencyKey,
+      providerUserId,
+      walletAccountId: wallet.id,
+      payoutMethodId: payoutMethod.id,
+      amountPaisa: input.amountPaisa,
+      idempotencyKey: input.idempotencyKey,
+      destinationSnapshot: {
+        type: payoutMethod.type,
+        accountHolderName: payoutMethod.accountHolderName,
+        maskedAccountIdentifier: payoutMethod.maskedAccountIdentifier,
+        bankName: payoutMethod.bankName,
+        branchName: payoutMethod.branchName,
+        routingNumber: payoutMethod.routingNumber,
+      },
     } });
     await tx.walletAccount.update({ where: { id: wallet.id }, data: {
       availableBalancePaisa: { decrement: input.amountPaisa }, heldBalancePaisa: { increment: input.amountPaisa }, balanceVersion: { increment: 1 },
@@ -1799,6 +2614,7 @@ export async function listProviderPayouts(providerUserId: string, input: {
   const [payouts, total] = await Promise.all([
     prisma.payoutRequest.findMany({
       where,
+      include: { payoutMethod: { select: payoutMethodPublicSelect } },
       orderBy: { createdAt: "desc" },
       skip: (input.page - 1) * input.limit,
       take: input.limit,
@@ -1809,24 +2625,30 @@ export async function listProviderPayouts(providerUserId: string, input: {
 }
 
 export async function getProviderPayout(providerUserId: string, payoutId: string) {
-  const payout = await prisma.payoutRequest.findFirst({ where: { id: payoutId, providerUserId } });
+  const payout = await prisma.payoutRequest.findFirst({ where: { id: payoutId, providerUserId }, include: { payoutMethod: { select: payoutMethodPublicSelect } } });
   if (!payout) fail(404, "PAYOUT_NOT_FOUND", "Payout request was not found");
   return serialize(payout);
 }
 
-export async function listPayouts(status?: PayoutStatus) {
-  return serialize(await prisma.payoutRequest.findMany({
-    ...(status ? { where: { status } } : {}),
-    include: { provider: { select: { id: true, fullName: true, email: true } } },
-    orderBy: { createdAt: "asc" },
-    take: 200,
-  }));
+export async function listPayouts(input: { page: number; limit: number; status?: PayoutStatus }) {
+  const where: Prisma.PayoutRequestWhereInput = input.status ? { status: input.status } : {};
+  const [payouts, total] = await Promise.all([
+    prisma.payoutRequest.findMany({
+      where,
+      include: { provider: { select: { id: true, fullName: true, email: true } }, payoutMethod: { select: payoutMethodPublicSelect } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.payoutRequest.count({ where }),
+  ]);
+  return serialize({ payouts, pagination: pagination(input.page, input.limit, total) });
 }
 
 export async function reviewPayout(
   adminUserId: string,
   payoutId: string,
-  input: { decision: "APPROVED" | "REJECTED" | "PAID"; note: string },
+  input: { decision: "APPROVED" | "REJECTED" | "PAID"; note: string; externalReference?: string },
 ) {
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "payout", payoutId);
@@ -1838,6 +2660,13 @@ export async function reviewPayout(
     }
     if (input.decision !== "PAID" && payout.status !== PayoutStatus.PENDING) {
       fail(409, "PAYOUT_TRANSITION_INVALID", "Only a pending payout can be approved or rejected");
+    }
+    let externalReference: string | null = null;
+    if (input.decision === "PAID") {
+      if (!input.externalReference) {
+        fail(400, "PAYOUT_EXTERNAL_REFERENCE_REQUIRED", "An external transfer reference is required when marking a payout paid");
+      }
+      externalReference = input.externalReference;
     }
     await lockEntity(tx, "wallet", payout.walletAccountId);
     const wallet = await tx.walletAccount.findUniqueOrThrow({ where: { id: payout.walletAccountId } });
@@ -1879,6 +2708,7 @@ export async function reviewPayout(
         reviewNote: input.note,
         reviewedAt: now,
         paidAt: input.decision === "PAID" ? now : null,
+        externalReference,
       },
     });
     await notification(tx, {
@@ -1890,8 +2720,13 @@ export async function reviewPayout(
       entityId: payout.id,
       idempotencyKey: `payout:${payout.id}:${input.decision}`,
     });
-    await audit(tx, DomainAuditEventType.PAYOUT_REVIEWED, adminUserId,
-      undefined, "PayoutRequest", payout.id, { decision: input.decision });
+    const payoutEvent = input.decision === "APPROVED"
+      ? DomainAuditEventType.PAYOUT_APPROVED
+      : input.decision === "REJECTED"
+        ? DomainAuditEventType.PAYOUT_REJECTED
+        : DomainAuditEventType.PAYOUT_PAID;
+    await audit(tx, payoutEvent, adminUserId,
+      undefined, "PayoutRequest", payout.id, { decision: input.decision, reason: input.note });
     return serialize(updated);
   }, { isolationLevel: "Serializable" });
 }
@@ -1982,7 +2817,8 @@ export async function resolveDispute(adminUserId: string, disputeId: string, inp
     await lockEntity(tx, "dispute", disputeId);
     const dispute = await tx.dispute.findUnique({ where: { id: disputeId }, include: { booking: true } });
     if (!dispute) fail(404, "DISPUTE_NOT_FOUND", "Dispute was not found");
-    if (!["OPEN", "UNDER_REVIEW"].includes(dispute.status)) fail(409, "DISPUTE_STATE_INVALID", "Dispute has already been resolved");
+    const resolvableStatuses: DisputeStatus[] = [DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW];
+    if (!resolvableStatuses.includes(dispute.status)) fail(409, "DISPUTE_STATE_INVALID", "Dispute has already been resolved");
     const updated = await tx.dispute.update({ where: { id: dispute.id }, data: {
       status: input.decision, resolution: input.resolution, resolvedByUserId: adminUserId, resolvedAt: new Date(),
     } });
@@ -2082,14 +2918,21 @@ export async function getProviderDispute(actorUserId: string, disputeId: string)
   return dispute;
 }
 
-export async function listDisputes(status?: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED") {
-  return prisma.dispute.findMany({
-    ...(status ? { where: { status } } : {}),
-    include: {
-      booking: { select: { id: true, bookingCode: true, propertyId: true, driverUserId: true, providerUserId: true } },
-      openedBy: { select: { id: true, fullName: true, email: true } },
-    },
-    orderBy: { createdAt: "asc" },
-    take: 200,
-  });
+export async function listDisputes(input: { page: number; limit: number; status?: DisputeStatus }) {
+  const where: Prisma.DisputeWhereInput = input.status ? { status: input.status } : {};
+  const [disputes, total] = await Promise.all([
+    prisma.dispute.findMany({
+      where,
+      include: {
+        booking: { select: { id: true, bookingCode: true, status: true, propertyId: true, driverUserId: true, providerUserId: true, startAt: true, scheduledEndAt: true, property: { select: { id: true, name: true, publicArea: true } }, driver: { select: { id: true, fullName: true } }, provider: { select: { id: true, fullName: true } } } },
+        openedBy: { select: { id: true, fullName: true, email: true } },
+        resolvedBy: { select: { id: true, fullName: true } },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.dispute.count({ where }),
+  ]);
+  return serialize({ disputes, pagination: pagination(input.page, input.limit, total) });
 }

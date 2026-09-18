@@ -55,6 +55,27 @@ export const createResourceSchema = z.object({
   }),
 });
 
+export const createBulkResourcesSchema = z.object({
+  params: z.object({ propertyId: uuid }),
+  body: z.object({
+    spaces: z.array(z.object({
+      displayName: z.string().trim().min(2).max(120),
+      spotCode: z.string().trim().min(1).max(30),
+    }).strict()).min(1).max(100),
+    sharedDefaults: z.object({
+      floor: z.string().trim().max(40).optional(),
+      zone: z.string().trim().max(60).optional(),
+      supportedVehicleTypes: z.array(vehicleType).min(1).max(4),
+      isCovered: z.boolean().default(false),
+      hasCctv: z.boolean().default(false),
+      hasGuard: z.boolean().default(false),
+      maxHeightCm: z.number().int().min(100).max(1000).optional(),
+      maxWidthCm: z.number().int().min(100).max(1000).optional(),
+      maxLengthCm: z.number().int().min(100).max(3000).optional(),
+    }).strict(),
+  }).strict(),
+});
+
 export const updateResourceSchema = z.object({
   params: z.object({ resourceId: uuid }),
   body: z.object({
@@ -95,11 +116,68 @@ export const claimRightSchema = z.object({
   }),
 });
 
+export const createRightClaimBatchSchema = z.object({
+  params: z.object({ propertyId: uuid }).strict(),
+  body: z.object({
+    resourceIds: z.array(uuid).min(2).max(100).refine((values) => new Set(values).size === values.length, "Resource IDs must be unique"),
+    rightType: z.enum(["OWNERSHIP", "USE_ONLY", "COMMERCIAL_LEASE", "AUTHORIZED_OPERATION"]),
+    quantity: z.number().int().min(1).max(1000).default(1),
+    canUse: z.boolean().default(true), canList: z.boolean().default(false), canSetPrice: z.boolean().default(false),
+    canManageBookings: z.boolean().default(false), canDelegateManager: z.boolean().default(false),
+    validFrom: isoDate.optional(), validUntil: isoDate.optional(),
+  }).strict().superRefine((value, context) => {
+    if (value.validFrom && value.validUntil && new Date(value.validUntil) <= new Date(value.validFrom)) context.addIssue({ code: "custom", path: ["validUntil"], message: "validUntil must be later than validFrom" });
+    if (value.rightType === "USE_ONLY" && (value.canList || value.canSetPrice || value.canManageBookings)) context.addIssue({ code: "custom", path: ["canList"], message: "USE_ONLY cannot grant commercial permissions" });
+  }),
+});
+
+export const rightClaimBatchQuerySchema = z.object({ query: z.object({ ...pagination, status: z.enum(["PENDING", "COMPLETED", "PARTIALLY_RESOLVED", "CANCELLED"]).optional() }).strict() });
+export const rightClaimBatchParamsSchema = z.object({ params: z.object({ batchId: uuid }).strict() });
+export const reviewRightClaimBatchSchema = z.object({
+  params: z.object({ batchId: uuid }).strict(),
+  body: z.object({ decision: z.enum(["VERIFIED", "REJECTED"]), reason: z.string().trim().min(10).max(500).optional(), rights: z.array(z.object({ rightId: uuid, expectedVersion: z.number().int().positive() }).strict()).min(1).max(100).refine((rights) => new Set(rights.map((right) => right.rightId)).size === rights.length, "Each claim may appear only once") }).strict().superRefine((value, context) => {
+    if (value.decision === "REJECTED" && !value.reason) context.addIssue({ code: "custom", path: ["reason"], message: "Rejection reason is required" });
+  }),
+});
+
+const rightDocumentCategory = z.enum(["OWNERSHIP_DOCUMENT", "LEASE_AGREEMENT", "OWNER_CONSENT", "AUTHORIZATION_LETTER", "PARKING_ALLOCATION", "OTHER"]);
+export const rightDocumentUploadByRightSchema = z.object({ params: z.object({ rightId: uuid }).strict(), body: z.object({ category: rightDocumentCategory }).strict() });
+export const rightDocumentUploadByAmendmentSchema = z.object({ params: z.object({ amendmentId: uuid }).strict(), body: z.object({ category: rightDocumentCategory }).strict() });
+export const rightDocumentUploadByBatchSchema = z.object({ params: z.object({ batchId: uuid }).strict(), body: z.object({ category: rightDocumentCategory }).strict() });
+export const rightDocumentParamsSchema = z.object({ params: z.object({ documentId: uuid }).strict() });
+
+export const updatePendingRightSchema = z.object({
+  params: z.object({ rightId: uuid }),
+  body: z.object({
+    rightType: z.enum(["OWNERSHIP", "USE_ONLY", "COMMERCIAL_LEASE", "AUTHORIZED_OPERATION"]).optional(),
+    quantity: z.number().int().min(1).max(1000).optional(),
+    canUse: z.boolean().optional(),
+    canList: z.boolean().optional(),
+    canSetPrice: z.boolean().optional(),
+    canManageBookings: z.boolean().optional(),
+    canDelegateManager: z.boolean().optional(),
+    validFrom: isoDate.optional(),
+    validUntil: isoDate.nullable().optional(),
+    expectedVersion: z.number().int().positive(),
+  }).strict().superRefine((value, context) => {
+    if (!Object.keys(value).some((key) => key !== "expectedVersion")) {
+      context.addIssue({ code: "custom", message: "At least one claim field is required" });
+    }
+    if (value.rightType === "USE_ONLY" && (value.canList || value.canSetPrice || value.canManageBookings)) {
+      context.addIssue({ code: "custom", path: ["canList"], message: "USE_ONLY rights cannot grant commercial permissions" });
+    }
+    if (value.validFrom && value.validUntil && new Date(value.validUntil) <= new Date(value.validFrom)) {
+      context.addIssue({ code: "custom", path: ["validUntil"], message: "validUntil must be later than validFrom" });
+    }
+  }),
+});
+
 export const verifyRightSchema = z.object({
   params: z.object({ rightId: uuid }),
   body: z.object({
     decision: z.enum(["VERIFIED", "REJECTED", "DISPUTED", "REVOKED"]),
     reason: z.string().trim().min(5).max(500).optional(),
+    expectedVersion: z.number().int().positive(),
   }).strict().superRefine((value, context) => {
     if (value.decision !== "VERIFIED" && !value.reason) {
       context.addIssue({ code: "custom", path: ["reason"], message: "A reason is required for this decision" });
@@ -161,6 +239,59 @@ export const createAvailabilityExceptionSchema = z.object({
   }).strict().refine((value) => new Date(value.endsAt) > new Date(value.startsAt), {
     path: ["endsAt"], message: "endsAt must be later than startsAt",
   }),
+});
+
+const rightAmendmentChangesSchema = z.object({
+  rightType: z.enum(["OWNERSHIP", "USE_ONLY", "COMMERCIAL_LEASE", "AUTHORIZED_OPERATION"]).optional(),
+  quantity: z.number().int().min(1).max(1000).optional(),
+  canUse: z.boolean().optional(),
+  canList: z.boolean().optional(),
+  canSetPrice: z.boolean().optional(),
+  canManageBookings: z.boolean().optional(),
+  canDelegateManager: z.boolean().optional(),
+  validFrom: isoDate.optional(),
+  validUntil: isoDate.nullable().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, "At least one proposed change is required");
+
+export const createRightAmendmentSchema = z.object({
+  params: z.object({ rightId: uuid }).strict(),
+  body: z.object({
+    expectedVersion: z.number().int().positive(),
+    proposedChanges: rightAmendmentChangesSchema,
+  }).strict(),
+});
+
+export const rightAmendmentParamsSchema = z.object({
+  params: z.object({ amendmentId: uuid }).strict(),
+});
+
+export const adminRightAmendmentQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["DRAFT", "PENDING", "APPROVED", "REJECTED", "CANCELLED"]).optional(),
+  }).strict(),
+});
+
+export const reviewRightAmendmentSchema = z.object({
+  params: z.object({ amendmentId: uuid }).strict(),
+  body: z.object({
+    decision: z.enum(["APPROVED", "REJECTED"]),
+    expectedRightVersion: z.number().int().positive(),
+    reason: z.string().trim().min(5).max(500).optional(),
+  }).strict().superRefine((value, context) => {
+    if (value.decision === "REJECTED" && !value.reason) {
+      context.addIssue({ code: "custom", path: ["reason"], message: "A rejection reason is required" });
+    }
+  }),
+});
+
+export const adminParkingRightQuerySchema = z.object({
+  query: z.object({
+    ...pagination,
+    status: z.enum(["PENDING_VERIFICATION", "VERIFIED", "DISPUTED", "REJECTED", "REVOKED", "EXPIRED"]).optional(),
+    propertyId: uuid.optional(),
+    holderUserId: uuid.optional(),
+  }).strict(),
 });
 
 export const availabilityExceptionParamsSchema = z.object({
@@ -249,14 +380,35 @@ export const refundSchema = z.object({
 });
 
 export const payoutSchema = z.object({
-  body: z.object({ amountPaisa: positivePaisa, idempotencyKey }).strict(),
+  body: z.object({ amountPaisa: positivePaisa, payoutMethodId: uuid, idempotencyKey }).strict(),
 });
+
+export const payoutMethodSchema = z.object({
+  body: z.object({
+    type: z.enum(["BANK", "BKASH", "NAGAD", "OTHER_MFS"]),
+    accountHolderName: z.string().trim().min(2).max(120),
+    accountIdentifier: z.string().trim().min(6).max(100),
+    bankName: z.string().trim().min(2).max(120).optional(),
+    branchName: z.string().trim().max(120).optional(),
+    routingNumber: z.string().trim().max(40).optional(),
+    isDefault: z.boolean().default(false),
+  }).strict().superRefine((value, context) => {
+    if (value.type === "BANK" && !value.bankName) {
+      context.addIssue({ code: "custom", path: ["bankName"], message: "Bank name is required for a bank payout method" });
+    }
+    if (value.type !== "BANK" && !/^(?:\+?88)?01[3-9]\d{8}$/.test(value.accountIdentifier.replace(/[\s-]/g, ""))) {
+      context.addIssue({ code: "custom", path: ["accountIdentifier"], message: "Use a valid Bangladesh mobile wallet number" });
+    }
+  }),
+});
+
+export const payoutMethodParamsSchema = z.object({ params: z.object({ payoutMethodId: uuid }) });
 
 export const payoutParamsSchema = z.object({ params: z.object({ payoutId: uuid }) });
 export const providerPayoutQuerySchema = z.object({
   query: z.object({
     ...pagination,
-    status: z.enum(["PENDING", "APPROVED", "REJECTED", "PAID"]).optional(),
+    status: z.enum(["PENDING", "ON_HOLD", "APPROVED", "REJECTED", "PAID"]).optional(),
   }).strict(),
 });
 
@@ -274,7 +426,7 @@ export const adminListingSuspensionSchema = z.object({
 });
 
 export const adminPayoutQuerySchema = z.object({
-  query: z.object({ status: z.enum(["PENDING", "APPROVED", "REJECTED", "PAID"]).optional() }).strict(),
+  query: z.object({ ...pagination, status: z.enum(["PENDING", "ON_HOLD", "APPROVED", "REJECTED", "PAID"]).optional() }).strict(),
 });
 
 export const adminPayoutReviewSchema = z.object({
@@ -282,11 +434,21 @@ export const adminPayoutReviewSchema = z.object({
   body: z.object({
     decision: z.enum(["APPROVED", "REJECTED", "PAID"]),
     note: z.string().trim().min(3).max(500),
-  }).strict(),
+    externalReference: z.string().trim().min(3).max(120).optional(),
+  }).strict().superRefine((value, context) => {
+    if (value.decision === "PAID" && !value.externalReference) {
+      context.addIssue({ code: "custom", path: ["externalReference"], message: "External transfer reference is required when marking a payout paid" });
+    }
+  }),
 });
 
 export const adminDisputeQuerySchema = z.object({
-  query: z.object({ status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "REJECTED"]).optional() }).strict(),
+  query: z.object({ ...pagination, status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "REJECTED"]).optional() }).strict(),
+});
+
+export const listingReportSchema = z.object({
+  params: z.object({ listingId: uuid }),
+  body: z.object({ reason: z.string().trim().min(10).max(500), details: z.string().trim().max(2000).optional() }).strict(),
 });
 
 export const disputeListQuerySchema = z.object({
@@ -299,6 +461,7 @@ export const disputeListQuerySchema = z.object({
 export const adminListingQuerySchema = z.object({
   query: z.object({
     ...pagination,
+    search: z.string().trim().max(120).optional(),
     status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "SUSPENDED", "ENDED"]).optional(),
     providerUserId: uuid.optional(),
     propertyId: uuid.optional(),

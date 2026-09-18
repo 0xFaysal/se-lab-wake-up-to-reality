@@ -1,6 +1,6 @@
 import { apiClient } from "./api-client";
 import type { VehicleType } from "./api-types";
-import type { AvailabilityDto, AvailabilityExceptionDto, AvailabilityRuleInput, CreateParkingResourceInput, ParkingResourceDto } from "./marketplace-types";
+import type { AvailabilityDto, AvailabilityExceptionDto, AvailabilityRuleInput, BulkParkingResourceInput, CreateParkingResourceInput, ParkingResourceDto } from "./marketplace-types";
 
 interface UpdateParkingResourceInput {
   displayName?: string;
@@ -21,6 +21,7 @@ export const parkingResourcesApi = {
   list: (propertyId: string) => apiClient.get<ParkingResourceDto[]>(`/provider/properties/${propertyId}/parking-resources`),
   detail: (resourceId: string) => apiClient.get<ParkingResourceDto>(`/provider/parking-resources/${resourceId}`),
   create: (propertyId: string, input: CreateParkingResourceInput) => apiClient.post<ParkingResourceDto>(`/provider/properties/${propertyId}/parking-resources`, input),
+  createBulk: (propertyId: string, input: BulkParkingResourceInput) => apiClient.post<{ resources: ParkingResourceDto[]; createdCount: number }>(`/provider/properties/${propertyId}/parking-resources/bulk`, input),
   update: (resourceId: string, input: UpdateParkingResourceInput) => apiClient.patch<ParkingResourceDto>(`/provider/parking-resources/${resourceId}`, input),
   remove: (resourceId: string) => apiClient.delete<{ deleted: true }>(`/provider/parking-resources/${resourceId}`),
   availability: (resourceId: string) => apiClient.get<AvailabilityDto>(`/provider/parking-resources/${resourceId}/availability`),

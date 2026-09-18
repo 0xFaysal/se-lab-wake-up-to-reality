@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { LockKeyhole, MonitorSmartphone } from "lucide-react";
+import { CreditCard, LockKeyhole, MonitorSmartphone } from "lucide-react";
 import { ProviderPage, ProviderPageHeader } from "@/components/owner/provider-page";
 
 export default function OwnerSettingsPage() {
-  return <ProviderPage className="max-w-4xl"><ProviderPageHeader title="Provider settings" description="Manage the account controls currently supported by ParkEase BD." breadcrumbs={[{ label: "Account" }, { label: "Settings" }]} /><div className="grid gap-4 sm:grid-cols-2"><SettingLink href="/owner/security" icon={<LockKeyhole className="size-5" />} title="Security" description="Change your password or sign out from every device." /><SettingLink href="/owner/account/sessions" icon={<MonitorSmartphone className="size-5" />} title="Active sessions" description="Review and revoke individual login sessions." /></div></ProviderPage>;
+  return <ProviderPage className="max-w-4xl"><ProviderPageHeader title="Provider settings" description="Manage account security and payout destinations." breadcrumbs={[{ label: "Account" }, { label: "Settings" }]} /><div className="grid gap-4 sm:grid-cols-2"><SettingLink href="/owner/account/security" icon={<LockKeyhole className="size-5" />} title="Security" description="Change your password or sign out from every device." /><SettingLink href="/owner/account/sessions" icon={<MonitorSmartphone className="size-5" />} title="Active sessions" description="Review and revoke individual login sessions." /><SettingLink href="/owner/settings/payout-methods" icon={<CreditCard className="size-5" />} title="Payout methods" description="Add and manage masked bank or mobile wallet destinations." /></div></ProviderPage>;
 }
 
 function SettingLink({ href, icon, title, description }: { href: string; icon: React.ReactNode; title: string; description: string }) {

@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LayoutGrid } from "lucide-react";
+import { Building2, LayoutGrid, LockKeyhole, MonitorSmartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { label: "Overview", href: "/manager/dashboard", icon: LayoutGrid },
   { label: "Delegated Properties", href: "/manager/properties", icon: Building2 },
+  { label: "Security", href: "/manager/account/security", icon: LockKeyhole },
+  { label: "Sessions", href: "/manager/account/sessions", icon: MonitorSmartphone },
 ];
 
 export function ManagerSidebar({ onCloseMobile }: { onCloseMobile?: () => void }) {

@@ -21,6 +21,8 @@ import { usersRouter } from "./modules/users/users.routes.js";
 import { vehicleRouter } from "./modules/vehicles/vehicle.routes.js";
 import { propertyRouter } from "./modules/properties/property.routes.js";
 import { adminPropertyRouter } from "./modules/admin/properties/admin-property.routes.js";
+import { adminOperationsRouter } from "./modules/admin/operations/admin-operations.routes.js";
+import { adminControlRouter } from "./modules/admin/control/admin-control.routes.js";
 import { guardAssignmentRouter } from "./modules/guard-assignments/guard-assignment.routes.js";
 import { propertyGovernanceRouter } from "./modules/property-governance/property-governance.routes.js";
 import { managerDelegationRouter } from "./modules/manager-delegations/manager-delegation.routes.js";
@@ -157,6 +159,8 @@ app.use(
   propertyImageRouter,
 );
 app.use("/api/v1", guardAssignmentRouter);
+app.use("/api/v1/admin", adminOperationsRouter);
+app.use("/api/v1/admin", adminControlRouter);
 app.use("/api/v1/admin/properties", adminPropertyRouter);
 app.use("/api/v1", propertyGovernanceRouter);
 app.use("/api/v1", managerDelegationRouter);
