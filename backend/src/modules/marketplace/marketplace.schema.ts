@@ -57,7 +57,25 @@ export const createResourceSchema = z.object({
 
 export const createBulkResourcesSchema = z.object({
   params: z.object({ propertyId: uuid }),
-  body: z.object({
+  body: z.union([z.object({
+    resource: z.object({
+      type: z.literal("FIXED_SPACE"),
+      displayName: z.string().trim().min(2).max(120),
+      floor: z.string().trim().max(40).optional(),
+      zone: z.string().trim().max(60).optional(),
+      supportedVehicleTypes: z.array(vehicleType).min(1).max(4),
+      isCovered: z.boolean().default(false),
+      hasCctv: z.boolean().default(false),
+      hasGuard: z.boolean().default(false),
+      maxHeightCm: z.number().int().min(100).max(1000).optional(),
+      maxWidthCm: z.number().int().min(100).max(1000).optional(),
+      maxLengthCm: z.number().int().min(100).max(3000).optional(),
+    }).strict(),
+    units: z.array(z.object({
+      displayName: z.string().trim().min(2).max(120).optional(),
+      spotCode: z.string().trim().min(1).max(30),
+    }).strict()).min(1).max(100),
+  }).strict(), z.object({
     spaces: z.array(z.object({
       displayName: z.string().trim().min(2).max(120),
       spotCode: z.string().trim().min(1).max(30),
@@ -73,7 +91,7 @@ export const createBulkResourcesSchema = z.object({
       maxWidthCm: z.number().int().min(100).max(1000).optional(),
       maxLengthCm: z.number().int().min(100).max(3000).optional(),
     }).strict(),
-  }).strict(),
+  }).strict()]),
 });
 
 export const updateResourceSchema = z.object({
@@ -187,6 +205,7 @@ export const verifyRightSchema = z.object({
 
 const listingBodySchema = z.object({
     parkingRightId: uuid,
+    parkingResourceUnitId: uuid.optional(),
     title: z.string().trim().min(3).max(150),
     description: z.string().trim().max(3000).optional(),
     pricePerHourPaisa: positivePaisa,
@@ -204,7 +223,7 @@ export const createListingSchema = z.object({
 
 export const updateListingSchema = z.object({
   params: z.object({ listingId: uuid }),
-  body: listingBodySchema.omit({ parkingRightId: true }).partial()
+  body: listingBodySchema.omit({ parkingRightId: true, parkingResourceUnitId: true }).partial()
     .refine((value) => Object.keys(value).length > 0, "At least one field is required")
     .refine(
       (value) => value.minDurationMinutes === undefined
@@ -328,9 +347,18 @@ export const searchParkingSchema = z.object({
     resourceType: z.enum(["FIXED_SPACE", "SHARED_POOL"]).optional(),
     facilityCodes: z.string().trim().max(300).transform((value) => value.split(",").map((item) => item.trim()).filter(Boolean)).optional(),
     minAvailableUnits: z.coerce.number().int().min(1).max(100).optional(),
-  }).strict().refine((value) => new Date(value.endAt) > new Date(value.startAt), {
+  }).strict().refine((value) => new Date(value.startAt) > new Date(), {
+    path: ["startAt"], message: "startAt must be in the future",
+  }).refine((value) => new Date(value.endAt) > new Date(value.startAt), {
     path: ["endAt"], message: "endAt must be later than startAt",
   }),
+});
+
+export const browseParkingSchema = z.object({
+  query: z.object({
+    latitude: z.coerce.number().min(-90).max(90),
+    longitude: z.coerce.number().min(-180).max(180),
+  }).strict(),
 });
 
 export const driverFavoriteParamsSchema = z.object({ params: z.object({ propertyId: uuid }) });
@@ -374,13 +402,18 @@ export const publicPropertyDetailSchema = z.object({
     startAt: isoDate,
     endAt: isoDate,
     vehicleType,
-  }).strict().refine((value) => new Date(value.endAt) > new Date(value.startAt), {
+  }).strict().refine((value) => new Date(value.startAt) > new Date(), {
+    path: ["startAt"], message: "startAt must be in the future",
+  }).refine((value) => new Date(value.endAt) > new Date(value.startAt), {
     path: ["endAt"], message: "endAt must be later than startAt",
   }),
 });
 
 export const createQuoteSchema = z.object({
   body: z.object({ listingId: uuid, vehicleId: uuid, startAt: isoDate, endAt: isoDate }).strict()
+    .refine((value) => new Date(value.startAt) > new Date(), {
+      path: ["startAt"], message: "startAt must be in the future",
+    })
     .refine((value) => new Date(value.endAt) > new Date(value.startAt), {
       path: ["endAt"], message: "endAt must be later than startAt",
     }),

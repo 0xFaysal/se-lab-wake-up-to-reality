@@ -23,6 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandIcon } from "@/components/common/app-logo";
 
 type NavItem = {
   label: string;
@@ -87,7 +88,7 @@ export function OwnerSidebar({ onCloseMobile }: { onCloseMobile?: () => void }) 
   return (
     <aside className="flex h-dvh w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
       <Link href="/owner/dashboard" onClick={onCloseMobile} className="flex h-16 items-center gap-3 border-b px-5">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-[#064E3B] text-base font-extrabold text-white">P</span>
+        <BrandIcon size={36} className="size-9" />
         <span>
           <strong className="block text-sm text-slate-950">ParkEase BD</strong>
           <span className="text-[11px] text-slate-500">Provider Portal</span>

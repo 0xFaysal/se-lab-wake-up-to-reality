@@ -114,6 +114,33 @@ describe("Marketplace validation invariants", () => {
       params: { propertyId },
       body: { spaces: [{ displayName: "A", spotCode: "" }], sharedDefaults },
     }).success, false);
+    assert.equal(createBulkResourcesSchema.safeParse({
+      params: { propertyId },
+      body: {
+        resource: {
+          type: "FIXED_SPACE",
+          displayName: "Basement Zone A",
+          ...sharedDefaults,
+        },
+        units: [
+          { displayName: "Parking space A-01", spotCode: "A-01" },
+          { displayName: "Parking space A-02", spotCode: "A-02" },
+        ],
+      },
+    }).success, true);
+  });
+
+  it("accepts an optional fixed-unit scope on a listing", () => {
+    assert.equal(createListingSchema.safeParse({ body: {
+      parkingRightId: rightId,
+      parkingResourceUnitId: resourceId,
+      title: "Extra-wide A-10",
+      pricePerHourPaisa: "15000",
+      minDurationMinutes: 60,
+      maxDurationMinutes: 720,
+      allowedVehicleTypes: ["SUV"],
+      securityDepositPaisa: "0",
+    } }).success, true);
   });
 
   it("rejects duplicate claims in one Admin batch decision", () => {

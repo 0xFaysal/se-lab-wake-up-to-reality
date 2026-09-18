@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface AppLogoProps {
@@ -13,31 +14,20 @@ export function AppLogo({
   linkTo = "/",
 }: AppLogoProps) {
   const sizeClasses = {
-    sm: "text-base",
-    default: "text-lg",
-    lg: "text-xl sm:text-2xl",
-  };
-
-  const markSize = {
-    sm: "size-6 text-xs",
-    default: "size-7 text-xs font-bold",
-    lg: "size-8 text-sm font-black",
+    sm: "h-7 w-auto",
+    default: "h-8 w-auto",
+    lg: "h-9 w-auto sm:h-10",
   };
 
   const logo = (
-    <div className={cn("inline-flex items-center gap-2 select-none", className)}>
-      <span
-        className={cn(
-          "flex items-center justify-center rounded-lg bg-primary text-white font-mono shadow-xs",
-          markSize[size]
-        )}
-      >
-        P
-      </span>
-      <span className={cn("font-heading font-extrabold tracking-tight text-foreground", sizeClasses[size])}>
-        ParkEase <span className="text-primary">BD</span>
-      </span>
-    </div>
+    <Image
+      src="/Parkease-icon.svg"
+      alt="ParkEase BD"
+      width={1849}
+      height={456}
+      unoptimized
+      className={cn("select-none object-contain", sizeClasses[size], className)}
+    />
   );
 
   if (linkTo) {
@@ -47,6 +37,10 @@ export function AppLogo({
       </Link>
     );
   }
-
+  
   return logo;
+}
+
+export function BrandIcon({ className, size = 36 }: { className?: string; size?: number }) {
+  return <Image src="/favicon/android-chrome-192x192.png" alt="" aria-hidden="true" width={size} height={size} className={cn("shrink-0 object-contain", className)} />;
 }

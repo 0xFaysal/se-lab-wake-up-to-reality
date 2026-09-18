@@ -8,6 +8,7 @@ function query(input: ParkingSearchParams) {
 }
 
 export const parkingSearchApi = {
+  browse: (input: Pick<ParkingSearchParams, "latitude" | "longitude">) => apiClient.get<ParkingSearchResultDto[]>(`/parking/browse?${query(input as ParkingSearchParams)}`),
   search: (input: ParkingSearchParams) => apiClient.get<ParkingSearchResultDto[]>(`/parking/search?${query(input)}`),
   propertyDetail: (propertyId: string, input: Pick<ParkingSearchParams, "startAt" | "endAt" | "vehicleType">) =>
     apiClient.get<PublicPropertyDetailDto>(`/parking/properties/${propertyId}?${query(input as ParkingSearchParams)}`),

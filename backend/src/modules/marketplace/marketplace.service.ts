@@ -235,8 +235,8 @@ export async function createResource(actorUserId: string, propertyId: string, in
     const authority = await requireAuthority(actorUserId, propertyId, undefined, undefined, tx);
     const normalizedSpotCode = input.spotCode ? normalizeSpotCode(input.spotCode) : null;
     if (normalizedSpotCode) {
-      const duplicate = await tx.parkingSpot.findFirst({
-        where: { propertyId, normalizedSpotCode, deletedAt: null }, select: { id: true },
+      const duplicate = await tx.parkingResourceUnit.findFirst({
+        where: { parkingSpot: { propertyId }, normalizedSpotCode, deletedAt: null }, select: { id: true },
       });
       if (duplicate) fail(409, "PARKING_RESOURCE_CODE_CONFLICT", "A resource with this spot code already exists");
     }
@@ -260,7 +260,11 @@ export async function createResource(actorUserId: string, propertyId: string, in
         maxHeightCm: input.maxHeightCm ?? null,
         maxWidthCm: input.maxWidthCm ?? null,
         maxLengthCm: input.maxLengthCm ?? null,
+        ...(input.type === ParkingResourceType.FIXED_SPACE && input.spotCode && normalizedSpotCode
+          ? { units: { create: { spotCode: input.spotCode, normalizedSpotCode, displayName: input.displayName, status: ParkingSpotStatus.INACTIVE } } }
+          : {}),
       },
+      include: { units: true },
     });
     await audit(tx, DomainAuditEventType.PARKING_RESOURCE_CREATED, actorUserId, propertyId, "ParkingResource", resource.id);
     return serialize(resource);
@@ -268,6 +272,13 @@ export async function createResource(actorUserId: string, propertyId: string, in
 }
 
 export async function createBulkFixedResources(actorUserId: string, propertyId: string, input: {
+  resource: {
+    type: ParkingResourceType; displayName: string; floor?: string; zone?: string; supportedVehicleTypes: VehicleType[];
+    isCovered: boolean; hasCctv: boolean; hasGuard: boolean;
+    maxHeightCm?: number; maxWidthCm?: number; maxLengthCm?: number;
+  };
+  units: Array<{ displayName?: string; spotCode: string }>;
+} | {
   spaces: Array<{ displayName: string; spotCode: string }>;
   sharedDefaults: {
     floor?: string; zone?: string; supportedVehicleTypes: VehicleType[];
@@ -279,10 +290,22 @@ export async function createBulkFixedResources(actorUserId: string, propertyId: 
     await lockEntity(tx, "property-resource", propertyId);
     await requireEligibleProperty(propertyId, tx);
     const authority = await requireAuthority(actorUserId, propertyId, undefined, undefined, tx);
-    const rows = input.spaces.map((space, index) => ({
-      ...space,
+    const canonical = "resource" in input ? input : {
+      resource: {
+        type: ParkingResourceType.FIXED_SPACE,
+        displayName: input.sharedDefaults.zone
+          ? `${input.sharedDefaults.zone} fixed parking`
+          : input.sharedDefaults.floor
+            ? `${input.sharedDefaults.floor} fixed parking`
+            : "Fixed parking spaces",
+        ...input.sharedDefaults,
+      },
+      units: input.spaces,
+    };
+    const rows = canonical.units.map((unit, index) => ({
+      ...unit,
       index,
-      normalizedSpotCode: normalizeSpotCode(space.spotCode),
+      normalizedSpotCode: normalizeSpotCode(unit.spotCode),
     }));
     const validationErrors: Array<{ index: number; spotCode: string; code: string; message: string }> = [];
     const seen = new Map<string, number>();
@@ -294,8 +317,8 @@ export async function createBulkFixedResources(actorUserId: string, propertyId: 
         seen.set(row.normalizedSpotCode, row.index);
       }
     }
-    const existing = await tx.parkingSpot.findMany({
-      where: { propertyId, normalizedSpotCode: { in: rows.map((row) => row.normalizedSpotCode) }, deletedAt: null },
+    const existing = await tx.parkingResourceUnit.findMany({
+      where: { parkingSpot: { propertyId }, normalizedSpotCode: { in: rows.map((row) => row.normalizedSpotCode) }, deletedAt: null },
       select: { normalizedSpotCode: true },
     });
     const existingCodes = new Set(existing.map((row) => row.normalizedSpotCode));
@@ -308,34 +331,35 @@ export async function createBulkFixedResources(actorUserId: string, propertyId: 
       fail(409, "PARKING_RESOURCE_BULK_VALIDATION_FAILED", "One or more parking spaces could not be created", { errors: validationErrors });
     }
 
-    const resources = [];
-    for (const row of rows) {
-      const resource = await tx.parkingSpot.create({
-        data: {
-          propertyId,
-          providerMembershipId: authority.membership.id,
-          resourceType: ParkingResourceType.FIXED_SPACE,
-          displayName: row.displayName,
+    const resource = await tx.parkingSpot.create({
+      data: {
+        propertyId,
+        providerMembershipId: authority.membership.id,
+        resourceType: ParkingResourceType.FIXED_SPACE,
+        displayName: canonical.resource.displayName,
+        floor: canonical.resource.floor ?? null,
+        zone: canonical.resource.zone ?? null,
+        capacity: rows.length,
+        supportedVehicleType: canonical.resource.supportedVehicleTypes[0]!,
+        supportedVehicleTypes: canonical.resource.supportedVehicleTypes,
+        status: ParkingSpotStatus.INACTIVE,
+        isCovered: canonical.resource.isCovered,
+        hasCctv: canonical.resource.hasCctv,
+        hasGuard: canonical.resource.hasGuard,
+        maxHeightCm: canonical.resource.maxHeightCm ?? null,
+        maxWidthCm: canonical.resource.maxWidthCm ?? null,
+        maxLengthCm: canonical.resource.maxLengthCm ?? null,
+        units: { create: rows.map((row) => ({
           spotCode: row.spotCode,
           normalizedSpotCode: row.normalizedSpotCode,
-          floor: input.sharedDefaults.floor ?? null,
-          zone: input.sharedDefaults.zone ?? null,
-          capacity: 1,
-          supportedVehicleType: input.sharedDefaults.supportedVehicleTypes[0]!,
-          supportedVehicleTypes: input.sharedDefaults.supportedVehicleTypes,
+          displayName: row.displayName ?? row.spotCode,
           status: ParkingSpotStatus.INACTIVE,
-          isCovered: input.sharedDefaults.isCovered,
-          hasCctv: input.sharedDefaults.hasCctv,
-          hasGuard: input.sharedDefaults.hasGuard,
-          maxHeightCm: input.sharedDefaults.maxHeightCm ?? null,
-          maxWidthCm: input.sharedDefaults.maxWidthCm ?? null,
-          maxLengthCm: input.sharedDefaults.maxLengthCm ?? null,
-        },
-      });
-      resources.push(resource);
-    }
-    await audit(tx, DomainAuditEventType.PARKING_RESOURCE_BULK_CREATED, actorUserId, propertyId, "Property", propertyId, { createdCount: resources.length });
-    return serialize({ resources, createdCount: resources.length });
+        })) },
+      },
+      include: { units: { orderBy: { normalizedSpotCode: "asc" } } },
+    });
+    await audit(tx, DomainAuditEventType.PARKING_RESOURCE_BULK_CREATED, actorUserId, propertyId, "ParkingResource", resource.id, { createdUnitCount: rows.length });
+    return serialize({ resource, units: resource.units, resources: [resource], createdCount: rows.length });
   }, { isolationLevel: "Serializable" });
 }
 
@@ -347,7 +371,7 @@ export async function listResources(actorUserId: string, propertyId: string) {
       deletedAt: null,
       ...(authority.managed ? { providerMembershipId: authority.membership.id } : {}),
     },
-    include: { parkingRights: true, listings: true },
+    include: { parkingRights: true, listings: true, units: { where: { deletedAt: null }, orderBy: { normalizedSpotCode: "asc" } } },
     orderBy: [{ createdAt: "desc" }],
   });
   return serialize(resources);
@@ -356,7 +380,7 @@ export async function listResources(actorUserId: string, propertyId: string) {
 export async function getResource(actorUserId: string, resourceId: string) {
   const resource = await prisma.parkingSpot.findFirst({
     where: { id: resourceId, deletedAt: null },
-    include: { parkingRights: true, listings: true, availabilityRules: true, availabilityExceptions: true },
+    include: { parkingRights: true, listings: true, units: { where: { deletedAt: null }, orderBy: { normalizedSpotCode: "asc" } }, availabilityRules: true, availabilityExceptions: true },
   });
   if (!resource) fail(404, "PARKING_RESOURCE_NOT_FOUND", "Parking resource was not found");
   await requireAuthority(actorUserId, resource.propertyId, ManagerDelegationPermission.RESOURCE_VIEW, resourceId);
@@ -369,8 +393,13 @@ export async function updateResource(actorUserId: string, resourceId: string, in
     const resource = await tx.parkingSpot.findFirst({ where: { id: resourceId, deletedAt: null } });
     if (!resource) fail(404, "PARKING_RESOURCE_NOT_FOUND", "Parking resource was not found");
     await requireAuthority(actorUserId, resource.propertyId, ManagerDelegationPermission.LISTING_MANAGE, resourceId, tx);
-    if (resource.resourceType === ParkingResourceType.FIXED_SPACE && input.capacity !== undefined && input.capacity !== 1) {
-      fail(400, "PARKING_RESOURCE_CAPACITY_INVALID", "Fixed-space capacity must remain 1");
+    if (resource.resourceType === ParkingResourceType.FIXED_SPACE && input.capacity !== undefined) {
+      if (input.capacity !== 1 && input.capacity !== resource.capacity) {
+        fail(400, "PARKING_RESOURCE_CAPACITY_INVALID", "Manage fixed-space capacity by adding or removing physical units");
+      }
+      // Older clients sent capacity=1 for every fixed resource. Capacity is now
+      // derived from child units, so that compatibility value must not overwrite it.
+      delete input.capacity;
     }
     if (typeof input.capacity === "number" && input.capacity < resource.capacity) {
       const entitlement = await tx.parkingRight.aggregate({
@@ -380,7 +409,11 @@ export async function updateResource(actorUserId: string, resourceId: string, in
         fail(409, "PARKING_RESOURCE_CAPACITY_IN_USE", "Capacity is below verified parking-right entitlement");
       }
     }
-    return serialize(await tx.parkingSpot.update({ where: { id: resourceId }, data: input as Prisma.ParkingSpotUpdateInput }));
+    const updated = await tx.parkingSpot.update({ where: { id: resourceId }, data: input as Prisma.ParkingSpotUpdateInput });
+    if (resource.resourceType === ParkingResourceType.FIXED_SPACE && typeof input.status === "string") {
+      await tx.parkingResourceUnit.updateMany({ where: { parkingSpotId: resourceId, deletedAt: null }, data: { status: input.status as ParkingSpotStatus } });
+    }
+    return serialize(updated);
   }, { isolationLevel: "Serializable" });
 }
 
@@ -393,6 +426,7 @@ export async function deleteResource(actorUserId: string, resourceId: string) {
     const blockers = await tx.booking.count({ where: { parkingSpotId: resourceId, status: { notIn: ["COMPLETED", "CANCELLED", "EXPIRED", "NO_SHOW"] } } });
     if (blockers > 0) fail(409, "PARKING_RESOURCE_DELETE_BLOCKED", "Resource has active booking dependencies");
     await tx.parkingListing.updateMany({ where: { parkingSpotId: resourceId, status: { not: "ENDED" } }, data: { status: "ENDED", deactivatedAt: new Date() } });
+    await tx.parkingResourceUnit.updateMany({ where: { parkingSpotId: resourceId, deletedAt: null }, data: { deletedAt: new Date(), status: ParkingSpotStatus.INACTIVE } });
     await tx.parkingSpot.update({ where: { id: resourceId }, data: { deletedAt: new Date(), status: "INACTIVE" } });
   });
 }
@@ -424,8 +458,8 @@ export async function claimParkingRight(actorUserId: string, resourceId: string,
         { rightId: existingClaim.id, status: existingClaim.status },
       );
     }
-    if (resource.resourceType === ParkingResourceType.FIXED_SPACE && input.quantity !== 1) {
-      fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A fixed-space right quantity must be 1");
+    if (resource.resourceType === ParkingResourceType.FIXED_SPACE && input.quantity !== resource.capacity) {
+      fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A resource-wide fixed-space claim must cover the resource capacity");
     }
     if (input.rightType === ParkingRightType.USE_ONLY && input.canList) {
       fail(400, "PARKING_RIGHT_COMMERCIAL_USE_FORBIDDEN", "USE_ONLY rights cannot list parking commercially");
@@ -484,8 +518,8 @@ export async function updatePendingParkingRight(actorUserId: string, rightId: st
     const canManageBookings = rightType === ParkingRightType.USE_ONLY ? false : input.canManageBookings ?? right.canManageBookings;
     const validFrom = input.validFrom ? new Date(input.validFrom) : right.validFrom;
     const validUntil = input.validUntil !== undefined ? input.validUntil ? new Date(input.validUntil) : null : right.validUntil;
-    if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && quantity !== 1) {
-      fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A fixed-space right quantity must be 1");
+    if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && quantity !== right.parkingSpot.capacity) {
+      fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A resource-wide fixed-space claim must cover the resource capacity");
     }
     if ((canSetPrice || canManageBookings) && !canList) fail(400, "PARKING_RIGHT_PERMISSION_INVALID", "Pricing and booking management require listing permission");
     if (validUntil && validUntil <= validFrom) fail(400, "PARKING_RIGHT_VALIDITY_INVALID", "The right end time must be later than its start time");
@@ -527,7 +561,7 @@ export async function createParkingRightClaimBatch(actorUserId: string, property
     if (!membershipId || !providerUserId || authorities.some((authority) => authority.membership.id !== membershipId)) fail(403, "PARKING_RIGHT_BATCH_AUTHORITY_INVALID", "All selected resources must belong to the same Provider membership");
     const conflicts = await tx.parkingRight.findMany({ where: { parkingSpotId: { in: input.resourceIds }, holderUserId: providerUserId, status: { in: [ParkingRightStatus.PENDING_VERIFICATION, ParkingRightStatus.VERIFIED, ParkingRightStatus.DISPUTED] } }, select: { id: true, parkingSpotId: true, status: true } });
     if (conflicts.length) fail(409, "PARKING_RIGHT_BATCH_CONFLICT", "One or more selected resources already have an active or pending claim", { conflicts });
-    if (resources.some((resource) => resource.resourceType === ParkingResourceType.FIXED_SPACE) && input.quantity !== 1) fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "Fixed-space batch claims must use quantity 1");
+    if (resources.some((resource) => resource.resourceType === ParkingResourceType.FIXED_SPACE && input.quantity !== resource.capacity)) fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "Each fixed-space claim must cover its resource capacity");
     if (input.rightType === ParkingRightType.USE_ONLY && (input.canList || input.canSetPrice || input.canManageBookings)) fail(400, "PARKING_RIGHT_COMMERCIAL_USE_FORBIDDEN", "USE_ONLY rights cannot grant commercial permissions");
     if ((input.canSetPrice || input.canManageBookings) && !input.canList) fail(400, "PARKING_RIGHT_PERMISSION_INVALID", "Pricing and booking management require listing permission");
     const validFrom = input.validFrom ? new Date(input.validFrom) : new Date();
@@ -734,7 +768,7 @@ type ParkingRightProposedChanges = {
 
 function validateRightChanges(right: {
   rightType: ParkingRightType; quantity: number; canList: boolean; canSetPrice: boolean; canManageBookings: boolean;
-  validFrom: Date; validUntil: Date | null; parkingSpot: { resourceType: ParkingResourceType };
+  validFrom: Date; validUntil: Date | null; parkingSpot: { resourceType: ParkingResourceType; capacity: number };
 }, changes: ParkingRightProposedChanges) {
   const next = {
     rightType: changes.rightType ?? right.rightType,
@@ -745,8 +779,8 @@ function validateRightChanges(right: {
     validFrom: changes.validFrom ? new Date(changes.validFrom) : right.validFrom,
     validUntil: changes.validUntil !== undefined ? changes.validUntil ? new Date(changes.validUntil) : null : right.validUntil,
   };
-  if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && next.quantity !== 1) {
-    fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A fixed-space right quantity must be 1");
+  if (right.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE && next.quantity !== right.parkingSpot.capacity) {
+    fail(400, "PARKING_RIGHT_QUANTITY_INVALID", "A resource-wide fixed-space right must cover its resource capacity");
   }
   if (next.rightType === ParkingRightType.USE_ONLY && (next.canList || next.canSetPrice || next.canManageBookings)) {
     fail(400, "PARKING_RIGHT_COMMERCIAL_USE_FORBIDDEN", "A use-only right cannot grant commercial permissions");
@@ -763,7 +797,7 @@ function validateRightChanges(right: {
 export async function createParkingRightAmendment(actorUserId: string, rightId: string, input: { expectedVersion: number; proposedChanges: ParkingRightProposedChanges }) {
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "parking-right", rightId);
-    const right = await tx.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: { select: { propertyId: true, resourceType: true } } } });
+    const right = await tx.parkingRight.findUnique({ where: { id: rightId }, include: { parkingSpot: { select: { propertyId: true, resourceType: true, capacity: true } } } });
     if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
     if (right.holderUserId !== actorUserId) fail(403, "PARKING_RIGHT_FORBIDDEN", "Only the verified right holder can request a change");
     if (right.status !== ParkingRightStatus.VERIFIED) fail(409, "PARKING_RIGHT_AMENDMENT_NOT_ALLOWED", "Only a verified parking right can be amended");
@@ -835,7 +869,7 @@ export async function reviewParkingRightAmendment(adminUserId: string, amendment
     if (!amendment) fail(404, "PARKING_RIGHT_AMENDMENT_NOT_FOUND", "Parking right change request was not found");
     if (amendment.status !== ParkingRightAmendmentStatus.PENDING) fail(409, "PARKING_RIGHT_AMENDMENT_STATE_INVALID", "This change request has already been resolved");
     await lockEntity(tx, "parking-right", amendment.parkingRightId);
-    const right = await tx.parkingRight.findUnique({ where: { id: amendment.parkingRightId }, include: { parkingSpot: { select: { propertyId: true, resourceType: true } } } });
+    const right = await tx.parkingRight.findUnique({ where: { id: amendment.parkingRightId }, include: { parkingSpot: { select: { propertyId: true, resourceType: true, capacity: true } } } });
     if (!right) fail(404, "PARKING_RIGHT_NOT_FOUND", "Parking right was not found");
     if (right.version !== input.expectedRightVersion || right.version !== amendment.baseRightVersion) fail(409, "PARKING_RIGHT_CLAIM_CHANGED", "The parking right changed after this request was submitted", { currentVersion: right.version, baseRightVersion: amendment.baseRightVersion });
     if (right.status !== ParkingRightStatus.VERIFIED) fail(409, "PARKING_RIGHT_AMENDMENT_NOT_ALLOWED", "The original parking right is no longer verified");
@@ -877,7 +911,7 @@ export async function listParkingRights(actorUserId: string) {
   const scopes = await listProviderAccessScopes(actorUserId, ManagerDelegationPermission.RESOURCE_VIEW);
   const rights = await prisma.parkingRight.findMany({
     where: { providerMembershipId: { in: scopes.map((scope) => scope.providerMembershipId) } },
-    include: { parkingSpot: { select: { id: true, displayName: true, spotCode: true, resourceType: true, propertyId: true } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } },
+    include: { parkingSpot: { include: { units: { where: { deletedAt: null }, orderBy: { normalizedSpotCode: "asc" } } } }, documents: { select: { id: true, category: true, originalName: true, mimeType: true, sizeBytes: true, createdAt: true } } },
     orderBy: { createdAt: "desc" },
   });
   const scopeByMembership = new Map(scopes.map((scope) => [scope.providerMembershipId, scope]));
@@ -971,7 +1005,7 @@ export async function verifyParkingRight(adminUserId: string, rightId: string, i
 }
 
 export async function createListing(actorUserId: string, input: {
-  parkingRightId: string; title: string; description?: string; pricePerHourPaisa: bigint;
+  parkingRightId: string; parkingResourceUnitId?: string; title: string; description?: string; pricePerHourPaisa: bigint;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[]; securityDepositPaisa: bigint;
 }) {
   return prisma.$transaction(async (tx) => {
@@ -992,6 +1026,13 @@ export async function createListing(actorUserId: string, input: {
     if (right.parkingSpot.deletedAt || right.parkingSpot.status === ParkingSpotStatus.BLOCKED) {
       fail(409, "PARKING_RESOURCE_NOT_LISTABLE", "Parking resource is not eligible for listing");
     }
+    if (input.parkingResourceUnitId) {
+      if (right.parkingSpot.resourceType !== ParkingResourceType.FIXED_SPACE) {
+        fail(400, "PARKING_RESOURCE_UNIT_INVALID", "Shared-pool listings cannot target a fixed unit");
+      }
+      const unit = await tx.parkingResourceUnit.findFirst({ where: { id: input.parkingResourceUnitId, parkingSpotId: right.parkingSpotId, deletedAt: null } });
+      if (!unit) fail(404, "PARKING_RESOURCE_UNIT_NOT_FOUND", "Parking resource unit was not found");
+    }
     const supported = new Set(right.parkingSpot.supportedVehicleTypes.length > 0
       ? right.parkingSpot.supportedVehicleTypes : [right.parkingSpot.supportedVehicleType]);
     if (input.allowedVehicleTypes.some((type) => !supported.has(type))) {
@@ -1007,6 +1048,7 @@ export async function createListing(actorUserId: string, input: {
         providerUserId: right.holderUserId,
         providerMembershipId: right.providerMembershipId,
         parkingRightId: right.id,
+        parkingResourceUnitId: input.parkingResourceUnitId ?? null,
         title: input.title,
         description: input.description ?? null,
         pricePerHourPaisa: input.pricePerHourPaisa,
@@ -1018,6 +1060,7 @@ export async function createListing(actorUserId: string, input: {
         settlementWalletAccountId: wallet.id,
       },
     });
+    await tx.parkingListingPriceHistory.create({ data: { parkingListingId: listing.id, previousPricePaisa: null, pricePerHourPaisa: listing.pricePerHourPaisa, changedByUserId: actorUserId } });
     return serialize(listing);
   }, { isolationLevel: "Serializable" });
 }
@@ -1068,7 +1111,11 @@ export async function updateListing(actorUserId: string, listingId: string, inpu
       const max = Number(input.maxDurationMinutes ?? listing.maxDurationMinutes);
       if (max < min) fail(400, "LISTING_DURATION_INVALID", "Maximum duration must be at least the minimum duration");
     }
-    return serialize(await tx.parkingListing.update({ where: { id: listingId }, data: input as Prisma.ParkingListingUpdateInput }));
+    const updated = await tx.parkingListing.update({ where: { id: listingId }, data: input as Prisma.ParkingListingUpdateInput });
+    if (input.pricePerHourPaisa !== undefined && BigInt(input.pricePerHourPaisa as string | number | bigint) !== listing.pricePerHourPaisa) {
+      await tx.parkingListingPriceHistory.create({ data: { parkingListingId: listing.id, previousPricePaisa: listing.pricePerHourPaisa, pricePerHourPaisa: updated.pricePerHourPaisa, changedByUserId: actorUserId } });
+    }
+    return serialize(updated);
   });
 }
 
@@ -1080,6 +1127,7 @@ async function changeListingStatus(actorUserId: string, listingId: string, activ
       include: {
         parkingSpot: { include: { property: true, availabilityRules: true } },
         parkingRight: true,
+        parkingResourceUnit: true,
       },
     });
     if (!listing) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
@@ -1093,6 +1141,7 @@ async function changeListingStatus(actorUserId: string, listingId: string, activ
         listing.parkingRight.rightType !== ParkingRightType.USE_ONLY && listing.parkingRight.validFrom <= now &&
         (!listing.parkingRight.validUntil || listing.parkingRight.validUntil > now);
       if (!rightValid || listing.parkingSpot.status !== ParkingSpotStatus.ACTIVE ||
+          (listing.parkingResourceUnit && listing.parkingResourceUnit.status !== ParkingSpotStatus.ACTIVE) ||
           listing.parkingSpot.property.status !== PropertyStatus.ACTIVE ||
           listing.parkingSpot.property.verificationStatus !== VerificationStatus.VERIFIED) {
         fail(409, "PARKING_LISTING_NOT_ELIGIBLE", "Property, resource, or parking right is not eligible");
@@ -1112,7 +1161,12 @@ async function changeListingStatus(actorUserId: string, listingId: string, activ
       }
       if (listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE) {
         const conflict = await tx.parkingListing.findFirst({
-          where: { parkingSpotId: listing.parkingSpotId, id: { not: listing.id }, status: ParkingListingStatus.ACTIVE },
+          where: {
+            parkingSpotId: listing.parkingSpotId,
+            parkingResourceUnitId: listing.parkingResourceUnitId,
+            id: { not: listing.id },
+            status: ParkingListingStatus.ACTIVE,
+          },
           select: { id: true },
         });
         if (conflict) fail(409, "PARKING_LISTING_CONFLICT", "This fixed space already has an active listing");
@@ -1147,6 +1201,11 @@ const adminListingInclude = {
   providerMembership: { select: { id: true, status: true, verificationStatus: true } },
   parkingRight: {
     select: { id: true, rightType: true, status: true, quantity: true, validFrom: true, validUntil: true },
+  },
+  parkingResourceUnit: { select: { id: true, spotCode: true, displayName: true, status: true } },
+  priceHistory: {
+    orderBy: { createdAt: "desc" as const },
+    select: { id: true, previousPricePaisa: true, pricePerHourPaisa: true, createdAt: true, changedBy: { select: { id: true, fullName: true } } },
   },
   parkingSpot: {
     select: {
@@ -1328,6 +1387,7 @@ export async function resumeListing(adminUserId: string, listingId: string, reas
         providerMembership: { select: { status: true, verificationStatus: true } },
         parkingSpot: { include: { property: true, availabilityRules: true } },
         parkingRight: true,
+        parkingResourceUnit: true,
       },
     });
     if (!listing) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
@@ -1337,6 +1397,7 @@ export async function resumeListing(adminUserId: string, listingId: string, reas
     if (listing.provider.status !== UserStatus.ACTIVE) reasons.push("PROVIDER_SUSPENDED");
     if (listing.providerMembership.status !== "ACTIVE" || listing.providerMembership.verificationStatus !== VerificationStatus.VERIFIED) reasons.push("PROVIDER_MEMBERSHIP_INACTIVE");
     if (listing.parkingSpot.deletedAt || listing.parkingSpot.status !== ParkingSpotStatus.ACTIVE) reasons.push("RESOURCE_INACTIVE");
+    if (listing.parkingResourceUnit && (listing.parkingResourceUnit.deletedAt || listing.parkingResourceUnit.status !== ParkingSpotStatus.ACTIVE)) reasons.push("RESOURCE_UNIT_INACTIVE");
     if (listing.parkingSpot.property.status !== PropertyStatus.ACTIVE) reasons.push("PROPERTY_INACTIVE");
     if (listing.parkingSpot.property.verificationStatus !== VerificationStatus.VERIFIED) reasons.push("PROPERTY_UNVERIFIED");
     if (listing.parkingRight.status === ParkingRightStatus.REVOKED) reasons.push("RIGHT_REVOKED");
@@ -1460,10 +1521,15 @@ async function loadBookableListing(listingId: string) {
         status: ParkingSpotStatus.ACTIVE,
         property: { deletedAt: null, canonicalPropertyId: null, status: PropertyStatus.ACTIVE, verificationStatus: VerificationStatus.VERIFIED },
       },
+      OR: [
+        { parkingResourceUnitId: null },
+        { parkingResourceUnit: { deletedAt: null, status: ParkingSpotStatus.ACTIVE } },
+      ],
     },
     include: {
       parkingRight: true,
-      parkingSpot: { include: { property: true, availabilityRules: true, availabilityExceptions: true, facilities: { include: { facility: true } } } },
+      parkingResourceUnit: true,
+      parkingSpot: { include: { property: true, units: { where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE }, orderBy: { normalizedSpotCode: "asc" } }, availabilityRules: true, availabilityExceptions: true, facilities: { include: { facility: true } } } },
     },
   });
 }
@@ -1478,9 +1544,10 @@ async function availableListingUnits(
   startAt: Date,
   endAt: Date,
 ) {
-  const rightCapacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
-    ? 1
-    : listing.parkingRight.quantity;
+  const physicalCapacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
+    ? listing.parkingResourceUnitId ? 1 : listing.parkingSpot.units.length
+    : listing.parkingSpot.capacity;
+  const rightCapacity = Math.min(physicalCapacity, listing.parkingRight.quantity);
   const [rightAllocations, resourceAllocations] = await Promise.all([
     activeAllocationCount(listing.parkingSpotId, listing.parkingRightId, startAt, endAt),
     prisma.parkingAllocation.count({
@@ -1513,21 +1580,122 @@ async function availableUnitsForListings(
       endAt: { gt: startAt },
       OR: [{ status: ParkingAllocationStatus.BOOKED }, { expiresAt: { gt: new Date() } }],
     },
-    select: { parkingSpotId: true, parkingRightId: true },
+    select: { parkingSpotId: true, parkingRightId: true, parkingResourceUnitId: true },
   });
   const resourceCounts = new Map<string, number>();
   const rightCounts = new Map<string, number>();
+  const allocatedUnitIds = new Set<string>();
   for (const allocation of allocations) {
     resourceCounts.set(allocation.parkingSpotId, (resourceCounts.get(allocation.parkingSpotId) ?? 0) + 1);
     const key = `${allocation.parkingSpotId}:${allocation.parkingRightId}`;
     rightCounts.set(key, (rightCounts.get(key) ?? 0) + 1);
+    if (allocation.parkingResourceUnitId) allocatedUnitIds.add(allocation.parkingResourceUnitId);
   }
   return new Map(listings.map((listing) => {
-    const rightCapacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE ? 1 : listing.parkingRight.quantity;
+    if (listing.parkingResourceUnitId) {
+      return [listing.id, allocatedUnitIds.has(listing.parkingResourceUnitId) ? 0 : 1];
+    }
+    const physicalCapacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
+      ? listing.parkingSpot.units.length
+      : listing.parkingSpot.capacity;
+    const rightCapacity = Math.min(physicalCapacity, listing.parkingRight.quantity);
     const rightCount = rightCounts.get(`${listing.parkingSpotId}:${listing.parkingRightId}`) ?? 0;
     const resourceCount = resourceCounts.get(listing.parkingSpotId) ?? 0;
-    return [listing.id, Math.max(0, Math.min(rightCapacity - rightCount, listing.parkingSpot.capacity - resourceCount))];
+    return [listing.id, Math.max(0, Math.min(rightCapacity - rightCount, physicalCapacity - resourceCount))];
   }));
+}
+
+export async function browseParking(input: { latitude: number; longitude: number }) {
+  const listings = await prisma.parkingListing.findMany({
+    where: {
+      status: ParkingListingStatus.ACTIVE,
+      provider: { status: UserStatus.ACTIVE, deletedAt: null },
+      parkingRight: { ...activeRightWhere(), canList: true, canSetPrice: true },
+      OR: [{ parkingResourceUnitId: null }, { parkingResourceUnit: { deletedAt: null, status: ParkingSpotStatus.ACTIVE } }],
+      parkingSpot: {
+        deletedAt: null,
+        status: ParkingSpotStatus.ACTIVE,
+        property: { deletedAt: null, canonicalPropertyId: null, status: PropertyStatus.ACTIVE, verificationStatus: VerificationStatus.VERIFIED },
+      },
+    },
+    include: {
+      parkingRight: true,
+      parkingResourceUnit: true,
+      parkingSpot: {
+        include: {
+          property: { include: { images: { where: { isCover: true }, take: 1 } } },
+          units: { where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE } },
+          facilities: { include: { facility: true } },
+        },
+      },
+    },
+    take: 500,
+  });
+  const groups = new Map<string, {
+    property: {
+      id: string; name: string; publicArea: string; approximateAddress: string;
+      latitude: number; longitude: number; coverImageUrl: string | null;
+    };
+    offers: JsonObject[];
+    distanceKm: number;
+    availableUnits: number;
+    availableUnitsByResource: Map<string, number>;
+  }>();
+
+  for (const listing of listings) {
+    const property = listing.parkingSpot.property;
+    const physicalCapacity = listing.parkingResourceUnitId
+      ? 1
+      : listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
+        ? listing.parkingSpot.units.length
+        : listing.parkingSpot.capacity;
+    const availableUnits = Math.max(0, Math.min(physicalCapacity, listing.parkingRight.quantity));
+    if (availableUnits === 0) continue;
+    const distanceKm = haversineKm(input.latitude, input.longitude, Number(property.latitude), Number(property.longitude));
+    const group = groups.get(property.id) ?? {
+      property: {
+        id: property.id,
+        name: property.name,
+        publicArea: property.publicArea,
+        approximateAddress: property.approximateAddress,
+        latitude: Number(property.latitude),
+        longitude: Number(property.longitude),
+        coverImageUrl: property.images[0]?.url ?? null,
+      },
+      offers: [],
+      distanceKm,
+      availableUnits: 0,
+      availableUnitsByResource: new Map<string, number>(),
+    };
+    group.offers.push({
+      listingId: listing.id,
+      resourceType: listing.parkingSpot.resourceType,
+      title: listing.title,
+      pricePerHourPaisa: listing.pricePerHourPaisa.toString(),
+      allowedVehicleTypes: listing.allowedVehicleTypes,
+      isCovered: listing.parkingSpot.isCovered,
+      facilities: listing.parkingSpot.facilities.map((item) => item.facility.code),
+      availableUnits,
+    });
+    group.availableUnitsByResource.set(
+      listing.parkingSpotId,
+      Math.max(group.availableUnitsByResource.get(listing.parkingSpotId) ?? 0, availableUnits),
+    );
+    group.availableUnits = [...group.availableUnitsByResource.values()].reduce((sum, count) => sum + count, 0);
+    groups.set(property.id, group);
+  }
+
+  return [...groups.values()].map((group) => {
+    const prices = group.offers.map((offer) => BigInt(String(offer.pricePerHourPaisa)));
+    return {
+      ...group.property,
+      distanceKm: Number(group.distanceKm.toFixed(2)),
+      availableUnits: group.availableUnits,
+      minimumPricePaisa: prices.reduce((a, b) => a < b ? a : b).toString(),
+      maximumPricePaisa: prices.reduce((a, b) => a > b ? a : b).toString(),
+      offers: group.offers,
+    };
+  }).sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
 export async function searchParking(input: {
@@ -1537,14 +1705,24 @@ export async function searchParking(input: {
 }) {
   const startAt = new Date(input.startAt);
   const endAt = new Date(input.endAt);
+  const durationMinutes = Math.ceil((endAt.getTime() - startAt.getTime()) / 60_000);
   const listings = await prisma.parkingListing.findMany({
     where: {
       status: ParkingListingStatus.ACTIVE,
       allowedVehicleTypes: { has: input.vehicleType },
+      minDurationMinutes: { lte: durationMinutes },
+      maxDurationMinutes: { gte: durationMinutes },
       ...(input.minPricePaisa === undefined ? {} : { pricePerHourPaisa: { gte: input.minPricePaisa } }),
       ...(input.maxPricePaisa === undefined ? {} : { pricePerHourPaisa: { lte: input.maxPricePaisa } }),
       provider: { status: UserStatus.ACTIVE, deletedAt: null },
-      parkingRight: activeRightWhere(),
+      parkingRight: {
+        status: ParkingRightStatus.VERIFIED,
+        canList: true,
+        canSetPrice: true,
+        validFrom: { lte: startAt },
+        OR: [{ validUntil: null }, { validUntil: { gte: endAt } }],
+      },
+      OR: [{ parkingResourceUnitId: null }, { parkingResourceUnit: { deletedAt: null, status: ParkingSpotStatus.ACTIVE } }],
       parkingSpot: {
         deletedAt: null,
         status: ParkingSpotStatus.ACTIVE,
@@ -1558,7 +1736,8 @@ export async function searchParking(input: {
     },
     include: {
       parkingRight: true,
-      parkingSpot: { include: { property: { include: { images: { where: { isCover: true }, take: 1 } } }, availabilityRules: true, availabilityExceptions: true, facilities: { include: { facility: true } } } },
+      parkingResourceUnit: true,
+      parkingSpot: { include: { property: { include: { images: { where: { isCover: true }, take: 1 } } }, units: { where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE }, orderBy: { normalizedSpotCode: "asc" } }, availabilityRules: true, availabilityExceptions: true, facilities: { include: { facility: true } } } },
     },
     take: 500,
   });
@@ -1570,6 +1749,7 @@ export async function searchParking(input: {
     offers: JsonObject[];
     distanceKm: number;
     availableUnits: number;
+    availableUnitsByResource: Map<string, number>;
   }>();
   const unitsByListing = await availableUnitsForListings(listings, startAt, endAt);
   for (const listing of listings) {
@@ -1593,6 +1773,7 @@ export async function searchParking(input: {
       offers: [],
       distanceKm,
       availableUnits: 0,
+      availableUnitsByResource: new Map<string, number>(),
     };
     group.offers.push({
       listingId: listing.id,
@@ -1604,7 +1785,11 @@ export async function searchParking(input: {
       facilities: listing.parkingSpot.facilities.map((item) => item.facility.code),
       availableUnits,
     });
-    group.availableUnits += availableUnits;
+    group.availableUnitsByResource.set(
+      listing.parkingSpotId,
+      Math.max(group.availableUnitsByResource.get(listing.parkingSpotId) ?? 0, availableUnits),
+    );
+    group.availableUnits = [...group.availableUnitsByResource.values()].reduce((sum, count) => sum + count, 0);
     groups.set(property.id, group);
   }
   return [...groups.values()].map((group) => {
@@ -1623,7 +1808,7 @@ export async function searchParking(input: {
 export async function getPublicPropertyDetail(propertyId: string, input: {
   startAt: string; endAt: string; vehicleType: VehicleType;
 }) {
-  const [property, listings, reviewSummary] = await Promise.all([
+  const [property, listings, reviewSummary, reviews, ratingGroups] = await Promise.all([
     prisma.property.findFirst({
       where: {
         id: propertyId,
@@ -1659,7 +1844,12 @@ export async function getPublicPropertyDetail(propertyId: string, input: {
         status: ParkingListingStatus.ACTIVE,
         allowedVehicleTypes: { has: input.vehicleType },
         provider: { status: UserStatus.ACTIVE, deletedAt: null },
-        parkingRight: activeRightWhere(),
+        parkingRight: {
+          status: ParkingRightStatus.VERIFIED,
+          canList: true,
+          canSetPrice: true,
+        },
+        OR: [{ parkingResourceUnitId: null }, { parkingResourceUnit: { deletedAt: null, status: ParkingSpotStatus.ACTIVE } }],
         parkingSpot: {
           propertyId,
           deletedAt: null,
@@ -1674,9 +1864,11 @@ export async function getPublicPropertyDetail(propertyId: string, input: {
       },
       include: {
         parkingRight: true,
+        parkingResourceUnit: true,
         parkingSpot: {
           include: {
             property: true,
+            units: { where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE }, orderBy: { normalizedSpotCode: "asc" } },
             availabilityRules: true,
             availabilityExceptions: true,
             facilities: { include: { facility: true } },
@@ -1686,8 +1878,27 @@ export async function getPublicPropertyDetail(propertyId: string, input: {
       orderBy: { pricePerHourPaisa: "asc" },
     }),
     prisma.review.aggregate({
-      where: { booking: { propertyId } },
+      where: { booking: { propertyId }, reportedAt: null },
       _avg: { rating: true },
+      _count: { _all: true },
+    }),
+    prisma.review.findMany({
+      where: { booking: { propertyId }, reportedAt: null },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        providerReply: true,
+        providerRepliedAt: true,
+        createdAt: true,
+        driver: { select: { fullName: true } },
+      },
+    }),
+    prisma.review.groupBy({
+      by: ["rating"],
+      where: { booking: { propertyId }, reportedAt: null },
       _count: { _all: true },
     }),
   ]);
@@ -1695,15 +1906,32 @@ export async function getPublicPropertyDetail(propertyId: string, input: {
 
   const startAt = new Date(input.startAt);
   const endAt = new Date(input.endAt);
+  const durationMinutes = Math.ceil((endAt.getTime() - startAt.getTime()) / 60_000);
   const offers: JsonObject[] = [];
   const facilities = new Map<string, string>();
+  const availabilitySchedule = new Map<string, {
+    dayOfWeek: number; startTime: string; endTime: string; validFrom: string; validUntil: string | null;
+  }>();
   const unitsByListing = await availableUnitsForListings(listings, startAt, endAt);
   for (const listing of listings) {
-    if (!(await isResourceAvailable(listing.parkingSpot, startAt, endAt))) continue;
-    const availableUnits = unitsByListing.get(listing.id) ?? 0;
-    if (availableUnits === 0) continue;
+    const rightAvailable = listing.parkingRight.validFrom <= startAt &&
+      (!listing.parkingRight.validUntil || listing.parkingRight.validUntil >= endAt);
+    const resourceAvailable = rightAvailable && await isResourceAvailable(listing.parkingSpot, startAt, endAt);
+    const durationAllowed = durationMinutes >= listing.minDurationMinutes && durationMinutes <= listing.maxDurationMinutes;
+    const availableUnits = resourceAvailable && durationAllowed ? unitsByListing.get(listing.id) ?? 0 : 0;
     for (const item of listing.parkingSpot.facilities) {
       facilities.set(item.facility.code, item.facility.displayName);
+    }
+    for (const rule of listing.parkingSpot.availabilityRules) {
+      if (!rule.isActive) continue;
+      const schedule = {
+        dayOfWeek: rule.dayOfWeek,
+        startTime: rule.startLocalTime.toISOString().slice(11, 16),
+        endTime: rule.endLocalTime.toISOString().slice(11, 16),
+        validFrom: rule.validFrom.toISOString().slice(0, 10),
+        validUntil: rule.validUntil?.toISOString().slice(0, 10) ?? null,
+      };
+      availabilitySchedule.set(`${schedule.dayOfWeek}:${schedule.startTime}:${schedule.endTime}:${schedule.validFrom}:${schedule.validUntil ?? ""}`, schedule);
     }
     offers.push({
       listingId: listing.id,
@@ -1738,7 +1966,24 @@ export async function getPublicPropertyDetail(propertyId: string, input: {
     longitude: Number(property.longitude),
     rating: reviewSummary._avg.rating,
     reviewCount: reviewSummary._count._all,
+    ratingDistribution: Object.fromEntries(ratingGroups.map((group) => [group.rating, group._count._all])),
+    reviews: reviews.map((review) => {
+      const nameParts = review.driver.fullName.trim().split(/\s+/);
+      const reviewerName = nameParts.length > 1
+        ? `${nameParts[0]} ${nameParts.at(-1)?.charAt(0) ?? ""}.`
+        : nameParts[0] ?? "Driver";
+      return {
+        id: review.id,
+        rating: review.rating,
+        comment: review.comment,
+        reviewerName,
+        providerReply: review.providerReply,
+        providerRepliedAt: review.providerRepliedAt,
+        createdAt: review.createdAt,
+      };
+    }),
     facilities: [...facilities].map(([code, displayName]) => ({ code, displayName })),
+    availabilitySchedule: [...availabilitySchedule.values()].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime)),
     requestedPeriod: { startAt, endAt, vehicleType: input.vehicleType },
     offers,
   });
@@ -1898,7 +2143,8 @@ export async function createHold(driverUserId: string, input: { quoteId: string;
             include: {
               provider: true,
               parkingRight: true,
-              parkingSpot: { include: { property: true, availabilityRules: true, availabilityExceptions: true } },
+              parkingResourceUnit: true,
+              parkingSpot: { include: { property: true, units: { where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE }, orderBy: { normalizedSpotCode: "asc" } }, availabilityRules: true, availabilityExceptions: true } },
             },
           },
         },
@@ -1922,11 +2168,35 @@ export async function createHold(driverUserId: string, input: { quoteId: string;
       const allocationCount = await activeAllocationCount(
         listing.parkingSpotId, listing.parkingRightId, quote.startAt, quote.endAt, tx,
       );
-      const capacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE ? 1 : listing.parkingRight.quantity;
+      const physicalCapacity = listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
+        ? listing.parkingResourceUnitId ? 1 : listing.parkingSpot.units.length
+        : listing.parkingSpot.capacity;
+      const capacity = Math.min(physicalCapacity, listing.parkingRight.quantity);
       if (allocationCount >= capacity) fail(409, "PARKING_NOT_AVAILABLE", "Parking capacity was reserved by another Driver");
 
       let capacityUnit = 1;
-      if (listing.parkingSpot.resourceType === ParkingResourceType.SHARED_POOL) {
+      let parkingResourceUnitId: string | null = null;
+      if (listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE) {
+        const used = await tx.parkingAllocation.findMany({
+          where: {
+            parkingSpotId: listing.parkingSpotId,
+            parkingResourceUnitId: { not: null },
+            status: { in: [ParkingAllocationStatus.HELD, ParkingAllocationStatus.BOOKED] },
+            startAt: { lt: quote.endAt }, endAt: { gt: quote.startAt },
+            OR: [{ status: ParkingAllocationStatus.BOOKED }, { expiresAt: { gt: now } }],
+          },
+          select: { parkingResourceUnitId: true },
+        });
+        const usedUnitIds = new Set(used.flatMap((item) => item.parkingResourceUnitId ? [item.parkingResourceUnitId] : []));
+        const candidates = listing.parkingResourceUnitId
+          ? listing.parkingSpot.units.filter((unit) => unit.id === listing.parkingResourceUnitId)
+          : listing.parkingSpot.units;
+        const selectedIndex = candidates.findIndex((unit) => !usedUnitIds.has(unit.id));
+        const selectedUnit = selectedIndex >= 0 ? candidates[selectedIndex] : undefined;
+        if (!selectedUnit) fail(409, "PARKING_NOT_AVAILABLE", "No fixed parking unit is available for this time");
+        parkingResourceUnitId = selectedUnit.id;
+        capacityUnit = listing.parkingSpot.units.findIndex((unit) => unit.id === selectedUnit.id) + 1;
+      } else {
         const used = await tx.parkingAllocation.findMany({
           where: {
             parkingSpotId: listing.parkingSpotId,
@@ -1945,6 +2215,7 @@ export async function createHold(driverUserId: string, input: { quoteId: string;
       const allocation = await tx.parkingAllocation.create({ data: {
         parkingSpotId: listing.parkingSpotId,
         parkingRightId: listing.parkingRightId,
+        parkingResourceUnitId,
         capacityUnit,
         startAt: quote.startAt,
         endAt: quote.endAt,
@@ -2014,7 +2285,7 @@ export async function createBooking(driverUserId: string, input: { holdId: strin
       where: { id: input.holdId, driverUserId },
       include: {
         quote: true,
-        allocation: true,
+        allocation: { include: { parkingResourceUnit: true } },
         listing: { include: { parkingRight: true, parkingSpot: true } },
       },
     });
@@ -2037,6 +2308,8 @@ export async function createBooking(driverUserId: string, input: { holdId: strin
       parkingSpotId: listing.parkingSpotId,
       listingId: listing.id,
       parkingRightId: listing.parkingRightId,
+      parkingResourceUnitId: hold.allocation.parkingResourceUnitId,
+      assignedUnitCode: hold.allocation.parkingResourceUnit?.spotCode ?? null,
       providerUserId: listing.providerUserId,
       settlementRecipientUserId: listing.settlementRecipientUserId,
       settlementWalletAccountId: listing.settlementWalletAccountId,
@@ -2060,6 +2333,7 @@ const bookingInclude = {
   vehicle: { select: { id: true, vehicleType: true, registrationNumber: true } },
   property: { select: { id: true, name: true, publicArea: true, approximateAddress: true } },
   parkingSpot: { select: { id: true, displayName: true, spotCode: true, resourceType: true, floor: true, zone: true } },
+  parkingResourceUnit: { select: { id: true, spotCode: true, displayName: true, status: true } },
   listing: { select: { id: true, title: true } },
   payments: { orderBy: { createdAt: "desc" as const } },
 } satisfies Prisma.BookingInclude;

@@ -71,10 +71,12 @@ export default function AdminListingDetailPage({ params }: { params: Promise<{ l
       <Info label="Provider" value={`${listing.provider.fullName} (${listing.provider.email})`} />
       <Info label="Property" value={`${listing.parkingSpot.property.name}, ${listing.parkingSpot.property.publicArea}`} />
       <Info label="Resource" value={listing.parkingSpot.displayName ?? listing.parkingSpot.spotCode ?? listing.parkingSpot.resourceType} />
+      <Info label="Scope" value={listing.parkingResourceUnit ? `Unit ${listing.parkingResourceUnit.spotCode}` : "Entire resource"} />
       <Info label="Price" value={`${formatBDTFromPaisa(listing.pricePerHourPaisa)}/hour`} />
       <Info label="Right status" value={listing.parkingRight.status} />
       <Info label="Membership" value={`${listing.providerMembership.status} / ${listing.providerMembership.verificationStatus}`} />
     </section>
+    <section className="border border-slate-200 bg-white p-5"><h2 className="text-sm font-bold">Price history</h2>{listing.priceHistory.length ? <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[520px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2">Changed</th><th className="px-3 py-2">Previous</th><th className="px-3 py-2">New price</th><th className="px-3 py-2">Changed by</th></tr></thead><tbody className="divide-y">{listing.priceHistory.map((entry) => <tr key={entry.id}><td className="px-3 py-2">{formatDateTime(entry.createdAt)}</td><td className="px-3 py-2">{entry.previousPricePaisa === null ? "Initial price" : formatBDTFromPaisa(entry.previousPricePaisa)}</td><td className="px-3 py-2 font-semibold">{formatBDTFromPaisa(entry.pricePerHourPaisa)}</td><td className="px-3 py-2">{entry.changedBy.fullName}</td></tr>)}</tbody></table></div> : <p className="mt-2 text-sm text-slate-500">No price changes recorded.</p>}</section>
     <section className="border border-slate-200 bg-white p-5"><h2 className="text-sm font-bold">Moderation safety</h2><p className="mt-2 text-sm text-slate-600">Resume is accepted only when the Property, resource, Provider membership and parking right still satisfy backend eligibility rules. Every action is audited.</p></section>
     {eligibilityReasons.length > 0 && <section className="border border-amber-300 bg-amber-50 p-5"><h2 className="text-sm font-bold text-amber-950">Listing cannot be resumed</h2><ul className="mt-3 space-y-2 text-sm text-amber-900">{eligibilityReasons.map((item) => <li key={item}>{eligibilityMessage(item, listing.parkingRight.id)}</li>)}</ul>{eligibilityReasons.some((item) => item.startsWith("RIGHT_")) && <Link href={`/admin/marketplace/rights?holderUserId=${listing.provider.id}`} className="mt-4 inline-flex text-sm font-bold text-emerald-800">View Parking Right</Link>}</section>}
     <Dialog open={Boolean(action)} onOpenChange={(open) => { if (!open && !moderation.isPending) { setAction(null); setReason(""); } }}>
@@ -97,6 +99,7 @@ function eligibilityMessage(reason: string, _rightId: string) {
     PROPERTY_INACTIVE: "The Property is inactive.",
     PROPERTY_UNVERIFIED: "The Property is not verified.",
     RESOURCE_INACTIVE: "The parking resource is inactive.",
+    RESOURCE_UNIT_INACTIVE: "The listing's fixed parking unit is inactive.",
     PROVIDER_SUSPENDED: "The Provider account is not active.",
     PROVIDER_MEMBERSHIP_INACTIVE: "The Provider membership is inactive or unverified.",
     AVAILABILITY_MISSING: "Current weekly availability has not been configured.",
