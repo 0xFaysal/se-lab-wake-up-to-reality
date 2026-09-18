@@ -77,6 +77,7 @@ export const deleteDriverSavedLocation = action((req) => service.deleteDriverSav
 export const listDriverSearchHistory = action((req) => service.listDriverSearchHistory(userId(req)));
 export const addDriverSearchHistory = action((req) => service.addDriverSearchHistory(userId(req), req.body), 201);
 export const clearDriverSearchHistory = action((req) => service.clearDriverSearchHistory(userId(req)));
+export const deleteDriverSearchHistoryItem = action((req) => service.deleteDriverSearchHistoryItem(userId(req), param(req, "searchId")));
 export const createQuote = action((req) => service.createQuote(userId(req), req.body), 201);
 export const getQuote = action((req) => service.getQuote(userId(req), param(req, "quoteId")));
 export const createHold = action((req) => service.createHold(userId(req), req.body), 201);

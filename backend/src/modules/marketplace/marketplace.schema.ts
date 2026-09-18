@@ -366,6 +366,8 @@ export const createSearchHistorySchema = z.object({
   }).strict(),
 });
 
+export const searchHistoryParamsSchema = z.object({ params: z.object({ searchId: uuid }) });
+
 export const publicPropertyDetailSchema = z.object({
   params: z.object({ propertyId: uuid }),
   query: z.object({

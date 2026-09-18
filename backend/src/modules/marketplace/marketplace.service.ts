@@ -1832,6 +1832,12 @@ export async function clearDriverSearchHistory(driverUserId: string) {
   return { deleted: result.count };
 }
 
+export async function deleteDriverSearchHistoryItem(driverUserId: string, searchId: string) {
+  const result = await prisma.driverSearchHistory.deleteMany({ where: { id: searchId, userId: driverUserId } });
+  if (result.count === 0) fail(404, "SEARCH_HISTORY_NOT_FOUND", "Search history item was not found");
+  return { deleted: true };
+}
+
 export async function createQuote(driverUserId: string, input: { listingId: string; vehicleId: string; startAt: string; endAt: string }) {
   const startAt = new Date(input.startAt);
   const endAt = new Date(input.endAt);

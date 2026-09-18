@@ -12,5 +12,6 @@ export const driverDiscoveryApi = {
   deleteSavedLocation: (locationId: string) => apiClient.delete<{ deleted: true }>(`/driver/saved-locations/${locationId}`),
   recentSearches: () => apiClient.get<DriverSearchHistoryDto[]>("/driver/recent-searches"),
   addRecentSearch: (input: { displayName: string; latitude: number; longitude: number; radiusKm: number; vehicleType: VehicleType }) => apiClient.post<DriverSearchHistoryDto>("/driver/recent-searches", input),
+  deleteRecentSearch: (searchId: string) => apiClient.delete<{ deleted: true }>(`/driver/recent-searches/${searchId}`),
   clearRecentSearches: () => apiClient.delete<{ deleted: number }>("/driver/recent-searches"),
 };
