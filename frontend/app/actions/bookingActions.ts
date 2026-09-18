@@ -17,19 +17,72 @@ export const CreateBookingSessionSchema = z.object({
 
 export type CreateBookingSessionPayload = z.infer<typeof CreateBookingSessionSchema>;
 
-// ─── In-Memory Mock Stores ───────────────────────────────────────────────────
+// ─── In-Memory Mock Stores & Concurrency Control ─────────────────────────────
 
 // Simulates an idempotency cache to prevent double-charging or duplicate session creation
 const idempotencyStore = new Map<string, any>();
 
-// Simulates a pessimistic lock / atomic check against the database
-async function checkSpotAvailabilityAtomically(
+interface SpotReservationLease {
+  leaseId: string;
+  spotId: string;
+  driverId: string;
+  startTime: number;
+  endTime: number;
+  expiresAt: number; // TTL (5 minutes checkout hold)
+}
+
+// In-memory atomic lease store simulating Redis Redlock / Postgres SELECT FOR UPDATE
+// Key: spotId -> Array of active reservation leases
+const activeSpotLeases = new Map<string, SpotReservationLease[]>();
+
+/**
+ * Atomically acquires an exclusive checkout lease on a parking spot.
+ * Completely eliminates TOCTOU race conditions where concurrent requests double-book a slot.
+ */
+async function acquireAtomicSpotLease(
   spotId: string,
   startTime: Date,
-  endTime: Date
-): Promise<boolean> {
-  // In production, uses SELECT FOR UPDATE or Redis Redlock
-  return Math.random() > 0.05; 
+  endTime: Date,
+  driverId: string
+): Promise<{ acquired: boolean; leaseId?: string; expiresAt?: number; conflictingDriverId?: string }> {
+  const now = Date.now();
+  const startMs = startTime.getTime();
+  const endMs = endTime.getTime();
+
+  const currentLeases = activeSpotLeases.get(spotId) || [];
+
+  // 1. Evict expired leases
+  const validLeases = currentLeases.filter((lease) => lease.expiresAt > now);
+
+  // 2. Concurrency Collision Check (Overlapping Time Window)
+  // Two bookings overlap if startA < endB and endA > startB
+  const conflictingLease = validLeases.find((lease) => {
+    const hasOverlap = startMs < lease.endTime && endMs > lease.startTime;
+    return hasOverlap && lease.driverId !== driverId;
+  });
+
+  if (conflictingLease) {
+    activeSpotLeases.set(spotId, validLeases);
+    return { acquired: false, conflictingDriverId: conflictingLease.driverId };
+  }
+
+  // 3. Atomically grant lease with 5-minute checkout TTL
+  const leaseId = `lease_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const expiresAt = now + 5 * 60 * 1000; // 5-minute TTL
+
+  const newLease: SpotReservationLease = {
+    leaseId,
+    spotId,
+    driverId,
+    startTime: startMs,
+    endTime: endMs,
+    expiresAt,
+  };
+
+  validLeases.push(newLease);
+  activeSpotLeases.set(spotId, validLeases);
+
+  return { acquired: true, leaseId, expiresAt };
 }
 
 // Simulates fetching authoritative pricing configurations directly from the DB
@@ -108,10 +161,23 @@ export async function createBookingSession(rawPayload: CreateBookingSessionPaylo
       throw new Error("INVALID_BOOKING_DURATION: Maximum single session duration is 72 hours.");
     }
 
-    // 4. Concurrency Control: Atomic Availability Check
-    const isAvailable = await checkSpotAvailabilityAtomically(spotId, start, end);
-    if (!isAvailable) {
-      throw new Error("RACE_CONDITION_PREVENTED: The spot was just booked by another user.");
+    // 4. Concurrency Control: Atomic Slot Reservation Lease (TOCTOU Defense)
+    const leaseResult = await acquireAtomicSpotLease(spotId, start, end, driverId);
+    if (!leaseResult.acquired) {
+      await logDriverAction({
+        driverId,
+        actionType: "GENERIC_DRIVER_ACTION",
+        actionDescription: `Race condition prevented: Spot ${spotId} is actively leased by another user.`,
+        status: "FAILURE",
+        payload: {
+          spotId,
+          propertyId,
+          startTime,
+          endTime,
+          conflictingDriverId: leaseResult.conflictingDriverId,
+        },
+      });
+      throw new Error("RACE_CONDITION_PREVENTED: The spot was just booked or is being checked out by another driver. Please choose another spot.");
     }
 
     // 5. Zero-Trust Pricing Recalculation
@@ -181,6 +247,8 @@ export async function createBookingSession(rawPayload: CreateBookingSessionPaylo
     const response = {
       success: true,
       sessionId,
+      leaseId: leaseResult.leaseId,
+      leaseExpiresAt: leaseResult.expiresAt,
       totalAmount: authoritativeTotalBDT,
       message: "Checkout session created securely."
     };
