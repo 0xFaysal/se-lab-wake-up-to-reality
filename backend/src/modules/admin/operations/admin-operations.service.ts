@@ -453,11 +453,15 @@ export async function listAdminReviews(query: Page & { reported?: boolean; ratin
 }
 
 export async function getAdminSystemHealth() {
+  const emailConfigured =
+    env.EMAIL_PROVIDER === "resend"
+      ? Boolean(env.RESEND_API_KEY && env.EMAIL_FROM_ADDRESS)
+      : Boolean(env.EMAIL_HOST && env.EMAIL_USERNAME && env.EMAIL_PASSWORD);
   const checks = {
     api: { status: "operational" as const },
     postgres: { status: "unavailable" as "operational" | "unavailable" },
     redis: { status: "unavailable" as "operational" | "unavailable" },
-    email: { status: (env.EMAIL_HOST && env.EMAIL_USERNAME && env.EMAIL_PASSWORD ? "configured" : "not_configured") as "configured" | "not_configured" },
+    email: { status: (emailConfigured ? "configured" : "not_configured") as "configured" | "not_configured" },
     cloudinary: { status: (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET ? "configured" : "not_configured") as "configured" | "not_configured" },
     backgroundJobs: { status: "not_configured" as const },
   };
