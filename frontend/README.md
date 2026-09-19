@@ -15,10 +15,10 @@ The frontend runs at `http://localhost:3000`; the backend defaults to `http://lo
 ## Environment
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1
+BACKEND_API_BASE_URL=http://localhost:4000/api/v1
 ```
 
-Only the public API origin belongs in a `NEXT_PUBLIC_` variable. Never place JWTs, refresh tokens, Cloudinary secrets or database credentials in frontend environment variables.
+The browser calls the same-origin `/api/v1` gateway. Next.js forwards those requests to `BACKEND_API_BASE_URL`, which keeps HttpOnly authentication cookies first-party. Never place JWTs, refresh tokens, Cloudinary secrets or database credentials in frontend environment variables.
 
 ## Authentication
 
