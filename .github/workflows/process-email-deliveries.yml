@@ -1,0 +1,33 @@
+name: Process Email Deliveries
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: process-email-deliveries
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Process scheduled campaigns and queued deliveries
+        env:
+          API_URL: ${{ secrets.PARKEASE_API_URL }}
+          CRON_SECRET: ${{ secrets.EMAIL_WORKER_CRON_SECRET }}
+        run: |
+          test -n "$API_URL"
+          test -n "$CRON_SECRET"
+          curl --fail --silent --show-error \
+            --retry 2 \
+            --retry-delay 5 \
+            --max-time 50 \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$API_URL/internal/jobs/email-delivery"

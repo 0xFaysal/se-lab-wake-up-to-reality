@@ -28,6 +28,7 @@ import { propertyGovernanceRouter } from "./modules/property-governance/property
 import { managerDelegationRouter } from "./modules/manager-delegations/manager-delegation.routes.js";
 import { propertyImageRouter } from "./modules/property-images/property-image.routes.js";
 import { marketplaceRouter } from "./modules/marketplace/marketplace.routes.js";
+import { internalRouter } from "./modules/internal/internal.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -142,6 +143,7 @@ app.get("/", (req, res) =>
 );
 
 app.use("/health", healthRouter);
+app.use("/internal", internalRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/vehicles", vehicleRouter);

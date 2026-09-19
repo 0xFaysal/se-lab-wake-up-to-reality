@@ -62,7 +62,15 @@ const schema = z
       .enum(["true", "false"])
       .default(process.env.NODE_ENV === "development" ? "true" : "false")
       .transform((value) => value === "true"),
-    EMAIL_WORKER_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).max(60000).default(5000),
+    EMAIL_WORKER_POLL_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .min(1000)
+      .max(60000)
+      .default(5000),
+    EMAIL_WORKER_CRON_SECRET: optionalNonEmptyString.pipe(
+      z.string().min(32).optional(),
+    ),
     CLOUDINARY_CLOUD_NAME: optionalNonEmptyString,
     CLOUDINARY_API_KEY: optionalNonEmptyString,
     CLOUDINARY_API_SECRET: optionalNonEmptyString,
@@ -142,7 +150,8 @@ const schema = z
         context.addIssue({
           code: "custom",
           path: ["EMAIL_FROM_ADDRESS"],
-          message: "Email sender address is required when EMAIL_PROVIDER=resend",
+          message:
+            "Email sender address is required when EMAIL_PROVIDER=resend",
         });
       }
     }
@@ -217,9 +226,12 @@ const schema = z
             context.addIssue({
               code: "custom",
               path: [
-                ["EMAIL_HOST", "EMAIL_PORT", "EMAIL_USERNAME", "EMAIL_PASSWORD"][
-                  index
-                ]!,
+                [
+                  "EMAIL_HOST",
+                  "EMAIL_PORT",
+                  "EMAIL_USERNAME",
+                  "EMAIL_PASSWORD",
+                ][index]!,
               ],
               message: "SMTP configuration is required in production",
             });

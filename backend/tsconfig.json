@@ -16,6 +16,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "api/**/*.ts",
     "tests/**/*.ts",
     "prisma/**/*.ts",
     "prisma.config.ts",

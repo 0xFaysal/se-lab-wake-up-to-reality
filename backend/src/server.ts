@@ -2,17 +2,14 @@ import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
-import { connectRedis, redis } from "./config/redis.js";
+import { redis } from "./config/redis.js";
+import { ensureInfrastructure } from "./config/infrastructure.js";
 import { startEmailDeliveryWorker } from "./workers/email-delivery.runner.js";
 
 async function bootstrap() {
-  await prisma.$connect();
+  await ensureInfrastructure();
 
-  logger.info("PostgreSQL connected");
-
-  await connectRedis();
-
-  logger.info("Redis connected");
+  logger.info("PostgreSQL and Redis connected");
 
   const emailWorker = env.EMAIL_WORKER_ENABLED
     ? startEmailDeliveryWorker(env.EMAIL_WORKER_POLL_INTERVAL_MS)
