@@ -18,6 +18,7 @@ process.env.DATA_ENCRYPTION_KEY =
 process.env.EXPOSE_DEVELOPMENT_AUTH_CODES = "false";
 process.env.API_PUBLIC_URL = "http://localhost:4000";
 process.env.PASSWORD_RESET_URL = "http://localhost:3000/reset-password";
+process.env.EMAIL_PROVIDER = "smtp";
 process.env.EMAIL_HOST = "smtp.example.test";
 process.env.EMAIL_PORT = "2525";
 process.env.EMAIL_USERNAME = "unit-tests@example.com";
