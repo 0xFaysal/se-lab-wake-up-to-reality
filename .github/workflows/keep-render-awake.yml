@@ -1,0 +1,26 @@
+name: Keep Render Backend Awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-render-backend-awake
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping backend liveness endpoint
+        run: |
+          curl --fail --silent --show-error \
+            --retry 3 \
+            --retry-delay 10 \
+            --max-time 90 \
+            https://parkease-api-qluo.onrender.com/health/live
