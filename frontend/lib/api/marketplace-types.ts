@@ -21,6 +21,12 @@ export interface ParkingResourceDto {
   maxWidthCm: number | null; maxLengthCm: number | null; createdAt: string; updatedAt: string;
   parkingRights?: ParkingRightDto[]; listings?: ParkingListingDto[];
   availabilityRules?: AvailabilityRuleDto[]; availabilityExceptions?: AvailabilityExceptionDto[];
+  units?: ParkingResourceUnitDto[];
+}
+
+export interface ParkingResourceUnitDto {
+  id: string; parkingSpotId: string; spotCode: string; normalizedSpotCode: string;
+  displayName: string | null; status: ParkingResourceStatus; createdAt: string; updatedAt: string;
 }
 
 export interface CreateParkingResourceInput {
@@ -30,8 +36,8 @@ export interface CreateParkingResourceInput {
 }
 
 export interface BulkParkingResourceInput {
-  spaces: Array<{ displayName: string; spotCode: string }>;
-  sharedDefaults: Omit<CreateParkingResourceInput, "type" | "displayName" | "spotCode" | "capacity">;
+  resource: Omit<CreateParkingResourceInput, "spotCode" | "capacity"> & { type: "FIXED_SPACE" };
+  units: Array<{ displayName?: string; spotCode: string }>;
 }
 
 export interface ParkingRightDto {
@@ -95,6 +101,7 @@ export interface ParkingRightAmendmentDto {
 
 export interface ParkingListingDto {
   id: string; parkingSpotId: string; providerUserId: string; providerMembershipId: string; parkingRightId: string;
+  parkingResourceUnitId: string | null;
   status: ListingStatus; title: string; description: string | null; pricePerHourPaisa: string;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[];
   securityDepositPaisa: string; publishedAt: string | null; deactivatedAt: string | null;
@@ -104,13 +111,15 @@ export interface AdminListingDto extends ParkingListingDto {
   provider: { id: string; fullName: string; email: string; status: string };
   providerMembership: { id: string; status: string; verificationStatus: string };
   parkingRight: ParkingRightDto;
+  parkingResourceUnit: { id: string; spotCode: string; displayName: string | null; status: ParkingResourceStatus } | null;
+  priceHistory: Array<{ id: string; previousPricePaisa: string | null; pricePerHourPaisa: string; createdAt: string; changedBy: { id: string; fullName: string } }>;
   parkingSpot: ParkingResourceDto & {
     property: { id: string; name: string; publicArea: string; verificationStatus: string; status: string };
   };
 }
 
 export interface ListingInput {
-  parkingRightId: string; title: string; description?: string; pricePerHourPaisa: string;
+  parkingRightId: string; parkingResourceUnitId?: string; title: string; description?: string; pricePerHourPaisa: string;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[]; securityDepositPaisa: string;
 }
 
@@ -141,7 +150,10 @@ export interface PublicPropertyDetailDto {
   entryCutoffLocalTime: string | null; generalParkingRules: string | null; commonSafetyRules: string | null;
   temporaryClosureReason: string | null; temporaryClosedAt: string | null; temporaryClosedUntil: string | null;
   images: Array<{ id: string; url: string; imageType: string; sortOrder: number; isCover: boolean }>;
-  rating: number | null; reviewCount: number; facilities: Array<{ code: string; displayName: string }>;
+  rating: number | null; reviewCount: number; ratingDistribution: Record<string, number>;
+  reviews: Array<{ id: string; rating: number; comment: string | null; reviewerName: string; providerReply: string | null; providerRepliedAt: string | null; createdAt: string }>;
+  facilities: Array<{ code: string; displayName: string }>;
+  availabilitySchedule: Array<{ dayOfWeek: number; startTime: string; endTime: string; validFrom: string; validUntil: string | null }>;
   requestedPeriod: { startAt: string; endAt: string; vehicleType: VehicleType };
   offers: PublicPropertyOfferDto[];
 }
@@ -152,12 +164,14 @@ export interface PaymentDto { id: string; bookingId: string; payerUserId: string
 export interface BookingDto {
   id: string; bookingCode: string; holdId: string; driverUserId: string; vehicleId: string; propertyId: string;
   parkingSpotId: string; listingId: string; providerUserId: string; status: MarketplaceBookingStatus;
+  parkingResourceUnitId: string | null; assignedUnitCode: string | null;
   startAt: string; scheduledEndAt: string; effectiveEndAt: string; baseAmountPaisa: string; platformFeePaisa: string;
   depositPaisa: string; totalAmountPaisa: string; confirmedAt: string | null; checkedInAt: string | null;
   checkoutRequestedAt: string | null; checkedOutAt: string | null; cancelledAt: string | null; createdAt: string; updatedAt: string;
   vehicle?: { id: string; vehicleType: VehicleType; registrationNumber: string };
   property?: { id: string; name: string; publicArea: string; approximateAddress: string };
   parkingSpot?: { id: string; displayName: string | null; spotCode: string | null; resourceType: ParkingResourceType; floor: string | null; zone: string | null };
+  parkingResourceUnit?: { id: string; spotCode: string; displayName: string | null; status: ParkingResourceStatus } | null;
   listing?: { id: string; title: string; providerMembershipId?: string }; payments?: PaymentDto[];
 }
 export interface GuardBookingDto {

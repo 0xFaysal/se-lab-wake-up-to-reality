@@ -698,6 +698,7 @@ model User {
   parkingRightClaimBatches        ParkingRightClaimBatch[]            @relation("ParkingRightClaimBatchProvider")
   parkingListings                 ParkingListing[]                    @relation("ListingProvider")
   settlementListings              ParkingListing[]                    @relation("ListingSettlementRecipient")
+  listingPriceChanges             ParkingListingPriceHistory[]        @relation("ListingPriceChangedBy")
   bookingQuotes                   BookingQuote[]                      @relation("QuoteDriver")
   reservationHolds                ReservationHold[]                   @relation("HoldDriver")
   driverBookings                  Booking[]                           @relation("BookingDriver")
@@ -1247,12 +1248,34 @@ model ParkingSpot {
   holds                      ReservationHold[]
   allocations                ParkingAllocation[]
   bookings                   Booking[]
+  units                      ParkingResourceUnit[]
 
   @@unique([propertyId, normalizedSpotCode])
   @@index([propertyId])
   @@index([providerMembershipId])
   @@index([status, supportedVehicleType, hourlyRatePaisa])
   @@map("parking_spots")
+}
+
+model ParkingResourceUnit {
+  id                 String            @id @default(uuid()) @db.Uuid
+  parkingSpotId      String            @map("parking_spot_id") @db.Uuid
+  spotCode           String            @map("spot_code") @db.VarChar(30)
+  normalizedSpotCode String            @map("normalized_spot_code") @db.VarChar(30)
+  displayName        String?           @map("display_name") @db.VarChar(120)
+  status             ParkingSpotStatus @default(INACTIVE)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  parkingSpot ParkingSpot         @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+  listings    ParkingListing[]
+  allocations ParkingAllocation[]
+  bookings    Booking[]
+
+  @@unique([parkingSpotId, normalizedSpotCode])
+  @@index([parkingSpotId, status])
+  @@map("parking_resource_units")
 }
 
 model ParkingRight {
@@ -1373,6 +1396,7 @@ model ParkingListing {
   providerUserId            String               @map("provider_user_id") @db.Uuid
   providerMembershipId      String               @map("provider_membership_id") @db.Uuid
   parkingRightId            String               @map("parking_right_id") @db.Uuid
+  parkingResourceUnitId     String?              @map("parking_resource_unit_id") @db.Uuid
   status                    ParkingListingStatus @default(DRAFT)
   title                     String               @db.VarChar(150)
   description               String?
@@ -1388,22 +1412,41 @@ model ParkingListing {
   createdAt                 DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                 DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  parkingSpot             ParkingSpot       @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
-  provider                User              @relation("ListingProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
-  providerMembership      PropertyProvider  @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
-  parkingRight            ParkingRight      @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
-  settlementRecipient     User              @relation("ListingSettlementRecipient", fields: [settlementRecipientUserId], references: [id], onDelete: Restrict)
-  settlementWalletAccount WalletAccount     @relation("ListingSettlementWallet", fields: [settlementWalletAccountId], references: [id], onDelete: Restrict)
+  parkingSpot             ParkingSpot                  @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+  provider                User                         @relation("ListingProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
+  providerMembership      PropertyProvider             @relation(fields: [providerMembershipId], references: [id], onDelete: Restrict)
+  parkingRight            ParkingRight                 @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
+  parkingResourceUnit     ParkingResourceUnit?         @relation(fields: [parkingResourceUnitId], references: [id], onDelete: Restrict)
+  settlementRecipient     User                         @relation("ListingSettlementRecipient", fields: [settlementRecipientUserId], references: [id], onDelete: Restrict)
+  settlementWalletAccount WalletAccount                @relation("ListingSettlementWallet", fields: [settlementWalletAccountId], references: [id], onDelete: Restrict)
   quotes                  BookingQuote[]
   holds                   ReservationHold[]
   bookings                Booking[]
   reports                 ListingReport[]
+  priceHistory            ParkingListingPriceHistory[]
 
   @@index([parkingSpotId, status])
   @@index([providerUserId, status])
   @@index([providerMembershipId, status])
   @@index([parkingRightId, status])
+  @@index([parkingResourceUnitId, status])
   @@map("parking_listings")
+}
+
+model ParkingListingPriceHistory {
+  id                 String   @id @default(uuid()) @db.Uuid
+  parkingListingId   String   @map("parking_listing_id") @db.Uuid
+  previousPricePaisa BigInt?  @map("previous_price_paisa")
+  pricePerHourPaisa  BigInt   @map("price_per_hour_paisa")
+  changedByUserId    String   @map("changed_by_user_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  parkingListing ParkingListing @relation(fields: [parkingListingId], references: [id], onDelete: Restrict, map: "parking_listing_price_history_listing_id_fkey")
+  changedBy      User           @relation("ListingPriceChangedBy", fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([parkingListingId, createdAt(sort: Desc)], map: "parking_listing_price_history_listing_created_idx")
+  @@index([changedByUserId, createdAt(sort: Desc)], map: "parking_listing_price_history_actor_created_idx")
+  @@map("parking_listing_price_history")
 }
 
 model ParkingFacility {
@@ -1518,24 +1561,27 @@ model BookingQuote {
 }
 
 model ParkingAllocation {
-  id             String                  @id @default(uuid()) @db.Uuid
-  parkingSpotId  String                  @map("parking_spot_id") @db.Uuid
-  parkingRightId String                  @map("parking_right_id") @db.Uuid
-  capacityUnit   Int                     @default(1) @map("capacity_unit")
-  startAt        DateTime                @map("start_at") @db.Timestamptz(6)
-  endAt          DateTime                @map("end_at") @db.Timestamptz(6)
-  status         ParkingAllocationStatus @default(HELD)
-  expiresAt      DateTime?               @map("expires_at") @db.Timestamptz(6)
-  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                    String                  @id @default(uuid()) @db.Uuid
+  parkingSpotId         String                  @map("parking_spot_id") @db.Uuid
+  parkingRightId        String                  @map("parking_right_id") @db.Uuid
+  parkingResourceUnitId String?                 @map("parking_resource_unit_id") @db.Uuid
+  capacityUnit          Int                     @default(1) @map("capacity_unit")
+  startAt               DateTime                @map("start_at") @db.Timestamptz(6)
+  endAt                 DateTime                @map("end_at") @db.Timestamptz(6)
+  status                ParkingAllocationStatus @default(HELD)
+  expiresAt             DateTime?               @map("expires_at") @db.Timestamptz(6)
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  parkingSpot  ParkingSpot      @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
-  parkingRight ParkingRight     @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
-  hold         ReservationHold?
-  booking      Booking?
+  parkingSpot         ParkingSpot          @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+  parkingRight        ParkingRight         @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
+  parkingResourceUnit ParkingResourceUnit? @relation(fields: [parkingResourceUnitId], references: [id], onDelete: Restrict)
+  hold                ReservationHold?
+  booking             Booking?
 
   @@index([parkingSpotId, startAt, endAt, status])
   @@index([parkingRightId, capacityUnit, startAt, endAt, status])
+  @@index([parkingResourceUnitId, startAt, endAt, status])
   @@index([status, expiresAt])
   @@map("parking_allocations")
 }
@@ -1577,6 +1623,8 @@ model Booking {
   parkingSpotId             String        @map("parking_spot_id") @db.Uuid
   listingId                 String        @map("listing_id") @db.Uuid
   parkingRightId            String        @map("parking_right_id") @db.Uuid
+  parkingResourceUnitId     String?       @map("parking_resource_unit_id") @db.Uuid
+  assignedUnitCode          String?       @map("assigned_unit_code") @db.VarChar(30)
   providerUserId            String        @map("provider_user_id") @db.Uuid
   settlementRecipientUserId String        @map("settlement_recipient_user_id") @db.Uuid
   settlementWalletAccountId String        @map("settlement_wallet_account_id") @db.Uuid
@@ -1597,17 +1645,18 @@ model Booking {
   createdAt                 DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                 DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  hold                    ReservationHold   @relation(fields: [holdId], references: [id], onDelete: Restrict)
-  allocation              ParkingAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
-  driver                  User              @relation("BookingDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
-  vehicle                 Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-  property                Property          @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  parkingSpot             ParkingSpot       @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
-  listing                 ParkingListing    @relation(fields: [listingId], references: [id], onDelete: Restrict)
-  parkingRight            ParkingRight      @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
-  provider                User              @relation("BookingProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
-  settlementRecipient     User              @relation("BookingSettlementRecipient", fields: [settlementRecipientUserId], references: [id], onDelete: Restrict)
-  settlementWalletAccount WalletAccount     @relation("BookingSettlementWallet", fields: [settlementWalletAccountId], references: [id], onDelete: Restrict)
+  hold                    ReservationHold      @relation(fields: [holdId], references: [id], onDelete: Restrict)
+  allocation              ParkingAllocation    @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  driver                  User                 @relation("BookingDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
+  vehicle                 Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  property                Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  parkingSpot             ParkingSpot          @relation(fields: [parkingSpotId], references: [id], onDelete: Restrict)
+  listing                 ParkingListing       @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  parkingRight            ParkingRight         @relation(fields: [parkingRightId], references: [id], onDelete: Restrict)
+  parkingResourceUnit     ParkingResourceUnit? @relation(fields: [parkingResourceUnitId], references: [id], onDelete: Restrict)
+  provider                User                 @relation("BookingProvider", fields: [providerUserId], references: [id], onDelete: Restrict)
+  settlementRecipient     User                 @relation("BookingSettlementRecipient", fields: [settlementRecipientUserId], references: [id], onDelete: Restrict)
+  settlementWalletAccount WalletAccount        @relation("BookingSettlementWallet", fields: [settlementWalletAccountId], references: [id], onDelete: Restrict)
   credential              AccessCredential?
   payments                Payment[]
   review                  Review?
@@ -1618,6 +1667,7 @@ model Booking {
   @@index([providerUserId, status, startAt])
   @@index([propertyId, status, startAt])
   @@index([listingId, status, createdAt(sort: Desc)])
+  @@index([parkingResourceUnitId, status, startAt])
   @@index([propertyId, providerUserId, status, startAt])
   @@map("bookings")
 }

@@ -48,7 +48,7 @@ export function AuthVisualPanel() {
         <AppLogo
           size="lg"
           linkTo="/"
-          className="text-white [&_span]:text-white [&_span:last-child]:text-emerald-400"
+          className="rounded-md bg-white/95 px-3 py-2 shadow-sm"
         />
       </div>
 
