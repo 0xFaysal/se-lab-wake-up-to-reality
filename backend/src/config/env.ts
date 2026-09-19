@@ -51,10 +51,13 @@ const schema = z
       .int()
       .positive()
       .default(10),
+    EMAIL_PROVIDER: z.enum(["smtp", "resend"]).default("smtp"),
     EMAIL_HOST: z.string().min(1).optional(),
     EMAIL_PORT: z.coerce.number().int().positive().max(65535).optional(),
     EMAIL_USERNAME: z.email().optional(),
     EMAIL_PASSWORD: z.string().min(1).optional(),
+    RESEND_API_KEY: optionalNonEmptyString,
+    EMAIL_FROM_ADDRESS: z.email().optional(),
     EMAIL_WORKER_ENABLED: z
       .enum(["true", "false"])
       .default(process.env.NODE_ENV === "development" ? "true" : "false")
@@ -108,7 +111,10 @@ const schema = z
       value.EMAIL_USERNAME,
       value.EMAIL_PASSWORD,
     ];
-    if (emailConfiguration.some((entry) => entry !== undefined)) {
+    if (
+      value.EMAIL_PROVIDER === "smtp" &&
+      emailConfiguration.some((entry) => entry !== undefined)
+    ) {
       emailConfiguration.forEach((entry, index) => {
         if (entry === undefined) {
           context.addIssue({
@@ -122,6 +128,23 @@ const schema = z
           });
         }
       });
+    }
+
+    if (value.EMAIL_PROVIDER === "resend") {
+      if (!value.RESEND_API_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["RESEND_API_KEY"],
+          message: "Resend API key is required when EMAIL_PROVIDER=resend",
+        });
+      }
+      if (!value.EMAIL_FROM_ADDRESS) {
+        context.addIssue({
+          code: "custom",
+          path: ["EMAIL_FROM_ADDRESS"],
+          message: "Email sender address is required when EMAIL_PROVIDER=resend",
+        });
+      }
     }
 
     const cloudinaryConfiguration = [
@@ -188,19 +211,21 @@ const schema = z
         });
       }
 
-      emailConfiguration.forEach((entry, index) => {
-        if (entry === undefined) {
-          context.addIssue({
-            code: "custom",
-            path: [
-              ["EMAIL_HOST", "EMAIL_PORT", "EMAIL_USERNAME", "EMAIL_PASSWORD"][
-                index
-              ]!,
-            ],
-            message: "SMTP configuration is required in production",
-          });
-        }
-      });
+      if (value.EMAIL_PROVIDER === "smtp") {
+        emailConfiguration.forEach((entry, index) => {
+          if (entry === undefined) {
+            context.addIssue({
+              code: "custom",
+              path: [
+                ["EMAIL_HOST", "EMAIL_PORT", "EMAIL_USERNAME", "EMAIL_PASSWORD"][
+                  index
+                ]!,
+              ],
+              message: "SMTP configuration is required in production",
+            });
+          }
+        });
+      }
 
       cloudinaryConfiguration.forEach((entry, index) => {
         if (entry === undefined) {

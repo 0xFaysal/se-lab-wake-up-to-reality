@@ -6,13 +6,24 @@ import { ContentStatus, EmailTemplateType } from "../../../generated/prisma/clie
 import { prisma } from "../../config/prisma.js";
 import { renderEmailTemplate } from "./email-template.js";
 
-type EmailConfiguration = {
+type SmtpEmailConfiguration = {
+  provider: "smtp";
   host: string;
   port: number;
   username: string;
   password: string;
   testTransport: boolean;
 };
+
+type ResendEmailConfiguration = {
+  provider: "resend";
+  apiKey: string;
+  fromAddress: string;
+};
+
+type EmailConfiguration =
+  | SmtpEmailConfiguration
+  | ResendEmailConfiguration;
 
 let emailTransporter: Transporter | undefined;
 
@@ -27,6 +38,22 @@ async function managedTemplate(type: EmailTemplateType, values: Record<string, s
 }
 
 function getEmailConfiguration(): EmailConfiguration {
+  if (env.EMAIL_PROVIDER === "resend") {
+    if (!env.RESEND_API_KEY || !env.EMAIL_FROM_ADDRESS) {
+      throw new AppError({
+        statusCode: 503,
+        code: "EMAIL_SERVICE_NOT_CONFIGURED",
+        message: "Email delivery is not configured",
+      });
+    }
+
+    return {
+      provider: "resend",
+      apiKey: env.RESEND_API_KEY,
+      fromAddress: env.EMAIL_FROM_ADDRESS,
+    };
+  }
+
   const host = env.EMAIL_HOST;
   const port = env.EMAIL_PORT;
   const username = env.EMAIL_USERNAME;
@@ -34,6 +61,7 @@ function getEmailConfiguration(): EmailConfiguration {
 
   if (env.NODE_ENV === "test") {
     return {
+      provider: "smtp",
       host: host ?? "localhost",
       port: port ?? 1025,
       username: username ?? "test@parkease.local",
@@ -54,13 +82,21 @@ function getEmailConfiguration(): EmailConfiguration {
     });
   }
 
-  return { host, port, username, password, testTransport: false };
+  return {
+    provider: "smtp",
+    host,
+    port,
+    username,
+    password,
+    testTransport: false,
+  };
 }
 
-function getEmailTransporter(): Transporter {
+function getEmailTransporter(
+  configuration: SmtpEmailConfiguration,
+): Transporter {
   if (emailTransporter) return emailTransporter;
 
-  const configuration = getEmailConfiguration();
   if (configuration.testTransport) {
     emailTransporter = nodemailer.createTransport({ jsonTransport: true });
     return emailTransporter;
@@ -138,10 +174,50 @@ async function sendTransactionalEmail(input: {
   failureMessage: string;
 }): Promise<void> {
   const configuration = getEmailConfiguration();
-  const transporter = getEmailTransporter();
   const startedAt = Date.now();
 
   try {
+    if (configuration.provider === "resend") {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${configuration.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `ParkEase BD <${configuration.fromAddress}>`,
+          to: [input.to],
+          subject: input.subject,
+          text: input.text,
+          html: input.html,
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      if (!response.ok) {
+        throw Object.assign(
+          new Error("The email provider rejected the request"),
+          { providerStatusCode: response.status },
+        );
+      }
+
+      const result = (await response.json()) as { id?: string };
+      if (!result.id) {
+        throw new Error("The email provider returned an invalid response");
+      }
+
+      logger.info(
+        {
+          messageId: result.id,
+          durationMs: Date.now() - startedAt,
+          emailProvider: configuration.provider,
+        },
+        "Transactional email accepted by email provider",
+      );
+      return;
+    }
+
+    const transporter = getEmailTransporter(configuration);
     const info = await transporter.sendMail({
       from: { name: "ParkEase BD", address: configuration.username },
       to: input.to,
@@ -160,6 +236,7 @@ async function sendTransactionalEmail(input: {
     logger.info({
       messageId: info.messageId,
       durationMs: Date.now() - startedAt,
+      emailProvider: configuration.provider,
       smtpHost: configuration.host,
       smtpPort: configuration.port,
     }, "Transactional email accepted by SMTP server");
@@ -167,11 +244,18 @@ async function sendTransactionalEmail(input: {
     const smtpError = error instanceof Error ? error : undefined;
     logger.error({
       durationMs: Date.now() - startedAt,
-      smtpHost: configuration.host,
-      smtpPort: configuration.port,
+      emailProvider: configuration.provider,
+      smtpHost:
+        configuration.provider === "smtp" ? configuration.host : undefined,
+      smtpPort:
+        configuration.provider === "smtp" ? configuration.port : undefined,
       smtpErrorCode: smtpError && "code" in smtpError ? smtpError.code : undefined,
       smtpCommand: smtpError && "command" in smtpError ? smtpError.command : undefined,
       smtpResponseCode: smtpError && "responseCode" in smtpError ? smtpError.responseCode : undefined,
+      providerStatusCode:
+        smtpError && "providerStatusCode" in smtpError
+          ? smtpError.providerStatusCode
+          : undefined,
     }, "Transactional email delivery failed");
     throw new AppError({
       statusCode: 503,
