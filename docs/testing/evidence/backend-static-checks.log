@@ -1,0 +1,321 @@
+# Backend static checks
+# Run: 2026-09-20 08:00:16 +0600 | Node v24.11.1 | npm 11.6.2 | commit 8efe713
+
+$ npx prisma validate
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+The schema at prisma\schema.prisma is valid 🚀
+[exit code: 0]
+
+$ npx prisma generate
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+┌─────────────────────────────────────────────────────────┐
+│  Update available 7.10.0 -> 8.0.0-rc.15                 │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+
+✔ Generated Prisma Client (7.10.0) to .\generated\prisma in 883ms
+
+[exit code: 0]
+
+$ npm run format:check
+
+> parkease-api@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] docker-compose.yml
+[warn] docs/property-governance.md
+[warn] package-lock.json
+[warn] package.json
+[warn] prisma.config.ts
+[warn] prisma/demo-seed.ts
+[warn] prisma/email-template-seed.ts
+[warn] prisma/seed.ts
+[warn] README.md
+[warn] scripts/qa/postman-helper.mjs
+[warn] scripts/qa/run-postman-tests.mjs
+[warn] scripts/send-test-email.mjs
+[warn] src/app.ts
+[warn] src/common/auth/cookies.ts
+[warn] src/common/auth/identifier.ts
+[warn] src/common/auth/jwt.ts
+[warn] src/common/auth/metadata-hash.ts
+[warn] src/common/auth/password.ts
+[warn] src/common/auth/phone.ts
+[warn] src/common/auth/token-hash.ts
+[warn] src/common/email/email-template.ts
+[warn] src/common/email/email.service.ts
+[warn] src/common/errors/app-error.ts
+[warn] src/common/errors/normalize-request-error.ts
+[warn] src/common/finance/platform-fee.ts
+[warn] src/common/middleware/auth.ts
+[warn] src/common/middleware/csrf-protection.ts
+[warn] src/common/middleware/error-handler.ts
+[warn] src/common/middleware/not-found.ts
+[warn] src/common/middleware/rate-limit.ts
+[warn] src/common/middleware/request-id.ts
+[warn] src/common/middleware/require-account-ready.ts
+[warn] src/common/middleware/require-password-change-complete.ts
+[warn] src/common/middleware/require-role.ts
+[warn] src/common/middleware/validate.ts
+[warn] src/common/security/encryption.ts
+[warn] src/common/sms/sms.service.ts
+[warn] src/common/uploads/image-upload.constants.ts
+[warn] src/common/uploads/image-upload.middleware.ts
+[warn] src/common/uploads/property-image-storage.ts
+[warn] src/common/uploads/right-document-storage.ts
+[warn] src/common/uploads/right-document-upload.middleware.ts
+[warn] src/common/vehicles/registration-number.ts
+[warn] src/config/cloudinary.ts
+[warn] src/config/env.ts
+[warn] src/config/logger.ts
+[warn] src/config/prisma.ts
+[warn] src/config/redis.ts
+[warn] src/config/swagger.ts
+[warn] src/docs/openapi.schemas.ts
+[warn] src/docs/openapi.tags.ts
+[warn] src/modules/admin/control/admin-control.controller.ts
+[warn] src/modules/admin/control/admin-control.routes.ts
+[warn] src/modules/admin/control/admin-control.schema.ts
+[warn] src/modules/admin/control/admin-control.service.ts
+[warn] src/modules/admin/control/email-management.service.ts
+[warn] src/modules/admin/operations/admin-operations.controller.ts
+[warn] src/modules/admin/operations/admin-operations.routes.ts
+[warn] src/modules/admin/operations/admin-operations.schema.ts
+[warn] src/modules/admin/operations/admin-operations.service.ts
+[warn] src/modules/admin/properties/admin-property.controller.ts
+[warn] src/modules/admin/properties/admin-property.errors.ts
+[warn] src/modules/admin/properties/admin-property.mapper.ts
+[warn] src/modules/admin/properties/admin-property.repository.ts
+[warn] src/modules/admin/properties/admin-property.routes.ts
+[warn] src/modules/admin/properties/admin-property.schema.ts
+[warn] src/modules/admin/properties/admin-property.service.ts
+[warn] src/modules/admin/properties/admin-property.types.ts
+[warn] src/modules/auth/auth.controller.ts
+[warn] src/modules/auth/auth.errors.ts
+[warn] src/modules/auth/auth.repository.ts
+[warn] src/modules/auth/auth.routes.ts
+[warn] src/modules/auth/auth.schema.ts
+[warn] src/modules/auth/auth.service.ts
+[warn] src/modules/auth/auth.types.ts
+[warn] src/modules/guard-assignments/guard-assignment.controller.ts
+[warn] src/modules/guard-assignments/guard-assignment.errors.ts
+[warn] src/modules/guard-assignments/guard-assignment.mapper.ts
+[warn] src/modules/guard-assignments/guard-assignment.policy.ts
+[warn] src/modules/guard-assignments/guard-assignment.repository.ts
+[warn] src/modules/guard-assignments/guard-assignment.routes.ts
+[warn] src/modules/guard-assignments/guard-assignment.schema.ts
+[warn] src/modules/guard-assignments/guard-assignment.service.ts
+[warn] src/modules/guard-assignments/guard-assignment.types.ts
+[warn] src/modules/guard-assignments/owner-guard-assignment.routes.ts
+[warn] src/modules/health/health.routes.ts
+[warn] src/modules/manager-delegations/manager-delegation.controller.ts
+[warn] src/modules/manager-delegations/manager-delegation.errors.ts
+[warn] src/modules/manager-delegations/manager-delegation.mapper.ts
+[warn] src/modules/manager-delegations/manager-delegation.routes.ts
+[warn] src/modules/manager-delegations/manager-delegation.schema.ts
+[warn] src/modules/manager-delegations/manager-delegation.service.ts
+[warn] src/modules/manager-delegations/manager-delegation.types.ts
+[warn] src/modules/marketplace/marketplace.controller.ts
+[warn] src/modules/marketplace/marketplace.repository.ts
+[warn] src/modules/marketplace/marketplace.routes.ts
+[warn] src/modules/marketplace/marketplace.schema.ts
+[warn] src/modules/marketplace/marketplace.service.ts
+[warn] src/modules/marketplace/platform-fee.service.ts
+[warn] src/modules/properties/property-identity.ts
+[warn] src/modules/properties/property-sensitive-data.ts
+[warn] src/modules/properties/property.controller.ts
+[warn] src/modules/properties/property.errors.ts
+[warn] src/modules/properties/property.mapper.ts
+[warn] src/modules/properties/property.policy.ts
+[warn] src/modules/properties/property.repository.ts
+[warn] src/modules/properties/property.routes.ts
+[warn] src/modules/properties/property.schema.ts
+[warn] src/modules/properties/property.service.ts
+[warn] src/modules/properties/property.types.ts
+[warn] src/modules/property-governance/domain-audit.ts
+[warn] src/modules/property-governance/property-governance.controller.ts
+[warn] src/modules/property-governance/property-governance.errors.ts
+[warn] src/modules/property-governance/property-governance.mapper.ts
+[warn] src/modules/property-governance/property-governance.policy.ts
+[warn] src/modules/property-governance/property-governance.repository.ts
+[warn] src/modules/property-governance/property-governance.routes.ts
+[warn] src/modules/property-governance/property-governance.schema.ts
+[warn] src/modules/property-governance/property-governance.service.ts
+[warn] src/modules/property-governance/property-governance.types.ts
+[warn] src/modules/property-images/property-image.controller.ts
+[warn] src/modules/property-images/property-image.errors.ts
+[warn] src/modules/property-images/property-image.mapper.ts
+[warn] src/modules/property-images/property-image.policy.ts
+[warn] src/modules/property-images/property-image.repository.ts
+[warn] src/modules/property-images/property-image.routes.ts
+[warn] src/modules/property-images/property-image.schema.ts
+[warn] src/modules/property-images/property-image.service.ts
+[warn] src/modules/property-images/property-image.types.ts
+[warn] src/modules/property-images/property-image.validation.ts
+[warn] src/modules/users/users.controller.ts
+[warn] src/modules/users/users.routes.ts
+[warn] src/modules/users/users.schema.ts
+[warn] src/modules/users/users.service.ts
+[warn] src/modules/vehicles/vehicle.controller.ts
+[warn] src/modules/vehicles/vehicle.errors.ts
+[warn] src/modules/vehicles/vehicle.mapper.ts
+[warn] src/modules/vehicles/vehicle.repository.ts
+[warn] src/modules/vehicles/vehicle.routes.ts
+[warn] src/modules/vehicles/vehicle.schema.ts
+[warn] src/modules/vehicles/vehicle.service.ts
+[warn] src/modules/vehicles/vehicle.types.ts
+[warn] src/server.ts
+[warn] src/types/express.d.ts
+[warn] src/workers/email-delivery.runner.ts
+[warn] src/workers/email-delivery.worker.ts
+[warn] test-api/fixtures/README.md
+[warn] test-api/README.md
+[warn] tests/helpers/test-env.ts
+[warn] tests/integration/auth/auth.integration.test.ts
+[warn] tests/integration/governance/property-governance.integration.test.ts
+[warn] tests/integration/guards/guard-assignments.integration.test.ts
+[warn] tests/integration/marketplace/marketplace.integration.test.ts
+[warn] tests/integration/properties/properties.integration.test.ts
+[warn] tests/integration/properties/property-images-admin-verification.integration.test.ts
+[warn] tests/integration/vehicles/vehicles.integration.test.ts
+[warn] tests/unit/admin-properties/admin-control-validation.test.ts
+[warn] tests/unit/admin-properties/admin-property-validation.test.ts
+[warn] tests/unit/admin-properties/platform-fee.test.ts
+[warn] tests/unit/auth/auth-schema.test.ts
+[warn] tests/unit/auth/authorization.test.ts
+[warn] tests/unit/auth/phone.test.ts
+[warn] tests/unit/common/email-template.test.ts
+[warn] tests/unit/common/encryption.test.ts
+[warn] tests/unit/common/logger-redaction.test.ts
+[warn] tests/unit/common/normalize-request-error.test.ts
+[warn] tests/unit/common/validation-error.test.ts
+[warn] tests/unit/guard-assignments/guard-assignment-mapper.test.ts
+[warn] tests/unit/guard-assignments/guard-assignment-policy.test.ts
+[warn] tests/unit/guard-assignments/guard-assignment-validation.test.ts
+[warn] tests/unit/manager-delegations/manager-delegation-validation.test.ts
+[warn] tests/unit/marketplace/marketplace-validation.test.ts
+[warn] tests/unit/properties/encryption.test.ts
+[warn] tests/unit/properties/property-policy.test.ts
+[warn] tests/unit/properties/property-validation.test.ts
+[warn] tests/unit/property-governance/property-governance.test.ts
+[warn] tests/unit/property-images/property-image-policy.test.ts
+[warn] tests/unit/property-images/property-image-validation.test.ts
+[warn] tests/unit/vehicles/registration-number.test.ts
+[warn] tests/unit/vehicles/vehicle-validation.test.ts
+[warn] tsconfig.build.json
+[warn] tsconfig.json
+[warn] Code style issues found in 182 files. Run Prettier with --write to fix.
+[exit code: 1]
+
+$ npm run typecheck
+
+> parkease-api@0.1.0 typecheck
+> tsc --noEmit
+
+[exit code: 0]
+
+$ npm run build
+
+> parkease-api@0.1.0 build
+> tsc -p tsconfig.build.json
+
+[exit code: 0]
+
+# Note: this Windows checkout uses core.autocrlf=true, so Prettier also flags CRLF line endings.
+# Re-run ignoring line endings (matches what Linux CI would report):
+$ npx prettier --check --end-of-line auto .
+Checking formatting...
+[warn] docs/property-governance.md
+[warn] prisma/demo-seed.ts
+[warn] prisma/email-template-seed.ts
+[warn] prisma/seed.ts
+[warn] scripts/qa/postman-helper.mjs
+[warn] scripts/qa/run-postman-tests.mjs
+[warn] scripts/send-test-email.mjs
+[warn] src/common/email/email-template.ts
+[warn] src/common/email/email.service.ts
+[warn] src/common/finance/platform-fee.ts
+[warn] src/common/middleware/csrf-protection.ts
+[warn] src/common/middleware/rate-limit.ts
+[warn] src/common/uploads/right-document-storage.ts
+[warn] src/common/uploads/right-document-upload.middleware.ts
+[warn] src/config/env.ts
+[warn] src/docs/openapi.schemas.ts
+[warn] src/docs/openapi.tags.ts
+[warn] src/modules/admin/control/admin-control.controller.ts
+[warn] src/modules/admin/control/admin-control.routes.ts
+[warn] src/modules/admin/control/admin-control.schema.ts
+[warn] src/modules/admin/control/admin-control.service.ts
+[warn] src/modules/admin/control/email-management.service.ts
+[warn] src/modules/admin/operations/admin-operations.controller.ts
+[warn] src/modules/admin/operations/admin-operations.routes.ts
+[warn] src/modules/admin/operations/admin-operations.service.ts
+[warn] src/modules/admin/properties/admin-property.controller.ts
+[warn] src/modules/admin/properties/admin-property.schema.ts
+[warn] src/modules/admin/properties/admin-property.service.ts
+[warn] src/modules/guard-assignments/guard-assignment.controller.ts
+[warn] src/modules/guard-assignments/guard-assignment.errors.ts
+[warn] src/modules/guard-assignments/guard-assignment.mapper.ts
+[warn] src/modules/guard-assignments/guard-assignment.policy.ts
+[warn] src/modules/guard-assignments/guard-assignment.repository.ts
+[warn] src/modules/guard-assignments/guard-assignment.schema.ts
+[warn] src/modules/guard-assignments/guard-assignment.service.ts
+[warn] src/modules/guard-assignments/guard-assignment.types.ts
+[warn] src/modules/manager-delegations/manager-delegation.controller.ts
+[warn] src/modules/manager-delegations/manager-delegation.errors.ts
+[warn] src/modules/manager-delegations/manager-delegation.schema.ts
+[warn] src/modules/manager-delegations/manager-delegation.service.ts
+[warn] src/modules/marketplace/marketplace.controller.ts
+[warn] src/modules/marketplace/marketplace.repository.ts
+[warn] src/modules/marketplace/marketplace.routes.ts
+[warn] src/modules/marketplace/marketplace.schema.ts
+[warn] src/modules/marketplace/marketplace.service.ts
+[warn] src/modules/marketplace/platform-fee.service.ts
+[warn] src/modules/properties/property.mapper.ts
+[warn] src/modules/properties/property.policy.ts
+[warn] src/modules/properties/property.schema.ts
+[warn] src/modules/properties/property.service.ts
+[warn] src/modules/property-governance/domain-audit.ts
+[warn] src/modules/property-governance/property-governance.controller.ts
+[warn] src/modules/property-governance/property-governance.errors.ts
+[warn] src/modules/property-governance/property-governance.policy.ts
+[warn] src/modules/property-governance/property-governance.repository.ts
+[warn] src/modules/property-governance/property-governance.routes.ts
+[warn] src/modules/property-governance/property-governance.schema.ts
+[warn] src/modules/property-governance/property-governance.service.ts
+[warn] src/modules/property-governance/property-governance.types.ts
+[warn] src/modules/property-images/property-image.service.ts
+[warn] src/modules/users/users.controller.ts
+[warn] src/modules/users/users.service.ts
+[warn] src/workers/email-delivery.runner.ts
+[warn] tests/helpers/test-env.ts
+[warn] tests/integration/governance/property-governance.integration.test.ts
+[warn] tests/integration/guards/guard-assignments.integration.test.ts
+[warn] tests/integration/marketplace/marketplace.integration.test.ts
+[warn] tests/integration/properties/properties.integration.test.ts
+[warn] tests/integration/properties/property-images-admin-verification.integration.test.ts
+[warn] tests/unit/admin-properties/admin-control-validation.test.ts
+[warn] tests/unit/admin-properties/platform-fee.test.ts
+[warn] tests/unit/common/email-template.test.ts
+[warn] tests/unit/common/encryption.test.ts
+[warn] tests/unit/common/logger-redaction.test.ts
+[warn] tests/unit/guard-assignments/guard-assignment-mapper.test.ts
+[warn] tests/unit/guard-assignments/guard-assignment-policy.test.ts
+[warn] tests/unit/guard-assignments/guard-assignment-validation.test.ts
+[warn] tests/unit/manager-delegations/manager-delegation-validation.test.ts
+[warn] tests/unit/marketplace/marketplace-validation.test.ts
+[warn] tests/unit/properties/encryption.test.ts
+[warn] tests/unit/property-governance/property-governance.test.ts
+[warn] Code style issues found in 81 files. Run Prettier with --write to fix.
+[exit code: 1]
