@@ -1,0 +1,187 @@
+# Backend integration tests (npm run test:integration)
+# Run: 2026-09-20 08:01:44 +0600 | Node v24.11.1 | commit 8efe713
+# Database: PostgreSQL 18 (parkease_test, Docker) | Redis 8 (Docker)
+
+$ npx prisma migrate status
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+Datasource "db": PostgreSQL database "parkease_test", schema "public" at "localhost:5432"
+
+30 migrations found in prisma/migrations
+
+Database schema is up to date!
+
+$ npm run test:integration   (15-minute limit)
+
+> parkease-api@0.1.0 test:integration
+> tsx --test --test-concurrency=1 tests/integration/auth/auth.integration.test.ts tests/integration/vehicles/vehicles.integration.test.ts tests/integration/properties/properties.integration.test.ts tests/integration/properties/property-images-admin-verification.integration.test.ts tests/integration/guards/guard-assignments.integration.test.ts tests/integration/governance/property-governance.integration.test.ts tests/integration/marketplace/marketplace.integration.test.ts
+
+▶ authentication integration
+  ✔ returns a safe client error for malformed JSON (311.8643ms)
+  ✔ registers once for all equivalent phone formats (502.5038ms)
+  ✔ blocks cross-site state-changing requests (5.1632ms)
+  ✔ activates the account after email verification while phone remains optional (139.7012ms)
+  ✔ lets a ready owner invite a Guard without sharing a password (758.7724ms)
+  ✔ delivers and consumes a single-use password reset token (360.2785ms)
+  ✔ detects concurrent refresh reuse and contains the session family (431.5434ms)
+✔ authentication integration (30689.2989ms)
+▶ multi-provider Property governance integration
+  ✔ transitions authority and prevents stale shared changes (429.4783ms)
+✔ multi-provider Property governance integration (1268.4652ms)
+(node:1092) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+▶ normalized Property Guard lifecycle integration
+  ✔ requires Guard consent before provider-specific assignment (538.5954ms)
+✔ normalized Property Guard lifecycle integration (3835.7344ms)
+(node:18216) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+▶ marketplace end-to-end and concurrency
+  ✖ runs fixed-space booking/payment/Guard/settlement/review and admits one concurrent hold (1287.7001ms)
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `tx.parkingAllocation.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\marketplace\marketplace.service.ts:2215:53
+
+  2212   if (capacityUnit === 0) fail(409, "PARKING_NOT_AVAILABLE", "Parking entitlement is fully reserved");
+  2213 }
+  2214 const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+→ 2215 const allocation = await tx.parkingAllocation.create(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+  ✔ caps shared-pool overlapping holds at the Provider right quantity (766.0188ms)
+prisma:error 
+Invalid `prisma.parkingListing.deleteMany()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\tests\integration\marketplace\marketplace.integration.test.ts:148:35
+
+  145 await prisma.reservationHold.deleteMany({ where: { parkingSpot: { propertyId } } });
+  146 await prisma.parkingAllocation.deleteMany({ where: { parkingSpot: { propertyId } } });
+  147 await prisma.bookingQuote.deleteMany({ where: { parkingSpot: { propertyId } } });
+→ 148 await prisma.parkingListing.deleteMany(
+Foreign key constraint violated on the constraint: `parking_listing_price_history_listing_id_fkey`
+✖ marketplace end-to-end and concurrency (3290.2492ms)
+▶ parking owner property management integration
+  ✔ creates a pending property with sensitive fields encrypted at rest (143.5172ms)
+  ✔ lists summaries without private fields and decrypts owner detail (110.1665ms)
+  ✔ returns 404 for cross-owner read, update, and delete attempts (75.3272ms)
+  ✔ requires the owner role, email verification, and completed password setup (88.9443ms)
+  ✔ keeps verification for minor edits and re-encrypts instructions (82.455ms)
+  ✔ resets verification and uses a fresh IV after a critical edit (43.6269ms)
+  ✔ returns a rejected property to pending review after an owner edit (49.1439ms)
+  ✔ does not expose crypto errors when protected data is tampered (41.4853ms)
+  ✔ soft-deletes and hides the property (72.5818ms)
+✔ parking owner property management integration (3340.1742ms)
+▶ Property images and Admin verification integration
+  ✔ uploads validated images and assigns exactly one initial cover (210.8037ms)
+  ✔ rejects spoofed content and files larger than 5 MB (81.7712ms)
+prisma:error 
+Invalid `db.propertyImage.create()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\src\modules\property-images\property-image.repository.ts:58:27
+
+  55   data: Prisma.PropertyImageUncheckedCreateInput,
+  56   db: PropertyImageClient = prisma,
+  57 ) {
+→ 58   return db.propertyImage.create(
+Unique constraint failed on the constraint: `property_images_storage_key_key`
+  ✔ cleans uploaded assets when database persistence fails (110.1445ms)
+  ✔ blocks cross-owner upload and lists only owned image metadata (146.3375ms)
+  ✔ reorders images and maintains a single selected cover (46.889ms)
+  ✔ keeps the DB row on storage failure and promotes a replacement cover (120.5741ms)
+  ✔ allows only Admin to list pending Properties and read decrypted detail (163.2999ms)
+(node:10504) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ✔ blocks approval without an image and validates rejection reasons (143.6179ms)
+  ✔ returns a rejected Property to PENDING after an Owner edit (60.4407ms)
+  ✔ approves an email-verified owner's Property without phone verification (104.6058ms)
+  ✔ returns a verified Property to review when its final image is removed (51.0843ms)
+  ✖ allows exactly one concurrent verification decision to win (80.7556ms)
+prisma:error 
+Invalid `prisma.property.deleteMany()` invocation in
+D:\downloads\se-lab-wake-up-to-reality\backend\tests\integration\properties\property-images-admin-verification.integration.test.ts:225:29
+
+  222 if (propertyIds.length > 0) {
+  223   await prisma.propertyImage.deleteMany({ where: { propertyId: { in: propertyIds } } });
+  224   await prisma.propertyProvider.deleteMany({ where: { propertyId: { in: propertyIds } } });
+→ 225   await prisma.property.deleteMany(
+Foreign key constraint violated on the constraint: `domain_audit_events_property_id_fkey`
+✖ Property images and Admin verification integration (4202.9745ms)
+[exit code: 124]
+
+# The full run above was stopped by the 15-minute limit (exit 124) because the vehicles file never finished.
+# Re-run of that file on its own (same database), 2026-09-20 08:17:00 +0600:
+$ npm run test:vehicles:integration   (5-minute limit)
+
+> parkease-api@0.1.0 test:vehicles:integration
+> tsx --test tests/integration/vehicles/vehicles.integration.test.ts
+
+▶ vehicle management integration
+  ✔ makes the first vehicle default and the second non-default (130.4354ms)
+  ✔ atomically changes and orders the default vehicle (39.8812ms)
+  ✔ gets and updates only an owned active vehicle (65.2195ms)
+  ✔ returns 404 for every cross-Driver vehicle mutation (51.7928ms)
+  ✔ blocks globally duplicated normalized registrations (16.5565ms)
+  ✔ blocks non-Driver and unverified accounts (15.3652ms)
+  ✔ soft-deletes the default and promotes the newest remaining vehicle (40.3235ms)
+  ✔ deletes a non-default vehicle without changing the current default (40.4793ms)
+✔ vehicle management integration (5773.4687ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6007.8419
+[exit code: 0]
