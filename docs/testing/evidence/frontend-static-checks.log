@@ -1,0 +1,644 @@
+# Frontend static checks
+# Run: 2026-09-20 08:01:22 +0600 | Node v24.11.1 | commit 8efe713
+# Build uses NEXT_PUBLIC_API_BASE_URL=https://api.parkease.invalid/api/v1 (same as CI)
+
+$ npm run typecheck
+
+> frontend@0.1.0 typecheck
+> tsc --noEmit
+
+[exit code: 0]
+
+$ npm run lint
+
+> frontend@0.1.0 lint
+> eslint
+
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\(public-app)\parking\[spotId]\page.tsx
+  171:22  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\(public-app)\parking\[spotId]\page.tsx:171:22
+  169 |   useEffect(() => {
+  170 |     if (startSlots.length === 0) {
+> 171 |       if (startTime) setStartTime("");
+      |                      ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  172 |       return;
+  173 |     }
+  174 |     if (!startSlots.includes(startTime)) setStartTime(startSlots[0]!);  react-hooks/set-state-in-effect
+  178:20  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\(public-app)\parking\[spotId]\page.tsx:178:20
+  176 |   useEffect(() => {
+  177 |     if (endSlots.length === 0) {
+> 178 |       if (endTime) setEndTime("");
+      |                    ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  179 |       return;
+  180 |     }
+  181 |     if (!endSlots.includes(endTime)) setEndTime(endSlots[0]!);                    react-hooks/set-state-in-effect
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\admin\communications\campaigns\new\page.tsx
+  21:70  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\admin\communications\campaigns\new\page.tsx:21:70
+  19 |   const templates = useQuery({ queryKey: ["admin", "email-templates", "published", "broadcast"], queryFn: () => adminOperationsApi.emailTemplates({ status: "PUBLISHED", type: "BROADCAST", limit: 100 }) });
+  20 |   const estimate = useQuery({ queryKey: ["admin", "email-campaign-estimate", audience], queryFn: () => adminOperationsApi.estimateEmailCampaign(audience) });
+> 21 |   useEffect(() => { if (!templateId && templates.data?.templates[0]) setTemplateId(templates.data.templates[0].id); }, [templateId, templates.data]);
+     |                                                                      ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  22 |   const create = useMutation({ mutationFn: (body: Record<string, unknown>) => adminOperationsApi.createEmailCampaign(body), onSuccess: (campaign) => { toast.success("Campaign draft created"); router.push(`/admin/communications/campaigns/${campaign.id}`); }, onError: (error: Error) => toast.error(getApiErrorMessage(error)) });
+  23 |   return <div className="max-w-4xl space-y-6"><header><p className="text-xs font-bold uppercase text-emerald-700">Communication</p><h1 className="text-2xl font-black">New email campaign</h1><p className="mt-1 text-sm text-slate-500">Only active accounts with verified email addresses are included.</p></header>
+  24 |     <form className="grid gap-4 border-y border-slate-200 bg-white py-5 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); create.mutate({ title: data.get("title"), templateId, audience, subjectOverride: data.get("subjectOverride") || null, htmlBodyOverride: data.get("htmlBodyOverride") || null, textBodyOverride: data.get("textBodyOverride") || null }); }}>  react-hooks/set-state-in-effect
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\admin\communications\templates\[templateId]\page.tsx
+  40:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\admin\communications\templates\[templateId]\page.tsx:40:5
+  38 |     if (!item) return;
+  39 |
+> 40 |     setForm({ name: item.name, subject: item.subject, preheader: item.preheader ?? "", htmlBody: item.htmlBody, textBody: item.textBody, allowedVariables: item.allowedVariables.join(", ") });
+     |     ^^^^^^^ Avoid calling setState() directly within an effect
+  41 |     setSampleValues(Object.fromEntries(item.allowedVariables.map((key) => [key, SAMPLE_VARIABLE_VALUES[key] ?? `Sample ${key}`])));
+  42 |   }, [query.data]);
+  43 |   const refresh = () => client.invalidateQueries({ queryKey: ["admin", "email-template", templateId] });  react-hooks/set-state-in-effect
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\admin\marketplace\listings\[listingId]\page.tsx
+  92:45  warning  '_rightId' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\app\owner\approvals\owner-approvals-client.tsx
+   9:3   warning  'User' is defined but never used           @typescript-eslint/no-unused-vars
+  12:3   warning  'Filter' is defined but never used         @typescript-eslint/no-unused-vars
+  13:3   warning  'ChevronDown' is defined but never used    @typescript-eslint/no-unused-vars
+  17:3   warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+  18:3   warning  'ArrowRight' is defined but never used     @typescript-eslint/no-unused-vars
+  19:3   warning  'MoreVertical' is defined but never used   @typescript-eslint/no-unused-vars
+  75:33  warning  'requestId' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\admin\admin-module-page.tsx
+  126:38  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\location-search-input.tsx
+  16:19  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\location-search-input.tsx:16:19
+  14 |   const [locationError, setLocationError] = useState<string>();
+  15 |
+> 16 |   useEffect(() => setText(value), [value]);
+     |                   ^^^^^^^ Avoid calling setState() directly within an effect
+  17 |   useEffect(() => {
+  18 |     const query = text.trim();
+  19 |     if (query.length < 3 || query === value) { setPlaces([]); return; }                                             react-hooks/set-state-in-effect
+  19:48  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\location-search-input.tsx:19:48
+  17 |   useEffect(() => {
+  18 |     const query = text.trim();
+> 19 |     if (query.length < 3 || query === value) { setPlaces([]); return; }
+     |                                                ^^^^^^^^^ Avoid calling setState() directly within an effect
+  20 |     const controller = new AbortController();
+  21 |     const timer = window.setTimeout(async () => {
+  22 |       setLoading(true);  react-hooks/set-state-in-effect
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\parking-auth-modal.tsx
+  5:10  warning  'Button' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\parking-search-view.tsx
+   37:7   error  'startHour' is never reassigned. Use 'const' instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        prefer-const
+  171:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\parking-search-view.tsx:171:5
+  169 |     const nextFilters = defaultFilters(params);
+  170 |     const nextHasSearched = params.has("date") || params.has("startTime");
+> 171 |     setFilters(nextFilters);
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  172 |     setRequest(toRequest(nextFilters));
+  173 |     setHasSearched(nextHasSearched);
+  174 |     setSelectedSpotId(undefined);                                                                                                                                                                                                                        react-hooks/set-state-in-effect
+  181:25  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\components\parking\parking-search-view.tsx:181:25
+  179 |     if (!driverMode || new URLSearchParams(searchParamsKey).has("vehicleType")) return;
+  180 |     const defaultVehicle = vehicles.query.data?.find((vehicle) => vehicle.isDefault) ?? vehicles.query.data?.[0];
+> 181 |     if (defaultVehicle) setFilters((current) => ({ ...current, vehicleType: defaultVehicle.vehicleType }));
+      |                         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  182 |   }, [driverMode, searchParamsKey, vehicles.query.data]);
+  183 |
+  184 |   function rememberSearch(nextFilters: FilterState, nextRequest: ParkingSearchParams) {  react-hooks/set-state-in-effect
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\bookings\components\booking-list-item.tsx
+  2:33  warning  'Car' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\bookings\components\digital-access-pass.tsx
+  1:16  warning  'QrCode' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\bookings\components\nearest-reservation-card.tsx
+  3:38  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\bookings\components\payment-summary-card.tsx
+  1:10  warning  'CreditCard' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\dashboard\components\driver-dashboard-view.tsx
+  24:15  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\dashboard\components\driver-dashboard-view.tsx:24:15
+  22 |   const savedVehicles = vehicles.data ?? [];
+  23 |   const defaultVehicle = savedVehicles.find((vehicle) => vehicle.isDefault) ?? savedVehicles[0];
+> 24 |   const now = Date.now();
+     |               ^^^^^^^^^^ Cannot call impure function
+  25 |   const allBookings = bookings.data ?? [];
+  26 |   const activeBooking = allBookings.find((booking) => ["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED"].includes(booking.status) && new Date(booking.scheduledEndAt).getTime() >= now);
+  27 |   const upcoming = allBookings.filter((booking) => booking.status === "CONFIRMED" && new Date(booking.startAt).getTime() > now).slice(0, 3);  react-hooks/purity
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-dispute-detail-view.tsx
+    3:27  warning  'useEffect' is defined but never used            @typescript-eslint/no-unused-vars
+    5:8   warning  'Image' is defined but never used                @typescript-eslint/no-unused-vars
+    8:3   warning  'AlertTriangle' is defined but never used        @typescript-eslint/no-unused-vars
+    9:3   warning  'Clock' is defined but never used                @typescript-eslint/no-unused-vars
+   14:3   warning  'XCircle' is defined but never used              @typescript-eslint/no-unused-vars
+   19:3   warning  'Download' is defined but never used             @typescript-eslint/no-unused-vars
+   20:3   warning  'Building2' is defined but never used            @typescript-eslint/no-unused-vars
+   21:3   warning  'Car' is defined but never used                  @typescript-eslint/no-unused-vars
+   24:3   warning  'MessageSquare' is defined but never used        @typescript-eslint/no-unused-vars
+   25:3   warning  'AlertCircle' is defined but never used          @typescript-eslint/no-unused-vars
+   26:3   warning  'DollarSign' is defined but never used           @typescript-eslint/no-unused-vars
+   29:3   warning  'ExternalLink' is defined but never used         @typescript-eslint/no-unused-vars
+   30:3   warning  'Lock' is defined but never used                 @typescript-eslint/no-unused-vars
+   32:3   warning  'HelpCircle' is defined but never used           @typescript-eslint/no-unused-vars
+   33:3   warning  'Sparkles' is defined but never used             @typescript-eslint/no-unused-vars
+   34:3   warning  'Paperclip' is defined but never used            @typescript-eslint/no-unused-vars
+   36:3   warning  'Eye' is defined but never used                  @typescript-eslint/no-unused-vars
+  318:9   warning  'isResolved' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-disputes-view.tsx
+   12:3   warning  'Filter' is defined but never used                      @typescript-eslint/no-unused-vars
+   14:3   warning  'ArrowUpRight' is defined but never used                @typescript-eslint/no-unused-vars
+   16:3   warning  'XCircle' is defined but never used                     @typescript-eslint/no-unused-vars
+   18:3   warning  'Building2' is defined but never used                   @typescript-eslint/no-unused-vars
+   19:3   warning  'Calendar' is defined but never used                    @typescript-eslint/no-unused-vars
+   20:3   warning  'Eye' is defined but never used                         @typescript-eslint/no-unused-vars
+   21:3   warning  'AlertCircle' is defined but never used                 @typescript-eslint/no-unused-vars
+   22:3   warning  'ChevronDown' is defined but never used                 @typescript-eslint/no-unused-vars
+   24:3   warning  'DollarSign' is defined but never used                  @typescript-eslint/no-unused-vars
+   29:3   warning  'Car' is defined but never used                         @typescript-eslint/no-unused-vars
+  153:26  warning  'setPropertyFilter' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-edit-listing-view.tsx
+  17:3   warning  'Sliders' is defined but never used                  @typescript-eslint/no-unused-vars
+  18:3   warning  'DollarSign' is defined but never used               @typescript-eslint/no-unused-vars
+  23:3   warning  'Edit' is defined but never used                     @typescript-eslint/no-unused-vars
+  26:3   warning  'RotateCcw' is defined but never used                @typescript-eslint/no-unused-vars
+  28:3   warning  'Zap' is defined but never used                      @typescript-eslint/no-unused-vars
+  65:23  warning  'setPeakPricing' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-guards-view.tsx
+  15:3  warning  'Lock' is defined but never used          @typescript-eslint/no-unused-vars
+  18:3  warning  'Users' is defined but never used         @typescript-eslint/no-unused-vars
+  27:3  warning  'ArrowUpRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-managers-view.tsx
+  323:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-properties-view.tsx
+  17:3  warning  'ShieldAlert' is defined but never used        @typescript-eslint/no-unused-vars
+  18:3  warning  'ArrowUpDown' is defined but never used        @typescript-eslint/no-unused-vars
+  19:3  warning  'Filter' is defined but never used             @typescript-eslint/no-unused-vars
+  20:3  warning  'SlidersHorizontal' is defined but never used  @typescript-eslint/no-unused-vars
+  21:3  warning  'ExternalLink' is defined but never used       @typescript-eslint/no-unused-vars
+  22:3  warning  'Edit' is defined but never used               @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-property-details-view.tsx
+  21:3  warning  'Sliders' is defined but never used       @typescript-eslint/no-unused-vars
+  25:3  warning  'KeyRound' is defined but never used      @typescript-eslint/no-unused-vars
+  28:3  warning  'AlertCircle' is defined but never used   @typescript-eslint/no-unused-vars
+  31:3  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+  32:3  warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  35:3  warning  'Layers' is defined but never used        @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-sessions-view.tsx
+   3:27  warning  'useEffect' is defined but never used          @typescript-eslint/no-unused-vars
+  13:3   warning  'Filter' is defined but never used             @typescript-eslint/no-unused-vars
+  14:3   warning  'MapPin' is defined but never used             @typescript-eslint/no-unused-vars
+  18:3   warning  'ExternalLink' is defined but never used       @typescript-eslint/no-unused-vars
+  19:3   warning  'Building2' is defined but never used          @typescript-eslint/no-unused-vars
+  20:3   warning  'Users' is defined but never used              @typescript-eslint/no-unused-vars
+  21:3   warning  'Eye' is defined but never used                @typescript-eslint/no-unused-vars
+  22:3   warning  'SlidersHorizontal' is defined but never used  @typescript-eslint/no-unused-vars
+  24:3   warning  'Check' is defined but never used              @typescript-eslint/no-unused-vars
+  25:3   warning  'Flame' is defined but never used              @typescript-eslint/no-unused-vars
+  26:3   warning  'Radio' is defined but never used              @typescript-eslint/no-unused-vars
+  27:3   warning  'ArrowRight' is defined but never used         @typescript-eslint/no-unused-vars
+  28:3   warning  'Sparkles' is defined but never used           @typescript-eslint/no-unused-vars
+  29:3   warning  'Calendar' is defined but never used           @typescript-eslint/no-unused-vars
+  30:3   warning  'CreditCard' is defined but never used         @typescript-eslint/no-unused-vars
+  31:3   warning  'QrCode' is defined but never used             @typescript-eslint/no-unused-vars
+  32:3   warning  'Lock' is defined but never used               @typescript-eslint/no-unused-vars
+  33:3   warning  'ArrowUpRight' is defined but never used       @typescript-eslint/no-unused-vars
+  34:3   warning  'Maximize2' is defined but never used          @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-settings-view.tsx
+  14:3  warning  'KeyRound' is defined but never used     @typescript-eslint/no-unused-vars
+  22:3  warning  'ChevronDown' is defined but never used  @typescript-eslint/no-unused-vars
+  24:3  warning  'CreditCard' is defined but never used   @typescript-eslint/no-unused-vars
+  26:3  warning  'RefreshCw' is defined but never used    @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-support-ticket-details-view.tsx
+   11:3   warning  'ShieldCheck' is defined but never used        @typescript-eslint/no-unused-vars
+   16:3   warning  'Building2' is defined but never used          @typescript-eslint/no-unused-vars
+   17:3   warning  'Banknote' is defined but never used           @typescript-eslint/no-unused-vars
+   21:3   warning  'HelpCircle' is defined but never used         @typescript-eslint/no-unused-vars
+   24:3   warning  'ChevronRight' is defined but never used       @typescript-eslint/no-unused-vars
+   25:3   warning  'Sparkles' is defined but never used           @typescript-eslint/no-unused-vars
+   72:9   warning  'router' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  288:23  warning  'isSystem' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\owner-support-view.tsx
+   3:27  warning  'useMemo' is defined but never used       @typescript-eslint/no-unused-vars
+   8:3   warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+  11:3   warning  'ExternalLink' is defined but never used  @typescript-eslint/no-unused-vars
+  15:3   warning  'Clock' is defined but never used         @typescript-eslint/no-unused-vars
+  16:3   warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  26:3   warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  35:3   warning  'HelpTopic' is defined but never used     @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\property-edit-live-view.tsx
+  32:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\property-edit-live-view.tsx:32:5
+  30 |
+  31 |     const item = query.data;
+> 32 |     setValues({ name: item.name, publicArea: item.publicArea, approximateAddress: item.approximateAddress, exactAddress: item.exactAddress, latitude: item.latitude, longitude: item.longitude, ...(item.entranceLatitude !== null ? { entranceLatitude: item.entranceLatitude } : {}), ...(item.entranceLongitude !== null ? { entranceLongitude: item.entranceLongitude } : {}), ...(item.accessInstructions ? { accessInstructions: item.accessInstructions } : {}), visitorIdentificationRequired: item.visitorIdentificationRequired, ...(item.vehicleHeightLimitCm ? { vehicleHeightLimitCm: item.vehicleHeightLimitCm } : {}), ...(item.entryCutoffLocalTime ? { entryCutoffLocalTime: item.entryCutoffLocalTime } : {}), ...(item.generalParkingRules ? { generalParkingRules: item.generalParkingRules } : {}), ...(item.commonSafetyRules ? { commonSafetyRules: item.commonSafetyRules } : {}) });
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |   }, [query.data]);
+  34 |
+  35 |   const update = useMutation({  react-hooks/set-state-in-effect
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\property-wizard-live-view.tsx
+  42:20  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\components\property-wizard-live-view.tsx:42:20
+  40 |   const [differentPropertyConfirmed, setDifferentPropertyConfirmed] = useState(false);
+  41 |   const pending = create.isPending || submitting;
+> 42 |   const latitude = methods.watch("latitude");
+     |                    ^^^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  43 |   const longitude = methods.watch("longitude");
+  44 |   const matchCheck = useMutation({ mutationFn: propertyApi.possibleMatches });
+  45 |   const join = useMutation({ mutationFn: propertyApi.requestMembership, onSuccess: () => { toast.success("Property membership request submitted"); router.push("/owner/properties"); }, onError: (requestError) => setError(getApiErrorMessage(requestError)) });  react-hooks/incompatible-library
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\managers\add-manager-wizard.tsx
+   19:3  warning  'ShieldAlert' is defined but never used      @typescript-eslint/no-unused-vars
+   25:3  warning  'X' is defined but never used                @typescript-eslint/no-unused-vars
+  112:9  warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\managers\manager-assignments-view.tsx
+   7:3  warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+  13:3  warning  'Clock' is defined but never used          @typescript-eslint/no-unused-vars
+  15:3  warning  'Lock' is defined but never used           @typescript-eslint/no-unused-vars
+  16:3  warning  'Mail' is defined but never used           @typescript-eslint/no-unused-vars
+  17:3  warning  'Phone' is defined but never used          @typescript-eslint/no-unused-vars
+  19:3  warning  'RotateCcw' is defined but never used      @typescript-eslint/no-unused-vars
+  21:3  warning  'Shield' is defined but never used         @typescript-eslint/no-unused-vars
+  22:3  warning  'ShieldAlert' is defined but never used    @typescript-eslint/no-unused-vars
+  26:3  warning  'User' is defined but never used           @typescript-eslint/no-unused-vars
+  27:3  warning  'UserCheck' is defined but never used      @typescript-eslint/no-unused-vars
+  28:3  warning  'UserX' is defined but never used          @typescript-eslint/no-unused-vars
+  30:3  warning  'X' is defined but never used              @typescript-eslint/no-unused-vars
+  31:3  warning  'XCircle' is defined but never used        @typescript-eslint/no-unused-vars
+  38:3  warning  'OwnerProperty' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\managers\manager-details-view.tsx
+  11:3  warning  'Calendar' is defined but never used                    @typescript-eslint/no-unused-vars
+  12:3  warning  'Check' is defined but never used                       @typescript-eslint/no-unused-vars
+  17:3  warning  'ExternalLink' is defined but never used                @typescript-eslint/no-unused-vars
+  18:3  warning  'Eye' is defined but never used                         @typescript-eslint/no-unused-vars
+  19:3  warning  'Info' is defined but never used                        @typescript-eslint/no-unused-vars
+  22:3  warning  'MoreVertical' is defined but never used                @typescript-eslint/no-unused-vars
+  25:3  warning  'Send' is defined but never used                        @typescript-eslint/no-unused-vars
+  26:3  warning  'Shield' is defined but never used                      @typescript-eslint/no-unused-vars
+  27:3  warning  'ShieldAlert' is defined but never used                 @typescript-eslint/no-unused-vars
+  29:3  warning  'SlidersHorizontal' is defined but never used           @typescript-eslint/no-unused-vars
+  30:3  warning  'Sparkles' is defined but never used                    @typescript-eslint/no-unused-vars
+  32:3  warning  'User' is defined but never used                        @typescript-eslint/no-unused-vars
+  34:3  warning  'UserMinus' is defined but never used                   @typescript-eslint/no-unused-vars
+  36:3  warning  'Users' is defined but never used                       @typescript-eslint/no-unused-vars
+  46:3  warning  'countRestrictedPermissions' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\managers\manager-permissions-view.tsx
+    7:3  warning  'AlertTriangle' is defined but never used               @typescript-eslint/no-unused-vars
+   14:3  warning  'Clock' is defined but never used                       @typescript-eslint/no-unused-vars
+   19:3  warning  'Info' is defined but never used                        @typescript-eslint/no-unused-vars
+   25:3  warning  'RefreshCw' is defined but never used                   @typescript-eslint/no-unused-vars
+   28:3  warning  'Settings' is defined but never used                    @typescript-eslint/no-unused-vars
+   30:3  warning  'ShieldAlert' is defined but never used                 @typescript-eslint/no-unused-vars
+   34:3  warning  'User' is defined but never used                        @typescript-eslint/no-unused-vars
+   36:3  warning  'X' is defined but never used                           @typescript-eslint/no-unused-vars
+   37:3  warning  'XCircle' is defined but never used                     @typescript-eslint/no-unused-vars
+   49:3  warning  'countRestrictedPermissions' is defined but never used  @typescript-eslint/no-unused-vars
+  223:9  warning  'router' is assigned a value but never used             @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\listing-wizard-shell.tsx
+   8:3  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+  12:3  warning  'Save' is defined but never used          @typescript-eslint/no-unused-vars
+  13:3  warning  'Building2' is defined but never used     @typescript-eslint/no-unused-vars
+  14:3  warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-1-details-view.tsx
+   4:8  warning  'Link' is defined but never used        @typescript-eslint/no-unused-vars
+   8:3  warning  'Building' is defined but never used    @typescript-eslint/no-unused-vars
+  13:3  warning  'Info' is defined but never used        @typescript-eslint/no-unused-vars
+  15:3  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+  16:3  warning  'ArrowLeft' is defined but never used   @typescript-eslint/no-unused-vars
+  17:3  warning  'Warehouse' is defined but never used   @typescript-eslint/no-unused-vars
+  18:3  warning  'Check' is defined but never used       @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-2-location-view.tsx
+  11:3  warning  'ExternalLink' is defined but never used  @typescript-eslint/no-unused-vars
+  15:3  warning  'CloudCheck' is defined but never used    @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-3-spaces-view.tsx
+   9:3  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  15:3  warning  'Edit2' is defined but never used         @typescript-eslint/no-unused-vars
+  16:3  warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-4-pricing-view.tsx
+  11:3  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+  14:3  warning  'Edit2' is defined but never used         @typescript-eslint/no-unused-vars
+  17:3  warning  'Clock' is defined but never used         @typescript-eslint/no-unused-vars
+  18:3  warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-5-amenities-view.tsx
+   4:8  warning  'Link' is defined but never used         @typescript-eslint/no-unused-vars
+   8:3  warning  'Lock' is defined but never used         @typescript-eslint/no-unused-vars
+  10:3  warning  'Eye' is defined but never used          @typescript-eslint/no-unused-vars
+  18:3  warning  'Sparkles' is defined but never used     @typescript-eslint/no-unused-vars
+  29:3  warning  'AlertCircle' is defined but never used  @typescript-eslint/no-unused-vars
+  30:3  warning  'QrCode' is defined but never used       @typescript-eslint/no-unused-vars
+  31:3  warning  'Flame' is defined but never used        @typescript-eslint/no-unused-vars
+  32:3  warning  'Moon' is defined but never used         @typescript-eslint/no-unused-vars
+  33:3  warning  'FileText' is defined but never used     @typescript-eslint/no-unused-vars
+  34:3  warning  'PhoneCall' is defined but never used    @typescript-eslint/no-unused-vars
+  35:3  warning  'X' is defined but never used            @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-6-photos-view.tsx
+   5:8  warning  'Link' is defined but never used          @typescript-eslint/no-unused-vars
+  17:3  warning  'Sparkles' is defined but never used      @typescript-eslint/no-unused-vars
+  18:3  warning  'Info' is defined but never used          @typescript-eslint/no-unused-vars
+  20:3  warning  'ExternalLink' is defined but never used  @typescript-eslint/no-unused-vars
+  22:3  warning  'ArrowRight' is defined but never used    @typescript-eslint/no-unused-vars
+  23:3  warning  'ArrowLeft' is defined but never used     @typescript-eslint/no-unused-vars
+  24:3  warning  'X' is defined but never used             @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-7-review-view.tsx
+  13:3  warning  'Shield' is defined but never used       @typescript-eslint/no-unused-vars
+  15:3  warning  'Clock' is defined but never used        @typescript-eslint/no-unused-vars
+  18:3  warning  'Layers' is defined but never used       @typescript-eslint/no-unused-vars
+  19:3  warning  'ArrowRight' is defined but never used   @typescript-eslint/no-unused-vars
+  24:3  warning  'Sparkles' is defined but never used     @typescript-eslint/no-unused-vars
+  25:3  warning  'Edit3' is defined but never used        @typescript-eslint/no-unused-vars
+  27:3  warning  'FileCheck' is defined but never used    @typescript-eslint/no-unused-vars
+  28:3  warning  'AlertCircle' is defined but never used  @typescript-eslint/no-unused-vars
+  29:3  warning  'HelpCircle' is defined but never used   @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\owner\wizard\steps\step-success-view.tsx
+  14:3  warning  'ShieldCheck' is defined but never used         @typescript-eslint/no-unused-vars
+  20:3  warning  'MapPin' is defined but never used              @typescript-eslint/no-unused-vars
+  25:3  warning  'ChevronRight' is defined but never used        @typescript-eslint/no-unused-vars
+  31:9  warning  'router' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  34:9  warning  'showToast' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\payments\components\add-payment-form.tsx
+  4:34  warning  'Wallet' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\payments\components\saved-payment-card.tsx
+  5:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\features\profile\components\profile-sidebar.tsx
+  10:3  warning  'ShieldCheck' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\downloads\se-lab-wake-up-to-reality\frontend\lib\security\permission-guard.tsx
+  33:11  warning  'hasPermission' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 214 problems (11 errors, 203 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+[exit code: 1]
+
+$ npm run build
+
+> frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.2.12 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 30.4s
+  Running TypeScript ...
+  Finished TypeScript in 15.7s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/109) ...
+  Generating static pages using 7 workers (27/109) 
+  Generating static pages using 7 workers (54/109) 
+  Generating static pages using 7 workers (81/109) 
+✓ Generating static pages using 7 workers (109/109) in 5.6s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /account-unavailable
+├ ○ /account/security
+├ ○ /account/sessions
+├ ○ /admin
+├ ƒ /admin/[...section]
+├ ○ /admin/account/security
+├ ○ /admin/account/sessions
+├ ○ /admin/analytics
+├ ○ /admin/communications/campaigns
+├ ƒ /admin/communications/campaigns/[campaignId]
+├ ○ /admin/communications/campaigns/new
+├ ○ /admin/communications/deliveries
+├ ○ /admin/communications/templates
+├ ƒ /admin/communications/templates/[templateId]
+├ ƒ /admin/content/legal/[documentId]
+├ ○ /admin/drivers
+├ ○ /admin/guards
+├ ○ /admin/managers
+├ ○ /admin/marketplace
+├ ○ /admin/marketplace/disputes
+├ ○ /admin/marketplace/listings
+├ ƒ /admin/marketplace/listings/[listingId]
+├ ○ /admin/marketplace/payouts
+├ ○ /admin/marketplace/right-amendments
+├ ○ /admin/marketplace/right-batches
+├ ○ /admin/marketplace/rights
+├ ○ /admin/parking-operations
+├ ○ /admin/properties
+├ ƒ /admin/properties/[propertyId]
+├ ○ /admin/properties/pending
+├ ○ /admin/providers
+├ ○ /admin/users
+├ ○ /admin/users/new
+├ ○ /cancellation-policy
+├ ○ /change-initial-password
+├ ○ /driver
+├ ○ /driver/account/security
+├ ○ /driver/account/sessions
+├ ○ /driver/active-session
+├ ○ /driver/bookings
+├ ƒ /driver/bookings/[bookingId]
+├ ƒ /driver/bookings/[bookingId]/dispute
+├ ƒ /driver/bookings/[bookingId]/payment
+├ ƒ /driver/bookings/[bookingId]/review
+├ ○ /driver/bookings/confirmation
+├ ○ /driver/bookings/review
+├ ○ /driver/dashboard
+├ ○ /driver/disputes
+├ ƒ /driver/disputes/[disputeId]
+├ ○ /driver/favorites
+├ ○ /driver/notifications
+├ ○ /driver/parking
+├ ƒ /driver/parking/[spotId]
+├ ○ /driver/payment-methods
+├ ○ /driver/payments
+├ ○ /driver/profile
+├ ○ /driver/recent-searches
+├ ○ /driver/refunds
+├ ƒ /driver/refunds/[refundId]
+├ ○ /driver/reviews
+├ ○ /driver/saved-locations
+├ ○ /driver/support
+├ ○ /driver/vehicles
+├ ○ /driver/wallet
+├ ○ /forgot-password
+├ ○ /guard
+├ ○ /guard/account/security
+├ ○ /guard/account/sessions
+├ ○ /guard/assignments
+├ ○ /guard/bookings
+├ ƒ /guard/bookings/[id]
+├ ƒ /guard/bookings/[id]/active
+├ ƒ /guard/bookings/[id]/checkout-success
+├ ƒ /guard/bookings/[id]/confirm
+├ ƒ /guard/bookings/[id]/upcoming
+├ ○ /guard/profile
+├ ○ /guard/scan
+├ ○ /how-it-works
+├ ○ /login
+├ ○ /manager/account/security
+├ ○ /manager/account/sessions
+├ ○ /manager/dashboard
+├ ○ /manager/properties
+├ ƒ /manager/properties/[propertyId]
+├ ○ /owner
+├ ○ /owner/account/security
+├ ○ /owner/account/sessions
+├ ○ /owner/approvals
+├ ○ /owner/availability
+├ ○ /owner/bookings
+├ ƒ /owner/bookings/[id]
+├ ○ /owner/dashboard
+├ ○ /owner/disputes
+├ ƒ /owner/disputes/[disputeId]
+├ ○ /owner/earnings
+├ ƒ /owner/guards
+├ ○ /owner/listings
+├ ○ /owner/managers
+├ ƒ /owner/managers/[id]
+├ ƒ /owner/managers/[id]/assignments
+├ ƒ /owner/managers/[id]/permissions
+├ ○ /owner/managers/new
+├ ○ /owner/notifications
+├ ○ /owner/parking
+├ ○ /owner/payouts
+├ ƒ /owner/payouts/[payoutId]
+├ ○ /owner/properties
+├ ƒ /owner/properties/[id]
+├ ƒ /owner/properties/[id]/edit
+├ ○ /owner/properties/new
+├ ○ /owner/properties/new/step-1
+├ ○ /owner/properties/new/step-2
+├ ○ /owner/properties/new/step-3
+├ ○ /owner/properties/new/step-4
+├ ○ /owner/properties/new/step-5
+├ ○ /owner/properties/new/step-6
+├ ○ /owner/properties/new/step-7
+├ ○ /owner/properties/new/success
+├ ○ /owner/reviews
+├ ○ /owner/security
+├ ○ /owner/sessions
+├ ○ /owner/settings
+├ ○ /owner/settings/payout-methods
+├ ○ /owner/support
+├ ƒ /owner/support/[ticketId]
+├ ○ /parking
+├ ƒ /parking/[spotId]
+├ ○ /privacy
+├ ○ /register
+├ ƒ /reset-password
+├ ○ /safety
+├ ○ /support
+└ ○ /verify-otp
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[exit code: 0]
