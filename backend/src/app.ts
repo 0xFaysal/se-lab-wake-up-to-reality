@@ -144,14 +144,14 @@ app.get("/", (req, res) =>
 );
 
 /**
- * Internal email worker tick — called by Vercel Cron (or any external scheduler)
- * every minute to process due email campaigns and send queued deliveries.
+ * Internal email worker tick — called by Vercel Cron (GET) or external scheduler (GET/POST)
+ * to process due email campaigns and send queued deliveries.
  *
  * Protected by a shared secret (CRON_SECRET env var) so random internet traffic
  * cannot trigger mass email sends. Vercel Cron sends this header automatically
  * when CRON_SECRET is configured in the dashboard.
  */
-app.post("/internal/email-worker/tick", async (req, res) => {
+app.all("/internal/email-worker/tick", async (req, res) => {
   const cronSecret = process.env["CRON_SECRET"];
   const authHeader = req.header("authorization");
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
