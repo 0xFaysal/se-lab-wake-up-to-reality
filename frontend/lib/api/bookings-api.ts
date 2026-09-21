@@ -1,5 +1,5 @@
 import { apiClient } from "./api-client";
-import type { BookingDto, PaymentCaptureResult, RefundDto, ReviewDto, DisputeDto, DisputeStatus, PaginationDto } from "./marketplace-types";
+import type { BookingDto, PaymentDto, PaymentSessionResult, RefundDto, RefundPreview, ReviewDto, DisputeDto, DisputeStatus, PaginationDto } from "./marketplace-types";
 
 export const bookingsApi = {
   create: (holdId: string, idempotencyKey: string) => apiClient.post<BookingDto>("/bookings", { holdId, idempotencyKey }),
@@ -9,8 +9,10 @@ export const bookingsApi = {
   providerDetail: (bookingId: string) => apiClient.get<BookingDto>(`/provider/bookings/${bookingId}`),
   cancel: (bookingId: string) => apiClient.post<BookingDto>(`/bookings/${bookingId}/cancel`, {}),
   requestCheckout: (bookingId: string) => apiClient.post<BookingDto>(`/bookings/${bookingId}/checkout-request`, {}),
-  captureSimulatedPayment: (bookingId: string, idempotencyKey: string) => apiClient.post<PaymentCaptureResult>("/payments/simulated/capture", { bookingId, idempotencyKey }),
-  refund: (paymentId: string, input: { amountPaisa: string; reason: string; idempotencyKey: string }) => apiClient.post<RefundDto>(`/payments/${paymentId}/refunds`, input),
+  createPaymentSession: (bookingId: string, idempotencyKey: string) => apiClient.post<PaymentSessionResult>(`/bookings/${bookingId}/payments/sslcommerz/session`, { idempotencyKey }, { headers: { "Idempotency-Key": idempotencyKey } }),
+  payment: (paymentId: string) => apiClient.get<PaymentDto>(`/payments/${paymentId}`),
+  refundPreview: (paymentId: string) => apiClient.get<RefundPreview>(`/payments/${paymentId}/refunds/preview`),
+  refund: (paymentId: string, input: { reason: string; idempotencyKey: string }) => apiClient.post<RefundDto>(`/payments/${paymentId}/refunds`, input),
   review: (bookingId: string, input: { rating: number; comment?: string }) => apiClient.post<ReviewDto>(`/bookings/${bookingId}/reviews`, input),
   driverReviews: () => apiClient.get<ReviewDto[]>("/reviews"),
   dispute: (bookingId: string, input: { category: string; description: string; evidence?: Array<{ url: string; type: string }> }) => apiClient.post<DisputeDto>(`/bookings/${bookingId}/disputes`, input),

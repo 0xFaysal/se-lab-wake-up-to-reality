@@ -1,14 +1,13 @@
-import { Lock, QrCode } from "lucide-react";
-import Image from "next/image";
-import stepAccessQrImg from "@/assets/step-access-qr.jpg";
+import { Lock } from "lucide-react";
+import QRCode from "react-qr-code";
 
 interface DigitalAccessPassProps {
-  accessOtp: string;
+  accessCredential: string;
   propertyTitle?: string;
 }
 
 export function DigitalAccessPass({
-  accessOtp,
+  accessCredential,
   propertyTitle = "Gulshan Residential Parking",
 }: DigitalAccessPassProps) {
   return (
@@ -21,18 +20,12 @@ export function DigitalAccessPass({
         {/* Left: High-Contrast QR Code Card */}
         <div className="md:col-span-5 flex justify-center md:justify-start">
           <div className="relative size-44 sm:size-48 rounded-2xl bg-white p-3 shadow-2xl flex flex-col items-center justify-between border-4 border-emerald-950/20">
-            {/* Embedded QR Code Graphic */}
-            <div className="relative size-32 sm:size-36 flex items-center justify-center bg-gray-50 rounded-xl overflow-hidden">
-              <Image
-                src={stepAccessQrImg}
-                alt="Digital Access QR Code Pass"
-                fill
-                className="object-cover"
-              />
+            <div className="flex size-32 items-center justify-center rounded-xl bg-white sm:size-36" aria-label="Booking access QR code">
+              <QRCode value={accessCredential} size={136} />
             </div>
             <div className="w-full text-center py-0.5 border-t border-gray-100">
               <span className="text-[10px] font-bold text-gray-800 tracking-wider font-mono uppercase">
-                Gate Pass ID: {accessOtp}
+                Scan at the assigned gate
               </span>
             </div>
           </div>
@@ -51,16 +44,6 @@ export function DigitalAccessPass({
               Present this QR code or Access OTP to the assigned parking guard
               upon arrival at {propertyTitle}.
             </p>
-          </div>
-
-          {/* Prominent Access OTP Box */}
-          <div className="inline-flex flex-col rounded-xl bg-emerald-950/60 border border-white/20 px-5 py-2.5 backdrop-blur-sm shadow-inner">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-200/80">
-              Access OTP
-            </span>
-            <span className="text-2xl sm:text-3xl font-black tracking-widest text-white font-mono leading-tight">
-              {accessOtp}
-            </span>
           </div>
 
           {/* Security Notice Banner */}

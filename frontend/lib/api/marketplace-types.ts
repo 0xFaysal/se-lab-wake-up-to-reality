@@ -7,8 +7,8 @@ export type ParkingRightStatus = "PENDING_VERIFICATION" | "VERIFIED" | "DISPUTED
 export type ListingStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "SUSPENDED" | "ENDED";
 export type HoldStatus = "ACTIVE" | "CONSUMED" | "EXPIRED" | "RELEASED";
 export type MarketplaceBookingStatus = "PAYMENT_PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED" | "PAYMENT_DUE" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "NO_SHOW" | "DISPUTED";
-export type PaymentStatus = "PENDING" | "CAPTURED" | "FAILED" | "PARTIALLY_REFUNDED" | "REFUNDED";
-export type RefundStatus = "PENDING" | "SUCCEEDED" | "FAILED";
+export type PaymentStatus = "CREATED" | "SESSION_CREATED" | "PENDING" | "VALIDATING" | "SUCCEEDED" | "CAPTURED" | "FAILED" | "CANCELLED" | "EXPIRED" | "REFUND_PENDING" | "PARTIALLY_REFUNDED" | "REFUNDED";
+export type RefundStatus = "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "REJECTED";
 export type PayoutStatus = "PENDING" | "ON_HOLD" | "APPROVED" | "REJECTED" | "PAID";
 export type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
 export interface PaginationDto { page: number; limit: number; total: number; totalPages: number }
@@ -173,6 +173,7 @@ export interface BookingDto {
   parkingSpot?: { id: string; displayName: string | null; spotCode: string | null; resourceType: ParkingResourceType; floor: string | null; zone: string | null };
   parkingResourceUnit?: { id: string; spotCode: string; displayName: string | null; status: ParkingResourceStatus } | null;
   listing?: { id: string; title: string; providerMembershipId?: string }; payments?: PaymentDto[];
+  accessCredential?: string | null;
 }
 export interface GuardBookingDto {
   id: string; bookingCode: string; status: "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED";
@@ -184,7 +185,8 @@ export interface GuardBookingDto {
   parkingSpot: { id: string; displayName: string | null; spotCode: string | null; resourceType: ParkingResourceType; floor: string | null; zone: string | null };
   listing: { id: string; title: string };
 }
-export interface PaymentCaptureResult { payment: PaymentDto; booking: BookingDto; accessCredential: string | null; credentialAlreadyIssued: boolean }
+export interface PaymentSessionResult { paymentId: string; status: PaymentStatus; gateway: "SSLCOMMERZ"; checkoutUrl: string; expiresAt: string }
+export interface RefundPreview { eligible: boolean; refundableAmountPaisa: string; policyReason: string; cutoffAt: string }
 
 export interface WalletDto { id: string; userId: string; currency: string; status: string; availableBalancePaisa: string; pendingBalancePaisa: string; heldBalancePaisa: string; balanceVersion: number; createdAt: string; updatedAt: string }
 export interface LedgerEntryDto { id: string; accountCode: string; entrySide: "DEBIT" | "CREDIT"; amountPaisa: string; createdAt: string; ledgerTransaction: { id: string; referenceType: string; referenceId: string; description: string; createdAt: string } }

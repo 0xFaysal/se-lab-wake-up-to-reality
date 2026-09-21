@@ -43,6 +43,10 @@ export const sensitiveLogPaths = [
   "*.CLOUDINARY_API_SECRET",
   "cloudinaryApiSecret",
   "*.cloudinaryApiSecret",
+  "SSLCOMMERZ_STORE_PASSWORD",
+  "*.SSLCOMMERZ_STORE_PASSWORD",
+  "store_passwd",
+  "*.store_passwd",
 ] as const;
 
 export const logger = pino({

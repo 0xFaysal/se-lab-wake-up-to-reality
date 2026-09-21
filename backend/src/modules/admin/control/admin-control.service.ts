@@ -541,9 +541,9 @@ export async function getFinanceAnalytics(input: { from?: string; to?: string; g
   const { start, end } = analyticsRange(input.from, input.to);
   const bucket = Prisma.raw(`date_trunc('${input.granularity}', "created_at")`);
   const [payments, refunds, captured, refunded] = await Promise.all([
-    prisma.$queryRaw<MoneyTrendRow[]>(Prisma.sql`SELECT ${bucket} AS "bucket", COUNT(*)::int AS "count", COALESCE(SUM("amount_paisa"), 0)::bigint AS "amountPaisa" FROM "payments" WHERE "created_at" >= ${start} AND "created_at" < ${end} AND "status" IN ('CAPTURED', 'PARTIALLY_REFUNDED', 'REFUNDED') GROUP BY 1 ORDER BY 1`),
+    prisma.$queryRaw<MoneyTrendRow[]>(Prisma.sql`SELECT ${bucket} AS "bucket", COUNT(*)::int AS "count", COALESCE(SUM("amount_paisa"), 0)::bigint AS "amountPaisa" FROM "payments" WHERE "created_at" >= ${start} AND "created_at" < ${end} AND "status" IN ('SUCCEEDED', 'CAPTURED', 'PARTIALLY_REFUNDED', 'REFUNDED') GROUP BY 1 ORDER BY 1`),
     prisma.$queryRaw<MoneyTrendRow[]>(Prisma.sql`SELECT ${bucket} AS "bucket", COUNT(*)::int AS "count", COALESCE(SUM("amount_paisa"), 0)::bigint AS "amountPaisa" FROM "refunds" WHERE "created_at" >= ${start} AND "created_at" < ${end} AND "status" = 'SUCCEEDED' GROUP BY 1 ORDER BY 1`),
-    prisma.payment.aggregate({ where: { createdAt: { gte: start, lt: end }, status: { in: [PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED] } }, _sum: { amountPaisa: true }, _count: true }),
+    prisma.payment.aggregate({ where: { createdAt: { gte: start, lt: end }, status: { in: [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED] } }, _sum: { amountPaisa: true }, _count: true }),
     prisma.refund.aggregate({ where: { createdAt: { gte: start, lt: end }, status: RefundStatus.SUCCEEDED }, _sum: { amountPaisa: true }, _count: true }),
   ]);
   const capturedAmount = captured._sum.amountPaisa ?? 0n;

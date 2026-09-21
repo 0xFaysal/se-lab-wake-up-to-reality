@@ -19,6 +19,7 @@ const schema = z
     DATABASE_URL: z.string().min(1),
     REDIS_URL: z.string().min(1),
     CORS_ORIGIN: z.url(),
+    FRONTEND_BASE_URL: z.url().optional(),
     API_PUBLIC_URL: z.url().optional(),
     PASSWORD_RESET_URL: z.url().optional(),
     TRUST_PROXY_HOPS: z.coerce.number().int().nonnegative().default(0),
@@ -78,6 +79,18 @@ const schema = z
     EXPOSE_DEVELOPMENT_AUTH_CODES: z
       .enum(["true", "false"])
       .default("false")
+      .transform((value) => value === "true"),
+    SSLCOMMERZ_ENABLED: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+    SSLCOMMERZ_ENVIRONMENT: z.enum(["sandbox", "live"]).default("sandbox"),
+    SSLCOMMERZ_STORE_ID: optionalNonEmptyString,
+    SSLCOMMERZ_STORE_PASSWORD: optionalNonEmptyString,
+    SSLCOMMERZ_SUCCESS_URL: z.url().optional(),
+    SSLCOMMERZ_FAIL_URL: z.url().optional(),
+    SSLCOMMERZ_CANCEL_URL: z.url().optional(),
+    SSLCOMMERZ_IPN_URL: z.url().optional(),
+    SSLCOMMERZ_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(10000),
+    SIMULATED_PAYMENTS_ENABLED: z.enum(["true", "false"])
+      .default(process.env.NODE_ENV === "production" ? "false" : "true")
       .transform((value) => value === "true"),
   })
   .superRefine((value, context) => {
@@ -145,6 +158,25 @@ const schema = z
           message: "Email sender address is required when EMAIL_PROVIDER=resend",
         });
       }
+    }
+
+    if (value.SSLCOMMERZ_ENABLED) {
+      for (const name of [
+        "SSLCOMMERZ_STORE_ID",
+        "SSLCOMMERZ_STORE_PASSWORD",
+        "SSLCOMMERZ_SUCCESS_URL",
+        "SSLCOMMERZ_FAIL_URL",
+        "SSLCOMMERZ_CANCEL_URL",
+        "SSLCOMMERZ_IPN_URL",
+      ] as const) {
+        if (!value[name]) {
+          context.addIssue({ code: "custom", path: [name], message: `${name} is required when SSLCOMMERZ is enabled` });
+        }
+      }
+    }
+
+    if (value.SSLCOMMERZ_ENVIRONMENT === "live" && value.NODE_ENV !== "production") {
+      context.addIssue({ code: "custom", path: ["SSLCOMMERZ_ENVIRONMENT"], message: "Live payments require NODE_ENV=production" });
     }
 
     const cloudinaryConfiguration = [
@@ -245,6 +277,7 @@ const schema = z
 
       for (const [name, url] of [
         ["CORS_ORIGIN", value.CORS_ORIGIN],
+        ["FRONTEND_BASE_URL", value.FRONTEND_BASE_URL],
         ["API_PUBLIC_URL", value.API_PUBLIC_URL],
         ["PASSWORD_RESET_URL", value.PASSWORD_RESET_URL],
       ] as const) {
@@ -254,6 +287,15 @@ const schema = z
             path: [name],
             message: `${name} must use HTTPS in production`,
           });
+        }
+      }
+
+      if (value.SSLCOMMERZ_ENABLED) {
+        for (const name of ["SSLCOMMERZ_SUCCESS_URL", "SSLCOMMERZ_FAIL_URL", "SSLCOMMERZ_CANCEL_URL", "SSLCOMMERZ_IPN_URL"] as const) {
+          const url = value[name];
+          if (url && new URL(url).protocol !== "https:") {
+            context.addIssue({ code: "custom", path: [name], message: `${name} must use HTTPS in production` });
+          }
         }
       }
     }

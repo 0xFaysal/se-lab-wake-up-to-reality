@@ -27,11 +27,11 @@ export const bookingStatus: Record<MarketplaceBookingStatus, StatusPresentation>
   NO_SHOW: { label: "No show", className: red }, DISPUTED: { label: "Disputed", className: red },
 };
 export const paymentStatus: Record<PaymentStatus, StatusPresentation> = {
-  PENDING: { label: "Pending", className: amber }, CAPTURED: { label: "Paid", className: green }, FAILED: { label: "Failed", className: red },
+  CREATED: { label: "Starting", className: amber }, SESSION_CREATED: { label: "Checkout ready", className: blue }, PENDING: { label: "Pending", className: amber }, VALIDATING: { label: "Verifying", className: amber }, SUCCEEDED: { label: "Paid", className: green }, CAPTURED: { label: "Paid", className: green }, FAILED: { label: "Failed", className: red }, CANCELLED: { label: "Cancelled", className: red }, EXPIRED: { label: "Expired", className: slate }, REFUND_PENDING: { label: "Refund pending", className: amber },
   PARTIALLY_REFUNDED: { label: "Partially refunded", className: blue }, REFUNDED: { label: "Refunded", className: slate },
 };
 export const refundStatus: Record<RefundStatus, StatusPresentation> = {
-  PENDING: { label: "Pending", className: amber }, SUCCEEDED: { label: "Refunded", className: green }, FAILED: { label: "Failed", className: red },
+  PENDING: { label: "Pending", className: amber }, PROCESSING: { label: "Processing", className: blue }, SUCCEEDED: { label: "Refunded", className: green }, FAILED: { label: "Failed", className: red }, REJECTED: { label: "Rejected", className: red },
 };
 export const payoutStatus: Record<PayoutStatus, StatusPresentation> = {
   PENDING: { label: "Pending", className: amber }, ON_HOLD: { label: "On hold", className: red }, APPROVED: { label: "Approved", className: blue }, REJECTED: { label: "Rejected", className: red }, PAID: { label: "Simulated paid", className: green },
