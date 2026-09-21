@@ -305,10 +305,13 @@ const schema = z
 const result = schema.safeParse(process.env);
 
 if (!result.success) {
-  console.error(
-    "Invalid environment variables",
-    z.flattenError(result.error).fieldErrors,
-  );
+  const fieldErrors = z.flattenError(result.error).fieldErrors;
+  console.error("Invalid environment variables:", fieldErrors);
+  if (process.env["VERCEL"]) {
+    throw new Error(
+      `Invalid environment variables on Vercel:\n${JSON.stringify(fieldErrors, null, 2)}`,
+    );
+  }
   process.exit(1);
 }
 

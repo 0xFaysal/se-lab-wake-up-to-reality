@@ -25,8 +25,15 @@ function getInitPromise(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       await prisma.$connect();
-      await connectRedis();
-    })();
+      try {
+        await connectRedis();
+      } catch (redisError) {
+        console.error("Redis cold-start connection failed (non-fatal):", redisError);
+      }
+    })().catch((err) => {
+      initPromise = undefined;
+      throw err;
+    });
   }
   return initPromise;
 }
@@ -35,7 +42,22 @@ export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  await getInitPromise();
-  // Express accepts Node's raw IncomingMessage / ServerResponse
-  app(req, res);
+  try {
+    await getInitPromise();
+    // Express accepts Node's raw IncomingMessage / ServerResponse
+    app(req, res);
+  } catch (error) {
+    console.error("Vercel function invocation error:", error);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Server Initialization Error",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
 }
