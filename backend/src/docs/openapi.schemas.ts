@@ -1693,7 +1693,7 @@ export const openApiSchemas = {
     type: "object",
     properties: {
       id: { type: "string", format: "uuid" },
-      status: { type: "string", enum: ["PENDING", "CAPTURED", "FAILED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+      status: { type: "string", enum: ["CREATED", "SESSION_CREATED", "PENDING", "VALIDATING", "SUCCEEDED", "CAPTURED", "FAILED", "CANCELLED", "EXPIRED", "REFUND_PENDING", "PARTIALLY_REFUNDED", "REFUNDED"] },
       amountPaisa: { type: "string" },
       providerReference: { type: "string", nullable: true },
     },

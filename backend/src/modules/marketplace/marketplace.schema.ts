@@ -489,7 +489,7 @@ export const refundParamsSchema = z.object({ params: z.object({ refundId: uuid }
 export const driverRefundQuerySchema = z.object({
   query: z.object({
     ...pagination,
-    status: z.enum(["PENDING", "SUCCEEDED", "FAILED"]).optional(),
+    status: z.enum(["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REJECTED"]).optional(),
   }).strict(),
 });
 

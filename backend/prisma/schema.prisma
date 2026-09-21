@@ -153,9 +153,16 @@ enum AccessCredentialStatus {
 }
 
 enum PaymentStatus {
+  CREATED
+  SESSION_CREATED
   PENDING
+  VALIDATING
+  SUCCEEDED
   CAPTURED
   FAILED
+  CANCELLED
+  EXPIRED
+  REFUND_PENDING
   PARTIALLY_REFUNDED
   REFUNDED
 
@@ -164,8 +171,10 @@ enum PaymentStatus {
 
 enum RefundStatus {
   PENDING
+  PROCESSING
   SUCCEEDED
   FAILED
+  REJECTED
 
   @@map("refund_status")
 }
@@ -1688,39 +1697,83 @@ model AccessCredential {
 }
 
 model Payment {
-  id                String        @id @default(uuid()) @db.Uuid
-  bookingId         String        @map("booking_id") @db.Uuid
-  payerUserId       String        @map("payer_user_id") @db.Uuid
-  amountPaisa       BigInt        @map("amount_paisa")
-  currency          String        @default("BDT") @db.Char(3)
-  status            PaymentStatus @default(PENDING)
-  provider          String        @default("SIMULATED") @db.VarChar(30)
-  providerReference String?       @unique @map("provider_reference") @db.VarChar(120)
-  idempotencyKey    String        @unique @map("idempotency_key") @db.VarChar(100)
-  capturedAt        DateTime?     @map("captured_at") @db.Timestamptz(6)
-  failedAt          DateTime?     @map("failed_at") @db.Timestamptz(6)
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                    String        @id @default(uuid()) @db.Uuid
+  bookingId             String        @map("booking_id") @db.Uuid
+  payerUserId           String        @map("payer_user_id") @db.Uuid
+  amountPaisa           BigInt        @map("amount_paisa")
+  currency              String        @default("BDT") @db.Char(3)
+  status                PaymentStatus @default(PENDING)
+  provider              String        @default("SIMULATED") @db.VarChar(30)
+  providerReference     String?       @unique @map("provider_reference") @db.VarChar(120)
+  environment           String        @default("DEVELOPMENT") @db.VarChar(20)
+  merchantTransactionId String?       @unique @map("merchant_transaction_id") @db.VarChar(30)
+  gatewaySessionKey     String?       @unique @map("gateway_session_key") @db.VarChar(160)
+  checkoutUrl           String?       @map("checkout_url") @db.Text
+  sessionExpiresAt      DateTime?     @map("session_expires_at") @db.Timestamptz(6)
+  validationId          String?       @unique @map("validation_id") @db.VarChar(160)
+  bankTransactionId     String?       @map("bank_transaction_id") @db.VarChar(160)
+  gatewayStatus         String?       @map("gateway_status") @db.VarChar(40)
+  cardType              String?       @map("card_type") @db.VarChar(80)
+  cardBrand             String?       @map("card_brand") @db.VarChar(80)
+  issuer                String?       @db.VarChar(120)
+  riskLevel             Int?          @map("risk_level")
+  riskTitle             String?       @map("risk_title") @db.VarChar(160)
+  refundedAmountPaisa   BigInt        @default(0) @map("refunded_amount_paisa")
+  idempotencyKey        String        @unique @map("idempotency_key") @db.VarChar(100)
+  initiatedAt           DateTime?     @map("initiated_at") @db.Timestamptz(6)
+  succeededAt           DateTime?     @map("succeeded_at") @db.Timestamptz(6)
+  capturedAt            DateTime?     @map("captured_at") @db.Timestamptz(6)
+  failedAt              DateTime?     @map("failed_at") @db.Timestamptz(6)
+  cancelledAt           DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  expiredAt             DateTime?     @map("expired_at") @db.Timestamptz(6)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Restrict)
-  payer   User     @relation("PaymentPayer", fields: [payerUserId], references: [id], onDelete: Restrict)
-  refunds Refund[]
+  booking  Booking          @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  payer    User             @relation("PaymentPayer", fields: [payerUserId], references: [id], onDelete: Restrict)
+  refunds  Refund[]
+  attempts PaymentAttempt[]
 
+  @@index([bookingId, provider])
   @@index([bookingId, status])
   @@index([payerUserId, createdAt(sort: Desc)])
   @@map("payments")
 }
 
+model PaymentAttempt {
+  id                    String        @id @default(uuid()) @db.Uuid
+  paymentId             String        @map("payment_id") @db.Uuid
+  attemptNumber         Int           @map("attempt_number")
+  merchantTransactionId String        @unique @map("merchant_transaction_id") @db.VarChar(30)
+  sessionKey            String?       @unique @map("session_key") @db.VarChar(160)
+  status                PaymentStatus @default(CREATED)
+  initiatedAt           DateTime      @default(now()) @map("initiated_at") @db.Timestamptz(6)
+  completedAt           DateTime?     @map("completed_at") @db.Timestamptz(6)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, attemptNumber])
+  @@index([paymentId, status])
+  @@map("payment_attempts")
+}
+
 model Refund {
-  id                String       @id @default(uuid()) @db.Uuid
-  paymentId         String       @map("payment_id") @db.Uuid
-  requestedByUserId String       @map("requested_by_user_id") @db.Uuid
-  amountPaisa       BigInt       @map("amount_paisa")
-  reason            String       @db.VarChar(500)
-  status            RefundStatus @default(PENDING)
-  idempotencyKey    String       @unique @map("idempotency_key") @db.VarChar(100)
-  processedAt       DateTime?    @map("processed_at") @db.Timestamptz(6)
-  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                         String       @id @default(uuid()) @db.Uuid
+  paymentId                  String       @map("payment_id") @db.Uuid
+  requestedByUserId          String       @map("requested_by_user_id") @db.Uuid
+  amountPaisa                BigInt       @map("amount_paisa")
+  reason                     String       @db.VarChar(500)
+  status                     RefundStatus @default(PENDING)
+  idempotencyKey             String       @unique @map("idempotency_key") @db.VarChar(100)
+  gatewayRefundTransactionId String?      @unique @map("gateway_refund_transaction_id") @db.VarChar(30)
+  gatewayRefundReferenceId   String?      @unique @map("gateway_refund_reference_id") @db.VarChar(160)
+  gatewayStatus              String?      @map("gateway_status") @db.VarChar(80)
+  policyReason               String?      @map("policy_reason") @db.VarChar(240)
+  submittedAt                DateTime?    @map("submitted_at") @db.Timestamptz(6)
+  processedAt                DateTime?    @map("processed_at") @db.Timestamptz(6)
+  createdAt                  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
 
   payment     Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   requestedBy User    @relation("RefundRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
