@@ -2,12 +2,33 @@ import { createClient } from "redis";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
 
-export const redis = createClient({ url: env.REDIS_URL });
+export const redis = createClient({
+  url: env.REDIS_URL,
+  socket: {
+    // In serverless (Vercel), connections are dropped between invocations.
+    // Cap retries so a bad URL fails fast instead of hanging the function.
+    reconnectStrategy: (retries) => {
+      if (retries >= 3) return new Error("Redis reconnect failed after 3 attempts");
+      return Math.min(retries * 200, 1000);
+    },
+  },
+});
 
 redis.on("error", (error) => logger.error({ error }, "Redis client error"));
 
 redis.on("reconnecting", () => logger.warn("Redis reconnecting"));
 
+/**
+ * Ensure the Redis client is connected.
+ *
+ * Safe to call on every request in serverless environments — the client
+ * caches the connection and reconnects only when the socket has been
+ * dropped (e.g. after a Vercel idle timeout).
+ */
 export async function connectRedis() {
-  if (!redis.isOpen) await redis.connect();
+  // isReady is false when the socket has dropped but isOpen may still be true
+  // briefly during the reconnect handshake, so check both.
+  if (!redis.isOpen || !redis.isReady) {
+    await redis.connect();
+  }
 }

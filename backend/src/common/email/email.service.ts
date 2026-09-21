@@ -109,9 +109,8 @@ function getEmailTransporter(
     port: configuration.port,
     secure,
     requireTLS: !secure,
-    pool: true,
-    maxConnections: 3,
-    maxMessages: 100,
+    // Do NOT use pool:true in serverless — Vercel kills idle TCP sockets between
+    // invocations, leaving the pool in a broken state for subsequent requests.
     dnsTimeout: 5_000,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
