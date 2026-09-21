@@ -29,6 +29,7 @@ import { managerDelegationRouter } from "./modules/manager-delegations/manager-d
 import { propertyImageRouter } from "./modules/property-images/property-image.routes.js";
 import { marketplaceRouter } from "./modules/marketplace/marketplace.routes.js";
 import { paymentRouter } from "./modules/payments/payment.routes.js";
+import { enqueueDueEmailCampaigns, processEmailDeliveryBatch } from "./modules/admin/control/email-management.service.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -141,6 +142,32 @@ app.get("/", (req, res) =>
     meta: { requestId: req.requestId, timestamp: new Date().toISOString() },
   }),
 );
+
+/**
+ * Internal email worker tick — called by Vercel Cron (or any external scheduler)
+ * every minute to process due email campaigns and send queued deliveries.
+ *
+ * Protected by a shared secret (CRON_SECRET env var) so random internet traffic
+ * cannot trigger mass email sends. Vercel Cron sends this header automatically
+ * when CRON_SECRET is configured in the dashboard.
+ */
+app.post("/internal/email-worker/tick", async (req, res) => {
+  const cronSecret = process.env["CRON_SECRET"];
+  const authHeader = req.header("authorization");
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const scheduled = await enqueueDueEmailCampaigns();
+    const deliveries = await processEmailDeliveryBatch();
+    logger.info({ scheduled, deliveries }, "Email worker tick completed");
+    res.status(200).json({ success: true, data: { scheduled, deliveries } });
+  } catch (error) {
+    logger.error({ error }, "Email worker tick failed");
+    res.status(500).json({ success: false, error: "Email worker tick failed" });
+  }
+});
 
 app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
