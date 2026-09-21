@@ -17,6 +17,7 @@ const schema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     DATABASE_URL: z.string().min(1),
+    DIRECT_URL: z.string().min(1).optional(),
     REDIS_URL: z.string().min(1),
     CORS_ORIGIN: z.url(),
     FRONTEND_BASE_URL: z.url().optional(),
