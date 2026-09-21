@@ -3,6 +3,12 @@ import { AppError } from "../errors/app-error.js";
 import { env } from "../../config/env.js";
 
 const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]); // Define a set of HTTP methods that are considered safe and do not require CSRF protection
+const gatewayCallbackPaths = new Set([
+  "/api/v1/payments/sslcommerz/ipn",
+  "/api/v1/payments/sslcommerz/success",
+  "/api/v1/payments/sslcommerz/fail",
+  "/api/v1/payments/sslcommerz/cancel",
+]);
 
 // Define a set of configured origins that are allowed to make requests to the server.
 const configuredOrigins = new Set([
@@ -16,7 +22,7 @@ it verifies that the request's origin is either in the configured origins or mat
 If the request fails these checks, it responds with a 403 error indicating that the cross-site request was rejected.*/
 
 export const csrfProtection: RequestHandler = (req, _res, next) => {
-  if (safeMethods.has(req.method)) {
+  if (safeMethods.has(req.method) || gatewayCallbackPaths.has(req.path)) {
     next();
     return;
   }

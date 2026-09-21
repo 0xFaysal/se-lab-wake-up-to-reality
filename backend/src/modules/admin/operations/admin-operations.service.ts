@@ -36,7 +36,7 @@ function notFound(resource: string): AppError {
 export async function getDashboardSummary() {
   const now = new Date();
   const trendFrom = new Date(now.getTime() - 30 * 86_400_000);
-  const successfulPaymentStatuses = [PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED];
+  const successfulPaymentStatuses = [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED];
   type TrendRow = { bucket: Date; count: number; amountPaisa?: bigint };
 
   const [
@@ -80,7 +80,7 @@ export async function getDashboardSummary() {
     prisma.parkingRight.count({ where: { status: ParkingRightStatus.VERIFIED, validUntil: { gt: now, lte: new Date(now.getTime() + 30 * 86_400_000) } } }),
     prisma.property.count({ where: { deletedAt: null, status: "ACTIVE", parkingSpots: { some: { deletedAt: null, status: "ACTIVE" } }, guardMemberships: { none: { status: "ACTIVE" } } } }),
     prisma.$queryRaw<TrendRow[]>(Prisma.sql`SELECT date_trunc('day', "created_at") AS "bucket", COUNT(*)::int AS "count" FROM "bookings" WHERE "created_at" >= ${trendFrom} GROUP BY 1 ORDER BY 1`),
-    prisma.$queryRaw<TrendRow[]>(Prisma.sql`SELECT date_trunc('day', "created_at") AS "bucket", COUNT(*)::int AS "count", COALESCE(SUM("amount_paisa"), 0)::bigint AS "amountPaisa" FROM "payments" WHERE "created_at" >= ${trendFrom} AND "status" IN ('CAPTURED', 'PARTIALLY_REFUNDED', 'REFUNDED') GROUP BY 1 ORDER BY 1`),
+    prisma.$queryRaw<TrendRow[]>(Prisma.sql`SELECT date_trunc('day', "created_at") AS "bucket", COUNT(*)::int AS "count", COALESCE(SUM("amount_paisa"), 0)::bigint AS "amountPaisa" FROM "payments" WHERE "created_at" >= ${trendFrom} AND "status" IN ('SUCCEEDED', 'CAPTURED', 'PARTIALLY_REFUNDED', 'REFUNDED') GROUP BY 1 ORDER BY 1`),
     prisma.$queryRaw<TrendRow[]>(Prisma.sql`SELECT date_trunc('day', "created_at") AS "bucket", COUNT(*)::int AS "count" FROM "users" WHERE "created_at" >= ${trendFrom} AND "deleted_at" IS NULL GROUP BY 1 ORDER BY 1`),
     prisma.domainAuditEvent.findMany({ orderBy: { createdAt: "desc" }, take: 10, select: { id: true, eventType: true, entityType: true, entityId: true, createdAt: true, actor: { select: { id: true, fullName: true, email: true } }, property: { select: { id: true, name: true } } } }),
   ]);

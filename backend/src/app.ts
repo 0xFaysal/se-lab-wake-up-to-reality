@@ -28,6 +28,7 @@ import { propertyGovernanceRouter } from "./modules/property-governance/property
 import { managerDelegationRouter } from "./modules/manager-delegations/manager-delegation.routes.js";
 import { propertyImageRouter } from "./modules/property-images/property-image.routes.js";
 import { marketplaceRouter } from "./modules/marketplace/marketplace.routes.js";
+import { paymentRouter } from "./modules/payments/payment.routes.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -145,6 +146,7 @@ app.use("/health", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/vehicles", vehicleRouter);
+app.use("/api/v1", paymentRouter);
 // Marketplace owns the nested parking-resource routes below /provider/properties.
 // Mount it before the Property router so delegated Managers reach its scoped
 // permission checks instead of being rejected by the Provider-only router.

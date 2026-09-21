@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import { fileTypeFromBuffer } from "file-type";
 import {
@@ -29,6 +29,7 @@ import {
 } from "../../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import { logger } from "../../config/logger.js";
+import { env } from "../../config/env.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { encryptSensitiveText } from "../../common/security/encryption.js";
 import { getRightDocumentStorage } from "../../common/uploads/right-document-storage.js";
@@ -43,6 +44,7 @@ import {
   type MarketplaceDb,
 } from "./marketplace.repository.js";
 import { resolvePlatformFee } from "./platform-fee.service.js";
+import { requestAdminRefund } from "../payments/payment.service.js";
 
 const DHAKA_TIME_ZONE = "Asia/Dhaka";
 const QUOTE_TTL_MS = 5 * 60 * 1000;
@@ -2338,14 +2340,39 @@ const bookingInclude = {
   payments: { orderBy: { createdAt: "desc" as const } },
 } satisfies Prisma.BookingInclude;
 
+const ACCESS_CREDENTIAL_PREFIX = "parkease-access:";
+
+function accessCredentialPayload(id: string) {
+  return `${ACCESS_CREDENTIAL_PREFIX}${id}`;
+}
+
+function credentialLookup(credential: string, tokenHash: string): Prisma.AccessCredentialWhereUniqueInput {
+  const id = credential.startsWith(ACCESS_CREDENTIAL_PREFIX)
+    ? credential.slice(ACCESS_CREDENTIAL_PREFIX.length)
+    : null;
+  return id && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+    ? { id }
+    : { tokenHash };
+}
+
 export async function listDriverBookings(driverUserId: string) {
   return serialize(await prisma.booking.findMany({ where: { driverUserId }, include: bookingInclude, orderBy: { createdAt: "desc" } }));
 }
 
 export async function getDriverBooking(driverUserId: string, bookingId: string) {
-  const booking = await prisma.booking.findFirst({ where: { id: bookingId, driverUserId }, include: bookingInclude });
+  const booking = await prisma.booking.findFirst({
+    where: { id: bookingId, driverUserId },
+    include: {
+      ...bookingInclude,
+      credential: { select: { id: true, status: true, expiresAt: true } },
+    },
+  });
   if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
-  return serialize(booking);
+  const { credential, ...details } = booking;
+  const accessCredential = credential?.status === "ACTIVE" && credential.expiresAt > new Date()
+    ? accessCredentialPayload(credential.id)
+    : null;
+  return serialize({ ...details, accessCredential });
 }
 
 export async function listProviderBookings(actorUserId: string) {
@@ -2496,6 +2523,7 @@ export async function cancelBooking(driverUserId: string, bookingId: string) {
 }
 
 export async function captureSimulatedPayment(driverUserId: string, input: { bookingId: string; idempotencyKey: string }) {
+  if (!env.SIMULATED_PAYMENTS_ENABLED) fail(404, "SIMULATED_PAYMENT_DISABLED", "Simulated payments are disabled");
   const previous = await prisma.payment.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: { booking: true } });
   if (previous) {
     if (previous.payerUserId !== driverUserId || previous.bookingId !== input.bookingId) {
@@ -2508,7 +2536,8 @@ export async function captureSimulatedPayment(driverUserId: string, input: { boo
     const booking = await tx.booking.findFirst({ where: { id: input.bookingId, driverUserId } });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
     if (booking.status !== BookingStatus.PAYMENT_PENDING) fail(409, "BOOKING_TRANSITION_INVALID", "Booking is not awaiting payment");
-    const rawCredential = randomBytes(32).toString("base64url");
+    const credentialId = randomUUID();
+    const rawCredential = accessCredentialPayload(credentialId);
     const tokenHash = createHash("sha256").update(rawCredential).digest("hex");
     const now = new Date();
     const payment = await tx.payment.create({ data: {
@@ -2540,6 +2569,7 @@ export async function captureSimulatedPayment(driverUserId: string, input: { boo
     });
     const updatedBooking = await tx.booking.update({ where: { id: booking.id }, data: { status: "CONFIRMED", confirmedAt: now } });
     await tx.accessCredential.create({ data: {
+      id: credentialId,
       bookingId: booking.id,
       tokenHash,
       expiresAt: new Date(booking.effectiveEndAt.getTime() + 24 * 60 * 60 * 1000),
@@ -2555,7 +2585,7 @@ export async function captureSimulatedPayment(driverUserId: string, input: { boo
 export async function verifyAccessCredential(guardUserId: string, credential: string) {
   const tokenHash = createHash("sha256").update(credential).digest("hex");
   const record = await prisma.accessCredential.findUnique({
-    where: { tokenHash },
+    where: credentialLookup(credential, tokenHash),
     select: {
       id: true,
       bookingId: true,
@@ -2577,7 +2607,11 @@ export async function checkInBooking(guardUserId: string, bookingId: string, cre
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "booking", bookingId);
     const tokenHash = createHash("sha256").update(credential).digest("hex");
-    const record = await tx.accessCredential.findFirst({ where: { bookingId, tokenHash }, include: { booking: true } });
+    const lookup = credentialLookup(credential, tokenHash);
+    const record = await tx.accessCredential.findFirst({
+      where: { bookingId, ...(lookup.id ? { id: lookup.id } : { tokenHash }) },
+      include: { booking: true },
+    });
     if (!record || record.status !== "ACTIVE" || record.expiresAt <= new Date()) {
       fail(400, "ACCESS_CREDENTIAL_INVALID", "Access credential is invalid or expired");
     }
@@ -2786,13 +2820,13 @@ export async function createAdminBookingRefund(
   const payment = await prisma.payment.findFirst({
     where: {
       bookingId,
-      status: { in: [PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED] },
+      status: { in: [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED] },
     },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });
   if (!payment) fail(409, "PAYMENT_NOT_REFUNDABLE", "This booking has no refundable payment");
-  return createRefund(adminUserId, payment.id, input);
+  return requestAdminRefund(adminUserId, payment.id, input);
 }
 
 const driverRefundInclude = {
