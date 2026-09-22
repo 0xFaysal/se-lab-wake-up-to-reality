@@ -17,6 +17,7 @@ const schema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     DATABASE_URL: z.string().min(1),
+    DIRECT_URL: z.string().min(1).optional(),
     REDIS_URL: z.string().min(1),
     CORS_ORIGIN: z.url(),
     FRONTEND_BASE_URL: z.url().optional(),
@@ -304,10 +305,13 @@ const schema = z
 const result = schema.safeParse(process.env);
 
 if (!result.success) {
-  console.error(
-    "Invalid environment variables",
-    z.flattenError(result.error).fieldErrors,
-  );
+  const fieldErrors = z.flattenError(result.error).fieldErrors;
+  console.error("Invalid environment variables:", fieldErrors);
+  if (process.env["VERCEL"]) {
+    throw new Error(
+      `Invalid environment variables on Vercel:\n${JSON.stringify(fieldErrors, null, 2)}`,
+    );
+  }
   process.exit(1);
 }
 
