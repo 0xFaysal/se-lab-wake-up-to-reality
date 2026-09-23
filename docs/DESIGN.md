@@ -110,6 +110,10 @@ spacing:
 
 ## Brand & Style
 
+> **Figma Canvas:** [ParkEase BD — UI/UX Design](https://www.figma.com/design/xpGwQGsxbzN8kQK0IubMPU/ParkEase-BD-%E2%80%94-UI-UX-Design?node-id=0-1&t=wANRYM1Cb6R2qjlc-1)
+>
+> **Screen Catalog & Specifications:** [UI/README.md](../UI/README.md)
+
 The design system is built for a premium residential parking marketplace that prioritizes trust, order, and calm within a dense urban environment. The aesthetic moves away from generic digital services toward a high-end, professionally art-directed editorial style.
 
 The visual direction is **Modern Minimalist with a focus on Craftsmanship**. It utilizes expansive white space, precise geometric alignment, and a sophisticated color palette to evoke a "Smart City" atmosphere. The emotional response should be one of relief and reliability—positioning the platform as a premium utility that brings order to Dhaka's parking challenges. Avoid all trends associated with "hype" culture, such as neon accents or aggressive gradients, in favor of a timeless, institutional quality.

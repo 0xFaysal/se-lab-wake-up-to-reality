@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { authApi } from "@/lib/api/auth-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
-import { destinationForUser } from "@/lib/auth-routing";
+import { resolvePostLoginRedirect } from "@/lib/auth-routing";
 import { queryKeys } from "@/lib/query-keys";
 
 export function RegisterForm() {
@@ -54,7 +54,7 @@ export function RegisterForm() {
       const result = await authApi.register({ fullName: data.fullName, email: data.email, phone: data.phone, password: data.password, role: data.role === "PARKING_OWNER" ? "PROVIDER" : "DRIVER", acceptTerms: true, acceptPrivacyPolicy: true });
       const requested = searchParams.get("redirect");
       queryClient.setQueryData(queryKeys.auth.me, result.user);
-      router.push(requested || destinationForUser(result.user));
+      router.push(resolvePostLoginRedirect(result.user, requested));
     } catch (error) { setSubmitError(getApiErrorMessage(error)); }
   }
 
