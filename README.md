@@ -5,6 +5,7 @@
 **UIU Software Engineering Lab | Section D | Lab 422 | Summer 2026**
 
 [![CI](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/ci.yml/badge.svg)](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/ci.yml)
+[![Figma](https://img.shields.io/badge/Figma-UI%2FUX%20Design-F24E1E?logo=figma&logoColor=white)](https://www.figma.com/design/xpGwQGsxbzN8kQK0IubMPU/ParkEase-BD-%E2%80%94-UI-UX-Design?node-id=0-1&t=wANRYM1Cb6R2qjlc-1)
 
 ## About the Project
 
@@ -285,6 +286,7 @@ The semester version will not integrate real banking, bKash, Nagad, or card paym
 | [Software Requirements Specification](./docs/SRS.md) | Functional and non-functional requirements |
 | [Architecture](./docs/ARCHITECTURE.md) | System structure and engineering decisions |
 | [API design](./docs/api-design.md) | API conventions and endpoint design |
+| [UI/UX Design (Figma)](https://www.figma.com/design/xpGwQGsxbzN8kQK0IubMPU/ParkEase-BD-%E2%80%94-UI-UX-Design?node-id=0-1&t=wANRYM1Cb6R2qjlc-1) | UI/UX design mockups and prototype |
 | [Contributing guide](./CONTRIBUTING.md) | Branch, commit, issue, and pull-request workflow |
 
 ## Team
