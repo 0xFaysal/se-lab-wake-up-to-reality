@@ -287,6 +287,7 @@ The semester version will not integrate real banking, bKash, Nagad, or card paym
 | [Architecture](./docs/ARCHITECTURE.md) | System structure and engineering decisions |
 | [API design](./docs/api-design.md) | API conventions and endpoint design |
 | [UI/UX Design (Figma)](https://www.figma.com/design/xpGwQGsxbzN8kQK0IubMPU/ParkEase-BD-%E2%80%94-UI-UX-Design?node-id=0-1&t=wANRYM1Cb6R2qjlc-1) | UI/UX design mockups and prototype |
+| [UI/UX Screen Catalog & Specs](./UI/README.md) | High-fidelity screen artifacts, workflows, and frontend handoff specs |
 | [Contributing guide](./CONTRIBUTING.md) | Branch, commit, issue, and pull-request workflow |
 
 ## Team
