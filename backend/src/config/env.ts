@@ -24,7 +24,9 @@ const schema = z
     API_PUBLIC_URL: z.url().optional(),
     PASSWORD_RESET_URL: z.url().optional(),
     TRUST_PROXY_HOPS: z.coerce.number().int().nonnegative().default(0),
-    COOKIE_SAME_SITE: z.enum(["lax", "none"]).default("lax"),
+    COOKIE_SAME_SITE: z
+      .enum(["lax", "none"])
+      .default(process.env.NODE_ENV === "production" ? "none" : "lax"),
     ENABLE_API_DOCS: z
       .enum(["true", "false"])
       .default(process.env.NODE_ENV === "production" ? "false" : "true")
