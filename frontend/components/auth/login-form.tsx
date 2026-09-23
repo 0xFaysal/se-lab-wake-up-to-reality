@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api/auth-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
-import { destinationForUser } from "@/lib/auth-routing";
+import { resolvePostLoginRedirect } from "@/lib/auth-routing";
 import { queryKeys } from "@/lib/query-keys";
 
 
@@ -41,7 +41,7 @@ export function LoginForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/driver/bookings";
+  const redirect = searchParams.get("redirect");
   const rememberMe = useWatch({ control, name: "rememberMe" });
 
   async function onSubmit(data: LoginFormValues) {
@@ -49,7 +49,7 @@ export function LoginForm() {
     try {
       const result = await authApi.login({ identifier: data.identifier, password: data.password, rememberDevice: data.rememberMe });
       queryClient.setQueryData(queryKeys.auth.me, result.user);
-      router.push(redirect !== "/driver/bookings" ? redirect : destinationForUser(result.user));
+      router.push(resolvePostLoginRedirect(result.user, redirect));
     } catch (error) { setSubmitError(getApiErrorMessage(error)); }
   }
 

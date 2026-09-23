@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api/auth-api";
 import { ApiError, getApiErrorMessage } from "@/lib/api/api-error";
-import { destinationForUser, getRequiredAccountAction } from "@/lib/auth-routing";
+import { resolvePostLoginRedirect } from "@/lib/auth-routing";
 import { queryKeys } from "@/lib/query-keys";
 import type { AuthUser } from "@/lib/api/api-types";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -47,11 +47,7 @@ export function OtpVerificationForm() {
 
   const continueForUser = useCallback((user: AuthUser) => {
     queryClient.setQueryData(queryKeys.auth.me, user);
-    const safeRedirect = redirectTarget.startsWith("/") &&
-      !redirectTarget.startsWith("//") && !redirectTarget.includes("\\") && !/\s/.test(redirectTarget) &&
-      !redirectTarget.startsWith("/verify-otp");
-    router.replace(getRequiredAccountAction(user).kind === "READY" && safeRedirect &&
-      redirectTarget !== "/driver/bookings" ? redirectTarget : destinationForUser(user));
+    router.replace(resolvePostLoginRedirect(user, redirectTarget));
   }, [queryClient, redirectTarget, router]);
 
   const requestCode = useCallback(async (target: "email" | "phone") => {
