@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { authApi } from "@/lib/api/auth-api";
 import { destinationForUser } from "@/lib/auth-routing";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function ChangeInitialPasswordForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -34,6 +37,8 @@ export function ChangeInitialPasswordForm() {
         currentPassword,
         newPassword,
       });
+      queryClient.setQueryData(queryKeys.auth.me, result.user);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
       router.replace(destinationForUser(result.user));
     } catch (caught) {
       setError(getApiErrorMessage(caught));
