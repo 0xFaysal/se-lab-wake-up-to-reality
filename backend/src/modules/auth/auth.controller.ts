@@ -44,6 +44,8 @@ export const registerController: RequestHandler = async (req, res, next) => {
       data: {
         user: result.user,
         nextAction: result.nextAction,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
       meta: {
         requestId: req.requestId,
@@ -75,6 +77,8 @@ export const loginController: RequestHandler = async (req, res, next) => {
       data: {
         user: result.user,
         nextAction: result.nextAction,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
       meta: {
         requestId: req.requestId,
@@ -88,7 +92,10 @@ export const loginController: RequestHandler = async (req, res, next) => {
 
 export const refreshController: RequestHandler = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies?.refresh_token;
+    const refreshToken =
+      req.cookies?.refresh_token ||
+      (typeof req.body?.refreshToken === "string" ? req.body.refreshToken.trim() : undefined) ||
+      req.header("x-refresh-token");
 
     if (!refreshToken) {
       throw new AppError({
@@ -116,6 +123,8 @@ export const refreshController: RequestHandler = async (req, res, next) => {
       data: {
         user: result.user,
         nextAction: result.nextAction,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
       meta: {
         requestId: req.requestId,
@@ -129,7 +138,11 @@ export const refreshController: RequestHandler = async (req, res, next) => {
 
 export const logoutController: RequestHandler = async (req, res, next) => {
   try {
-    await logoutUser(req.cookies?.refresh_token);
+    const refreshToken =
+      req.cookies?.refresh_token ||
+      (typeof req.body?.refreshToken === "string" ? req.body.refreshToken.trim() : undefined) ||
+      req.header("x-refresh-token");
+    await logoutUser(refreshToken);
     clearAuthCookies(res);
 
     res.status(204).send();
@@ -211,6 +224,8 @@ export const changeInitialPasswordController: RequestHandler = async (
       data: {
         user: result.user,
         nextAction: result.nextAction,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
       meta: {
         requestId: req.requestId,
