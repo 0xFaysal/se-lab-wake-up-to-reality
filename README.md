@@ -5,7 +5,7 @@
 **UIU Software Engineering Lab | Section D | Lab 422 | Summer 2026**
 
 [![CI](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/ci.yml/badge.svg)](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/ci.yml)
-[![Uptime & Health](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/uptime-check.yml/badge.svg)](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/uptime-check.yml)
+[![Uptime & Health](https://img.shields.io/badge/Uptime%20%26%20Health-Active-10b981?logo=githubactions&logoColor=white)](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/uptime-check.yml)
 [![Live Frontend](https://img.shields.io/badge/Frontend-Live%20on%20Vercel-success?logo=vercel&logoColor=white)](https://parkease-bd.vercel.app)
 [![Live API](https://img.shields.io/badge/API-Online-success?logo=nodedotjs&logoColor=white)](https://parkease-api.vercel.app/health/live)
 [![Figma](https://img.shields.io/badge/Figma-UI%2FUX%20Design-F24E1E?logo=figma&logoColor=white)](https://www.figma.com/design/xpGwQGsxbzN8kQK0IubMPU/ParkEase-BD-%E2%80%94-UI-UX-Design?node-id=0-1&t=wANRYM1Cb6R2qjlc-1)
