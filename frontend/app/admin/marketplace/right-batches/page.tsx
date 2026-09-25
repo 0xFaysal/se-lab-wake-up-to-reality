@@ -7,13 +7,189 @@ import { toast } from "sonner";
 import { parkingRightsApi } from "@/lib/api/parking-rights-api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DocumentViewerModal,
+  type DocumentViewerTarget,
+} from "@/components/common/document-viewer-modal";
 
 export default function AdminRightBatchesPage() {
-  const client = useQueryClient(); const [reasonByBatch, setReasonByBatch] = useState<Record<string, string>>({});
-  const query = useQuery({ queryKey: ["admin", "right-claim-batches"], queryFn: () => parkingRightsApi.adminBatches({ page: 1, limit: 100 }) });
-  const review = useMutation({ mutationFn: ({ id, decision, reason, rights }: { id: string; decision: "VERIFIED" | "REJECTED"; reason?: string; rights: Array<{ rightId: string; expectedVersion: number }> }) => parkingRightsApi.reviewBatch(id, { decision, ...(reason ? { reason } : {}), rights }), onSuccess: async () => { toast.success("Parking Right batch reviewed"); await client.invalidateQueries({ queryKey: ["admin", "right-claim-batches"] }); }, onError: (error: Error) => toast.error(error.message) });
-  async function openDocument(id: string) { try { const result = await parkingRightsApi.documentDownload(id); window.open(result.url, "_blank", "noopener,noreferrer"); } catch (error) { toast.error(error instanceof Error ? error.message : "Document could not be opened"); } }
-  return <div className="space-y-6"><header><p className="text-xs font-bold uppercase text-emerald-700">Marketplace</p><h1 className="text-2xl font-black">Parking Right batches</h1><p className="mt-1 text-sm text-slate-500">Review a shared claim basis while preserving an independent lifecycle for every resource.</p></header>
-    {query.isLoading ? <p className="text-sm text-slate-500">Loading claim batches...</p> : query.data?.batches.length ? <div className="space-y-5">{query.data.batches.map((batch) => { const pending = batch.rights.filter((right) => right.status === "PENDING_VERIFICATION"); const rights = pending.map((right) => ({ rightId: right.id, expectedVersion: right.version })); return <section key={batch.id} className="border-y border-slate-200 bg-white py-5"><div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold">{batch.property.name}</h2><p className="text-xs text-slate-500">{batch.provider.fullName} · {batch.rightType.replaceAll("_", " ")} · {batch.status}</p></div><strong className="text-sm">{batch.rights.length} resources</strong></div><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[520px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2">Space</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Version</th></tr></thead><tbody className="divide-y">{batch.rights.map((right) => <tr key={right.id}><td className="px-3 py-2">{right.parkingSpot.displayName ?? right.parkingSpot.spotCode}</td><td className="px-3 py-2">{right.status}</td><td className="px-3 py-2">v{right.version}</td></tr>)}</tbody></table></div><div className="mt-3 flex flex-wrap gap-2">{batch.documents.map((document) => <Button key={document.id} size="sm" variant="outline" onClick={() => void openDocument(document.id)}><FileText className="size-4" />{document.originalName}</Button>)}</div>{pending.length > 0 && <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Textarea placeholder="Reason is required when rejecting" value={reasonByBatch[batch.id] ?? ""} onChange={(event) => setReasonByBatch((current) => ({ ...current, [batch.id]: event.target.value }))} /><Button disabled={review.isPending} onClick={() => review.mutate({ id: batch.id, decision: "VERIFIED", rights })}>{review.isPending && <Loader2 className="size-4 animate-spin" />}Approve all eligible</Button><Button variant="destructive" disabled={review.isPending || (reasonByBatch[batch.id]?.trim().length ?? 0) < 10} onClick={() => review.mutate({ id: batch.id, decision: "REJECTED", reason: reasonByBatch[batch.id]!.trim(), rights })}>Reject pending</Button></div>}</section>; })}</div> : <div className="border-y border-slate-200 py-10 text-center"><p className="font-bold">No Parking Right claim batches are awaiting review.</p></div>}
-  </div>;
+  const client = useQueryClient();
+  const [reasonByBatch, setReasonByBatch] = useState<Record<string, string>>({});
+  const [selectedDoc, setSelectedDoc] = useState<DocumentViewerTarget | null>(null);
+
+  const query = useQuery({
+    queryKey: ["admin", "right-claim-batches"],
+    queryFn: () => parkingRightsApi.adminBatches({ page: 1, limit: 100 }),
+  });
+
+  const review = useMutation({
+    mutationFn: ({
+      id,
+      decision,
+      reason,
+      rights,
+    }: {
+      id: string;
+      decision: "VERIFIED" | "REJECTED";
+      reason?: string;
+      rights: Array<{ rightId: string; expectedVersion: number }>;
+    }) =>
+      parkingRightsApi.reviewBatch(id, {
+        decision,
+        ...(reason ? { reason } : {}),
+        rights,
+      }),
+    onSuccess: async () => {
+      toast.success("Parking Right batch reviewed");
+      await client.invalidateQueries({ queryKey: ["admin", "right-claim-batches"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  function openDocument(doc: {
+    id: string;
+    originalName: string;
+    mimeType?: string;
+    sizeBytes?: number;
+    category?: string;
+  }) {
+    setSelectedDoc({
+      id: doc.id,
+      originalName: doc.originalName,
+      mimeType: doc.mimeType,
+      sizeBytes: doc.sizeBytes,
+      category: doc.category,
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <p className="text-xs font-bold uppercase text-emerald-700">Marketplace</p>
+        <h1 className="text-2xl font-black">Parking Right batches</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Review a shared claim basis while preserving an independent lifecycle for every resource.
+        </p>
+      </header>
+
+      {query.isLoading ? (
+        <p className="text-sm text-slate-500">Loading claim batches...</p>
+      ) : query.data?.batches.length ? (
+        <div className="space-y-5">
+          {query.data.batches.map((batch) => {
+            const pending = batch.rights.filter(
+              (right) => right.status === "PENDING_VERIFICATION"
+            );
+            const rights = pending.map((right) => ({
+              rightId: right.id,
+              expectedVersion: right.version,
+            }));
+            return (
+              <section key={batch.id} className="border-y border-slate-200 bg-white py-5">
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <h2 className="font-bold">{batch.property.name}</h2>
+                    <p className="text-xs text-slate-500">
+                      {batch.provider.fullName} · {batch.rightType.replaceAll("_", " ")} · {batch.status}
+                    </p>
+                  </div>
+                  <strong className="text-sm">{batch.rights.length} resources</strong>
+                </div>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">Space</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Version</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {batch.rights.map((right) => (
+                        <tr key={right.id}>
+                          <td className="px-3 py-2">
+                            {right.parkingSpot.displayName ?? right.parkingSpot.spotCode}
+                          </td>
+                          <td className="px-3 py-2">{right.status}</td>
+                          <td className="px-3 py-2">v{right.version}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {batch.documents.map((document) => {
+                    const isPdf =
+                      document.mimeType === "application/pdf" ||
+                      document.originalName.toLowerCase().endsWith(".pdf");
+                    return (
+                      <Button
+                        key={document.id}
+                        size="sm"
+                        variant="outline"
+                        className="gap-2 border-slate-200 bg-slate-50/80 text-slate-800 hover:bg-slate-100"
+                        onClick={() => openDocument(document)}
+                      >
+                        <FileText
+                          className={`size-4 ${isPdf ? "text-rose-600" : "text-emerald-600"}`}
+                        />
+                        <span className="max-w-[240px] truncate">{document.originalName}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+                {pending.length > 0 && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                    <Textarea
+                      placeholder="Reason is required when rejecting"
+                      value={reasonByBatch[batch.id] ?? ""}
+                      onChange={(event) =>
+                        setReasonByBatch((current) => ({
+                          ...current,
+                          [batch.id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <Button
+                      disabled={review.isPending}
+                      onClick={() => review.mutate({ id: batch.id, decision: "VERIFIED", rights })}
+                    >
+                      {review.isPending && <Loader2 className="size-4 animate-spin" />}
+                      Approve all eligible
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={
+                        review.isPending || (reasonByBatch[batch.id]?.trim().length ?? 0) < 10
+                      }
+                      onClick={() =>
+                        review.mutate({
+                          id: batch.id,
+                          decision: "REJECTED",
+                          reason: reasonByBatch[batch.id]!.trim(),
+                          rights,
+                        })
+                      }
+                    >
+                      Reject pending
+                    </Button>
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="border-y border-slate-200 py-10 text-center">
+          <p className="font-bold">No Parking Right claim batches are awaiting review.</p>
+        </div>
+      )}
+
+      <DocumentViewerModal
+        document={selectedDoc}
+        isOpen={Boolean(selectedDoc)}
+        onClose={() => setSelectedDoc(null)}
+      />
+    </div>
+  );
 }
