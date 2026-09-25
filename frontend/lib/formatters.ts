@@ -1,6 +1,52 @@
 import type { GuardAssignmentStatus, VehicleType } from "@/lib/api/api-types";
 
-export function formatDateTime(value: string) { return new Intl.DateTimeFormat("en-BD", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" }).format(new Date(value)); }
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+  const timeMatch = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(trimmed);
+  if (timeMatch) {
+    const hours = parseInt(timeMatch[1]!, 10);
+    const minutes = timeMatch[2]!;
+    const period = hours >= 12 ? "PM" : "AM";
+    const displayHour = hours % 12 || 12;
+    return `${displayHour}:${minutes} ${period}`;
+  }
+  const date = new Date(trimmed);
+  if (isNaN(date.getTime())) return value;
+  try {
+    return new Intl.DateTimeFormat("en-BD", { timeStyle: "short", timeZone: "Asia/Dhaka" }).format(date);
+  } catch {
+    return value;
+  }
+}
+
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    // If it's a plain time string (e.g., "08:00" or "17:30:00")
+    if (/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.test(trimmed)) {
+      return formatTime(trimmed);
+    }
+  }
+
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (!date || isNaN(date.getTime())) {
+    return typeof value === "string" ? value : "";
+  }
+
+  try {
+    return new Intl.DateTimeFormat("en-BD", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Dhaka",
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
 export function toUtcFromBangladeshLocal(dateOrDateTime: string, time?: string) {
   const [date, localTime = "00:00"] = time ? [dateOrDateTime, time] : dateOrDateTime.split("T");
   const [year, month, day] = date!.split("-").map(Number);

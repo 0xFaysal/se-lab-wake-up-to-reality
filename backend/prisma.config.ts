@@ -8,7 +8,11 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"] || "postgresql://placeholder:placeholder@localhost:5432/postgres",
-    ...(process.env["DIRECT_URL"] ? { directUrl: process.env["DIRECT_URL"] } : {}),
+    // Prisma 7 removed datasource.directUrl. CLI workflows such as migrate
+    // must receive the direct/session connection through datasource.url.
+    url:
+      process.env["DIRECT_URL"] ||
+      process.env["DATABASE_URL"] ||
+      "postgresql://placeholder:placeholder@localhost:5432/postgres",
   },
 });

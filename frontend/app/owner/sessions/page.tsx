@@ -7,7 +7,7 @@ import { getApiErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 
-const activeStatuses = new Set(["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED", "PAYMENT_DUE"]);
+const activeStatuses = new Set(["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED"]);
 export default function OwnerSessionsPage() {
   const query = useQuery({ queryKey: queryKeys.bookings.provider({ active: true }), queryFn: bookingsApi.providerList, refetchInterval: 30_000 });
   const sessions = query.data?.filter((booking) => activeStatuses.has(booking.status)) ?? [];

@@ -15,4 +15,10 @@ export const financeApi = {
   providerPayout: (payoutId: string) => apiClient.get<PayoutDto>(`/provider/payouts/${payoutId}`),
   driverRefunds: (status?: RefundDto["status"]) => apiClient.get<{ refunds: RefundDto[]; pagination: PaginationDto }>(`/refunds${status ? `?status=${status}` : ""}`),
   driverRefund: (refundId: string) => apiClient.get<RefundDto>(`/refunds/${refundId}`),
+  driverPayoutMethods: () => apiClient.get<PayoutMethodDto[]>("/driver/payout-methods"),
+  createDriverPayoutMethod: (body: { type: PayoutMethodDto["type"]; accountHolderName: string; accountIdentifier: string; bankName?: string; branchName?: string; routingNumber?: string; isDefault: boolean }) => apiClient.post<PayoutMethodDto>("/driver/payout-methods", body),
+  setDefaultDriverPayoutMethod: (id: string) => apiClient.post<PayoutMethodDto>(`/driver/payout-methods/${id}/default`, {}),
+  deactivateDriverPayoutMethod: (id: string) => apiClient.post<PayoutMethodDto>(`/driver/payout-methods/${id}/deactivate`, {}),
+  requestDriverPayout: (amountPaisa: string, payoutMethodId: string, idempotencyKey: string) => apiClient.post<PayoutDto>("/driver/payouts", { amountPaisa, payoutMethodId, idempotencyKey }),
+  driverPayouts: (status?: PayoutDto["status"]) => apiClient.get<{ payouts: PayoutDto[]; pagination: PaginationDto }>(`/driver/payouts${status ? `?status=${status}` : ""}`),
 };

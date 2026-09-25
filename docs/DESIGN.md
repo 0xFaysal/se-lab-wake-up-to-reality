@@ -169,3 +169,22 @@ The shape language is "Refined Rounded." It uses generous corner radii to soften
 - **Maps:** Use a custom-styled map (Mapbox/Google) that de-saturates urban features and highlights roads in soft greys, with parking pins in the Primary Deep Emerald color.
 - **Lists:** Use "Divided Lists" where each item is separated by a 1px hairline border, avoiding the "boxed" look for data-heavy views like transaction histories.
 - **Search Bar:** A prominent, wide element with a 16px corner radius, featuring a refined magnifying glass icon and "Dhaka" pre-filled as a placeholder to ground the app locally.
+
+## Guard Operations Register
+
+The Guard portal uses the same Urban Harmony foundations in a denser, operations-first register called **Gate Control Desk**. Its signature interaction is the live emerald scan command: a high-contrast QR action with a restrained status pulse that remains easy to find under time pressure.
+
+- **Responsive shell:** mobile uses a four-item bottom navigation with a raised Scan action; desktop uses a persistent 280px operations rail and a wide content workspace.
+- **Operational hierarchy:** checkout requests appear before future arrivals; vehicle plate, space, and status remain the strongest information in every booking row.
+- **Safety:** check-in and checkout require explicit confirmation and keep server-returned pending, success, and error states visible. Guard views never show booking prices, deposits, payouts, or platform revenue.
+- **Accessibility:** controls have at least a 44px hit area, scan results are announced through live status text, camera start is user-initiated, and manual credential entry remains available when camera permission or hardware fails.
+- **Runtime tokens:** `--guard-canvas` maps to warm ivory, `--guard-surface` to white, `--guard-ink` to the primary text color, `--guard-mint` to the supporting emerald surface, `--guard-line` to the refined outline, and `--guard-warning` to muted ochre. These tokens are defined in `frontend/app/globals.css` and are the canonical Guard-specific aliases.
+
+## Provider Gate Team Handoff
+
+Provider Guard management uses a lifecycle-led workbench instead of treating the assignment table as the Guard directory. The selected Property is the canonical page scope and the full membership roster stays visible through pending acceptance, accepted/ready, and inactive states.
+
+- **Sequence:** create or find account → add to Property → Guard accepts → Provider assigns shift.
+- **State language:** amber means Guard action is required, sky means the membership is accepted and Provider action is required, and emerald means an active operational shift.
+- **Recovery:** an existing-membership conflict refreshes and highlights the roster rather than presenting a dead-end error. Account creation attempts the Property invitation automatically and preserves the new account if invitation delivery must be retried.
+- **Separation:** Property membership and Provider assignment remain distinct records; the interface explains the boundary and never implies that account creation alone grants booking access.

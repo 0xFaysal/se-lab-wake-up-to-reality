@@ -34,10 +34,9 @@ export function AuthVisualPanel() {
       <Image
         src={authGateImg}
         alt="ParkEase BD Residential Gate Security"
-        fill
-        sizes="50vw"
-        className="object-cover object-center"
         priority
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-center"
       />
 
       {/* Dark overlay gradient for crisp typography contrast */}

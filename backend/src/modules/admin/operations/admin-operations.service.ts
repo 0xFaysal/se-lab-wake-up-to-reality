@@ -62,14 +62,18 @@ export async function getDashboardSummary() {
     prisma.parkingSpot.count({ where: { deletedAt: null, status: "ACTIVE" } }),
     prisma.parkingListing.count({ where: { status: ParkingListingStatus.ACTIVE } }),
     prisma.booking.count({ where: { status: BookingStatus.CONFIRMED, startAt: { gt: now } } }),
-    prisma.booking.count({ where: { status: { in: [BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE] } } }),
+    prisma.booking.count({ where: { status: { in: [BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED] } } }),
     prisma.booking.count({ where: { status: BookingStatus.CHECKOUT_REQUESTED } }),
     prisma.payment.count({ where: { status: { in: successfulPaymentStatuses } } }),
     prisma.payment.aggregate({ where: { status: { in: successfulPaymentStatuses } }, _sum: { amountPaisa: true } }),
     prisma.refund.aggregate({ where: { status: RefundStatus.SUCCEEDED }, _sum: { amountPaisa: true } }),
-    prisma.ledgerEntry.aggregate({ where: { accountCode: "PLATFORM_REVENUE", entrySide: "CREDIT" }, _sum: { amountPaisa: true } }),
+    prisma.$queryRaw<Array<{ amountPaisa: bigint }>>(Prisma.sql`
+      SELECT COALESCE(SUM(CASE WHEN "entry_side" = 'CREDIT' THEN "amount_paisa" ELSE -"amount_paisa" END), 0)::bigint AS "amountPaisa"
+      FROM "ledger_entries"
+      WHERE "account_code" = 'PLATFORM_REVENUE'
+    `),
     prisma.walletAccount.aggregate({ where: { user: { roles: { some: { role: UserRoleType.PROVIDER } } } }, _sum: { availableBalancePaisa: true, pendingBalancePaisa: true, heldBalancePaisa: true } }),
-    prisma.payoutRequest.aggregate({ where: { status: PayoutStatus.PENDING }, _count: true, _sum: { amountPaisa: true } }),
+    prisma.payoutRequest.aggregate({ where: { status: { in: [PayoutStatus.PENDING, PayoutStatus.REQUESTED] } }, _count: true, _sum: { amountPaisa: true } }),
     prisma.payoutRequest.aggregate({ where: { status: PayoutStatus.PAID }, _sum: { amountPaisa: true } }),
     prisma.parkingRight.count({ where: { status: ParkingRightStatus.PENDING_VERIFICATION } }),
     prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }),
@@ -89,7 +93,7 @@ export async function getDashboardSummary() {
     users: { total: totalUsers, drivers, providers, managers, guards, suspended: suspendedUsers, blocked: blockedUsers },
     properties: { total: totalProperties, pending: pendingProperties, verified: verifiedProperties, rejected: rejectedProperties, inactive: inactiveProperties },
     marketplace: { activeResources, activeListings, upcomingBookings, activeSessions, checkoutRequested },
-    finance: { paymentVolumePaisa: money(capturedPayments._sum.amountPaisa), successfulPayments, platformRevenuePaisa: money(platformRevenue._sum.amountPaisa), refundedPaisa: money(refunds._sum.amountPaisa), pendingProviderEarningsPaisa: money(providerLiability._sum.pendingBalancePaisa), providerLiabilityPaisa: money(providerLiability._sum.availableBalancePaisa) + money(providerLiability._sum.pendingBalancePaisa) + money(providerLiability._sum.heldBalancePaisa), pendingPayoutPaisa: money(pendingPayouts._sum.amountPaisa), completedPayoutPaisa: money(completedPayouts._sum.amountPaisa) },
+    finance: { paymentVolumePaisa: money(capturedPayments._sum.amountPaisa), successfulPayments, platformRevenuePaisa: money(platformRevenue[0]?.amountPaisa), refundedPaisa: money(refunds._sum.amountPaisa), pendingProviderEarningsPaisa: money(providerLiability._sum.pendingBalancePaisa), providerLiabilityPaisa: money(providerLiability._sum.availableBalancePaisa) + money(providerLiability._sum.pendingBalancePaisa) + money(providerLiability._sum.heldBalancePaisa), pendingPayoutPaisa: money(pendingPayouts._sum.amountPaisa), completedPayoutPaisa: money(completedPayouts._sum.amountPaisa) },
     queues: { pendingProperties, pendingRights, openDisputes, pendingPayouts: pendingPayouts._count, suspendedListings },
     alerts: { failedPayments, overdueDisputes, payoutHolds, expiringRights, guardCoverageIssues },
     liveOperations: { upcomingBookings, activeSessions, checkoutRequested },
@@ -273,12 +277,12 @@ export async function listAdminBookings(query: Page & {
 export async function listAdminSessions(query: Page & { status?: BookingStatus; propertyId?: string; providerUserId?: string; overdue?: boolean }) {
   const now = new Date();
   const defaultStatuses: BookingStatus[] = [BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE, BookingStatus.COMPLETED];
-  const activeSessionStatuses: BookingStatus[] = [BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE];
+  const activeSessionStatuses: BookingStatus[] = [BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED];
   const where: Prisma.BookingWhereInput = {
     status: query.status ?? { in: defaultStatuses },
     ...(query.propertyId ? { propertyId: query.propertyId } : {}),
     ...(query.providerUserId ? { providerUserId: query.providerUserId } : {}),
-    ...(query.overdue ? { status: { in: [BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE] }, scheduledEndAt: { lt: now } } : {}),
+    ...(query.overdue ? { status: { in: activeSessionStatuses }, scheduledEndAt: { lt: now } } : {}),
   };
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({ where, orderBy: { startAt: "desc" }, skip: (query.page - 1) * query.limit, take: query.limit, select: bookingSummarySelect }),
@@ -479,7 +483,7 @@ export function getAdminCapabilities() {
     analytics: true, parkingOperations: true, riskFlags: true, adminNotes: true,
     legalVersioning: true, faqAndHelp: true, notificationCampaigns: true,
     platformFees: true, financialReconciliation: true, payoutHolds: true,
-    supportTickets: false, realtime: false, realPaymentGateway: false,
+    supportTickets: false, realtime: true, realPaymentGateway: env.SSLCOMMERZ_ENABLED,
     emailCampaignWorker: false, advancedOvertimeBilling: false,
     adminTwoFactorAuthentication: false, editablePlatformSettings: false,
   };

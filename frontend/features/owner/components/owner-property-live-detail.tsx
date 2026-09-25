@@ -6,6 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   CalendarClock,
+  CheckCircle2,
+  Circle,
+  Clock3,
   Edit3,
   ImageIcon,
   MapPin,
@@ -35,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { ProviderMarketplacePanel } from "@/features/marketplace/components/provider-marketplace-panel";
 import { PropertyImageManager } from "@/features/owner/components/property-image-manager";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import type { PropertyDetailDto } from "@/lib/api/api-types";
 import { propertyApi } from "@/lib/api/property-api";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
@@ -119,6 +123,8 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
           tone={item.status === "ACTIVE" ? "success" : "neutral"}
         />
       </div>
+
+      <PropertyJourney item={item} />
 
       {item.verificationStatus === "PENDING" && (
         <section className="border-l-4 border-amber-500 bg-amber-50 px-5 py-4 text-sm text-amber-950">
@@ -236,6 +242,18 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
       </AlertDialog>
     </ProviderPage>
   );
+}
+
+function PropertyJourney({ item }: { item: PropertyDetailDto }) {
+  const verified = item.verificationStatus === "VERIFIED" && item.status === "ACTIVE";
+  const rejected = item.verificationStatus === "REJECTED";
+  const steps = [
+    { label: "Details submitted", detail: "Property and location saved", complete: true },
+    { label: "Admin verification", detail: verified ? "Property approved" : rejected ? "Changes requested" : "Security review in progress", complete: verified, current: !verified },
+    { label: "Parking setup", detail: verified ? "Add spaces and confirm authority" : "Available after approval", complete: false, current: verified },
+    { label: "Publish", detail: "Set availability and pricing", complete: false, current: false },
+  ];
+  return <section aria-labelledby="property-journey-title" className="border-y bg-slate-50 px-4 py-4 sm:px-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold uppercase text-emerald-800">Onboarding</p><h2 id="property-journey-title" className="mt-1 font-bold">From property to live parking</h2></div><span className="text-xs font-semibold text-slate-500">{verified ? "Next: add parking" : rejected ? "Action required" : "Verification in progress"}</span></div><ol className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{steps.map((step) => { const Icon = step.complete ? CheckCircle2 : step.current ? Clock3 : Circle; return <li key={step.label} className="flex items-start gap-2 border-l-2 border-slate-200 pl-3"><Icon className={`mt-0.5 size-4 shrink-0 ${step.complete ? "text-emerald-700" : step.current ? rejected ? "text-red-600" : "text-amber-600" : "text-slate-400"}`} /><div><p className="text-xs font-bold text-slate-900">{step.label}</p><p className="mt-0.5 text-xs text-slate-500">{step.detail}</p></div></li>; })}</ol></section>;
 }
 
 function Info({ label, value }: { label: string; value: string }) {

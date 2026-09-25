@@ -29,6 +29,8 @@ export function PropertyEditLiveView({ propertyId }: { propertyId: string }) {
     if (!query.data) return;
 
     const item = query.data;
+    // The local editable draft is reset only when a fresh Property record is loaded.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setValues({ name: item.name, publicArea: item.publicArea, approximateAddress: item.approximateAddress, exactAddress: item.exactAddress, latitude: item.latitude, longitude: item.longitude, ...(item.entranceLatitude !== null ? { entranceLatitude: item.entranceLatitude } : {}), ...(item.entranceLongitude !== null ? { entranceLongitude: item.entranceLongitude } : {}), ...(item.accessInstructions ? { accessInstructions: item.accessInstructions } : {}), visitorIdentificationRequired: item.visitorIdentificationRequired, ...(item.vehicleHeightLimitCm ? { vehicleHeightLimitCm: item.vehicleHeightLimitCm } : {}), ...(item.entryCutoffLocalTime ? { entryCutoffLocalTime: item.entryCutoffLocalTime } : {}), ...(item.generalParkingRules ? { generalParkingRules: item.generalParkingRules } : {}), ...(item.commonSafetyRules ? { commonSafetyRules: item.commonSafetyRules } : {}) });
   }, [query.data]);
 

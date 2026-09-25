@@ -1,5 +1,5 @@
 import { apiClient } from "./api-client";
-import type { BookingDto, PaymentDto, PaymentSessionResult, RefundDto, RefundPreview, ReviewDto, DisputeDto, DisputeStatus, PaginationDto } from "./marketplace-types";
+import type { BookingCancellationPreview, BookingDto, BookingSettlementDto, PaymentDto, PaymentSessionResult, RefundDto, RefundPreview, ReviewDto, DisputeDto, DisputeStatus, PaginationDto } from "./marketplace-types";
 
 export const bookingsApi = {
   create: (holdId: string, idempotencyKey: string) => apiClient.post<BookingDto>("/bookings", { holdId, idempotencyKey }),
@@ -7,9 +7,13 @@ export const bookingsApi = {
   driverDetail: (bookingId: string) => apiClient.get<BookingDto>(`/bookings/${bookingId}`),
   providerList: () => apiClient.get<BookingDto[]>("/provider/bookings"),
   providerDetail: (bookingId: string) => apiClient.get<BookingDto>(`/provider/bookings/${bookingId}`),
-  cancel: (bookingId: string) => apiClient.post<BookingDto>(`/bookings/${bookingId}/cancel`, {}),
+  cancellationPreview: (bookingId: string) => apiClient.get<BookingCancellationPreview>(`/bookings/${bookingId}/cancellation-preview`),
+  cancel: (bookingId: string, input: { reason?: string; idempotencyKey: string }) => apiClient.post<{ booking: BookingDto }>(`/bookings/${bookingId}/cancel`, input),
+  settlement: (bookingId: string) => apiClient.get<BookingSettlementDto>(`/bookings/${bookingId}/settlement`),
+  providerSettlement: (bookingId: string) => apiClient.get<BookingSettlementDto>(`/provider/bookings/${bookingId}/settlement`),
   requestCheckout: (bookingId: string) => apiClient.post<BookingDto>(`/bookings/${bookingId}/checkout-request`, {}),
   createPaymentSession: (bookingId: string, idempotencyKey: string) => apiClient.post<PaymentSessionResult>(`/bookings/${bookingId}/payments/sslcommerz/session`, { idempotencyKey }, { headers: { "Idempotency-Key": idempotencyKey } }),
+  createSettlementPaymentSession: (bookingId: string, idempotencyKey: string) => apiClient.post<PaymentSessionResult>(`/bookings/${bookingId}/settlement/payments/sslcommerz/session`, { idempotencyKey }, { headers: { "Idempotency-Key": idempotencyKey } }),
   payment: (paymentId: string) => apiClient.get<PaymentDto>(`/payments/${paymentId}`),
   refundPreview: (paymentId: string) => apiClient.get<RefundPreview>(`/payments/${paymentId}/refunds/preview`),
   refund: (paymentId: string, input: { reason: string; idempotencyKey: string }) => apiClient.post<RefundDto>(`/payments/${paymentId}/refunds`, input),

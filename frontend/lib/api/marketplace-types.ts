@@ -9,7 +9,8 @@ export type HoldStatus = "ACTIVE" | "CONSUMED" | "EXPIRED" | "RELEASED";
 export type MarketplaceBookingStatus = "PAYMENT_PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED" | "PAYMENT_DUE" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "NO_SHOW" | "DISPUTED";
 export type PaymentStatus = "CREATED" | "SESSION_CREATED" | "PENDING" | "VALIDATING" | "SUCCEEDED" | "CAPTURED" | "FAILED" | "CANCELLED" | "EXPIRED" | "REFUND_PENDING" | "PARTIALLY_REFUNDED" | "REFUNDED";
 export type RefundStatus = "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "REJECTED";
-export type PayoutStatus = "PENDING" | "ON_HOLD" | "APPROVED" | "REJECTED" | "PAID";
+export type PayoutStatus = "PENDING" | "REQUESTED" | "ON_HOLD" | "APPROVED" | "REJECTED" | "PAID" | "CANCELLED";
+export type OvertimeBillingMode = "MULTIPLIER" | "FIXED_PER_HOUR";
 export type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
 export interface PaginationDto { page: number; limit: number; total: number; totalPages: number }
 
@@ -105,6 +106,8 @@ export interface ParkingListingDto {
   status: ListingStatus; title: string; description: string | null; pricePerHourPaisa: string;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[];
   securityDepositPaisa: string; publishedAt: string | null; deactivatedAt: string | null;
+  overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null;
+  overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number;
   createdAt: string; updatedAt: string; parkingSpot?: ParkingResourceDto; parkingRight?: ParkingRightDto;
 }
 export interface AdminListingDto extends ParkingListingDto {
@@ -121,6 +124,8 @@ export interface AdminListingDto extends ParkingListingDto {
 export interface ListingInput {
   parkingRightId: string; parkingResourceUnitId?: string; title: string; description?: string; pricePerHourPaisa: string;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[]; securityDepositPaisa: string;
+  overtimeBillingMode?: OvertimeBillingMode; overtimeMultiplierBps?: number | null;
+  overtimeRatePerHourPaisa?: string | null; overtimeGracePeriodMinutes?: number;
 }
 
 export interface AvailabilityRuleDto {
@@ -158,15 +163,19 @@ export interface PublicPropertyDetailDto {
   offers: PublicPropertyOfferDto[];
 }
 
-export interface BookingQuoteDto { id: string; driverUserId: string; listingId: string; vehicleId: string; parkingSpotId: string; startAt: string; endAt: string; durationMinutes: number; baseAmountPaisa: string; platformFeePaisa: string; depositPaisa: string; totalAmountPaisa: string; expiresAt: string; createdAt: string; expired?: boolean }
+export interface BookingQuoteDto { id: string; driverUserId: string; listingId: string; vehicleId: string; parkingSpotId: string; startAt: string; endAt: string; durationMinutes: number; baseRatePerHourPaisa: string; baseAmountPaisa: string; platformFeePaisa: string; depositPaisa: string; subtotalPaisa: string; totalAmountPaisa: string; driverWalletAvailablePaisa: string; driverWalletAppliedPaisa: string; gatewayAmountPaisa: string; overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null; overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number; expiresAt: string; createdAt: string; expired?: boolean }
 export interface ReservationHoldDto { id: string; quoteId: string; driverUserId: string; listingId: string; parkingSpotId: string; allocationId: string; status: HoldStatus; expiresAt: string; createdAt: string; updatedAt: string; expired?: boolean; quote?: BookingQuoteDto }
-export interface PaymentDto { id: string; bookingId: string; payerUserId: string; amountPaisa: string; currency: string; status: PaymentStatus; providerReference: string | null; capturedAt: string | null; createdAt: string; updatedAt: string }
+export interface PaymentDto { id: string; bookingId: string; payerUserId: string; amountPaisa: string; grossAmountPaisa: string; walletAppliedPaisa: string; currency: string; status: PaymentStatus; purpose: "BOOKING" | "SETTLEMENT"; providerReference: string | null; capturedAt: string | null; createdAt: string; updatedAt: string }
 export interface BookingDto {
   id: string; bookingCode: string; holdId: string; driverUserId: string; vehicleId: string; propertyId: string;
   parkingSpotId: string; listingId: string; providerUserId: string; status: MarketplaceBookingStatus;
   parkingResourceUnitId: string | null; assignedUnitCode: string | null;
   startAt: string; scheduledEndAt: string; effectiveEndAt: string; baseAmountPaisa: string; platformFeePaisa: string;
   depositPaisa: string; totalAmountPaisa: string; confirmedAt: string | null; checkedInAt: string | null;
+  subtotalPaisa: string; driverWalletAppliedPaisa: string; gatewayAmountPaisa: string;
+  overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null;
+  overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number;
+  financialStatus: "UNPAID" | "HELD" | "SETTLEMENT_PENDING" | "SETTLED" | "CANCELLED";
   checkoutRequestedAt: string | null; checkedOutAt: string | null; cancelledAt: string | null; createdAt: string; updatedAt: string;
   vehicle?: { id: string; vehicleType: VehicleType; registrationNumber: string };
   property?: { id: string; name: string; publicArea: string; approximateAddress: string };
@@ -174,6 +183,8 @@ export interface BookingDto {
   parkingResourceUnit?: { id: string; spotCode: string; displayName: string | null; status: ParkingResourceStatus } | null;
   listing?: { id: string; title: string; providerMembershipId?: string }; payments?: PaymentDto[];
   accessCredential?: string | null;
+  canCancel: boolean;
+  canPay: boolean;
 }
 export interface GuardBookingDto {
   id: string; bookingCode: string; status: "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED";
@@ -185,14 +196,16 @@ export interface GuardBookingDto {
   parkingSpot: { id: string; displayName: string | null; spotCode: string | null; resourceType: ParkingResourceType; floor: string | null; zone: string | null };
   listing: { id: string; title: string };
 }
-export interface PaymentSessionResult { paymentId: string; status: PaymentStatus; gateway: "SSLCOMMERZ"; checkoutUrl: string; expiresAt: string }
+export interface PaymentSessionResult { paymentId: string; status: PaymentStatus; gateway: "SSLCOMMERZ" | "INTERNAL_WALLET"; walletAppliedPaisa: string; gatewayAmountPaisa: string; checkoutUrl: string | null; expiresAt: string | null }
+export interface BookingCancellationPreview { paid: boolean; policyVersion: number; minutesBeforeStart: number; bookingChargePaisa: string; bookingRefundBps?: number; bookingRefundPaisa: string; depositReturnPaisa: string; platformFeePaisa: string; platformFeeRefundPaisa: string; driverWalletCreditPaisa: string }
+export interface BookingSettlementDto { id: string; bookingId: string; scheduledStartAt: string; scheduledEndAt: string; actualCheckInAt: string | null; actualCheckOutAt: string; baseChargePaisa: string; platformFeePaisa: string; depositPaisa: string; overtimeMinutes: number; overtimeChargePaisa: string; depositUsedPaisa: string; depositReturnedPaisa: string; providerGrossPaisa: string; providerNetPaisa: string; platformRevenuePaisa: string; driverRefundCreditPaisa: string; driverWalletChargedPaisa: string; outstandingPaisa: string; status: "PENDING" | "PAYMENT_DUE" | "COMPLETED"; completedAt: string | null }
 export interface RefundPreview { eligible: boolean; refundableAmountPaisa: string; policyReason: string; cutoffAt: string }
 
 export interface WalletDto { id: string; userId: string; currency: string; status: string; availableBalancePaisa: string; pendingBalancePaisa: string; heldBalancePaisa: string; balanceVersion: number; createdAt: string; updatedAt: string }
 export interface LedgerEntryDto { id: string; accountCode: string; entrySide: "DEBIT" | "CREDIT"; amountPaisa: string; createdAt: string; ledgerTransaction: { id: string; referenceType: string; referenceId: string; description: string; createdAt: string } }
-export interface EarningsSummaryDto { currency: string; availableBalancePaisa: string; pendingBalancePaisa: string; heldBalancePaisa: string; providerCount: number }
+export interface EarningsSummaryDto { currency: string; availableBalancePaisa: string; pendingBalancePaisa: string; unsettledBalancePaisa: string; unsettledBookingCount: number; heldBalancePaisa: string; providerCount: number }
 export interface RefundDto { id: string; paymentId: string; requestedByUserId: string; amountPaisa: string; reason: string; status: RefundStatus; processedAt: string | null; createdAt: string; payment?: { id: string; amountPaisa: string; currency: string; status: PaymentStatus; capturedAt: string | null; booking: { id: string; bookingCode: string; status: MarketplaceBookingStatus; property: { id: string; name: string; publicArea: string } } } }
-export interface PayoutMethodDto { id: string; type: "BANK" | "BKASH" | "NAGAD" | "OTHER_MFS"; accountHolderName: string; maskedAccountIdentifier: string; bankName: string | null; branchName: string | null; routingNumber: string | null; isDefault: boolean; status: "ACTIVE" | "INACTIVE"; createdAt: string; updatedAt: string }
+export interface PayoutMethodDto { id: string; type: "BANK" | "BKASH" | "NAGAD" | "ROCKET" | "OTHER_MFS"; accountHolderName: string; maskedAccountIdentifier: string; bankName: string | null; branchName: string | null; routingNumber: string | null; isDefault: boolean; status: "ACTIVE" | "INACTIVE"; createdAt: string; updatedAt: string }
 export interface PayoutDto { id: string; providerUserId: string; walletAccountId: string; payoutMethodId: string | null; amountPaisa: string; status: PayoutStatus; destinationSnapshot: { type: string; accountHolderName: string; maskedAccountIdentifier: string; bankName: string | null; branchName: string | null; routingNumber: string | null } | null; externalReference: string | null; reviewNote: string | null; reviewedAt: string | null; paidAt: string | null; heldAt?: string | null; holdReason?: string | null; createdAt: string; updatedAt?: string; payoutMethod?: PayoutMethodDto | null; provider?: { id: string; fullName: string; email: string } }
 export interface NotificationDto { id: string; type: string; title: string; message: string; entityType: string | null; entityId: string | null; readAt: string | null; createdAt: string }
 export interface DriverFavoriteDto { id: string; createdAt: string; property: { id: string; name: string; publicArea: string; approximateAddress: string; latitude: number; longitude: number; coverImageUrl: string | null } }

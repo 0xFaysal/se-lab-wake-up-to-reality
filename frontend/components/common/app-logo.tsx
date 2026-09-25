@@ -25,6 +25,8 @@ export function AppLogo({
       alt="ParkEase BD"
       width={1849}
       height={456}
+      priority
+      loading="eager"
       unoptimized
       className={cn("select-none object-contain", sizeClasses[size], className)}
     />

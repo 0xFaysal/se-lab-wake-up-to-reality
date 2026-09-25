@@ -28,6 +28,7 @@ import { propertyGovernanceRouter } from "./modules/property-governance/property
 import { managerDelegationRouter } from "./modules/manager-delegations/manager-delegation.routes.js";
 import { propertyImageRouter } from "./modules/property-images/property-image.routes.js";
 import { marketplaceRouter } from "./modules/marketplace/marketplace.routes.js";
+import { reconcileMarketplaceLifecycle } from "./modules/marketplace/marketplace.service.js";
 import { paymentRouter } from "./modules/payments/payment.routes.js";
 import { enqueueDueEmailCampaigns, processEmailDeliveryBatch } from "./modules/admin/control/email-management.service.js";
 import { swaggerSpec } from "./config/swagger.js";
@@ -161,8 +162,9 @@ app.all("/internal/email-worker/tick", async (req, res) => {
   try {
     const scheduled = await enqueueDueEmailCampaigns();
     const deliveries = await processEmailDeliveryBatch();
-    logger.info({ scheduled, deliveries }, "Email worker tick completed");
-    res.status(200).json({ success: true, data: { scheduled, deliveries } });
+    const marketplace = await reconcileMarketplaceLifecycle();
+    logger.info({ scheduled, deliveries, marketplace }, "Scheduled worker tick completed");
+    res.status(200).json({ success: true, data: { scheduled, deliveries, marketplace } });
   } catch (error) {
     logger.error({ error }, "Email worker tick failed");
     res.status(500).json({ success: false, error: "Email worker tick failed" });

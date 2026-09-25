@@ -4,6 +4,8 @@ import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 import { connectRedis, redis } from "./config/redis.js";
 import { startEmailDeliveryWorker } from "./workers/email-delivery.runner.js";
+import { startBookingLifecycleWorker } from "./workers/booking-lifecycle.runner.js";
+import { configureRealtime } from "./common/realtime/realtime.js";
 
 async function bootstrap() {
   await prisma.$connect();
@@ -17,6 +19,7 @@ async function bootstrap() {
   const emailWorker = env.EMAIL_WORKER_ENABLED
     ? startEmailDeliveryWorker(env.EMAIL_WORKER_POLL_INTERVAL_MS)
     : null;
+  const bookingLifecycleWorker = startBookingLifecycleWorker();
 
   const server = app.listen(env.PORT, () => {
     logger.info(
@@ -32,6 +35,7 @@ async function bootstrap() {
       );
     }
   });
+  configureRealtime(server);
 
   let shuttingDown = false;
 
@@ -41,7 +45,10 @@ async function bootstrap() {
 
     logger.info({ signal }, "Graceful shutdown started");
     server.close(async (closeError) => {
-      if (emailWorker) await emailWorker.stop();
+      await Promise.all([
+        emailWorker?.stop() ?? Promise.resolve(),
+        bookingLifecycleWorker.stop(),
+      ]);
       await Promise.allSettled([
         prisma.$disconnect(),
         redis.isOpen ? redis.quit() : Promise.resolve(),

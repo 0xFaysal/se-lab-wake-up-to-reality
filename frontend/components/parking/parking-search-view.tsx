@@ -34,7 +34,7 @@ function defaultSearchWindow() {
   }).formatToParts(now);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
   let date = `${value("year")}-${value("month")}-${value("day")}`;
-  let startHour = Number(value("hour")) + 1;
+  const startHour = Number(value("hour")) + 1;
 
   if (startHour >= 22) {
     const nextDate = new Date(`${date}T00:00:00Z`);
@@ -168,6 +168,8 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
     const params = new URLSearchParams(searchParamsKey);
     const nextFilters = defaultFilters(params);
     const nextHasSearched = params.has("date") || params.has("startTime");
+    // Browser back/forward changes the URL outside this component, so reset its search draft.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFilters(nextFilters);
     setRequest(toRequest(nextFilters));
     setHasSearched(nextHasSearched);
@@ -178,6 +180,8 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   useEffect(() => {
     if (!driverMode || new URLSearchParams(searchParamsKey).has("vehicleType")) return;
     const defaultVehicle = vehicles.query.data?.find((vehicle) => vehicle.isDefault) ?? vehicles.query.data?.[0];
+    // Vehicle data arrives asynchronously and supplies the first useful Driver default.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (defaultVehicle) setFilters((current) => ({ ...current, vehicleType: defaultVehicle.vehicleType }));
   }, [driverMode, searchParamsKey, vehicles.query.data]);
 
