@@ -11,7 +11,11 @@ If any of these checks fail, it responds with an appropriate error indicating th
 
 export const authenticate: RequestHandler = async (req, _res, next) => {
   try {
-    const token = req.cookies?.access_token;
+    const authHeader = req.header("authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : undefined;
+    const token = req.cookies?.access_token || bearerToken;
 
     if (!token) {
       throw new AppError({

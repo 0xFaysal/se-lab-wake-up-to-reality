@@ -22,6 +22,7 @@ const prettyTransport =
 export const sensitiveLogPaths = [
   "req.headers.authorization",
   "req.headers.cookie",
+  "req.headers['x-refresh-token']",
   "res.headers['set-cookie']",
   "password",
   "*.password",
