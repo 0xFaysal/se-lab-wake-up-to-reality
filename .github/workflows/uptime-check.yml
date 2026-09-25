@@ -1,0 +1,103 @@
+name: Uptime & Availability Check
+
+on:
+  schedule:
+    # Run every 30 minutes to monitor production availability
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/uptime-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  uptime-check:
+    name: Production Availability Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Probe live frontend & backend endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FRONTEND_URL="https://parkease-bd.vercel.app"
+          BACKEND_LIVE_URL="https://parkease-api.vercel.app/health/live"
+          BACKEND_READY_URL="https://parkease-api.vercel.app/health/ready"
+
+          echo "## 🌐 Production Service Availability Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "Generated at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Service | Target URL | HTTP Code | Latency | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+
+          ALL_PASSED=true
+
+          # 1. Check Frontend Application
+          FE_START=$(date +%s%N)
+          FE_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 2 "$FRONTEND_URL" || echo "000")
+          FE_END=$(date +%s%N)
+          FE_LATENCY="$(( (FE_END - FE_START) / 1000000 ))ms"
+
+          if [ "$FE_HTTP_CODE" = "200" ]; then
+            echo "| **Frontend Web App** | \`$FRONTEND_URL\` | \`$FE_HTTP_CODE\` | $FE_LATENCY | 🟢 **Operational** |" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Frontend is UP (HTTP $FE_HTTP_CODE in $FE_LATENCY)"
+          else
+            echo "| **Frontend Web App** | \`$FRONTEND_URL\` | \`$FE_HTTP_CODE\` | $FE_LATENCY | 🔴 **Unavailable** |" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ Frontend is DOWN (HTTP $FE_HTTP_CODE)"
+            ALL_PASSED=false
+          fi
+
+          # 2. Check Backend Process Health (/health/live)
+          BE_LIVE_START=$(date +%s%N)
+          BE_LIVE_RESPONSE=$(curl -s -w "\n%{http_code}" --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 2 "$BACKEND_LIVE_URL" || echo "000")
+          BE_LIVE_END=$(date +%s%N)
+          BE_LIVE_LATENCY="$(( (BE_LIVE_END - BE_LIVE_START) / 1000000 ))ms"
+          BE_LIVE_HTTP_CODE=$(echo "$BE_LIVE_RESPONSE" | tail -n 1)
+          BE_LIVE_BODY=$(echo "$BE_LIVE_RESPONSE" | head -n -1)
+
+          if [ "$BE_LIVE_HTTP_CODE" = "200" ] && echo "$BE_LIVE_BODY" | grep -q '"alive"'; then
+            echo "| **Backend API (Process)** | \`$BACKEND_LIVE_URL\` | \`$BE_LIVE_HTTP_CODE\` | $BE_LIVE_LATENCY | 🟢 **Alive** |" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Backend API process is UP (HTTP $BE_LIVE_HTTP_CODE in $BE_LIVE_LATENCY)"
+          else
+            echo "| **Backend API (Process)** | \`$BACKEND_LIVE_URL\` | \`$BE_LIVE_HTTP_CODE\` | $BE_LIVE_LATENCY | 🔴 **Unavailable** |" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ Backend API process check FAILED (HTTP $BE_LIVE_HTTP_CODE)"
+            ALL_PASSED=false
+          fi
+
+          # 3. Check Backend Readiness - Supabase & Upstash (/health/ready)
+          BE_READY_START=$(date +%s%N)
+          BE_READY_RESPONSE=$(curl -s -w "\n%{http_code}" --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 2 "$BACKEND_READY_URL" || echo "000")
+          BE_READY_END=$(date +%s%N)
+          BE_READY_LATENCY="$(( (BE_READY_END - BE_READY_START) / 1000000 ))ms"
+          BE_READY_HTTP_CODE=$(echo "$BE_READY_RESPONSE" | tail -n 1)
+          BE_READY_BODY=$(echo "$BE_READY_RESPONSE" | head -n -1)
+
+          if [ "$BE_READY_HTTP_CODE" = "200" ] && echo "$BE_READY_BODY" | grep -q '"postgres":true' && echo "$BE_READY_BODY" | grep -q '"redis":true'; then
+            echo "| **Database & Cache (Readiness)** | \`$BACKEND_READY_URL\` | \`$BE_READY_HTTP_CODE\` | $BE_READY_LATENCY | 🟢 **Connected (Supabase + Upstash)** |" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Database & Cache are CONNECTED (HTTP $BE_READY_HTTP_CODE in $BE_READY_LATENCY)"
+          else
+            echo "| **Database & Cache (Readiness)** | \`$BACKEND_READY_URL\` | \`$BE_READY_HTTP_CODE\` | $BE_READY_LATENCY | 🔴 **Degraded** |" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ Database/Cache readiness check FAILED (HTTP $BE_READY_HTTP_CODE)"
+            ALL_PASSED=false
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ALL_PASSED" = true ]; then
+            echo "> ✅ **All ParkEase BD production services are fully operational.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "All live services verified operational."
+          else
+            echo "> ⚠️ **One or more services failed production health checks.**" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
