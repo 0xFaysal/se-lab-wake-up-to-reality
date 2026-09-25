@@ -8,8 +8,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/uptime-check.yml"
+      - develop
 
 permissions:
   contents: read
