@@ -13,10 +13,9 @@ export function LocationSearchInput({ value, onSelect }: { value: string; onSele
   const [loading, setLoading] = useState(false);
   const [locationError, setLocationError] = useState<string>();
 
-  useEffect(() => setText(value), [value]);
   useEffect(() => {
     const query = text.trim();
-    if (query.length < 3 || query === value) { setPlaces([]); return; }
+    if (query.length < 3 || query === value) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
@@ -31,6 +30,8 @@ export function LocationSearchInput({ value, onSelect }: { value: string; onSele
     }, 450);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [text, value]);
+
+  const visiblePlaces = text.trim().length >= 3 && text !== value ? places : [];
 
   function useCurrentLocation() {
     setLocationError(undefined);
@@ -51,7 +52,7 @@ export function LocationSearchInput({ value, onSelect }: { value: string; onSele
     <MapPin className="pointer-events-none absolute left-3 top-3 size-4 text-emerald-700" />
     <Input value={text} onChange={(event) => { setText(event.target.value); setLocationError(undefined); }} placeholder="Search an area, landmark, or address" className="h-10 pl-9 pr-12" aria-label="Parking search location" />
     <Button type="button" size="icon" variant="ghost" className="absolute right-1 top-1 size-8" onClick={useCurrentLocation} aria-label="Use my current location">{loading ? <Loader2 className="size-4 animate-spin" /> : <LocateFixed className="size-4" />}</Button>
-    {places.length > 0 && <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-white p-1 shadow-xl">{places.map((place) => <button type="button" key={place.place_id} onClick={() => { const selected = { displayName: place.display_name, latitude: Number(place.lat), longitude: Number(place.lon) }; setText(selected.displayName); setPlaces([]); onSelect(selected); }} className="flex w-full items-start gap-2 rounded px-3 py-2 text-left text-sm hover:bg-slate-100"><MapPin className="mt-0.5 size-4 shrink-0 text-emerald-700" /><span className="line-clamp-2">{place.display_name}</span></button>)}</div>}
+    {visiblePlaces.length > 0 && <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-white p-1 shadow-xl">{visiblePlaces.map((place) => <button type="button" key={place.place_id} onClick={() => { const selected = { displayName: place.display_name, latitude: Number(place.lat), longitude: Number(place.lon) }; setText(selected.displayName); setPlaces([]); onSelect(selected); }} className="flex w-full items-start gap-2 rounded px-3 py-2 text-left text-sm hover:bg-slate-100"><MapPin className="mt-0.5 size-4 shrink-0 text-emerald-700" /><span className="line-clamp-2">{place.display_name}</span></button>)}</div>}
     {locationError && <p className="mt-1 text-xs text-rose-700">{locationError}</p>}
   </div>;
 }
