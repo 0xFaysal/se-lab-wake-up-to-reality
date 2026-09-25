@@ -64,9 +64,11 @@ describe("Marketplace validation invariants", () => {
   });
 
   it("accepts supported parking discovery filters and rejects unknown query fields", () => {
+    const futureStart = new Date(Date.now() + 3600_000).toISOString();
+    const futureEnd = new Date(Date.now() + 7200_000).toISOString();
     const query = {
       latitude: "23.8103", longitude: "90.4125", radiusKm: "5",
-      startAt: "2026-09-20T09:00:00.000Z", endAt: "2026-09-20T10:00:00.000Z",
+      startAt: futureStart, endAt: futureEnd,
       vehicleType: "SEDAN", covered: "true", hasCctv: "true", hasGuard: "false",
       resourceType: "FIXED_SPACE", facilityCodes: "EV_CHARGING,WHEELCHAIR_ACCESS", minAvailableUnits: "2",
     };
@@ -164,9 +166,11 @@ describe("Marketplace validation invariants", () => {
   });
 
   it("requires public Property detail search context", () => {
+    const futureStart = new Date(Date.now() + 3600_000).toISOString();
+    const futureEnd = new Date(Date.now() + 7200_000).toISOString();
     assert.equal(publicPropertyDetailSchema.safeParse({
       params: { propertyId },
-      query: { startAt: "2026-09-20T09:00:00.000Z", endAt: "2026-09-20T10:00:00.000Z", vehicleType: "SEDAN" },
+      query: { startAt: futureStart, endAt: futureEnd, vehicleType: "SEDAN" },
     }).success, true);
     assert.equal(publicPropertyDetailSchema.safeParse({ params: { propertyId }, query: {} }).success, false);
   });

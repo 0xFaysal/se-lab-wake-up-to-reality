@@ -76,7 +76,12 @@ export const changePasswordController: RequestHandler = async (
 
     res.status(200).json({
       success: true,
-      data: { user: result.user, nextAction: result.nextAction },
+      data: {
+        user: result.user,
+        nextAction: result.nextAction,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      },
       meta: { requestId: req.requestId, timestamp: new Date().toISOString() },
     });
   } catch (error) {
