@@ -1,0 +1,2 @@
+# Gitleaks ignore list for false-positive documentation placeholders
+90a5eb70669ca4d8680eb22a5470eca786c2c68b:README.md:generic-api-key:290

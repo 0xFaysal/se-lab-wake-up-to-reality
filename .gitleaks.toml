@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore documentation placeholders and test fixtures"
+paths = [
+  '''(?i)README\.md''',
+  '''(?i)docs/.*''',
+  '''(?i)backend/tests/.*''',
+  '''(?i)\.env\.example''',
+]
+regexes = [
+  '''(?i)replace-with-.*''',
+  '''(?i)0123456789abcdef.*''',
+]
