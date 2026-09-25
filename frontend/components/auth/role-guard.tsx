@@ -6,6 +6,7 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { destinationForUser, getRequiredAccountAction } from "@/lib/auth-routing";
 import type { UserRole } from "@/lib/api/api-types";
+import { RealtimeSync } from "@/providers/realtime-sync";
 
 export function RoleGuard({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
   const router = useRouter();
@@ -33,5 +34,5 @@ export function RoleGuard({ roles, children }: { roles: UserRole[]; children: Re
   if (isError || !authorized) {
     return <div className="flex min-h-[60vh] items-center justify-center"><div className="text-center"><ShieldAlert className="mx-auto size-8 text-amber-600" /><p className="mt-3 text-sm font-semibold">Redirecting to the correct portal…</p></div></div>;
   }
-  return children;
+  return <><RealtimeSync />{children}</>;
 }

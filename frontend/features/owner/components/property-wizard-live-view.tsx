@@ -119,7 +119,13 @@ function Progress({ step }: { step: number }) {
 
 function Field({ name, label, required = false, type = "text", min, max, minLength, maxLength }: { name: keyof FormValues; label: string; required?: boolean; type?: string; min?: number; max?: number; minLength?: number; maxLength?: number }) {
   const { register, formState: { errors } } = useFormContext<FormValues>();
-  return <div className="space-y-2"><Label htmlFor={name}>{label}{required && <span className="text-red-600"> *</span>}</Label><Input id={name} type={type} min={min} max={max} minLength={minLength} maxLength={maxLength} {...register(name, { required: required ? `${label} is required` : false })} aria-invalid={Boolean(errors[name])} />{errors[name] && <p role="alert" className="text-xs text-red-700">{String(errors[name]?.message)}</p>}</div>;
+  return <div className="space-y-2"><Label htmlFor={name}>{label}{required && <span className="text-red-600"> *</span>}</Label><Input id={name} type={type} min={min} max={max} minLength={minLength} maxLength={maxLength} {...register(name, {
+    required: required ? `${label} is required` : false,
+    ...(minLength === undefined ? {} : { minLength: { value: minLength, message: `${label} must contain at least ${minLength} characters` } }),
+    ...(maxLength === undefined ? {} : { maxLength: { value: maxLength, message: `${label} must contain at most ${maxLength} characters` } }),
+    ...(min === undefined ? {} : { min: { value: min, message: `${label} must be at least ${min}` } }),
+    ...(max === undefined ? {} : { max: { value: max, message: `${label} must be at most ${max}` } }),
+  })} aria-invalid={Boolean(errors[name])} />{errors[name] && <p role="alert" className="text-xs text-red-700">{String(errors[name]?.message)}</p>}</div>;
 }
 
 function IdentityFields() {

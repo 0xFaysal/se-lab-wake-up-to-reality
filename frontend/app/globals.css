@@ -97,6 +97,28 @@
   --sidebar-accent-foreground: #064E3B;
   --sidebar-border: #E5E7EB;
   --sidebar-ring: #064E3B;
+
+  /* Guard operations surfaces: runtime tokens mirror docs/DESIGN.md. */
+  --guard-canvas: #f6f7f2;
+  --guard-surface: #ffffff;
+  --guard-ink: #063f32;
+  --guard-mint: #d9f3e8;
+  --guard-line: #d9e1dc;
+  --guard-warning: #b45309;
+
+  --scrollbar-track: #edf1ed;
+  --scrollbar-thumb: #91a69c;
+  --scrollbar-thumb-hover: #55766a;
+  --scrollbar-thumb-active: #2b6954;
+
+  --z-sticky: 100;
+  --z-dropdown: 200;
+  --z-popover: 300;
+  --z-app-chrome: 400;
+  --z-backdrop: 500;
+  --z-dialog: 600;
+  --z-sheet: 700;
+  --z-toast: 900;
 }
 
 .dark {
@@ -141,6 +163,10 @@
 }
 
 @layer base {
+  html {
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
+  }
   * {
     @apply border-border outline-ring/50;
   }
@@ -150,6 +176,74 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
     letter-spacing: -0.025em;
+  }
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+  background: var(--scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+@media (forced-colors: active) {
+  html {
+    scrollbar-color: auto;
+  }
+}
+
+.guard-app {
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+.guard-app ::selection {
+  background: var(--guard-mint);
+  color: var(--guard-ink);
+}
+
+.guard-panel {
+  border: 1px solid var(--guard-line);
+  border-radius: 1rem;
+  background: var(--guard-surface);
+  box-shadow: 0 12px 36px rgba(6, 63, 50, 0.045);
+}
+
+.guard-scanner video,
+.guard-scanner canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 1rem;
+}
+
+.guard-scanner > div {
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guard-app *,
+  .guard-app *::before,
+  .guard-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

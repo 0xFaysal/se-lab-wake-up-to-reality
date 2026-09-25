@@ -8,7 +8,7 @@ export const backendCapabilities = {
   parkingSearch: true, quotes: true, holds: true, bookings: true, payments: true,
   wallet: true, earnings: true, refunds: true, payouts: true, notifications: true,
   reviews: true, disputes: true, guardBookingOperations: true,
-  supportTickets: false, realtimeSocket: false, advancedOvertime: false, realPaymentGateway: false,
+  supportTickets: false, realtimeSocket: true, advancedOvertime: true, realPaymentGateway: true,
 } as const;
 
 export const portalHome: Record<UserRole, string> = {
