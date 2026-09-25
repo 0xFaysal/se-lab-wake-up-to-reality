@@ -18,8 +18,14 @@ import * as governanceRepository from "../property-governance/property-governanc
 import * as propertyRepository from "../properties/property.repository.js";
 import { propertyErrors } from "../properties/property.errors.js";
 import { guardAssignmentErrors } from "./guard-assignment.errors.js";
-import { toGuardMembership, toProviderGuardAssignment } from "./guard-assignment.mapper.js";
-import { guardMembershipInclude, providerGuardAssignmentInclude } from "./guard-assignment.repository.js";
+import {
+  toGuardMembership,
+  toProviderGuardAssignment,
+} from "./guard-assignment.mapper.js";
+import {
+  guardMembershipInclude,
+  providerGuardAssignmentInclude,
+} from "./guard-assignment.repository.js";
 import {
   canAcceptGuardMembership,
   canEditProviderAssignmentShift,
@@ -27,18 +33,30 @@ import {
   canResumeProviderAssignment,
   canSuspendProviderAssignment,
 } from "./guard-assignment.policy.js";
-import type { AddPropertyGuardInput, CreateProviderGuardAssignmentInput, ListGuardAssignmentsQuery, ListGuardMembershipsQuery, UpdateGuardAssignmentInput } from "./guard-assignment.types.js";
+import type {
+  AddPropertyGuardInput,
+  CreateProviderGuardAssignmentInput,
+  ListGuardAssignmentsQuery,
+  ListGuardMembershipsQuery,
+  UpdateGuardAssignmentInput,
+} from "./guard-assignment.types.js";
 
 function shiftTimeToDate(value: string): Date {
   const [hours, minutes] = value.split(":").map(Number);
   return new Date(Date.UTC(1970, 0, 1, hours!, minutes!, 0, 0));
 }
 
-function parseIdentifier(identifier: string): { type: "email" | "phone"; value: string } {
+function parseIdentifier(identifier: string): {
+  type: "email" | "phone";
+  value: string;
+} {
   const value = identifier.trim().toLowerCase();
   if (value.includes("@")) return { type: "email", value };
-  try { return { type: "phone", value: normalizeBangladeshPhone(identifier) }; }
-  catch { throw guardAssignmentErrors.guardNotFound(); }
+  try {
+    return { type: "phone", value: normalizeBangladeshPhone(identifier) };
+  } catch {
+    throw guardAssignmentErrors.guardNotFound();
+  }
 }
 
 function pagination(page: number, limit: number, total: number) {
@@ -46,10 +64,16 @@ function pagination(page: number, limit: number, total: number) {
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
 }
 
-async function lockGuardAssignment(tx: Prisma.TransactionClient, assignmentId: string) {
+async function lockGuardAssignment(
+  tx: Prisma.TransactionClient,
+  assignmentId: string,
+) {
   await tx.$queryRaw<Array<{ lockResult: string }>>`
     SELECT pg_advisory_xact_lock(
       hashtextextended(${`provider-guard-assignment:${assignmentId}`}, 0)
@@ -57,12 +81,19 @@ async function lockGuardAssignment(tx: Prisma.TransactionClient, assignmentId: s
   `;
 }
 
-async function requireEligibleProperty(tx: Prisma.TransactionClient, propertyId: string) {
+async function requireEligibleProperty(
+  tx: Prisma.TransactionClient,
+  propertyId: string,
+) {
   const property = await tx.property.findFirst({
     where: { id: propertyId, deletedAt: null },
     select: { id: true, status: true, verificationStatus: true },
   });
-  if (!property || property.status !== PropertyStatus.ACTIVE || property.verificationStatus !== VerificationStatus.VERIFIED) {
+  if (
+    !property ||
+    property.status !== PropertyStatus.ACTIVE ||
+    property.verificationStatus !== VerificationStatus.VERIFIED
+  ) {
     throw guardAssignmentErrors.propertyNotEligible();
   }
   return property;
@@ -75,8 +106,15 @@ async function resolveProviderMembership(
   permission: ManagerDelegationPermission,
   requestedProviderMembershipId?: string,
 ) {
-  const own = await governanceRepository.findActiveVerifiedProviderMembership(actorUserId, propertyId, tx);
-  if (own && (!requestedProviderMembershipId || requestedProviderMembershipId === own.id)) {
+  const own = await governanceRepository.findActiveVerifiedProviderMembership(
+    actorUserId,
+    propertyId,
+    tx,
+  );
+  if (
+    own &&
+    (!requestedProviderMembershipId || requestedProviderMembershipId === own.id)
+  ) {
     return own;
   }
 
@@ -89,7 +127,8 @@ async function resolveProviderMembership(
         status: ManagerDelegationStatus.ACTIVE,
         OR: [{ validFrom: null }, { validFrom: { lte: now } }],
         AND: [{ OR: [{ validUntil: null }, { validUntil: { gt: now } }] }],
-        grantorProviderMembership: governanceRepository.activeVerifiedProviderWhere,
+        grantorProviderMembership:
+          governanceRepository.activeVerifiedProviderWhere,
         permissions: { some: { permission } },
       },
       select: { grantorProviderMembershipId: true },
@@ -111,24 +150,50 @@ async function resolveProviderMembership(
     tx,
   );
   if (!delegated) throw propertyErrors.notFound();
-  const membership = await tx.propertyProvider.findUnique({ where: { id: delegated.grantorProviderMembershipId } });
+  const membership = await tx.propertyProvider.findUnique({
+    where: { id: delegated.grantorProviderMembershipId },
+  });
   if (!membership) throw propertyErrors.notFound();
   return membership;
 }
 
-async function canManageSharedGuards(tx: Prisma.TransactionClient, actorUserId: string, propertyId: string) {
-  if (await governanceRepository.findActiveVerifiedProviderMembership(actorUserId, propertyId, tx)) return true;
-  return Boolean(await governanceRepository.findLiveManagerDelegation(
-    actorUserId,
-    propertyId,
-    ManagerDelegationPermission.GUARD_ADD_TO_PROPERTY,
-    undefined,
-    tx,
-  ));
+async function canManageSharedGuards(
+  tx: Prisma.TransactionClient,
+  actorUserId: string,
+  propertyId: string,
+) {
+  if (
+    await governanceRepository.findActiveVerifiedProviderMembership(
+      actorUserId,
+      propertyId,
+      tx,
+    )
+  )
+    return true;
+  return Boolean(
+    await governanceRepository.findLiveManagerDelegation(
+      actorUserId,
+      propertyId,
+      ManagerDelegationPermission.GUARD_ADD_TO_PROPERTY,
+      undefined,
+      tx,
+    ),
+  );
 }
 
-async function canViewSharedGuards(tx: Prisma.TransactionClient, actorUserId: string, propertyId: string) {
-  if (await governanceRepository.findActiveVerifiedProviderMembership(actorUserId, propertyId, tx)) return true;
+async function canViewSharedGuards(
+  tx: Prisma.TransactionClient,
+  actorUserId: string,
+  propertyId: string,
+) {
+  if (
+    await governanceRepository.findActiveVerifiedProviderMembership(
+      actorUserId,
+      propertyId,
+      tx,
+    )
+  )
+    return true;
   const admin = await tx.user.findFirst({
     where: {
       id: actorUserId,
@@ -138,20 +203,27 @@ async function canViewSharedGuards(tx: Prisma.TransactionClient, actorUserId: st
     select: { id: true },
   });
   if (admin) return true;
-  return Boolean(await governanceRepository.findLiveManagerDelegation(
-    actorUserId,
-    propertyId,
-    ManagerDelegationPermission.GUARD_VIEW,
-    undefined,
-    tx,
-  ));
+  return Boolean(
+    await governanceRepository.findLiveManagerDelegation(
+      actorUserId,
+      propertyId,
+      ManagerDelegationPermission.GUARD_VIEW,
+      undefined,
+      tx,
+    ),
+  );
 }
 
-export async function addPropertyGuard(actorUserId: string, propertyId: string, input: AddPropertyGuardInput) {
+export async function addPropertyGuard(
+  actorUserId: string,
+  propertyId: string,
+  input: AddPropertyGuardInput,
+) {
   try {
     return await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
-      if (!(await canManageSharedGuards(tx, actorUserId, propertyId))) throw propertyErrors.notFound();
+      if (!(await canManageSharedGuards(tx, actorUserId, propertyId)))
+        throw propertyErrors.notFound();
       await requireEligibleProperty(tx, propertyId);
       const identifier = parseIdentifier(input.identifier);
       const guard = await tx.user.findFirst({
@@ -159,13 +231,17 @@ export async function addPropertyGuard(actorUserId: string, propertyId: string, 
           deletedAt: null,
           status: { in: [UserStatus.PENDING, UserStatus.ACTIVE] },
           roles: { some: { role: UserRoleType.GUARD } },
-          ...(identifier.type === "email" ? { email: identifier.value } : { phone: identifier.value }),
+          ...(identifier.type === "email"
+            ? { email: identifier.value }
+            : { phone: identifier.value }),
         },
         select: { id: true },
       });
       if (!guard) throw guardAssignmentErrors.guardNotFound();
       const existing = await tx.propertyGuardMembership.findUnique({
-        where: { propertyId_guardUserId: { propertyId, guardUserId: guard.id } },
+        where: {
+          propertyId_guardUserId: { propertyId, guardUserId: guard.id },
+        },
       });
       if (
         existing &&
@@ -177,11 +253,21 @@ export async function addPropertyGuard(actorUserId: string, propertyId: string, 
       const membership = existing
         ? await tx.propertyGuardMembership.update({
             where: { id: existing.id },
-            data: { status: PropertyGuardMembershipStatus.PENDING_ACCEPTANCE, addedByUserId: actorUserId, invitedAt: new Date(), joinedAt: null, endedAt: null },
+            data: {
+              status: PropertyGuardMembershipStatus.PENDING_ACCEPTANCE,
+              addedByUserId: actorUserId,
+              invitedAt: new Date(),
+              joinedAt: null,
+              endedAt: null,
+            },
             include: guardMembershipInclude,
           })
         : await tx.propertyGuardMembership.create({
-            data: { propertyId, guardUserId: guard.id, addedByUserId: actorUserId },
+            data: {
+              propertyId,
+              guardUserId: guard.id,
+              addedByUserId: actorUserId,
+            },
             include: guardMembershipInclude,
           });
       await createDomainAuditEvent(tx, {
@@ -195,15 +281,21 @@ export async function addPropertyGuard(actorUserId: string, propertyId: string, 
       return toGuardMembership(membership);
     });
   } catch (error) {
-    if (isUniqueConstraintError(error)) throw guardAssignmentErrors.membershipAlreadyExists();
+    if (isUniqueConstraintError(error))
+      throw guardAssignmentErrors.membershipAlreadyExists();
     throw error;
   }
 }
 
-export async function listPropertyGuards(actorUserId: string, propertyId: string) {
+export async function listPropertyGuards(
+  actorUserId: string,
+  propertyId: string,
+) {
   const property = await propertyRepository.findPropertyById(propertyId);
   if (!property) throw propertyErrors.notFound();
-  const allowed = await prisma.$transaction((tx) => canViewSharedGuards(tx, actorUserId, propertyId));
+  const allowed = await prisma.$transaction((tx) =>
+    canViewSharedGuards(tx, actorUserId, propertyId),
+  );
   if (!allowed) throw propertyErrors.notFound();
   const records = await prisma.propertyGuardMembership.findMany({
     where: { propertyId },
@@ -213,40 +305,98 @@ export async function listPropertyGuards(actorUserId: string, propertyId: string
   return records.map(toGuardMembership);
 }
 
-export async function listMyGuardMemberships(guardUserId: string, query: ListGuardMembershipsQuery) {
-  const where = { guardUserId, ...(query.propertyId ? { propertyId: query.propertyId } : {}), ...(query.status ? { status: query.status } : {}) };
+export async function listMyGuardMemberships(
+  guardUserId: string,
+  query: ListGuardMembershipsQuery,
+) {
+  const where = {
+    guardUserId,
+    ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+    ...(query.status ? { status: query.status } : {}),
+  };
   const skip = (query.page - 1) * query.limit;
   const [records, total] = await Promise.all([
-    prisma.propertyGuardMembership.findMany({ where, skip, take: query.limit, orderBy: [{ invitedAt: "desc" }, { id: "desc" }], include: guardMembershipInclude }),
+    prisma.propertyGuardMembership.findMany({
+      where,
+      skip,
+      take: query.limit,
+      orderBy: [{ invitedAt: "desc" }, { id: "desc" }],
+      include: guardMembershipInclude,
+    }),
     prisma.propertyGuardMembership.count({ where }),
   ]);
-  return { memberships: records.map(toGuardMembership), pagination: pagination(query.page, query.limit, total) };
+  return {
+    memberships: records.map(toGuardMembership),
+    pagination: pagination(query.page, query.limit, total),
+  };
 }
 
-export async function respondToGuardMembership(guardUserId: string, membershipId: string, accept: boolean) {
+export async function respondToGuardMembership(
+  guardUserId: string,
+  membershipId: string,
+  accept: boolean,
+) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.propertyGuardMembership.findFirst({ where: { id: membershipId, guardUserId }, include: guardMembershipInclude });
+    const membership = await tx.propertyGuardMembership.findFirst({
+      where: { id: membershipId, guardUserId },
+      include: guardMembershipInclude,
+    });
     if (!membership) throw guardAssignmentErrors.membershipNotFound();
-    if (!canAcceptGuardMembership(membership.status)) throw guardAssignmentErrors.invalidTransition();
+    if (!canAcceptGuardMembership(membership.status))
+      throw guardAssignmentErrors.invalidTransition();
     if (accept) {
-      const guard = await tx.user.findUnique({ where: { id: guardUserId }, select: { status: true, mustChangePassword: true, emailVerifiedAt: true, deletedAt: true } });
-      if (!guard || guard.status !== UserStatus.ACTIVE || guard.mustChangePassword || !guard.emailVerifiedAt || guard.deletedAt) {
+      const guard = await tx.user.findUnique({
+        where: { id: guardUserId },
+        select: {
+          status: true,
+          mustChangePassword: true,
+          emailVerifiedAt: true,
+          deletedAt: true,
+        },
+      });
+      if (
+        !guard ||
+        guard.status !== UserStatus.ACTIVE ||
+        guard.mustChangePassword ||
+        !guard.emailVerifiedAt ||
+        guard.deletedAt
+      ) {
         throw guardAssignmentErrors.guardNotEligible();
       }
       await requireEligibleProperty(tx, membership.propertyId);
     }
     const changed = await tx.propertyGuardMembership.updateMany({
-      where: { id: membershipId, guardUserId, status: PropertyGuardMembershipStatus.PENDING_ACCEPTANCE },
+      where: {
+        id: membershipId,
+        guardUserId,
+        status: PropertyGuardMembershipStatus.PENDING_ACCEPTANCE,
+      },
       data: accept
-        ? { status: PropertyGuardMembershipStatus.ACTIVE, joinedAt: new Date(), endedAt: null }
-        : { status: PropertyGuardMembershipStatus.CANCELLED, endedAt: new Date() },
+        ? {
+            status: PropertyGuardMembershipStatus.ACTIVE,
+            joinedAt: new Date(),
+            endedAt: null,
+          }
+        : {
+            status: PropertyGuardMembershipStatus.CANCELLED,
+            endedAt: new Date(),
+          },
     });
     if (changed.count !== 1) throw guardAssignmentErrors.stateConflict();
-    return toGuardMembership(await tx.propertyGuardMembership.findUniqueOrThrow({ where: { id: membershipId }, include: guardMembershipInclude }));
+    return toGuardMembership(
+      await tx.propertyGuardMembership.findUniqueOrThrow({
+        where: { id: membershipId },
+        include: guardMembershipInclude,
+      }),
+    );
   });
 }
 
-export async function createProviderGuardAssignment(actorUserId: string, propertyId: string, input: CreateProviderGuardAssignmentInput) {
+export async function createProviderGuardAssignment(
+  actorUserId: string,
+  propertyId: string,
+  input: CreateProviderGuardAssignmentInput,
+) {
   try {
     return await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
@@ -259,7 +409,11 @@ export async function createProviderGuardAssignment(actorUserId: string, propert
       );
       await requireEligibleProperty(tx, propertyId);
       const guardMembership = await tx.propertyGuardMembership.findFirst({
-        where: { id: input.guardMembershipId, propertyId, status: PropertyGuardMembershipStatus.ACTIVE },
+        where: {
+          id: input.guardMembershipId,
+          propertyId,
+          status: PropertyGuardMembershipStatus.ACTIVE,
+        },
         select: { id: true },
       });
       if (!guardMembership) throw guardAssignmentErrors.membershipNotActive();
@@ -267,7 +421,13 @@ export async function createProviderGuardAssignment(actorUserId: string, propert
         where: {
           propertyGuardMembershipId: guardMembership.id,
           providerMembershipId: providerMembership.id,
-          status: { in: [GuardAssignmentStatus.PENDING_ACCEPTANCE, GuardAssignmentStatus.ACTIVE, GuardAssignmentStatus.SUSPENDED] },
+          status: {
+            in: [
+              GuardAssignmentStatus.PENDING_ACCEPTANCE,
+              GuardAssignmentStatus.ACTIVE,
+              GuardAssignmentStatus.SUSPENDED,
+            ],
+          },
         },
         select: { id: true },
       });
@@ -289,12 +449,16 @@ export async function createProviderGuardAssignment(actorUserId: string, propert
         propertyId,
         entityType: "ProviderGuardAssignment",
         entityId: assignment.id,
-        metadata: { providerMembershipId: providerMembership.id, guardMembershipId: guardMembership.id },
+        metadata: {
+          providerMembershipId: providerMembership.id,
+          guardMembershipId: guardMembership.id,
+        },
       });
       return toProviderGuardAssignment(assignment);
     });
   } catch (error) {
-    if (isUniqueConstraintError(error)) throw guardAssignmentErrors.alreadyExists();
+    if (isUniqueConstraintError(error))
+      throw guardAssignmentErrors.alreadyExists();
     throw error;
   }
 }
@@ -314,31 +478,51 @@ function providerAssignmentActorWhere(actorUserId: string) {
         providerMembership: {
           status: PropertyProviderStatus.ACTIVE,
           verificationStatus: VerificationStatus.VERIFIED,
-          managerDelegations: { some: {
-            managerUserId: actorUserId,
-            status: ManagerDelegationStatus.ACTIVE,
-            OR: [{ validFrom: null }, { validFrom: { lte: now } }],
-            AND: [{ OR: [{ validUntil: null }, { validUntil: { gt: now } }] }],
-            permissions: { some: { permission: ManagerDelegationPermission.GUARD_VIEW } },
-          } },
+          managerDelegations: {
+            some: {
+              managerUserId: actorUserId,
+              status: ManagerDelegationStatus.ACTIVE,
+              OR: [{ validFrom: null }, { validFrom: { lte: now } }],
+              AND: [
+                { OR: [{ validUntil: null }, { validUntil: { gt: now } }] },
+              ],
+              permissions: {
+                some: { permission: ManagerDelegationPermission.GUARD_VIEW },
+              },
+            },
+          },
         },
       },
     ],
   } satisfies Prisma.ProviderGuardAssignmentWhereInput;
 }
 
-export async function listProviderAssignments(actorUserId: string, query: ListGuardAssignmentsQuery) {
+export async function listProviderAssignments(
+  actorUserId: string,
+  query: ListGuardAssignmentsQuery,
+) {
   const where: Prisma.ProviderGuardAssignmentWhereInput = {
     ...providerAssignmentActorWhere(actorUserId),
-    ...(query.propertyId ? { propertyGuardMembership: { propertyId: query.propertyId } } : {}),
+    ...(query.propertyId
+      ? { propertyGuardMembership: { propertyId: query.propertyId } }
+      : {}),
     ...(query.status ? { status: query.status } : {}),
   };
   const skip = (query.page - 1) * query.limit;
   const [records, total] = await Promise.all([
-    prisma.providerGuardAssignment.findMany({ where, skip, take: query.limit, orderBy: [{ assignedAt: "desc" }, { id: "desc" }], include: providerGuardAssignmentInclude }),
+    prisma.providerGuardAssignment.findMany({
+      where,
+      skip,
+      take: query.limit,
+      orderBy: [{ assignedAt: "desc" }, { id: "desc" }],
+      include: providerGuardAssignmentInclude,
+    }),
     prisma.providerGuardAssignment.count({ where }),
   ]);
-  return { assignments: records.map(toProviderGuardAssignment), pagination: pagination(query.page, query.limit, total) };
+  return {
+    assignments: records.map(toProviderGuardAssignment),
+    pagination: pagination(query.page, query.limit, total),
+  };
 }
 
 export async function getProviderAssignment(
@@ -356,23 +540,45 @@ export async function getProviderAssignment(
   return toProviderGuardAssignment(record);
 }
 
-export async function listMyProviderAssignments(guardUserId: string, query: ListGuardAssignmentsQuery) {
+export async function listMyProviderAssignments(
+  guardUserId: string,
+  query: ListGuardAssignmentsQuery,
+) {
   const where: Prisma.ProviderGuardAssignmentWhereInput = {
-    propertyGuardMembership: { guardUserId, ...(query.propertyId ? { propertyId: query.propertyId } : {}) },
+    propertyGuardMembership: {
+      guardUserId,
+      ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+    },
     ...(query.status ? { status: query.status } : {}),
   };
   const skip = (query.page - 1) * query.limit;
   const [records, total] = await Promise.all([
-    prisma.providerGuardAssignment.findMany({ where, skip, take: query.limit, orderBy: [{ assignedAt: "desc" }, { id: "desc" }], include: providerGuardAssignmentInclude }),
+    prisma.providerGuardAssignment.findMany({
+      where,
+      skip,
+      take: query.limit,
+      orderBy: [{ assignedAt: "desc" }, { id: "desc" }],
+      include: providerGuardAssignmentInclude,
+    }),
     prisma.providerGuardAssignment.count({ where }),
   ]);
-  return { assignments: records.map(toProviderGuardAssignment), pagination: pagination(query.page, query.limit, total) };
+  return {
+    assignments: records.map(toProviderGuardAssignment),
+    pagination: pagination(query.page, query.limit, total),
+  };
 }
 
-async function requireAssignmentMutationAuthority(tx: Prisma.TransactionClient, actorUserId: string, assignmentId: string) {
+async function requireAssignmentMutationAuthority(
+  tx: Prisma.TransactionClient,
+  actorUserId: string,
+  assignmentId: string,
+) {
   const assignment = await tx.providerGuardAssignment.findUnique({
     where: { id: assignmentId },
-    include: { propertyGuardMembership: { select: { propertyId: true } }, providerMembership: true },
+    include: {
+      propertyGuardMembership: { select: { propertyId: true } },
+      providerMembership: true,
+    },
   });
   if (!assignment) throw guardAssignmentErrors.notFound();
   const propertyId = assignment.propertyGuardMembership.propertyId;
@@ -383,22 +589,33 @@ async function requireAssignmentMutationAuthority(tx: Prisma.TransactionClient, 
     ManagerDelegationPermission.GUARD_ASSIGN,
     assignment.providerMembershipId,
   );
-  if (membership.id !== assignment.providerMembershipId) throw guardAssignmentErrors.notFound();
+  if (membership.id !== assignment.providerMembershipId)
+    throw guardAssignmentErrors.notFound();
   return assignment;
 }
 
-export async function updateProviderGuardAssignment(actorUserId: string, assignmentId: string, input: UpdateGuardAssignmentInput) {
+export async function updateProviderGuardAssignment(
+  actorUserId: string,
+  assignmentId: string,
+  input: UpdateGuardAssignmentInput,
+) {
   return prisma.$transaction(async (tx) => {
     await lockGuardAssignment(tx, assignmentId);
-    const current = await requireAssignmentMutationAuthority(tx, actorUserId, assignmentId);
+    const current = await requireAssignmentMutationAuthority(
+      tx,
+      actorUserId,
+      assignmentId,
+    );
     let data: Prisma.ProviderGuardAssignmentUpdateManyMutationInput;
     let expected: GuardAssignmentStatus;
     if (input.action === "SUSPEND") {
-      if (!canSuspendProviderAssignment(current.status)) throw guardAssignmentErrors.invalidTransition();
+      if (!canSuspendProviderAssignment(current.status))
+        throw guardAssignmentErrors.invalidTransition();
       expected = GuardAssignmentStatus.ACTIVE;
       data = { status: GuardAssignmentStatus.SUSPENDED };
     } else if (input.action === "RESUME") {
-      if (!canResumeProviderAssignment(current.status)) throw guardAssignmentErrors.invalidTransition();
+      if (!canResumeProviderAssignment(current.status))
+        throw guardAssignmentErrors.invalidTransition();
       expected = GuardAssignmentStatus.SUSPENDED;
       data = { status: GuardAssignmentStatus.ACTIVE };
     } else {
@@ -406,19 +623,38 @@ export async function updateProviderGuardAssignment(actorUserId: string, assignm
         throw guardAssignmentErrors.invalidTransition();
       }
       expected = current.status;
-      data = { shiftStart: shiftTimeToDate(input.shiftStart), shiftEnd: shiftTimeToDate(input.shiftEnd) };
+      data = {
+        shiftStart: shiftTimeToDate(input.shiftStart),
+        shiftEnd: shiftTimeToDate(input.shiftEnd),
+      };
     }
-    if (current.status !== expected) throw guardAssignmentErrors.invalidTransition();
-    const changed = await tx.providerGuardAssignment.updateMany({ where: { id: assignmentId, status: expected }, data });
+    if (current.status !== expected)
+      throw guardAssignmentErrors.invalidTransition();
+    const changed = await tx.providerGuardAssignment.updateMany({
+      where: { id: assignmentId, status: expected },
+      data,
+    });
     if (changed.count !== 1) throw guardAssignmentErrors.stateConflict();
-    return toProviderGuardAssignment(await tx.providerGuardAssignment.findUniqueOrThrow({ where: { id: assignmentId }, include: providerGuardAssignmentInclude }));
+    return toProviderGuardAssignment(
+      await tx.providerGuardAssignment.findUniqueOrThrow({
+        where: { id: assignmentId },
+        include: providerGuardAssignmentInclude,
+      }),
+    );
   });
 }
 
-export async function endProviderGuardAssignment(actorUserId: string, assignmentId: string) {
+export async function endProviderGuardAssignment(
+  actorUserId: string,
+  assignmentId: string,
+) {
   return prisma.$transaction(async (tx) => {
     await lockGuardAssignment(tx, assignmentId);
-    const current = await requireAssignmentMutationAuthority(tx, actorUserId, assignmentId);
+    const current = await requireAssignmentMutationAuthority(
+      tx,
+      actorUserId,
+      assignmentId,
+    );
     if (!canEndProviderAssignment(current.status)) {
       throw guardAssignmentErrors.invalidTransition();
     }
@@ -437,7 +673,11 @@ export async function endProviderGuardAssignment(actorUserId: string, assignment
   });
 }
 
-export async function removePropertyGuard(adminUserId: string, propertyId: string, membershipId: string) {
+export async function removePropertyGuard(
+  adminUserId: string,
+  propertyId: string,
+  membershipId: string,
+) {
   return prisma.$transaction(async (tx) => {
     await propertyRepository.lockPropertyForMutation(propertyId, tx);
     const membership = await tx.propertyGuardMembership.findFirst({
@@ -462,10 +702,12 @@ export async function removePropertyGuard(adminUserId: string, propertyId: strin
         },
       },
     });
-    if (activeAssignments > 0) throw guardAssignmentErrors.membershipRemovalBlocked();
-    const targetStatus = membership.status === PropertyGuardMembershipStatus.PENDING_ACCEPTANCE
-      ? PropertyGuardMembershipStatus.CANCELLED
-      : PropertyGuardMembershipStatus.ENDED;
+    if (activeAssignments > 0)
+      throw guardAssignmentErrors.membershipRemovalBlocked();
+    const targetStatus =
+      membership.status === PropertyGuardMembershipStatus.PENDING_ACCEPTANCE
+        ? PropertyGuardMembershipStatus.CANCELLED
+        : PropertyGuardMembershipStatus.ENDED;
     const changed = await tx.propertyGuardMembership.updateMany({
       where: { id: membership.id, status: membership.status },
       data: { status: targetStatus, endedAt: new Date() },
@@ -481,10 +723,20 @@ export async function removePropertyGuard(adminUserId: string, propertyId: strin
   });
 }
 
-export const inviteGuard = (actorUserId: string, propertyId: string, input: AddPropertyGuardInput) => addPropertyGuard(actorUserId, propertyId, input);
+export const inviteGuard = (
+  actorUserId: string,
+  propertyId: string,
+  input: AddPropertyGuardInput,
+) => addPropertyGuard(actorUserId, propertyId, input);
 export const listOwnerAssignments = listProviderAssignments;
 export const updateOwnerAssignment = updateProviderGuardAssignment;
 export const endOwnerAssignment = endProviderGuardAssignment;
 export const listGuardAssignments = listMyProviderAssignments;
-export const acceptGuardAssignment = (guardUserId: string, membershipId: string) => respondToGuardMembership(guardUserId, membershipId, true);
-export const rejectGuardAssignment = (guardUserId: string, membershipId: string) => respondToGuardMembership(guardUserId, membershipId, false);
+export const acceptGuardAssignment = (
+  guardUserId: string,
+  membershipId: string,
+) => respondToGuardMembership(guardUserId, membershipId, true);
+export const rejectGuardAssignment = (
+  guardUserId: string,
+  membershipId: string,
+) => respondToGuardMembership(guardUserId, membershipId, false);

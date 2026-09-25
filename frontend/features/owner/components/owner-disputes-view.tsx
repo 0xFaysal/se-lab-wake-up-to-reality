@@ -9,24 +9,14 @@ import {
   ShieldCheck,
   Receipt,
   Search,
-  Filter,
   ChevronRight,
-  ArrowUpRight,
   CheckCircle2,
-  XCircle,
   FileText,
-  Building2,
-  Calendar,
-  Eye,
-  AlertCircle,
-  ChevronDown,
   Info,
-  DollarSign,
   HelpCircle,
   X,
   Check,
   Camera,
-  Car,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import { cn } from "@/lib/utils";
@@ -150,7 +140,7 @@ export function OwnerDisputesView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [propertyFilter, setPropertyFilter] = useState("ALL");
+  const propertyFilter = "ALL";
   const [sortBy, setSortBy] = useState<"URGENCY" | "NEWEST" | "AMOUNT_HIGH">("URGENCY");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 

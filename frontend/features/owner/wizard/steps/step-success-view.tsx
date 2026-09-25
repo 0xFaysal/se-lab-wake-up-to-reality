@@ -1,41 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  CheckCircle2,
   Check,
   Eye,
   Plus,
   ArrowRight,
   ExternalLink,
-  ShieldCheck,
   Calendar,
   DollarSign,
   Sliders,
   Clock,
   QrCode,
-  MapPin,
   TrendingUp,
   Zap,
   Building2,
   UserCheck,
-  ChevronRight,
   Sparkles,
 } from "lucide-react";
 import { ListingWizardShell } from "../listing-wizard-shell";
 
 export function StepSuccessView() {
-  const router = useRouter();
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
-  };
-
   return (
     <ListingWizardShell
       currentStep={7}
@@ -45,14 +32,6 @@ export function StepSuccessView() {
       isSuccessScreen={true}
       hideDefaultFooter={true}
     >
-      {/* Toast Notification */}
-      {toastMsg && (
-        <div className="fixed top-20 right-8 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs font-medium animate-in fade-in slide-in-from-top-2 border border-slate-700">
-          <CheckCircle2 className="size-4 text-emerald-400" />
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
       {/* Main 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
         {/* ================================================================= */}

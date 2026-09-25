@@ -2,39 +2,30 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
-  AlertTriangle,
   ArrowLeft,
   Building2,
   Calendar,
   Check,
   CheckCircle2,
   ChevronRight,
-  Clock,
   DollarSign,
   Eye,
   FileEdit,
   History,
-  Info,
   Layers,
   Lock,
   Mail,
   MessageSquare,
   Phone,
-  RefreshCw,
   RotateCcw,
   Save,
-  Settings,
   Shield,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Sliders,
-  User,
   Users,
-  X,
-  XCircle,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import { Switch } from "@/components/ui/switch";
@@ -46,7 +37,6 @@ import {
   DEFAULT_MANAGER_PERMISSIONS,
   ManagerPermissions,
   countEnabledPermissions,
-  countRestrictedPermissions,
 } from "@/lib/data/mock-owner-data";
 
 interface ManagerPermissionsViewProps {
@@ -220,7 +210,6 @@ const PERMISSION_GROUPS: {
 ];
 
 export function ManagerPermissionsView({ managerId }: ManagerPermissionsViewProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const initialPropertyId = searchParams.get("propertyId");
 

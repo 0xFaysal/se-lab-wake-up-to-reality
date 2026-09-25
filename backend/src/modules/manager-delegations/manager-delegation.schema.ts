@@ -49,10 +49,18 @@ export const createManagerDelegationSchema = z.object({
         });
       }
       if (new Set(value.permissions).size !== value.permissions.length) {
-        context.addIssue({ code: "custom", path: ["permissions"], message: "Permissions must be unique" });
+        context.addIssue({
+          code: "custom",
+          path: ["permissions"],
+          message: "Permissions must be unique",
+        });
       }
       if (new Set(value.resourceIds).size !== value.resourceIds.length) {
-        context.addIssue({ code: "custom", path: ["resourceIds"], message: "Resource IDs must be unique" });
+        context.addIssue({
+          code: "custom",
+          path: ["resourceIds"],
+          message: "Resource IDs must be unique",
+        });
       }
     }),
 });
@@ -107,14 +115,25 @@ export const createManagerDelegationByIdentifierSchema = z.object({
 export const updateManagerDelegationPermissionsSchema = z.object({
   params: z.object({ delegationId: z.uuid() }),
   body: z
-    .object({ permissions: permissionList, resourceIds: z.array(z.uuid()).max(100).default([]) })
+    .object({
+      permissions: permissionList,
+      resourceIds: z.array(z.uuid()).max(100).default([]),
+    })
     .strict()
     .superRefine((value, context) => {
       if (new Set(value.permissions).size !== value.permissions.length) {
-        context.addIssue({ code: "custom", path: ["permissions"], message: "Permissions must be unique" });
+        context.addIssue({
+          code: "custom",
+          path: ["permissions"],
+          message: "Permissions must be unique",
+        });
       }
       if (new Set(value.resourceIds).size !== value.resourceIds.length) {
-        context.addIssue({ code: "custom", path: ["resourceIds"], message: "Resource IDs must be unique" });
+        context.addIssue({
+          code: "custom",
+          path: ["resourceIds"],
+          message: "Resource IDs must be unique",
+        });
       }
     }),
 });

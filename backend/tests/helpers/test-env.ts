@@ -3,10 +3,8 @@ process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
 process.env.REDIS_URL = "redis://localhost:6379";
 process.env.CORS_ORIGIN = "http://localhost:3000";
 process.env.ENABLE_API_DOCS = "false";
-process.env.JWT_ACCESS_SECRET =
-  "unit-test-access-secret-000000000001";
-process.env.JWT_REFRESH_SECRET =
-  "unit-test-refresh-secret-000000000002";
+process.env.JWT_ACCESS_SECRET = "unit-test-access-secret-000000000001";
+process.env.JWT_REFRESH_SECRET = "unit-test-refresh-secret-000000000002";
 process.env.VERIFICATION_CODE_SECRET =
   "unit-test-verification-secret-000000003";
 process.env.AUTH_METADATA_HASH_SECRET =

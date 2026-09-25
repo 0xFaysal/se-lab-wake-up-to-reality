@@ -8,11 +8,9 @@ import {
   Crosshair,
   Building,
   Info,
-  ExternalLink,
   Eye,
   Sliders,
   Lightbulb,
-  CloudCheck,
   Compass,
   Check,
 } from "lucide-react";

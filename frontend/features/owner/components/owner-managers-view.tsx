@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Users,
   Plus,
@@ -320,9 +321,11 @@ export function OwnerManagersView() {
                     <div className="flex items-start gap-3.5 min-w-0 lg:min-w-[260px] shrink-0">
                       <div className="relative shrink-0">
                         {manager.avatarUrl ? (
-                          <img
+                          <Image
                             src={manager.avatarUrl}
                             alt={manager.name}
+                            width={48}
+                            height={48}
                             className="size-12 rounded-full object-cover border border-slate-200"
                           />
                         ) : (

@@ -33,7 +33,11 @@ export const createGuardController: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const createManagerController: RequestHandler = async (req, res, next) => {
+export const createManagerController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
   try {
     if (!req.auth) throw authErrors.authenticationRequired();
     const result = await createManagerAccount({

@@ -1,11 +1,31 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { GuardAssignmentStatus, PropertyGuardMembershipStatus } from "../../../generated/prisma/client.js";
-import { maskEmail, maskPhone, toGuardMembership, toProviderGuardAssignment } from "../../../src/modules/guard-assignments/guard-assignment.mapper.js";
-import type { GuardMembershipRecord, ProviderGuardAssignmentRecord } from "../../../src/modules/guard-assignments/guard-assignment.repository.js";
+import {
+  GuardAssignmentStatus,
+  PropertyGuardMembershipStatus,
+} from "../../../generated/prisma/client.js";
+import {
+  maskEmail,
+  maskPhone,
+  toGuardMembership,
+  toProviderGuardAssignment,
+} from "../../../src/modules/guard-assignments/guard-assignment.mapper.js";
+import type {
+  GuardMembershipRecord,
+  ProviderGuardAssignmentRecord,
+} from "../../../src/modules/guard-assignments/guard-assignment.repository.js";
 
-const property = { id: "property-id", name: "Gulshan Parking", publicArea: "Gulshan, Dhaka" };
-const guard = { id: "guard-id", fullName: "Security Guard", email: "guard@example.com", phone: "+8801712345678" };
+const property = {
+  id: "property-id",
+  name: "Gulshan Parking",
+  publicArea: "Gulshan, Dhaka",
+};
+const guard = {
+  id: "guard-id",
+  fullName: "Security Guard",
+  email: "guard@example.com",
+  phone: "+8801712345678",
+};
 const provider = { id: "provider-id", fullName: "Parking Provider" };
 
 const membership = {

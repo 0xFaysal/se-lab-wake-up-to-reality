@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Car,
@@ -10,28 +10,10 @@ import {
   ShieldCheck,
   RefreshCw,
   Search,
-  Filter,
-  MapPin,
   Phone,
   MessageSquare,
   ChevronRight,
-  ExternalLink,
-  Building2,
-  Users,
-  Eye,
-  SlidersHorizontal,
   X,
-  Check,
-  Flame,
-  Radio,
-  ArrowRight,
-  Sparkles,
-  Calendar,
-  CreditCard,
-  QrCode,
-  Lock,
-  ArrowUpRight,
-  Maximize2,
   LayoutGrid,
   ListFilter,
 } from "lucide-react";

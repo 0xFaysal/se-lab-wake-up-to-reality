@@ -141,18 +141,78 @@ async function main(): Promise<void> {
 
   if (!admin) throw new Error("Admin seed could not be resolved");
   const emailTemplates = [
-    { type: EmailTemplateType.EMAIL_VERIFICATION_OTP, name: "Email verification code", subject: "{{otp}} is your ParkEase BD verification code", htmlBody: "<h1>Verify your email</h1><p>Hello {{userName}},</p><p>Your verification code is <strong>{{otp}}</strong>.</p><p>It expires in {{expiresIn}} minutes.</p>", textBody: "Hello {{userName}},\n\nYour ParkEase BD verification code is {{otp}}.\nIt expires in {{expiresIn}} minutes.", allowedVariables: ["userName", "otp", "expiresIn"] },
-    { type: EmailTemplateType.ACCOUNT_SETUP, name: "Admin-created account setup", subject: "Complete your ParkEase BD account setup", htmlBody: "<h1>Complete your account setup</h1><p>Hello {{userName}},</p><p>Your {{status}} account is ready. Use this one-time link to set your password:</p><p><a href=\"{{setupUrl}}\">Set private password</a></p><p>The link expires in {{expiresIn}} minutes.</p>", textBody: "Hello {{userName}},\n\nYour {{status}} account is ready. Set your password: {{setupUrl}}\nThe link expires in {{expiresIn}} minutes.", allowedVariables: ["userName", "status", "setupUrl", "expiresIn"] },
-    { type: EmailTemplateType.PASSWORD_RESET, name: "Password reset", subject: "Reset your ParkEase BD password", htmlBody: "<h1>Reset your password</h1><p>Hello {{userName}},</p><p><a href=\"{{resetUrl}}\">Reset password</a></p><p>The link expires in {{expiresIn}} minutes.</p>", textBody: "Hello {{userName}},\n\nReset your password: {{resetUrl}}\nThe link expires in {{expiresIn}} minutes.", allowedVariables: ["userName", "resetUrl", "expiresIn"] },
-    { type: EmailTemplateType.GUARD_INVITATION, name: "Guard invitation", subject: "You have been invited to ParkEase BD", htmlBody: "<h1>Complete your Guard account</h1><p>Hello {{userName}},</p><p><a href=\"{{setupUrl}}\">Set account password</a></p><p>The link expires in {{expiresIn}} minutes.</p>", textBody: "Hello {{userName}},\n\nComplete your Guard account: {{setupUrl}}\nThe link expires in {{expiresIn}} minutes.", allowedVariables: ["userName", "setupUrl", "expiresIn"] },
-    { type: EmailTemplateType.MANAGER_INVITATION, name: "Manager invitation", subject: "You have been invited to manage ParkEase BD operations", htmlBody: "<h1>Complete your Manager account</h1><p>Hello {{userName}},</p><p><a href=\"{{setupUrl}}\">Set account password</a></p><p>The link expires in {{expiresIn}} minutes.</p>", textBody: "Hello {{userName}},\n\nComplete your Manager account: {{setupUrl}}\nThe link expires in {{expiresIn}} minutes.", allowedVariables: ["userName", "setupUrl", "expiresIn"] },
-    { type: EmailTemplateType.BROADCAST, name: "Platform broadcast", subject: "{{campaignTitle}}", htmlBody: "<h1>{{campaignTitle}}</h1><p>Hello {{userName}},</p><p>ParkEase BD has an update for you.</p>", textBody: "{{campaignTitle}}\n\nHello {{userName}},\n\nParkEase BD has an update for you.", allowedVariables: ["campaignTitle", "userName"] },
+    {
+      type: EmailTemplateType.EMAIL_VERIFICATION_OTP,
+      name: "Email verification code",
+      subject: "{{otp}} is your ParkEase BD verification code",
+      htmlBody:
+        "<h1>Verify your email</h1><p>Hello {{userName}},</p><p>Your verification code is <strong>{{otp}}</strong>.</p><p>It expires in {{expiresIn}} minutes.</p>",
+      textBody:
+        "Hello {{userName}},\n\nYour ParkEase BD verification code is {{otp}}.\nIt expires in {{expiresIn}} minutes.",
+      allowedVariables: ["userName", "otp", "expiresIn"],
+    },
+    {
+      type: EmailTemplateType.ACCOUNT_SETUP,
+      name: "Admin-created account setup",
+      subject: "Complete your ParkEase BD account setup",
+      htmlBody:
+        '<h1>Complete your account setup</h1><p>Hello {{userName}},</p><p>Your {{status}} account is ready. Use this one-time link to set your password:</p><p><a href="{{setupUrl}}">Set private password</a></p><p>The link expires in {{expiresIn}} minutes.</p>',
+      textBody:
+        "Hello {{userName}},\n\nYour {{status}} account is ready. Set your password: {{setupUrl}}\nThe link expires in {{expiresIn}} minutes.",
+      allowedVariables: ["userName", "status", "setupUrl", "expiresIn"],
+    },
+    {
+      type: EmailTemplateType.PASSWORD_RESET,
+      name: "Password reset",
+      subject: "Reset your ParkEase BD password",
+      htmlBody:
+        '<h1>Reset your password</h1><p>Hello {{userName}},</p><p><a href="{{resetUrl}}">Reset password</a></p><p>The link expires in {{expiresIn}} minutes.</p>',
+      textBody:
+        "Hello {{userName}},\n\nReset your password: {{resetUrl}}\nThe link expires in {{expiresIn}} minutes.",
+      allowedVariables: ["userName", "resetUrl", "expiresIn"],
+    },
+    {
+      type: EmailTemplateType.GUARD_INVITATION,
+      name: "Guard invitation",
+      subject: "You have been invited to ParkEase BD",
+      htmlBody:
+        '<h1>Complete your Guard account</h1><p>Hello {{userName}},</p><p><a href="{{setupUrl}}">Set account password</a></p><p>The link expires in {{expiresIn}} minutes.</p>',
+      textBody:
+        "Hello {{userName}},\n\nComplete your Guard account: {{setupUrl}}\nThe link expires in {{expiresIn}} minutes.",
+      allowedVariables: ["userName", "setupUrl", "expiresIn"],
+    },
+    {
+      type: EmailTemplateType.MANAGER_INVITATION,
+      name: "Manager invitation",
+      subject: "You have been invited to manage ParkEase BD operations",
+      htmlBody:
+        '<h1>Complete your Manager account</h1><p>Hello {{userName}},</p><p><a href="{{setupUrl}}">Set account password</a></p><p>The link expires in {{expiresIn}} minutes.</p>',
+      textBody:
+        "Hello {{userName}},\n\nComplete your Manager account: {{setupUrl}}\nThe link expires in {{expiresIn}} minutes.",
+      allowedVariables: ["userName", "setupUrl", "expiresIn"],
+    },
+    {
+      type: EmailTemplateType.BROADCAST,
+      name: "Platform broadcast",
+      subject: "{{campaignTitle}}",
+      htmlBody:
+        "<h1>{{campaignTitle}}</h1><p>Hello {{userName}},</p><p>ParkEase BD has an update for you.</p>",
+      textBody:
+        "{{campaignTitle}}\n\nHello {{userName}},\n\nParkEase BD has an update for you.",
+      allowedVariables: ["campaignTitle", "userName"],
+    },
   ];
   for (const template of emailTemplates) {
     await prisma.emailTemplate.upsert({
       where: { type_version: { type: template.type, version: 1 } },
       update: {},
-      create: { ...template, version: 1, status: ContentStatus.PUBLISHED, publishedAt: new Date(), createdByAdminId: admin.id },
+      create: {
+        ...template,
+        version: 1,
+        status: ContentStatus.PUBLISHED,
+        publishedAt: new Date(),
+        createdByAdminId: admin.id,
+      },
     });
   }
   await seedProfessionalEmailTemplates(prisma, admin.id);

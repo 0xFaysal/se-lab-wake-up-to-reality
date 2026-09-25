@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import {
   Shield,
   ShieldCheck,
-  Lock,
   KeyRound,
-  Eye,
   Camera,
   Car,
   Bike,
@@ -15,7 +12,6 @@ import {
   Lightbulb,
   CheckCircle2,
   Check,
-  Sparkles,
   ArrowUpDown,
   Clock,
   Warehouse,
@@ -26,13 +22,6 @@ import {
   Bath,
   Info,
   Sliders,
-  AlertCircle,
-  QrCode,
-  Flame,
-  Moon,
-  FileText,
-  PhoneCall,
-  X,
 } from "lucide-react";
 import { ListingWizardShell } from "../listing-wizard-shell";
 

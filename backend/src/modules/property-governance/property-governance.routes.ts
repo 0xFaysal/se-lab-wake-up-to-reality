@@ -32,7 +32,11 @@ import {
 } from "./property-governance.schema.js";
 
 export const propertyGovernanceRouter = Router();
-const noStore = (_req: Parameters<typeof authenticate>[0], res: Parameters<typeof authenticate>[1], next: Parameters<typeof authenticate>[2]) => {
+const noStore = (
+  _req: Parameters<typeof authenticate>[0],
+  res: Parameters<typeof authenticate>[1],
+  next: Parameters<typeof authenticate>[2],
+) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 };

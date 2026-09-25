@@ -18,16 +18,16 @@ It is intentionally not stored on `Property`.
 
 ## Authority matrix
 
-| Action | Sole Provider | Multi-provider member | Building Manager | Delegated Manager | Admin |
-| --- | --- | --- | --- | --- | --- |
-| Provider commercial scope | Yes | Own scope only | No | Explicit permission and grantor scope | Administrative only |
-| Common Property rules | Yes | Proposal only | Yes | No | Fallback |
-| Temporary closure | Yes | No direct authority | Yes | No | Fallback |
-| Shared Property images | Yes | No direct mutation | Yes | `IMAGE_MANAGE` only in single-provider mode | Yes |
-| View Property Guard directory | Yes | Yes | No | `GUARD_VIEW` | Yes |
-| Add Property Guard | Yes | Yes | No | `GUARD_ADD_TO_PROPERTY` | Administrative removal only |
-| Provider Guard assignment | Own scope | Own scope | No | `GUARD_ASSIGN` for grantor scope | No implicit commercial authority |
-| Manager delegation changes | Yes | Own delegation only | No | Never | Controlled account creation only |
+| Action                        | Sole Provider | Multi-provider member | Building Manager | Delegated Manager                           | Admin                            |
+| ----------------------------- | ------------- | --------------------- | ---------------- | ------------------------------------------- | -------------------------------- |
+| Provider commercial scope     | Yes           | Own scope only        | No               | Explicit permission and grantor scope       | Administrative only              |
+| Common Property rules         | Yes           | Proposal only         | Yes              | No                                          | Fallback                         |
+| Temporary closure             | Yes           | No direct authority   | Yes              | No                                          | Fallback                         |
+| Shared Property images        | Yes           | No direct mutation    | Yes              | `IMAGE_MANAGE` only in single-provider mode | Yes                              |
+| View Property Guard directory | Yes           | Yes                   | No               | `GUARD_VIEW`                                | Yes                              |
+| Add Property Guard            | Yes           | Yes                   | No               | `GUARD_ADD_TO_PROPERTY`                     | Administrative removal only      |
+| Provider Guard assignment     | Own scope     | Own scope             | No               | `GUARD_ASSIGN` for grantor scope            | No implicit commercial authority |
+| Manager delegation changes    | Yes           | Own delegation only   | No               | Never                                       | Controlled account creation only |
 
 A global `MANAGER` role grants no business authority. Building Manager is a
 separate Property-scoped assignment and grants only common-rule and temporary
@@ -87,13 +87,13 @@ authorization on both routes uses current Provider membership, never
 
 ## Route compatibility
 
-| Old route or term | Canonical replacement | State |
-| --- | --- | --- |
-| `/api/v1/owner/properties` | `/api/v1/provider/properties` | Deprecated alias |
-| `PARKING_OWNER` registration input | `PROVIDER` | Deprecated input alias |
-| `POST /api/v1/admin/properties/merge` | `POST /api/v1/admin/properties/:duplicateId/merge` | Deprecated alias |
-| `POST /api/v1/provider/properties/:propertyId/guard-invitations` | `POST /api/v1/properties/:propertyId/guards` | Deprecated alias |
-| `POST /api/v1/provider/properties/:propertyId/guard-assignments` | `POST /api/v1/provider/guard-assignments` | Compatibility alias |
+| Old route or term                                                | Canonical replacement                              | State                  |
+| ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------- |
+| `/api/v1/owner/properties`                                       | `/api/v1/provider/properties`                      | Deprecated alias       |
+| `PARKING_OWNER` registration input                               | `PROVIDER`                                         | Deprecated input alias |
+| `POST /api/v1/admin/properties/merge`                            | `POST /api/v1/admin/properties/:duplicateId/merge` | Deprecated alias       |
+| `POST /api/v1/provider/properties/:propertyId/guard-invitations` | `POST /api/v1/properties/:propertyId/guards`       | Deprecated alias       |
+| `POST /api/v1/provider/properties/:propertyId/guard-assignments` | `POST /api/v1/provider/guard-assignments`          | Compatibility alias    |
 
 Aliases call the same services and do not duplicate authorization or mutation
 logic.

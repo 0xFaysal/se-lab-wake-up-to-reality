@@ -13,7 +13,9 @@ export type BuildingManagerNominationInput = z.infer<
 >["body"];
 export type GovernanceVoteInput = z.infer<typeof governanceVoteSchema>["body"];
 export type CommonRulesInput = z.infer<typeof commonRulesSchema>["body"];
-export type TemporaryClosureInput = z.infer<typeof temporaryClosureSchema>["body"];
+export type TemporaryClosureInput = z.infer<
+  typeof temporaryClosureSchema
+>["body"];
 export type PropertyChangeProposalInput = z.infer<
   typeof propertyChangeProposalSchema
 >["body"];

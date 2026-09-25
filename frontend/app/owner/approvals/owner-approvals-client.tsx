@@ -6,17 +6,11 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  User,
   Building2,
   Search,
-  Filter,
-  ChevronDown,
   ShieldAlert,
   FileText,
   Activity,
-  AlertTriangle,
-  ArrowRight,
-  MoreVertical,
   Eye,
   Lock,
   Sparkles,
@@ -72,7 +66,7 @@ interface RejectDialogProps {
   onReject: (reason: string) => void;
 }
 
-function RejectDialog({ isOpen, requestId, actionType, onClose, onReject }: RejectDialogProps) {
+function RejectDialog({ isOpen, actionType, onClose, onReject }: RejectDialogProps) {
   const [reason, setReason] = useState("");
 
   if (!isOpen) return null;

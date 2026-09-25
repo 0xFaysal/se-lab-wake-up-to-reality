@@ -61,7 +61,11 @@ export const createPropertySchema = z.object({
       visitorIdentificationRequired: z.boolean().optional(),
       vehicleHeightLimitCm: z.number().int().positive().max(1000).optional(),
       entryCutoffLocalTime: timeSchema.optional(),
-      generalParkingRules: textField("General parking rules", 1, 2000).optional(),
+      generalParkingRules: textField(
+        "General parking rules",
+        1,
+        2000,
+      ).optional(),
       commonSafetyRules: textField("Common safety rules", 1, 2000).optional(),
     })
     .strict()
@@ -84,7 +88,13 @@ export const updatePropertySchema = z.object({
         .nullable()
         .optional(),
       visitorIdentificationRequired: z.boolean().optional(),
-      vehicleHeightLimitCm: z.number().int().positive().max(1000).nullable().optional(),
+      vehicleHeightLimitCm: z
+        .number()
+        .int()
+        .positive()
+        .max(1000)
+        .nullable()
+        .optional(),
       entryCutoffLocalTime: timeSchema.nullable().optional(),
       generalParkingRules: textField("General parking rules", 1, 2000)
         .nullable()

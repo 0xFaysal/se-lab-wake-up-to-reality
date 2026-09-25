@@ -29,10 +29,16 @@ const delegationInclude = {
 } satisfies Prisma.ProviderManagerDelegationInclude;
 
 function isUniqueConstraintError(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
 }
 
-async function lockDelegation(tx: Prisma.TransactionClient, delegationId: string) {
+async function lockDelegation(
+  tx: Prisma.TransactionClient,
+  delegationId: string,
+) {
   await tx.$queryRaw<Array<{ lockResult: string }>>`
     SELECT pg_advisory_xact_lock(
       hashtextextended(${`manager-delegation:${delegationId}`}, 0)
@@ -67,7 +73,8 @@ async function requireValidResources(
   const count = await tx.parkingSpot.count({
     where: { id: { in: resourceIds }, propertyId, providerMembershipId },
   });
-  if (count !== resourceIds.length) throw managerDelegationErrors.invalidResourceScope();
+  if (count !== resourceIds.length)
+    throw managerDelegationErrors.invalidResourceScope();
 }
 
 export async function createManagerDelegation(
@@ -77,7 +84,11 @@ export async function createManagerDelegation(
   try {
     return await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(input.propertyId, tx);
-      const membership = await requireProviderMembership(tx, providerUserId, input.propertyId);
+      const membership = await requireProviderMembership(
+        tx,
+        providerUserId,
+        input.propertyId,
+      );
       const manager = await tx.user.findFirst({
         where: {
           id: input.managerUserId,
@@ -88,7 +99,12 @@ export async function createManagerDelegation(
         select: { id: true },
       });
       if (!manager) throw managerDelegationErrors.managerNotEligible();
-      await requireValidResources(tx, membership.id, input.propertyId, input.resourceIds);
+      await requireValidResources(
+        tx,
+        membership.id,
+        input.propertyId,
+        input.resourceIds,
+      );
 
       const delegation = await tx.providerManagerDelegation.create({
         data: {
@@ -97,8 +113,14 @@ export async function createManagerDelegation(
           propertyId: input.propertyId,
           validFrom: input.validFrom ? new Date(input.validFrom) : null,
           validUntil: input.validUntil ? new Date(input.validUntil) : null,
-          permissions: { create: input.permissions.map((permission) => ({ permission })) },
-          resources: { create: input.resourceIds.map((parkingSpotId) => ({ parkingSpotId })) },
+          permissions: {
+            create: input.permissions.map((permission) => ({ permission })),
+          },
+          resources: {
+            create: input.resourceIds.map((parkingSpotId) => ({
+              parkingSpotId,
+            })),
+          },
         },
         include: delegationInclude,
       });
@@ -108,12 +130,16 @@ export async function createManagerDelegation(
         propertyId: input.propertyId,
         entityType: "ProviderManagerDelegation",
         entityId: delegation.id,
-        metadata: { managerUserId: manager.id, permissionCount: input.permissions.length },
+        metadata: {
+          managerUserId: manager.id,
+          permissionCount: input.permissions.length,
+        },
       });
       return toManagerDelegationDto(delegation);
     });
   } catch (error) {
-    if (isUniqueConstraintError(error)) throw managerDelegationErrors.conflict();
+    if (isUniqueConstraintError(error))
+      throw managerDelegationErrors.conflict();
     throw error;
   }
 }
@@ -169,7 +195,10 @@ export async function listManagerDelegations(managerUserId: string) {
   return records.map(toManagerDelegationDto);
 }
 
-export async function getProviderDelegation(providerUserId: string, delegationId: string) {
+export async function getProviderDelegation(
+  providerUserId: string,
+  delegationId: string,
+) {
   const record = await prisma.providerManagerDelegation.findFirst({
     where: {
       id: delegationId,
@@ -215,14 +244,27 @@ export async function updateManagerDelegationPermissions(
       throw managerDelegationErrors.invalidTransition();
     }
     await requireProviderMembership(tx, providerUserId, current.propertyId);
-    await requireValidResources(tx, current.grantorProviderMembershipId, current.propertyId, input.resourceIds);
-    await tx.providerManagerDelegationPermission.deleteMany({ where: { delegationId } });
-    await tx.providerManagerDelegationResource.deleteMany({ where: { delegationId } });
+    await requireValidResources(
+      tx,
+      current.grantorProviderMembershipId,
+      current.propertyId,
+      input.resourceIds,
+    );
+    await tx.providerManagerDelegationPermission.deleteMany({
+      where: { delegationId },
+    });
+    await tx.providerManagerDelegationResource.deleteMany({
+      where: { delegationId },
+    });
     const updated = await tx.providerManagerDelegation.update({
       where: { id: delegationId },
       data: {
-        permissions: { create: input.permissions.map((permission) => ({ permission })) },
-        resources: { create: input.resourceIds.map((parkingSpotId) => ({ parkingSpotId })) },
+        permissions: {
+          create: input.permissions.map((permission) => ({ permission })),
+        },
+        resources: {
+          create: input.resourceIds.map((parkingSpotId) => ({ parkingSpotId })),
+        },
       },
       include: delegationInclude,
     });
@@ -251,19 +293,28 @@ async function finishDelegation(
       include: { grantorProviderMembership: true },
     });
     if (!current) throw managerDelegationErrors.notFound();
-    const allowed = actor === "MANAGER"
-      ? current.managerUserId === actorUserId
-      : current.grantorProviderMembership.providerUserId === actorUserId;
+    const allowed =
+      actor === "MANAGER"
+        ? current.managerUserId === actorUserId
+        : current.grantorProviderMembership.providerUserId === actorUserId;
     if (!allowed) throw managerDelegationErrors.notFound();
 
     if (accept) {
-      if (actor !== "MANAGER" || current.status !== ManagerDelegationStatus.PENDING_ACCEPTANCE) {
+      if (
+        actor !== "MANAGER" ||
+        current.status !== ManagerDelegationStatus.PENDING_ACCEPTANCE
+      ) {
         throw managerDelegationErrors.invalidTransition();
       }
       const now = new Date();
-      if (current.validUntil && current.validUntil <= now) throw managerDelegationErrors.invalidTransition();
+      if (current.validUntil && current.validUntil <= now)
+        throw managerDelegationErrors.invalidTransition();
       const changed = await tx.providerManagerDelegation.updateMany({
-        where: { id: delegationId, managerUserId: actorUserId, status: ManagerDelegationStatus.PENDING_ACCEPTANCE },
+        where: {
+          id: delegationId,
+          managerUserId: actorUserId,
+          status: ManagerDelegationStatus.PENDING_ACCEPTANCE,
+        },
         data: { status: ManagerDelegationStatus.ACTIVE, acceptedAt: now },
       });
       if (changed.count !== 1) throw managerDelegationErrors.conflict();
@@ -275,9 +326,10 @@ async function finishDelegation(
       ) {
         throw managerDelegationErrors.invalidTransition();
       }
-      const status = current.status === ManagerDelegationStatus.PENDING_ACCEPTANCE
-        ? ManagerDelegationStatus.CANCELLED
-        : ManagerDelegationStatus.ENDED;
+      const status =
+        current.status === ManagerDelegationStatus.PENDING_ACCEPTANCE
+          ? ManagerDelegationStatus.CANCELLED
+          : ManagerDelegationStatus.ENDED;
       const changed = await tx.providerManagerDelegation.updateMany({
         where: { id: delegationId, status: current.status },
         data: { status, endedAt: new Date() },
@@ -302,9 +354,15 @@ async function finishDelegation(
   });
 }
 
-export const acceptManagerDelegation = (managerUserId: string, delegationId: string) =>
-  finishDelegation(managerUserId, delegationId, "MANAGER", true);
-export const rejectManagerDelegation = (managerUserId: string, delegationId: string) =>
-  finishDelegation(managerUserId, delegationId, "MANAGER", false);
-export const endManagerDelegation = (providerUserId: string, delegationId: string) =>
-  finishDelegation(providerUserId, delegationId, "PROVIDER", false);
+export const acceptManagerDelegation = (
+  managerUserId: string,
+  delegationId: string,
+) => finishDelegation(managerUserId, delegationId, "MANAGER", true);
+export const rejectManagerDelegation = (
+  managerUserId: string,
+  delegationId: string,
+) => finishDelegation(managerUserId, delegationId, "MANAGER", false);
+export const endManagerDelegation = (
+  providerUserId: string,
+  delegationId: string,
+) => finishDelegation(providerUserId, delegationId, "PROVIDER", false);

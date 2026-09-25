@@ -1,39 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Scale,
-  AlertTriangle,
-  Clock,
   ShieldCheck,
   ChevronRight,
   ArrowLeft,
   CheckCircle2,
-  XCircle,
   FileText,
   Upload,
   Camera,
   Video,
-  Download,
-  Building2,
-  Car,
   User,
   Phone,
-  MessageSquare,
-  AlertCircle,
-  DollarSign,
   Check,
   X,
-  ExternalLink,
-  Lock,
   Send,
-  HelpCircle,
-  Sparkles,
-  Paperclip,
   Trash2,
-  Eye,
   Info,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
@@ -315,7 +299,6 @@ export function OwnerDisputeDetailView({ disputeId }: { disputeId: string }) {
 
   const isActionRequired = dispute.status === "ACTION_REQUIRED";
   const isUnderReview = dispute.status === "UNDER_REVIEW";
-  const isResolved = dispute.status === "RESOLVED" || dispute.status === "REFUNDED";
 
   return (
     <div className="flex flex-col min-h-full relative bg-[#f9f9ff]">

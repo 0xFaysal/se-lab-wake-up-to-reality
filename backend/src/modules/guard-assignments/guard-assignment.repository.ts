@@ -20,6 +20,7 @@ export const providerGuardAssignmentInclude = {
 export type GuardMembershipRecord = Prisma.PropertyGuardMembershipGetPayload<{
   include: typeof guardMembershipInclude;
 }>;
-export type ProviderGuardAssignmentRecord = Prisma.ProviderGuardAssignmentGetPayload<{
-  include: typeof providerGuardAssignmentInclude;
-}>;
+export type ProviderGuardAssignmentRecord =
+  Prisma.ProviderGuardAssignmentGetPayload<{
+    include: typeof providerGuardAssignmentInclude;
+  }>;

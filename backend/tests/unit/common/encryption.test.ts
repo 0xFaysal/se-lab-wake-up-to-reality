@@ -2,9 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import "../../helpers/test-env.js";
 
-const { encryptSensitiveText, decryptSensitiveText } = await import(
-  "../../../src/common/security/encryption.js"
-);
+const { encryptSensitiveText, decryptSensitiveText } =
+  await import("../../../src/common/security/encryption.js");
 
 describe("encryptSensitiveText", () => {
   it("should encrypt and decrypt a string correctly", () => {

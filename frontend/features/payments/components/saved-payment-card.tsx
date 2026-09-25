@@ -2,7 +2,6 @@
 
 import { CreditCard, Smartphone, Wallet } from "lucide-react";
 import { SavedPaymentMethod } from "../types";
-import { cn } from "@/lib/utils";
 
 interface SavedPaymentCardProps {
   method: SavedPaymentMethod;

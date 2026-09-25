@@ -8,7 +8,8 @@ export const redis = createClient({
     // In serverless (Vercel), connections are dropped between invocations.
     // Cap retries so a bad URL fails fast instead of hanging the function.
     reconnectStrategy: (retries) => {
-      if (retries >= 3) return new Error("Redis reconnect failed after 3 attempts");
+      if (retries >= 3)
+        return new Error("Redis reconnect failed after 3 attempts");
       return Math.min(retries * 200, 1000);
     },
   },

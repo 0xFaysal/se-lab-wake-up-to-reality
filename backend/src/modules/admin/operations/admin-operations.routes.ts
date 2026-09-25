@@ -20,19 +20,75 @@ adminOperationsRouter.use(
 );
 
 adminOperationsRouter.get("/dashboard/summary", controller.dashboardSummary);
-adminOperationsRouter.get("/users", validate(schema.adminUsersQuerySchema), controller.listUsers);
-adminOperationsRouter.get("/users/:id", validate(schema.adminEntityIdSchema), controller.getUser);
-adminOperationsRouter.get("/properties", validate(schema.adminPropertiesQuerySchema), controller.listProperties);
-adminOperationsRouter.get("/bookings", validate(schema.adminBookingsQuerySchema), controller.listBookings);
-adminOperationsRouter.get("/bookings/:id", validate(schema.adminEntityIdSchema), controller.getBooking);
-adminOperationsRouter.get("/sessions", validate(schema.adminSessionsQuerySchema), controller.listSessions);
-adminOperationsRouter.get("/payments", validate(schema.adminPaymentsQuerySchema), controller.listPayments);
-adminOperationsRouter.get("/payments/:id", validate(schema.adminEntityIdSchema), controller.getPayment);
-adminOperationsRouter.get("/refunds", validate(schema.adminRefundsQuerySchema), controller.listRefunds);
-adminOperationsRouter.get("/ledger/transactions", validate(schema.adminLedgerQuerySchema), controller.listLedger);
-adminOperationsRouter.get("/ledger/transactions/:id", validate(schema.adminEntityIdSchema), controller.getLedgerTransaction);
-adminOperationsRouter.get("/audit-events", validate(schema.adminAuditQuerySchema), controller.listAuditEvents);
-adminOperationsRouter.get("/audit-events/:id", validate(schema.adminEntityIdSchema), controller.getAuditEvent);
-adminOperationsRouter.get("/reviews", validate(schema.adminReviewsQuerySchema), controller.listReviews);
+adminOperationsRouter.get(
+  "/users",
+  validate(schema.adminUsersQuerySchema),
+  controller.listUsers,
+);
+adminOperationsRouter.get(
+  "/users/:id",
+  validate(schema.adminEntityIdSchema),
+  controller.getUser,
+);
+adminOperationsRouter.get(
+  "/properties",
+  validate(schema.adminPropertiesQuerySchema),
+  controller.listProperties,
+);
+adminOperationsRouter.get(
+  "/bookings",
+  validate(schema.adminBookingsQuerySchema),
+  controller.listBookings,
+);
+adminOperationsRouter.get(
+  "/bookings/:id",
+  validate(schema.adminEntityIdSchema),
+  controller.getBooking,
+);
+adminOperationsRouter.get(
+  "/sessions",
+  validate(schema.adminSessionsQuerySchema),
+  controller.listSessions,
+);
+adminOperationsRouter.get(
+  "/payments",
+  validate(schema.adminPaymentsQuerySchema),
+  controller.listPayments,
+);
+adminOperationsRouter.get(
+  "/payments/:id",
+  validate(schema.adminEntityIdSchema),
+  controller.getPayment,
+);
+adminOperationsRouter.get(
+  "/refunds",
+  validate(schema.adminRefundsQuerySchema),
+  controller.listRefunds,
+);
+adminOperationsRouter.get(
+  "/ledger/transactions",
+  validate(schema.adminLedgerQuerySchema),
+  controller.listLedger,
+);
+adminOperationsRouter.get(
+  "/ledger/transactions/:id",
+  validate(schema.adminEntityIdSchema),
+  controller.getLedgerTransaction,
+);
+adminOperationsRouter.get(
+  "/audit-events",
+  validate(schema.adminAuditQuerySchema),
+  controller.listAuditEvents,
+);
+adminOperationsRouter.get(
+  "/audit-events/:id",
+  validate(schema.adminEntityIdSchema),
+  controller.getAuditEvent,
+);
+adminOperationsRouter.get(
+  "/reviews",
+  validate(schema.adminReviewsQuerySchema),
+  controller.listReviews,
+);
 adminOperationsRouter.get("/system/health", controller.systemHealth);
 adminOperationsRouter.get("/settings/capabilities", controller.capabilities);

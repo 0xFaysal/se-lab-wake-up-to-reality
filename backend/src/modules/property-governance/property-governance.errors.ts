@@ -17,7 +17,8 @@ export const governanceErrors = {
     new AppError({
       statusCode: 403,
       code: "PROPERTY_COMMON_AUTHORITY_REQUIRED",
-      message: "Current Property governance does not permit this shared operation",
+      message:
+        "Current Property governance does not permit this shared operation",
     }),
   managerRelationshipRequired: () =>
     new AppError({
@@ -41,6 +42,7 @@ export const governanceErrors = {
     new AppError({
       statusCode: 409,
       code: "PROPERTY_PROVIDER_EXIT_BLOCKED",
-      message: "Transfer or retire active parking resources before leaving this Property",
+      message:
+        "Transfer or retire active parking resources before leaving this Property",
     }),
 };

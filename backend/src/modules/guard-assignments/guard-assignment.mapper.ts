@@ -34,7 +34,9 @@ export function toGuardMembership(record: GuardMembershipRecord) {
   };
 }
 
-export function toProviderGuardAssignment(record: ProviderGuardAssignmentRecord) {
+export function toProviderGuardAssignment(
+  record: ProviderGuardAssignmentRecord,
+) {
   return {
     id: record.id,
     status: record.status,

@@ -94,7 +94,9 @@ export const refreshController: RequestHandler = async (req, res, next) => {
   try {
     const refreshToken =
       req.cookies?.refresh_token ||
-      (typeof req.body?.refreshToken === "string" ? req.body.refreshToken.trim() : undefined) ||
+      (typeof req.body?.refreshToken === "string"
+        ? req.body.refreshToken.trim()
+        : undefined) ||
       req.header("x-refresh-token");
 
     if (!refreshToken) {
@@ -140,7 +142,9 @@ export const logoutController: RequestHandler = async (req, res, next) => {
   try {
     const refreshToken =
       req.cookies?.refresh_token ||
-      (typeof req.body?.refreshToken === "string" ? req.body.refreshToken.trim() : undefined) ||
+      (typeof req.body?.refreshToken === "string"
+        ? req.body.refreshToken.trim()
+        : undefined) ||
       req.header("x-refresh-token");
     await logoutUser(refreshToken);
     clearAuthCookies(res);

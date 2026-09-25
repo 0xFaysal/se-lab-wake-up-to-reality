@@ -63,26 +63,33 @@ const professionalTemplates: ProfessionalTemplate[] = [
       preheader: "Use {{otp}} to verify your ParkEase BD email address.",
       eyebrow: "Email verification",
       heading: "Confirm your email address",
-      content: "Hello <strong>{{userName}}</strong>,<br><br>Enter the verification code below to finish securing your account.",
-      callout: '<div style="text-align:center;font-size:34px;line-height:42px;font-weight:800;letter-spacing:8px;color:#075b49">{{otp}}</div><div style="margin-top:8px;text-align:center;color:#596864;font-size:13px">Expires in {{expiresIn}} minutes</div>',
+      content:
+        "Hello <strong>{{userName}}</strong>,<br><br>Enter the verification code below to finish securing your account.",
+      callout:
+        '<div style="text-align:center;font-size:34px;line-height:42px;font-weight:800;letter-spacing:8px;color:#075b49">{{otp}}</div><div style="margin-top:8px;text-align:center;color:#596864;font-size:13px">Expires in {{expiresIn}} minutes</div>',
     }),
-    textBody: "Hello {{userName}},\n\nYour ParkEase BD verification code is {{otp}}.\nThis code expires in {{expiresIn}} minutes.\n\nIf you did not request this code, ignore this email.",
+    textBody:
+      "Hello {{userName}},\n\nYour ParkEase BD verification code is {{otp}}.\nThis code expires in {{expiresIn}} minutes.\n\nIf you did not request this code, ignore this email.",
     allowedVariables: ["userName", "otp", "expiresIn"],
   },
   {
     type: EmailTemplateType.ACCOUNT_SETUP,
     name: "Admin-created account setup",
     subject: "Complete your ParkEase BD account setup",
-    preheader: "Set your private password to activate your ParkEase BD account.",
+    preheader:
+      "Set your private password to activate your ParkEase BD account.",
     htmlBody: emailShell({
       preheader: "Complete your ParkEase BD account setup.",
       eyebrow: "Account setup",
       heading: "Your account is ready",
-      content: "Hello <strong>{{userName}}</strong>,<br><br>Your <strong>{{status}}</strong> account has been created. Set a private password before signing in.",
+      content:
+        "Hello <strong>{{userName}}</strong>,<br><br>Your <strong>{{status}}</strong> account has been created. Set a private password before signing in.",
       action: { label: "Set private password", url: "{{setupUrl}}" },
-      callout: "This secure setup link expires in {{expiresIn}} minutes and can only be used once.",
+      callout:
+        "This secure setup link expires in {{expiresIn}} minutes and can only be used once.",
     }),
-    textBody: "Hello {{userName}},\n\nYour {{status}} account is ready. Set your private password: {{setupUrl}}\n\nThis link expires in {{expiresIn}} minutes.",
+    textBody:
+      "Hello {{userName}},\n\nYour {{status}} account is ready. Set your private password: {{setupUrl}}\n\nThis link expires in {{expiresIn}} minutes.",
     allowedVariables: ["userName", "status", "setupUrl", "expiresIn"],
   },
   {
@@ -94,11 +101,14 @@ const professionalTemplates: ProfessionalTemplate[] = [
       preheader: "Reset your ParkEase BD password.",
       eyebrow: "Account security",
       heading: "Reset your password",
-      content: "Hello <strong>{{userName}}</strong>,<br><br>We received a request to reset your password. Use the secure button below to continue.",
+      content:
+        "Hello <strong>{{userName}}</strong>,<br><br>We received a request to reset your password. Use the secure button below to continue.",
       action: { label: "Reset password", url: "{{resetUrl}}" },
-      callout: "This link expires in {{expiresIn}} minutes. ParkEase BD will never ask you to share your password or verification code.",
+      callout:
+        "This link expires in {{expiresIn}} minutes. ParkEase BD will never ask you to share your password or verification code.",
     }),
-    textBody: "Hello {{userName}},\n\nReset your ParkEase BD password: {{resetUrl}}\n\nThis link expires in {{expiresIn}} minutes. If you did not request a reset, ignore this email.",
+    textBody:
+      "Hello {{userName}},\n\nReset your ParkEase BD password: {{resetUrl}}\n\nThis link expires in {{expiresIn}} minutes. If you did not request a reset, ignore this email.",
     allowedVariables: ["userName", "resetUrl", "expiresIn"],
   },
   {
@@ -110,11 +120,14 @@ const professionalTemplates: ProfessionalTemplate[] = [
       preheader: "Complete your ParkEase BD Guard account.",
       eyebrow: "Guard invitation",
       heading: "You have been invited",
-      content: "Hello <strong>{{userName}}</strong>,<br><br>A parking operator has invited you to join ParkEase BD as a Guard. Complete your secure account setup to continue.",
+      content:
+        "Hello <strong>{{userName}}</strong>,<br><br>A parking operator has invited you to join ParkEase BD as a Guard. Complete your secure account setup to continue.",
       action: { label: "Complete account setup", url: "{{setupUrl}}" },
-      callout: "This invitation link expires in {{expiresIn}} minutes and can only be used once.",
+      callout:
+        "This invitation link expires in {{expiresIn}} minutes and can only be used once.",
     }),
-    textBody: "Hello {{userName}},\n\nYou have been invited to join ParkEase BD as a Guard. Complete your account: {{setupUrl}}\n\nThis link expires in {{expiresIn}} minutes.",
+    textBody:
+      "Hello {{userName}},\n\nYou have been invited to join ParkEase BD as a Guard. Complete your account: {{setupUrl}}\n\nThis link expires in {{expiresIn}} minutes.",
     allowedVariables: ["userName", "setupUrl", "expiresIn"],
   },
   {
@@ -126,11 +139,14 @@ const professionalTemplates: ProfessionalTemplate[] = [
       preheader: "Complete your ParkEase BD Manager account.",
       eyebrow: "Manager invitation",
       heading: "Manage parking with confidence",
-      content: "Hello <strong>{{userName}}</strong>,<br><br>You have been invited to join ParkEase BD as a Manager. Set your private password to access the operations portal.",
+      content:
+        "Hello <strong>{{userName}}</strong>,<br><br>You have been invited to join ParkEase BD as a Manager. Set your private password to access the operations portal.",
       action: { label: "Complete account setup", url: "{{setupUrl}}" },
-      callout: "This secure invitation expires in {{expiresIn}} minutes and can only be used once.",
+      callout:
+        "This secure invitation expires in {{expiresIn}} minutes and can only be used once.",
     }),
-    textBody: "Hello {{userName}},\n\nYou have been invited to join ParkEase BD as a Manager. Complete your account: {{setupUrl}}\n\nThis link expires in {{expiresIn}} minutes.",
+    textBody:
+      "Hello {{userName}},\n\nYou have been invited to join ParkEase BD as a Manager. Complete your account: {{setupUrl}}\n\nThis link expires in {{expiresIn}} minutes.",
     allowedVariables: ["userName", "setupUrl", "expiresIn"],
   },
   {
@@ -142,19 +158,30 @@ const professionalTemplates: ProfessionalTemplate[] = [
       preheader: "{{campaignTitle}} - a new update from ParkEase BD.",
       eyebrow: "Platform update",
       heading: "{{campaignTitle}}",
-      content: "Hello <strong>{{userName}}</strong>,<br><br>We have an important ParkEase BD update for you. Please review the latest information and keep this email for reference.",
-      callout: "Thank you for being part of ParkEase BD. We are committed to making parking safer, clearer, and easier to manage.",
+      content:
+        "Hello <strong>{{userName}}</strong>,<br><br>We have an important ParkEase BD update for you. Please review the latest information and keep this email for reference.",
+      callout:
+        "Thank you for being part of ParkEase BD. We are committed to making parking safer, clearer, and easier to manage.",
     }),
-    textBody: "{{campaignTitle}}\n\nHello {{userName}},\n\nWe have an important ParkEase BD update for you. Please review the latest information and keep this email for reference.\n\nThank you for being part of ParkEase BD.",
+    textBody:
+      "{{campaignTitle}}\n\nHello {{userName}},\n\nWe have an important ParkEase BD update for you. Please review the latest information and keep this email for reference.\n\nThank you for being part of ParkEase BD.",
     allowedVariables: ["campaignTitle", "userName"],
   },
 ];
 
-export async function seedProfessionalEmailTemplates(prisma: PrismaClient, adminUserId: string): Promise<void> {
+export async function seedProfessionalEmailTemplates(
+  prisma: PrismaClient,
+  adminUserId: string,
+): Promise<void> {
   for (const template of professionalTemplates) {
     await prisma.$transaction(async (tx) => {
       const existingVersion = await tx.emailTemplate.findUnique({
-        where: { type_version: { type: template.type, version: PROFESSIONAL_TEMPLATE_VERSION } },
+        where: {
+          type_version: {
+            type: template.type,
+            version: PROFESSIONAL_TEMPLATE_VERSION,
+          },
+        },
       });
       if (existingVersion) return;
 

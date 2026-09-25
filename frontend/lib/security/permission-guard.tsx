@@ -30,7 +30,7 @@ export function PermissionGuard({
   children,
   className = "",
 }: PermissionGuardProps) {
-  const { hasPermission, hasAllPermissions, hasAnyPermission } = usePermissions();
+  const { hasAllPermissions, hasAnyPermission } = usePermissions();
 
   const permsArray = Array.isArray(requiredPermission)
     ? requiredPermission
