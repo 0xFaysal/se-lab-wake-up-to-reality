@@ -1,0 +1,167 @@
+name: ParkEase BD CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  CI: "true"
+
+jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out complete Git history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan repository for committed secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # These values only satisfy configuration validation during unit tests.
+      # CI never connects to the hosted production database or Redis instance.
+      NODE_ENV: test
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+      REDIS_URL: redis://127.0.0.1:6379
+      CORS_ORIGIN: https://parkease-bd.vercel.app
+      JWT_ACCESS_SECRET: ci-access-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      JWT_REFRESH_SECRET: ci-refresh-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      VERIFICATION_CODE_SECRET: ci-verification-cccccccccccccccccccccccccccccccc
+      AUTH_METADATA_HASH_SECRET: ci-metadata-dddddddddddddddddddddddddddddddd
+      PROPERTY_ADDRESS_FINGERPRINT_SECRET: ci-property-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+      DATA_ENCRYPTION_KEY: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+      EMAIL_WORKER_ENABLED: "false"
+      EXPOSE_DEVELOPMENT_AUTH_CODES: "true"
+      SSLCOMMERZ_ENABLED: "false"
+      SIMULATED_PAYMENTS_ENABLED: "true"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        run: npm exec -- prisma generate
+
+      - name: Validate Prisma schema
+        run: npm exec -- prisma validate
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Check TypeScript types
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build backend
+        run: npm run build
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_APP_URL: https://parkease-bd.vercel.app
+      NEXT_PUBLIC_API_BASE_URL: https://parkease-api.vercel.app/api/v1
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check TypeScript types
+        run: npm run typecheck
+
+      - name: Build Next.js application
+        run: npm run build
+
+  ci-status:
+    name: CI status
+    if: always()
+    needs:
+      - secret-scan
+      - backend
+      - frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify required jobs passed
+        env:
+          SECRET_SCAN_RESULT: ${{ needs.secret-scan.result }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+        run: |
+          for result in \
+            "$SECRET_SCAN_RESULT" \
+            "$BACKEND_RESULT" \
+            "$FRONTEND_RESULT"; do
+            if [ "$result" != "success" ]; then
+              echo "A required CI job did not pass (result: $result)." >&2
+              exit 1
+            fi
+          done
+
+          echo "All required ParkEase BD CI jobs passed."
