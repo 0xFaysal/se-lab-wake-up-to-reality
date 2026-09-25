@@ -1678,7 +1678,9 @@ export const openApiSchemas = {
     properties: {
       id: { type: "string", format: "uuid" },
       bookingCode: { type: "string" },
-      status: { type: "string", enum: ["PAYMENT_PENDING", "CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED", "COMPLETED", "CANCELLED", "EXPIRED", "NO_SHOW", "DISPUTED"] },
+      status: { type: "string", enum: ["PAYMENT_PENDING", "CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED", "PAYMENT_DUE", "COMPLETED", "CANCELLED", "EXPIRED", "NO_SHOW", "DISPUTED"] },
+      canCancel: { type: "boolean" },
+      canPay: { type: "boolean" },
       totalAmountPaisa: { type: "string" },
       startAt: { type: "string", format: "date-time" },
       scheduledEndAt: { type: "string", format: "date-time" },

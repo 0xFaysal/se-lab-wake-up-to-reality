@@ -203,7 +203,7 @@ export const verifyRightSchema = z.object({
   }),
 });
 
-const listingBodySchema = z.object({
+const listingBodyBaseSchema = z.object({
     parkingRightId: uuid,
     parkingResourceUnitId: uuid.optional(),
     title: z.string().trim().min(3).max(150),
@@ -217,7 +217,9 @@ const listingBodySchema = z.object({
     overtimeMultiplierBps: z.number().int().min(10_000).max(50_000).nullable().optional(),
     overtimeRatePerHourPaisa: z.coerce.bigint().min(100n).max(10_000_000n).nullable().optional(),
     overtimeGracePeriodMinutes: z.number().int().min(0).max(180).default(15),
-  }).strict().superRefine((value, context) => {
+  }).strict();
+
+const listingBodySchema = listingBodyBaseSchema.superRefine((value, context) => {
     if (value.overtimeBillingMode === "MULTIPLIER" && value.overtimeMultiplierBps === null) {
       context.addIssue({ code: "custom", path: ["overtimeMultiplierBps"], message: "Multiplier is required" });
     }
@@ -234,14 +236,22 @@ export const createListingSchema = z.object({
 
 export const updateListingSchema = z.object({
   params: z.object({ listingId: uuid }),
-  body: listingBodySchema.omit({ parkingRightId: true, parkingResourceUnitId: true }).partial()
+  body: listingBodyBaseSchema.omit({ parkingRightId: true, parkingResourceUnitId: true }).partial()
     .refine((value) => Object.keys(value).length > 0, "At least one field is required")
     .refine(
       (value) => value.minDurationMinutes === undefined
         || value.maxDurationMinutes === undefined
         || value.maxDurationMinutes >= value.minDurationMinutes,
       { path: ["maxDurationMinutes"], message: "Maximum duration must be at least the minimum duration" },
-    ),
+    )
+    .superRefine((value, context) => {
+      if (value.overtimeBillingMode === "MULTIPLIER" && value.overtimeMultiplierBps === null) {
+        context.addIssue({ code: "custom", path: ["overtimeMultiplierBps"], message: "Multiplier is required" });
+      }
+      if (value.overtimeBillingMode === "FIXED_PER_HOUR" && (value.overtimeRatePerHourPaisa === undefined || value.overtimeRatePerHourPaisa === null)) {
+        context.addIssue({ code: "custom", path: ["overtimeRatePerHourPaisa"], message: "Fixed overtime rate is required" });
+      }
+    }),
 });
 
 const availabilityRule = z.object({
@@ -433,6 +443,13 @@ export const createQuoteSchema = z.object({
 export const quoteParamsSchema = z.object({ params: z.object({ quoteId: uuid }) });
 export const holdParamsSchema = z.object({ params: z.object({ holdId: uuid }) });
 export const bookingParamsSchema = z.object({ params: z.object({ bookingId: uuid }) });
+export const cancelBookingSchema = z.object({
+  params: z.object({ bookingId: uuid }),
+  body: z.object({
+    reason: z.string().trim().min(3).max(500).optional(),
+    idempotencyKey,
+  }).strict(),
+});
 export const paymentParamsSchema = z.object({ params: z.object({ paymentId: uuid }) });
 
 export const guardBookingQuerySchema = z.object({
@@ -469,7 +486,7 @@ export const payoutSchema = z.object({
 
 export const payoutMethodSchema = z.object({
   body: z.object({
-    type: z.enum(["BANK", "BKASH", "NAGAD", "OTHER_MFS"]),
+    type: z.enum(["BANK", "BKASH", "NAGAD", "ROCKET", "OTHER_MFS"]),
     accountHolderName: z.string().trim().min(2).max(120),
     accountIdentifier: z.string().trim().min(6).max(100),
     bankName: z.string().trim().min(2).max(120).optional(),
@@ -492,7 +509,7 @@ export const payoutParamsSchema = z.object({ params: z.object({ payoutId: uuid }
 export const providerPayoutQuerySchema = z.object({
   query: z.object({
     ...pagination,
-    status: z.enum(["PENDING", "ON_HOLD", "APPROVED", "REJECTED", "PAID"]).optional(),
+    status: z.enum(["PENDING", "REQUESTED", "ON_HOLD", "APPROVED", "REJECTED", "PAID", "CANCELLED"]).optional(),
   }).strict(),
 });
 
@@ -510,7 +527,7 @@ export const adminListingSuspensionSchema = z.object({
 });
 
 export const adminPayoutQuerySchema = z.object({
-  query: z.object({ ...pagination, status: z.enum(["PENDING", "ON_HOLD", "APPROVED", "REJECTED", "PAID"]).optional() }).strict(),
+  query: z.object({ ...pagination, status: z.enum(["PENDING", "REQUESTED", "ON_HOLD", "APPROVED", "REJECTED", "PAID", "CANCELLED"]).optional() }).strict(),
 });
 
 export const adminPayoutReviewSchema = z.object({

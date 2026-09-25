@@ -59,6 +59,7 @@ export const analyticsFinance = action((req) => service.getFinanceAnalytics(req.
 export const analyticsOccupancy = action((req) => service.getOccupancyAnalytics(req.query as never));
 export const analyticsUsers = action((req) => service.getUserAnalytics(req.query as never));
 export const reconciliation = action(() => service.getFinancialReconciliation());
+export const financeOverview = action(() => service.getFinanceOverview());
 
 export const listLegal = action((req) => service.listLegalDocuments(req.query.type as never));
 export const getLegal = action((req) => service.getLegalDocument(id(req)));

@@ -105,8 +105,8 @@ export async function postSuccessfulBookingPayment(tx: Prisma.TransactionClient,
     ...holds.map((hold) => ({ accountCode: "DRIVER_REFUND_LIABILITY", walletAccountId: hold.walletAccountId, entrySide: "DEBIT" as const, amountPaisa: hold.amountPaisa })),
     { accountCode: "BOOKING_HELD_FUNDS", entrySide: "CREDIT", amountPaisa: input.grossAmountPaisa },
   ];
-  const debit = entries.filter((entry) => entry.entrySide === "DEBIT").reduce((sum, entry) => sum + entry.amountPaisa, 0n);
-  const credit = entries.filter((entry) => entry.entrySide === "CREDIT").reduce((sum, entry) => sum + entry.amountPaisa, 0n);
+  const debit = entries.filter((entry) => entry.entrySide === "DEBIT").reduce((sum, entry) => sum + BigInt(entry.amountPaisa), 0n);
+  const credit = entries.filter((entry) => entry.entrySide === "CREDIT").reduce((sum, entry) => sum + BigInt(entry.amountPaisa), 0n);
   if (debit !== credit) fail(500, "LEDGER_UNBALANCED", "Booking payment ledger is not balanced");
 
   const ledger = await tx.ledgerTransaction.create({
@@ -134,6 +134,50 @@ export async function postSuccessfulBookingPayment(tx: Prisma.TransactionClient,
     actorUserId: input.actorUserId,
     propertyId: input.propertyId,
     entityType: "Booking",
+    entityId: input.bookingId,
+    metadata: { walletAppliedPaisa: walletAppliedPaisa.toString(), gatewayAmountPaisa: input.gatewayAmountPaisa.toString(), ledgerTransactionId: ledger.id },
+  });
+  return { walletAppliedPaisa, ledgerTransactionId: ledger.id };
+}
+
+export async function postSuccessfulSettlementFunding(tx: Prisma.TransactionClient, input: {
+  paymentId: string;
+  bookingId: string;
+  actorUserId: string;
+  propertyId: string;
+  bookingCode: string;
+  grossAmountPaisa: bigint;
+  gatewayAmountPaisa: bigint;
+}) {
+  const holds = await tx.walletHold.findMany({
+    where: { paymentId: input.paymentId, status: WalletHoldStatus.ACTIVE },
+    include: { walletAccount: true },
+  });
+  const walletAppliedPaisa = holds.reduce((sum, hold) => sum + hold.amountPaisa, 0n);
+  if (input.gatewayAmountPaisa + walletAppliedPaisa !== input.grossAmountPaisa) {
+    fail(500, "PAYMENT_FUNDING_UNBALANCED", "Settlement funding does not match the outstanding amount");
+  }
+  const entries: Prisma.LedgerEntryCreateWithoutLedgerTransactionInput[] = [
+    ...(input.gatewayAmountPaisa > 0n ? [{ accountCode: "EXTERNAL_PAYMENT_CLEARING", entrySide: "DEBIT" as const, amountPaisa: input.gatewayAmountPaisa }] : []),
+    ...holds.map((hold) => ({ accountCode: "DRIVER_REFUND_LIABILITY", walletAccountId: hold.walletAccountId, entrySide: "DEBIT" as const, amountPaisa: hold.amountPaisa })),
+    { accountCode: "BOOKING_HELD_FUNDS", entrySide: "CREDIT" as const, amountPaisa: input.grossAmountPaisa },
+  ];
+  const ledger = await tx.ledgerTransaction.create({ data: {
+    referenceType: "BOOKING_SETTLEMENT_FUNDING",
+    referenceId: input.paymentId,
+    description: `Outstanding settlement funding for booking ${input.bookingCode}`,
+    actorUserId: input.actorUserId,
+    entries: { create: entries },
+  } });
+  for (const hold of holds) {
+    await tx.walletAccount.update({ where: { id: hold.walletAccountId }, data: { heldBalancePaisa: { decrement: hold.amountPaisa }, balanceVersion: { increment: 1 } } });
+    await tx.walletHold.update({ where: { id: hold.id }, data: { status: WalletHoldStatus.CONSUMED, consumedAt: new Date() } });
+  }
+  await createDomainAuditEvent(tx, {
+    eventType: DomainAuditEventType.DRIVER_WALLET_APPLIED,
+    actorUserId: input.actorUserId,
+    propertyId: input.propertyId,
+    entityType: "BookingSettlement",
     entityId: input.bookingId,
     metadata: { walletAppliedPaisa: walletAppliedPaisa.toString(), gatewayAmountPaisa: input.gatewayAmountPaisa.toString(), ledgerTransactionId: ledger.id },
   });

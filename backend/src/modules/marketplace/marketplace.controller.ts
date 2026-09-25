@@ -93,12 +93,15 @@ export const getProviderBooking = action((req) =>
 );
 export const listGuardBookings = action((req) => service.listGuardBookings(userId(req), req.query as never));
 export const getGuardBooking = action((req) => service.getGuardBooking(userId(req), param(req, "bookingId")));
-export const cancelBooking = action((req) => service.cancelBooking(userId(req), param(req, "bookingId")));
+export const previewBookingCancellation = action((req) => service.previewBookingCancellation(userId(req), param(req, "bookingId")));
+export const cancelBooking = action((req) => service.cancelBooking(userId(req), param(req, "bookingId"), req.body));
 export const capturePayment = action((req) => service.captureSimulatedPayment(userId(req), req.body), 201);
 export const verifyCredential = action((req) => service.verifyAccessCredential(userId(req), req.body.credential));
 export const checkIn = action((req) => service.checkInBooking(userId(req), param(req, "bookingId"), req.body.credential));
 export const requestCheckout = action((req) => service.requestCheckout(userId(req), param(req, "bookingId")));
 export const checkOut = action((req) => service.checkOutBooking(userId(req), param(req, "bookingId")));
+export const getDriverBookingSettlement = action((req) => service.getDriverBookingSettlement(userId(req), param(req, "bookingId")));
+export const getProviderBookingSettlement = action((req) => service.getProviderBookingSettlement(userId(req), param(req, "bookingId")));
 
 export const getWallet = action((req) => service.getWallet(userId(req)));
 export const listWalletTransactions = action((req) => service.listWalletTransactions(userId(req)));

@@ -70,3 +70,23 @@ test("fixed overtime and settlement use deposit before driver balance", () => {
     driverRefundCreditPaisa: 0n,
   });
 });
+
+test("no-show settlement returns the full deposit and releases the booked parking charge", () => {
+  assert.deepEqual(calculateSettlement({
+    baseChargePaisa: 3_600n,
+    platformFeePaisa: 360n,
+    depositPaisa: 40_000n,
+    overtimeChargePaisa: 0n,
+    driverAvailablePaisa: 0n,
+  }), {
+    depositUsedPaisa: 0n,
+    depositReturnedPaisa: 40_000n,
+    driverWalletChargedPaisa: 0n,
+    outstandingPaisa: 0n,
+    paidOvertimePaisa: 0n,
+    providerGrossPaisa: 3_600n,
+    providerNetPaisa: 3_600n,
+    platformRevenuePaisa: 360n,
+    driverRefundCreditPaisa: 40_000n,
+  });
+});

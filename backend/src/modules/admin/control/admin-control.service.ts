@@ -434,7 +434,7 @@ export async function getSharedPoolMonitor() {
 
 export async function getParkingOperationsOverview() {
   const now = new Date();
-  const operationalStatuses: BookingStatus[] = [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE];
+  const operationalStatuses: BookingStatus[] = [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED];
   const [properties, activeBookings, guardCoverage, activeVehicles, entryExitLog, sharedPools] = await Promise.all([
     prisma.property.findMany({
       where: { deletedAt: null, canonicalPropertyId: null },
@@ -474,7 +474,7 @@ export async function getParkingOperationsOverview() {
   const propertyCards = properties.map((property) => {
     const capacity = property.parkingSpots.reduce((sum, resource) => sum + resource.capacity, 0);
     const state = bookingMap.get(property.id) ?? {};
-    const occupied = (state[BookingStatus.CHECKED_IN] ?? 0) + (state[BookingStatus.CHECKOUT_REQUESTED] ?? 0) + (state[BookingStatus.PAYMENT_DUE] ?? 0);
+    const occupied = (state[BookingStatus.CHECKED_IN] ?? 0) + (state[BookingStatus.CHECKOUT_REQUESTED] ?? 0);
     const reserved = state[BookingStatus.CONFIRMED] ?? 0;
     return { id: property.id, name: property.name, publicArea: property.publicArea, status: property.status, temporaryClosureReason: property.temporaryClosureReason, temporaryClosedUntil: property.temporaryClosedUntil, capacity, occupied, reserved, available: Math.max(0, capacity - occupied - reserved), utilizationPercent: capacity === 0 ? 0 : Math.round((occupied / capacity) * 100), activeGuards: guardMap.get(property.id) ?? 0, guardCoverageGap: capacity > 0 && (guardMap.get(property.id) ?? 0) === 0 };
   });
@@ -501,13 +501,13 @@ export async function searchActiveVehicles(query: string, limit: number) {
     where: {
       deletedAt: null,
       OR: [{ normalizedRegistrationNumber: { contains: normalized } }, { registrationNumber: { contains: query, mode: "insensitive" } }],
-      bookings: { some: { status: { in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE] } } },
+      bookings: { some: { status: { in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED] } } },
     },
     take: limit,
     select: {
       id: true, registrationNumber: true, vehicleType: true, brand: true, model: true, color: true,
       owner: { select: { id: true, fullName: true, phone: true } },
-      bookings: { where: { status: { in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED, BookingStatus.PAYMENT_DUE] } }, orderBy: { startAt: "asc" }, take: 5, select: { id: true, bookingCode: true, status: true, startAt: true, scheduledEndAt: true, property: { select: { id: true, name: true } } } },
+      bookings: { where: { status: { in: [BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN, BookingStatus.CHECKOUT_REQUESTED] } }, orderBy: { startAt: "asc" }, take: 5, select: { id: true, bookingCode: true, status: true, startAt: true, scheduledEndAt: true, property: { select: { id: true, name: true } } } },
     },
   });
 }
@@ -595,11 +595,83 @@ export async function getFinancialReconciliation() {
   `);
   const [wallets, pendingPayouts, failedPayments, failedRefunds] = await Promise.all([
     prisma.walletAccount.count(),
-    prisma.payoutRequest.aggregate({ where: { status: { in: [PayoutStatus.PENDING, PayoutStatus.ON_HOLD, PayoutStatus.APPROVED] } }, _sum: { amountPaisa: true }, _count: true }),
+    prisma.payoutRequest.aggregate({ where: { status: { in: [PayoutStatus.PENDING, PayoutStatus.REQUESTED, PayoutStatus.ON_HOLD, PayoutStatus.APPROVED] } }, _sum: { amountPaisa: true }, _count: true }),
     prisma.payment.count({ where: { status: PaymentStatus.FAILED } }),
     prisma.refund.count({ where: { status: RefundStatus.FAILED } }),
   ]);
   return serialize({ checkedWallets: wallets, discrepancyCount: rows.length, discrepancies: rows, reservedPayoutPaisa: pendingPayouts._sum.amountPaisa ?? 0n, pendingPayoutCount: pendingPayouts._count, failedFinancialEvents: { payments: failedPayments, refunds: failedRefunds } });
+}
+
+export async function getFinanceOverview() {
+  const successfulPaymentStatuses = [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED];
+  const accountCodes = ["BOOKING_HELD_FUNDS", "PLATFORM_REVENUE", "PROVIDER_PAYABLE", "DRIVER_REFUND_LIABILITY"];
+  const [payments, gatewayRefunds, accountRows, providerWallets, driverWallets, settlements, recentRefundCredits] = await Promise.all([
+    prisma.payment.aggregate({ where: { status: { in: successfulPaymentStatuses } }, _sum: { amountPaisa: true }, _count: true }),
+    prisma.refund.aggregate({ where: { status: RefundStatus.SUCCEEDED }, _sum: { amountPaisa: true }, _count: true }),
+    prisma.ledgerEntry.groupBy({
+      by: ["accountCode", "entrySide"],
+      where: { accountCode: { in: accountCodes } },
+      _sum: { amountPaisa: true },
+    }),
+    prisma.walletAccount.aggregate({
+      where: { user: { roles: { some: { role: UserRoleType.PROVIDER } } } },
+      _sum: { availableBalancePaisa: true, pendingBalancePaisa: true, heldBalancePaisa: true },
+      _count: true,
+    }),
+    prisma.walletAccount.aggregate({
+      where: { user: { roles: { some: { role: UserRoleType.DRIVER } } } },
+      _sum: { availableBalancePaisa: true, pendingBalancePaisa: true, heldBalancePaisa: true },
+      _count: true,
+    }),
+    prisma.bookingSettlement.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true, status: true, providerNetPaisa: true, platformRevenuePaisa: true,
+        driverRefundCreditPaisa: true, overtimeChargePaisa: true, completedAt: true, createdAt: true,
+        booking: { select: { id: true, bookingCode: true, provider: { select: { id: true, fullName: true } }, property: { select: { id: true, name: true } } } },
+      },
+    }),
+    prisma.ledgerEntry.findMany({
+      where: { accountCode: "DRIVER_REFUND_LIABILITY", entrySide: "CREDIT", walletAccountId: { not: null } },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true, amountPaisa: true, createdAt: true,
+        walletAccount: { select: { user: { select: { id: true, fullName: true, email: true } } } },
+        ledgerTransaction: { select: { referenceType: true, referenceId: true, description: true } },
+      },
+    }),
+  ]);
+
+  const netAccount = (accountCode: string) => accountRows
+    .filter((row) => row.accountCode === accountCode)
+    .reduce((sum, row) => sum + (row.entrySide === "CREDIT" ? 1n : -1n) * (row._sum.amountPaisa ?? 0n), 0n);
+
+  return serialize({
+    captured: { amountPaisa: payments._sum.amountPaisa ?? 0n, count: payments._count },
+    gatewayRefunds: { amountPaisa: gatewayRefunds._sum.amountPaisa ?? 0n, count: gatewayRefunds._count },
+    ledger: {
+      heldBookingFundsPaisa: netAccount("BOOKING_HELD_FUNDS"),
+      platformRevenuePaisa: netAccount("PLATFORM_REVENUE"),
+      providerPayablePaisa: netAccount("PROVIDER_PAYABLE"),
+      driverRefundLiabilityPaisa: netAccount("DRIVER_REFUND_LIABILITY"),
+    },
+    providerWallets: {
+      count: providerWallets._count,
+      availablePaisa: providerWallets._sum.availableBalancePaisa ?? 0n,
+      pendingPaisa: providerWallets._sum.pendingBalancePaisa ?? 0n,
+      heldPaisa: providerWallets._sum.heldBalancePaisa ?? 0n,
+    },
+    driverWallets: {
+      count: driverWallets._count,
+      availablePaisa: driverWallets._sum.availableBalancePaisa ?? 0n,
+      pendingPaisa: driverWallets._sum.pendingBalancePaisa ?? 0n,
+      heldPaisa: driverWallets._sum.heldBalancePaisa ?? 0n,
+    },
+    recentSettlements: settlements,
+    recentRefundCredits,
+  });
 }
 
 export async function listLegalDocuments(type?: LegalDocumentType) {
@@ -975,7 +1047,7 @@ export async function holdPayout(adminUserId: string, payoutId: string, reason: 
     await lockEntity(tx, "payout", payoutId);
     const payout = await tx.payoutRequest.findUnique({ where: { id: payoutId } });
     if (!payout) fail(404, "PAYOUT_NOT_FOUND", "Payout request was not found");
-    if (payout.status !== PayoutStatus.PENDING) fail(409, "PAYOUT_TRANSITION_INVALID", "Only a pending payout can be held");
+    if (payout.status !== PayoutStatus.PENDING && payout.status !== PayoutStatus.REQUESTED) fail(409, "PAYOUT_TRANSITION_INVALID", "Only a requested payout can be held");
     const updated = await tx.payoutRequest.update({ where: { id: payoutId }, data: { status: PayoutStatus.ON_HOLD, heldAt: new Date(), holdReason: reason, reviewedById: adminUserId, reviewNote: reason, reviewedAt: new Date() } });
     await tx.notification.create({ data: { userId: payout.providerUserId, type: "PAYOUT_UPDATED", title: "Payout review on hold", message: "Your payout request requires additional review.", entityType: "PayoutRequest", entityId: payout.id, idempotencyKey: `payout:${payout.id}:ON_HOLD` } });
     await audit(tx, { eventType: DomainAuditEventType.PAYOUT_HELD, actorUserId: adminUserId, entityType: "PayoutRequest", entityId: payout.id, requestId, metadata: { reason } });
@@ -989,7 +1061,7 @@ export async function releasePayoutHold(adminUserId: string, payoutId: string, r
     const payout = await tx.payoutRequest.findUnique({ where: { id: payoutId } });
     if (!payout) fail(404, "PAYOUT_NOT_FOUND", "Payout request was not found");
     if (payout.status !== PayoutStatus.ON_HOLD) fail(409, "PAYOUT_TRANSITION_INVALID", "Only a held payout can be released");
-    const updated = await tx.payoutRequest.update({ where: { id: payoutId }, data: { status: PayoutStatus.PENDING, heldAt: null, holdReason: null, reviewedById: adminUserId, reviewNote: reason, reviewedAt: new Date() } });
+    const updated = await tx.payoutRequest.update({ where: { id: payoutId }, data: { status: PayoutStatus.REQUESTED, heldAt: null, holdReason: null, reviewedById: adminUserId, reviewNote: reason, reviewedAt: new Date() } });
     await tx.notification.create({ data: { userId: payout.providerUserId, type: "PAYOUT_UPDATED", title: "Payout review resumed", message: "Your payout request was released from hold and returned to review.", entityType: "PayoutRequest", entityId: payout.id, idempotencyKey: `payout:${payout.id}:RELEASED` } });
     await audit(tx, { eventType: DomainAuditEventType.PAYOUT_RELEASED, actorUserId: adminUserId, entityType: "PayoutRequest", entityId: payout.id, requestId, metadata: { reason } });
     return serialize(updated);

@@ -48,6 +48,7 @@ adminControlRouter.get("/analytics/finance", validate(schema.analyticsQuerySchem
 adminControlRouter.get("/analytics/occupancy", validate(schema.analyticsQuerySchema), controller.analyticsOccupancy);
 adminControlRouter.get("/analytics/users", validate(schema.analyticsQuerySchema), controller.analyticsUsers);
 adminControlRouter.get("/finance/reconciliation", controller.reconciliation);
+adminControlRouter.get("/finance/overview", controller.financeOverview);
 
 adminControlRouter.get("/content/legal", validate(schema.legalListSchema), controller.listLegal);
 adminControlRouter.get("/content/legal/:id", validate(schema.idParamsSchema), controller.getLegal);

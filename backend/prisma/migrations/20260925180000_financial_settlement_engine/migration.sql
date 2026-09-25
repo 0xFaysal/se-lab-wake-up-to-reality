@@ -168,3 +168,11 @@ ALTER TABLE "parking_listings"
       ("overtime_billing_mode" = 'FIXED_PER_HOUR' AND "overtime_rate_per_hour_paisa" BETWEEN 100 AND 10000000 AND "overtime_multiplier_bps" IS NULL)
     )
   );
+CREATE TYPE "payment_purpose" AS ENUM ('BOOKING', 'SETTLEMENT');
+
+ALTER TABLE "payments" ADD COLUMN "purpose" "payment_purpose" NOT NULL DEFAULT 'BOOKING';
+DROP INDEX IF EXISTS "payments_one_sslcommerz_per_booking_idx";
+CREATE UNIQUE INDEX "payments_one_booking_charge_per_booking_idx"
+  ON "payments"("booking_id") WHERE "purpose" = 'BOOKING';
+CREATE UNIQUE INDEX "payments_one_settlement_charge_per_booking_idx"
+  ON "payments"("booking_id") WHERE "purpose" = 'SETTLEMENT';

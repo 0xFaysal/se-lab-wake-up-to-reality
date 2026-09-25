@@ -185,8 +185,10 @@ marketplaceRouter.delete("/parking/holds/:holdId", requireRole(UserRoleType.DRIV
 marketplaceRouter.post("/bookings", requireRole(UserRoleType.DRIVER), validate(schema.createBookingSchema), controller.createBooking);
 marketplaceRouter.get("/bookings", requireRole(UserRoleType.DRIVER), controller.listDriverBookings);
 marketplaceRouter.get("/bookings/:bookingId", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.getDriverBooking);
-marketplaceRouter.post("/bookings/:bookingId/cancel", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.cancelBooking);
+marketplaceRouter.get("/bookings/:bookingId/cancellation-preview", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.previewBookingCancellation);
+marketplaceRouter.post("/bookings/:bookingId/cancel", requireRole(UserRoleType.DRIVER), validate(schema.cancelBookingSchema), controller.cancelBooking);
 marketplaceRouter.post("/bookings/:bookingId/checkout-request", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.requestCheckout);
+marketplaceRouter.get("/bookings/:bookingId/settlement", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.getDriverBookingSettlement);
 marketplaceRouter.get("/provider/bookings", providerOrManager, controller.listProviderBookings);
 marketplaceRouter.get(
   "/provider/bookings/:bookingId",
@@ -194,6 +196,7 @@ marketplaceRouter.get(
   validate(schema.bookingParamsSchema),
   controller.getProviderBooking,
 );
+marketplaceRouter.get("/provider/bookings/:bookingId/settlement", providerOrManager, validate(schema.bookingParamsSchema), controller.getProviderBookingSettlement);
 
 /**
  * @openapi
@@ -230,12 +233,19 @@ marketplaceRouter.get("/refunds/:refundId", requireRole(UserRoleType.DRIVER), va
 marketplaceRouter.post("/provider/payouts", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutSchema), controller.createPayout);
 marketplaceRouter.get("/provider/payouts", requireRole(UserRoleType.PROVIDER), validate(schema.providerPayoutQuerySchema), controller.listProviderPayouts);
 marketplaceRouter.get("/provider/payouts/:payoutId", requireRole(UserRoleType.PROVIDER), validate(schema.payoutParamsSchema), controller.getProviderPayout);
+marketplaceRouter.get("/driver/payout-methods", requireRole(UserRoleType.DRIVER), controller.listPayoutMethods);
+marketplaceRouter.post("/driver/payout-methods", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutMethodSchema), controller.createPayoutMethod);
+marketplaceRouter.post("/driver/payout-methods/:payoutMethodId/default", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.setDefaultPayoutMethod);
+marketplaceRouter.post("/driver/payout-methods/:payoutMethodId/deactivate", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.deactivatePayoutMethod);
+marketplaceRouter.post("/driver/payouts", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutSchema), controller.createPayout);
+marketplaceRouter.get("/driver/payouts", requireRole(UserRoleType.DRIVER), validate(schema.providerPayoutQuerySchema), controller.listProviderPayouts);
+marketplaceRouter.get("/driver/payouts/:payoutId", requireRole(UserRoleType.DRIVER), validate(schema.payoutParamsSchema), controller.getProviderPayout);
 /**
  * @openapi
  * /api/v1/admin/payouts:
  *   get: { tags: [Wallet], summary: List payout requests for manual review, security: [{ accessCookie: [] }], responses: { 200: { description: Payout review queue. } } }
  * /api/v1/admin/payouts/{payoutId}:
- *   patch: { tags: [Wallet], summary: Approve, reject, or mark an approved simulated payout paid, security: [{ accessCookie: [] }], responses: { 200: { description: Payout and wallet reservation updated atomically. } } }
+ *   patch: { tags: [Wallet], summary: Approve, reject, or record an approved manual payout as paid, security: [{ accessCookie: [] }], responses: { 200: { description: Payout and wallet reservation updated atomically. } } }
  */
 marketplaceRouter.get("/admin/payouts", requireRole(UserRoleType.ADMIN), validate(schema.adminPayoutQuerySchema), controller.listPayouts);
 marketplaceRouter.patch("/admin/payouts/:payoutId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.adminPayoutReviewSchema), controller.reviewPayout);
