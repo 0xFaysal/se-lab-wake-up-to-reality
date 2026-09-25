@@ -183,8 +183,12 @@ integration("parking owner property management integration", () => {
   after(async () => {
     if (userIds.length > 0) {
       await prisma.$transaction([
-        prisma.propertyProvider.deleteMany({ where: { providerUserId: { in: userIds } } }),
-        prisma.property.deleteMany({ where: { createdByUserId: { in: userIds } } }),
+        prisma.propertyProvider.deleteMany({
+          where: { providerUserId: { in: userIds } },
+        }),
+        prisma.property.deleteMany({
+          where: { createdByUserId: { in: userIds } },
+        }),
         prisma.refreshSession.deleteMany({
           where: { userId: { in: userIds } },
         }),
@@ -357,7 +361,9 @@ integration("parking owner property management integration", () => {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
       body: JSON.stringify({
-        version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
+        version: (
+          await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })
+        ).version,
         accessInstructions: "Use Gate B and call the desk",
       }),
     });
@@ -389,7 +395,9 @@ integration("parking owner property management integration", () => {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
       body: JSON.stringify({
-        version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
+        version: (
+          await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })
+        ).version,
         exactAddress: updatedExactAddress,
       }),
     });
@@ -433,7 +441,9 @@ integration("parking owner property management integration", () => {
       method: "PATCH",
       cookie: cookies.get("owner-a"),
       body: JSON.stringify({
-        version: (await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })).version,
+        version: (
+          await prisma.property.findUniqueOrThrow({ where: { id: propertyId } })
+        ).version,
         approximateAddress: "Beside Gulshan market",
       }),
     });

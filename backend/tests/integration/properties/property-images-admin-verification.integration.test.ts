@@ -220,8 +220,12 @@ integration("Property images and Admin verification integration", () => {
   after(async () => {
     resetStorage();
     if (propertyIds.length > 0) {
-      await prisma.propertyImage.deleteMany({ where: { propertyId: { in: propertyIds } } });
-      await prisma.propertyProvider.deleteMany({ where: { propertyId: { in: propertyIds } } });
+      await prisma.propertyImage.deleteMany({
+        where: { propertyId: { in: propertyIds } },
+      });
+      await prisma.propertyProvider.deleteMany({
+        where: { propertyId: { in: propertyIds } },
+      });
       await prisma.property.deleteMany({ where: { id: { in: propertyIds } } });
     }
     if (userIds.length > 0) {

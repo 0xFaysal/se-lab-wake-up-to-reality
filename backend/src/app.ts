@@ -30,7 +30,10 @@ import { propertyImageRouter } from "./modules/property-images/property-image.ro
 import { marketplaceRouter } from "./modules/marketplace/marketplace.routes.js";
 import { reconcileMarketplaceLifecycle } from "./modules/marketplace/marketplace.service.js";
 import { paymentRouter } from "./modules/payments/payment.routes.js";
-import { enqueueDueEmailCampaigns, processEmailDeliveryBatch } from "./modules/admin/control/email-management.service.js";
+import {
+  enqueueDueEmailCampaigns,
+  processEmailDeliveryBatch,
+} from "./modules/admin/control/email-management.service.js";
 import { swaggerSpec } from "./config/swagger.js";
 
 export const app = express();
@@ -163,8 +166,13 @@ app.all("/internal/email-worker/tick", async (req, res) => {
     const scheduled = await enqueueDueEmailCampaigns();
     const deliveries = await processEmailDeliveryBatch();
     const marketplace = await reconcileMarketplaceLifecycle();
-    logger.info({ scheduled, deliveries, marketplace }, "Scheduled worker tick completed");
-    res.status(200).json({ success: true, data: { scheduled, deliveries, marketplace } });
+    logger.info(
+      { scheduled, deliveries, marketplace },
+      "Scheduled worker tick completed",
+    );
+    res
+      .status(200)
+      .json({ success: true, data: { scheduled, deliveries, marketplace } });
   } catch (error) {
     logger.error({ error }, "Email worker tick failed");
     res.status(500).json({ success: false, error: "Email worker tick failed" });

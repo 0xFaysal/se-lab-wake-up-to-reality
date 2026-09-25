@@ -4,11 +4,21 @@ import { AppError } from "../errors/app-error.js";
 
 export const rightDocumentMaxCount = 5;
 export const rightDocumentMaxBytes = 10 * 1024 * 1024;
-const declaredTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const declaredTypes = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: rightDocumentMaxBytes, files: rightDocumentMaxCount, fields: 1, parts: rightDocumentMaxCount + 1 },
+  limits: {
+    fileSize: rightDocumentMaxBytes,
+    files: rightDocumentMaxCount,
+    fields: 1,
+    parts: rightDocumentMaxCount + 1,
+  },
   fileFilter: (_req, file, callback) => {
     if (declaredTypes.has(file.mimetype)) {
       callback(null, true);
@@ -30,9 +40,24 @@ export const rightDocumentUpload: RequestHandler = (req, res, next) => {
     if (!error) return next();
     if (error instanceof AppError) return next(error);
     if (error instanceof multer.MulterError) {
-      const limit = error.code === "LIMIT_FILE_SIZE" ? "Each evidence file must be 10 MB or smaller" : "No more than 5 evidence files may be uploaded";
-      return next(new AppError({ statusCode: 400, code: "RIGHT_DOCUMENT_LIMIT_EXCEEDED", message: limit }));
+      const limit =
+        error.code === "LIMIT_FILE_SIZE"
+          ? "Each evidence file must be 10 MB or smaller"
+          : "No more than 5 evidence files may be uploaded";
+      return next(
+        new AppError({
+          statusCode: 400,
+          code: "RIGHT_DOCUMENT_LIMIT_EXCEEDED",
+          message: limit,
+        }),
+      );
     }
-    return next(new AppError({ statusCode: 400, code: "RIGHT_DOCUMENT_MULTIPART_INVALID", message: "Parking Right evidence upload is invalid" }));
+    return next(
+      new AppError({
+        statusCode: 400,
+        code: "RIGHT_DOCUMENT_MULTIPART_INVALID",
+        message: "Parking Right evidence upload is invalid",
+      }),
+    );
   });
 };

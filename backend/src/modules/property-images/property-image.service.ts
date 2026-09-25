@@ -28,7 +28,10 @@ import * as propertyImageRepository from "./property-image.repository.js";
 import type { ReorderPropertyImagesInput } from "./property-image.types.js";
 import { validatePropertyImageFile } from "./property-image.validation.js";
 
-async function requirePropertyImageReadAccess(userId: string, propertyId: string) {
+async function requirePropertyImageReadAccess(
+  userId: string,
+  propertyId: string,
+) {
   const property = await propertyRepository.findPropertyById(propertyId);
   if (!property || !(await canReadProviderProperty(userId, propertyId))) {
     throw propertyErrors.notFound();
@@ -97,11 +100,15 @@ export async function uploadPropertyImages(
   try {
     const saved = await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
-      const property = await propertyRepository.findPropertyById(propertyId, tx);
+      const property = await propertyRepository.findPropertyById(
+        propertyId,
+        tx,
+      );
       if (
-      !property ||
-      !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-      ) throw propertyErrors.notFound();
+        !property ||
+        !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
+      )
+        throw propertyErrors.notFound();
 
       const currentCount = await propertyImageRepository.countPropertyImages(
         propertyId,
@@ -168,7 +175,8 @@ export async function reorderPropertyImages(
     if (
       !property ||
       !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-    ) throw propertyErrors.notFound();
+    )
+      throw propertyErrors.notFound();
 
     const currentImages = await propertyImageRepository.findPropertyImages(
       propertyId,
@@ -215,7 +223,8 @@ export async function deletePropertyImage(
     if (
       !property ||
       !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-    ) throw propertyErrors.notFound();
+    )
+      throw propertyErrors.notFound();
 
     const existingImage = await propertyImageRepository.findPropertyImage(
       propertyId,
@@ -238,7 +247,8 @@ export async function deletePropertyImage(
     if (
       !property ||
       !(await canManageSharedPropertyImages(actorUserId, propertyId, tx))
-    ) throw propertyErrors.sharedPropertyOperationForbidden();
+    )
+      throw propertyErrors.sharedPropertyOperationForbidden();
     const currentImage = await propertyImageRepository.findPropertyImage(
       propertyId,
       imageId,

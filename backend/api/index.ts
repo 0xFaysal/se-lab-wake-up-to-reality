@@ -28,7 +28,10 @@ function getInitPromise(): Promise<void> {
       try {
         await connectRedis();
       } catch (redisError) {
-        console.error("Redis cold-start connection failed (non-fatal):", redisError);
+        console.error(
+          "Redis cold-start connection failed (non-fatal):",
+          redisError,
+        );
       }
     })().catch((err) => {
       initPromise = undefined;

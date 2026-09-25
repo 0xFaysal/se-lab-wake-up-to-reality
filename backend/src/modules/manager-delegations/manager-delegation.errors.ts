@@ -29,7 +29,8 @@ export const managerDelegationErrors = {
     new AppError({
       statusCode: 400,
       code: "MANAGER_DELEGATION_RESOURCE_INVALID",
-      message: "Every delegated resource must belong to the grantor at this Property",
+      message:
+        "Every delegated resource must belong to the grantor at this Property",
     }),
   forbidden: () =>
     new AppError({

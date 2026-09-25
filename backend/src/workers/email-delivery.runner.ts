@@ -12,7 +12,9 @@ function wait(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export function startEmailDeliveryWorker(pollIntervalMs: number): EmailDeliveryWorker {
+export function startEmailDeliveryWorker(
+  pollIntervalMs: number,
+): EmailDeliveryWorker {
   let stopping = false;
   let running = false;
   let timer: NodeJS.Timeout | undefined;
@@ -23,8 +25,15 @@ export function startEmailDeliveryWorker(pollIntervalMs: number): EmailDeliveryW
     try {
       const scheduled = await enqueueDueEmailCampaigns();
       const deliveries = await processEmailDeliveryBatch();
-      if (scheduled.campaigns > 0 || deliveries.processed > 0 || deliveries.recovered > 0) {
-        logger.info({ scheduled, deliveries }, "Email delivery worker batch completed");
+      if (
+        scheduled.campaigns > 0 ||
+        deliveries.processed > 0 ||
+        deliveries.recovered > 0
+      ) {
+        logger.info(
+          { scheduled, deliveries },
+          "Email delivery worker batch completed",
+        );
       }
     } catch (error) {
       logger.error({ error }, "Email delivery worker batch failed");

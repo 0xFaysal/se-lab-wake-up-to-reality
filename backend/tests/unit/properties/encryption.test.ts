@@ -7,9 +7,8 @@ const {
   encryptSensitiveText,
   SensitiveDataEncryptionError,
 } = await import("../../../src/common/security/encryption.js");
-const { fingerprintPropertyAddress, normalizePropertyName } = await import(
-  "../../../src/modules/properties/property-identity.js"
-);
+const { fingerprintPropertyAddress, normalizePropertyName } =
+  await import("../../../src/modules/properties/property-identity.js");
 
 describe("sensitive data encryption", () => {
   it("round-trips UTF-8 text without storing plaintext", () => {

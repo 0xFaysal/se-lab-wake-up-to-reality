@@ -18,7 +18,11 @@ export type FinancialRealtimeEvent =
 let io: Server | null = null;
 
 function cookieValue(header: string | undefined, name: string) {
-  return header?.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
+  return header
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }
 
 export function configureRealtime(server: HttpServer) {
@@ -28,11 +32,18 @@ export function configureRealtime(server: HttpServer) {
   });
   io.use(async (socket, next) => {
     try {
-      const bearer = typeof socket.handshake.auth["token"] === "string" ? socket.handshake.auth["token"] : undefined;
-      const token = bearer || cookieValue(socket.handshake.headers.cookie, "access_token");
+      const bearer =
+        typeof socket.handshake.auth["token"] === "string"
+          ? socket.handshake.auth["token"]
+          : undefined;
+      const token =
+        bearer || cookieValue(socket.handshake.headers.cookie, "access_token");
       if (!token) throw new Error("AUTH_REQUIRED");
       const payload = await verifyAccessToken(token);
-      const session = await findAccessSession({ sessionId: payload.sessionId, userId: payload.userId });
+      const session = await findAccessSession({
+        sessionId: payload.sessionId,
+        userId: payload.userId,
+      });
       if (!session) throw new Error("AUTH_INVALID_TOKEN");
       socket.data["userId"] = payload.userId;
       next();
@@ -48,7 +59,14 @@ export function configureRealtime(server: HttpServer) {
   return io;
 }
 
-export function notifyUser(userId: string, event: FinancialRealtimeEvent, entity: { bookingId?: string; payoutId?: string }) {
+export function notifyUser(
+  userId: string,
+  event: FinancialRealtimeEvent,
+  entity: { bookingId?: string; payoutId?: string },
+) {
   if (!io) return;
-  io.to(`user:${userId}`).emit(event, { ...entity, changedAt: new Date().toISOString() });
+  io.to(`user:${userId}`).emit(event, {
+    ...entity,
+    changedAt: new Date().toISOString(),
+  });
 }

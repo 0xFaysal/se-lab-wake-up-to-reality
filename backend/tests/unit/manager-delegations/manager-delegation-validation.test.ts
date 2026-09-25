@@ -8,9 +8,8 @@ import { ManagerDelegationPermission } from "../../../generated/prisma/client.js
 import type { GovernanceClient } from "../../../src/modules/property-governance/property-governance.repository.js";
 import "../../helpers/test-env.js";
 
-const { findLiveManagerDelegation } = await import(
-  "../../../src/modules/property-governance/property-governance.repository.js"
-);
+const { findLiveManagerDelegation } =
+  await import("../../../src/modules/property-governance/property-governance.repository.js");
 
 const valid = {
   propertyId: "8c9f0dac-1260-4abc-a7d1-a7ebc1b6ab56",
@@ -21,7 +20,10 @@ const valid = {
 
 describe("Manager delegation validation", () => {
   it("accepts a unique least-privilege permission set", () => {
-    assert.equal(createManagerDelegationSchema.safeParse({ body: valid }).success, true);
+    assert.equal(
+      createManagerDelegationSchema.safeParse({ body: valid }).success,
+      true,
+    );
   });
 
   it("accepts an exact-identifier invitation without a client-visible Manager id", () => {
@@ -35,12 +37,22 @@ describe("Manager delegation validation", () => {
   });
 
   it("rejects duplicate permissions and inverted validity windows", () => {
-    assert.equal(createManagerDelegationSchema.safeParse({ body: { ...valid, permissions: ["RESOURCE_VIEW", "RESOURCE_VIEW"] } }).success, false);
-    assert.equal(createManagerDelegationSchema.safeParse({ body: {
-      ...valid,
-      validFrom: "2026-09-12T12:00:00.000Z",
-      validUntil: "2026-09-12T11:00:00.000Z",
-    } }).success, false);
+    assert.equal(
+      createManagerDelegationSchema.safeParse({
+        body: { ...valid, permissions: ["RESOURCE_VIEW", "RESOURCE_VIEW"] },
+      }).success,
+      false,
+    );
+    assert.equal(
+      createManagerDelegationSchema.safeParse({
+        body: {
+          ...valid,
+          validFrom: "2026-09-12T12:00:00.000Z",
+          validUntil: "2026-09-12T11:00:00.000Z",
+        },
+      }).success,
+      false,
+    );
   });
 
   it("queries permission in the exact Provider and Property scope", async () => {
@@ -63,10 +75,15 @@ describe("Manager delegation validation", () => {
     assert.equal(result, null);
     assert.deepEqual(
       {
-        managerUserId: (capturedWhere as { managerUserId: string }).managerUserId,
+        managerUserId: (capturedWhere as { managerUserId: string })
+          .managerUserId,
         propertyId: (capturedWhere as { propertyId: string }).propertyId,
-        providerMembershipId: (capturedWhere as { grantorProviderMembershipId: string }).grantorProviderMembershipId,
-        permission: (capturedWhere as { permissions: { some: { permission: string } } }).permissions.some.permission,
+        providerMembershipId: (
+          capturedWhere as { grantorProviderMembershipId: string }
+        ).grantorProviderMembershipId,
+        permission: (
+          capturedWhere as { permissions: { some: { permission: string } } }
+        ).permissions.some.permission,
       },
       {
         managerUserId: "manager-id",

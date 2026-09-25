@@ -37,17 +37,18 @@ async function createWorkforceAccount(input: {
   phone: string;
 }) {
   const createdByAdmin = input.actorRoles.includes(UserRoleType.ADMIN);
-  const accountOrigin = createdByAdmin &&
-      input.targetRole !== UserRoleType.GUARD &&
-      input.targetRole !== UserRoleType.MANAGER
-    ? AccountOrigin.ADMIN_CREATED_USER
-    : input.targetRole === UserRoleType.GUARD
-      ? input.actorRoles.includes(UserRoleType.ADMIN)
-        ? AccountOrigin.ADMIN_CREATED_GUARD
-        : AccountOrigin.PROVIDER_CREATED_GUARD
-      : input.actorRoles.includes(UserRoleType.ADMIN)
-        ? AccountOrigin.ADMIN_CREATED_MANAGER
-        : AccountOrigin.PROVIDER_CREATED_MANAGER;
+  const accountOrigin =
+    createdByAdmin &&
+    input.targetRole !== UserRoleType.GUARD &&
+    input.targetRole !== UserRoleType.MANAGER
+      ? AccountOrigin.ADMIN_CREATED_USER
+      : input.targetRole === UserRoleType.GUARD
+        ? input.actorRoles.includes(UserRoleType.ADMIN)
+          ? AccountOrigin.ADMIN_CREATED_GUARD
+          : AccountOrigin.PROVIDER_CREATED_GUARD
+        : input.actorRoles.includes(UserRoleType.ADMIN)
+          ? AccountOrigin.ADMIN_CREATED_MANAGER
+          : AccountOrigin.PROVIDER_CREATED_MANAGER;
   const phone = normalizeBangladeshPhone(input.phone);
   const setupToken = randomBytes(32).toString("base64url");
   const unusablePassword = randomBytes(48).toString("base64url");
@@ -229,7 +230,8 @@ export async function resendAdminAccountSetup(userId: string) {
     throw new AppError({
       statusCode: 409,
       code: "ACCOUNT_SETUP_RESEND_NOT_ALLOWED",
-      message: "A setup link can only be resent for a pending Admin-created account",
+      message:
+        "A setup link can only be resent for a pending Admin-created account",
     });
   }
 

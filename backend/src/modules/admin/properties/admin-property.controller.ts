@@ -143,13 +143,19 @@ export const mergeAdminPropertyByIdController: RequestHandler = async (
   }
 };
 
-export const previewAdminPropertyMergeController: RequestHandler = async (req, res, next) => {
+export const previewAdminPropertyMergeController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
   try {
     const preview = await adminPropertyService.previewPropertyMerge(
       String(req.query.canonicalPropertyId),
       requireDuplicatePropertyId(req),
     );
-    res.status(200).json({ success: true, data: { preview }, meta: responseMeta(req) });
+    res
+      .status(200)
+      .json({ success: true, data: { preview }, meta: responseMeta(req) });
   } catch (error) {
     next(error);
   }

@@ -343,7 +343,10 @@ export async function updateProperty(
       const changedFields = new Set(Object.keys(input));
       changedFields.delete("version");
       const providerCount =
-        await governanceRepository.getActiveVerifiedProviderCount(propertyId, tx);
+        await governanceRepository.getActiveVerifiedProviderCount(
+          propertyId,
+          tx,
+        );
       const [verifiedMembership, provisionalMembership] = await Promise.all([
         governanceRepository.findActiveVerifiedProviderMembership(
           providerUserId,
@@ -371,14 +374,21 @@ export async function updateProperty(
 
       const updateData: Prisma.PropertyUncheckedUpdateManyInput = {
         ...(input.name !== undefined
-          ? { name: input.name, normalizedName: normalizePropertyName(input.name) }
+          ? {
+              name: input.name,
+              normalizedName: normalizePropertyName(input.name),
+            }
           : {}),
-        ...(input.publicArea !== undefined ? { publicArea: input.publicArea } : {}),
+        ...(input.publicArea !== undefined
+          ? { publicArea: input.publicArea }
+          : {}),
         ...(input.approximateAddress !== undefined
           ? { approximateAddress: input.approximateAddress }
           : {}),
         ...(input.latitude !== undefined ? { latitude: input.latitude } : {}),
-        ...(input.longitude !== undefined ? { longitude: input.longitude } : {}),
+        ...(input.longitude !== undefined
+          ? { longitude: input.longitude }
+          : {}),
         ...(input.entranceLatitude !== undefined
           ? { entranceLatitude: input.entranceLatitude }
           : {}),
@@ -386,7 +396,10 @@ export async function updateProperty(
           ? { entranceLongitude: input.entranceLongitude }
           : {}),
         ...(input.visitorIdentificationRequired !== undefined
-          ? { visitorIdentificationRequired: input.visitorIdentificationRequired }
+          ? {
+              visitorIdentificationRequired:
+                input.visitorIdentificationRequired,
+            }
           : {}),
         ...(input.vehicleHeightLimitCm !== undefined
           ? { vehicleHeightLimitCm: input.vehicleHeightLimitCm }
@@ -423,7 +436,9 @@ export async function updateProperty(
             accessInstructionsTag: null,
           });
         } else {
-          const encryptedAccess = encryptSensitiveText(input.accessInstructions);
+          const encryptedAccess = encryptSensitiveText(
+            input.accessInstructions,
+          );
           Object.assign(updateData, {
             accessInstructionsCiphertext: encryptedAccess.ciphertext,
             accessInstructionsIv: encryptedAccess.iv,

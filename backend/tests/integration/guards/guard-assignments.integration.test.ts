@@ -27,7 +27,8 @@ integration("normalized Property Guard lifecycle integration", () => {
 
   async function createUser(key: string, role: "PROVIDER" | "GUARD") {
     const generated = await import("../../../generated/prisma/client.js");
-    const { hashPassword } = await import("../../../src/common/auth/password.js");
+    const { hashPassword } =
+      await import("../../../src/common/auth/password.js");
     const { signAccessToken } = await import("../../../src/common/auth/jwt.js");
     const user = await prisma.user.create({
       data: {
@@ -42,9 +43,17 @@ integration("normalized Property Guard lifecycle integration", () => {
       },
     });
     const session = await prisma.refreshSession.create({
-      data: { userId: user.id, tokenHash: randomUUID(), rememberDevice: false, expiresAt: new Date(Date.now() + 3_600_000) },
+      data: {
+        userId: user.id,
+        tokenHash: randomUUID(),
+        rememberDevice: false,
+        expiresAt: new Date(Date.now() + 3_600_000),
+      },
     });
-    cookies.set(key, `access_token=${await signAccessToken({ userId: user.id, sessionId: session.id, roles: [generated.UserRoleType[role]] })}`);
+    cookies.set(
+      key,
+      `access_token=${await signAccessToken({ userId: user.id, sessionId: session.id, roles: [generated.UserRoleType[role]] })}`,
+    );
     users.set(key, user);
     return user;
   }
@@ -54,12 +63,18 @@ integration("normalized Property Guard lifecycle integration", () => {
     process.env.DATABASE_URL = testDatabaseUrl!;
     process.env.REDIS_URL ??= "redis://localhost:6379";
     process.env.CORS_ORIGIN = "http://localhost:3000";
-    process.env.JWT_ACCESS_SECRET = "guard-flow-access-secret-at-least-32-characters";
-    process.env.JWT_REFRESH_SECRET = "guard-flow-refresh-secret-at-least-32-characters";
-    process.env.VERIFICATION_CODE_SECRET = "guard-flow-verification-secret-at-least-32-characters";
-    process.env.AUTH_METADATA_HASH_SECRET = "guard-flow-metadata-secret-at-least-32-characters";
-    process.env.PROPERTY_ADDRESS_FINGERPRINT_SECRET = "guard-flow-property-secret-at-least-32-characters";
-    process.env.DATA_ENCRYPTION_KEY = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+    process.env.JWT_ACCESS_SECRET =
+      "guard-flow-access-secret-at-least-32-characters";
+    process.env.JWT_REFRESH_SECRET =
+      "guard-flow-refresh-secret-at-least-32-characters";
+    process.env.VERIFICATION_CODE_SECRET =
+      "guard-flow-verification-secret-at-least-32-characters";
+    process.env.AUTH_METADATA_HASH_SECRET =
+      "guard-flow-metadata-secret-at-least-32-characters";
+    process.env.PROPERTY_ADDRESS_FINGERPRINT_SECRET =
+      "guard-flow-property-secret-at-least-32-characters";
+    process.env.DATA_ENCRYPTION_KEY =
+      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
     process.env.ENABLE_API_DOCS = "false";
 
     const appModule = await import("../../../src/app.js");
@@ -86,7 +101,11 @@ integration("normalized Property Guard lifecycle integration", () => {
         status: generated.PropertyStatus.ACTIVE,
         verificationStatus: generated.VerificationStatus.VERIFIED,
         providerMemberships: {
-          create: { providerUserId: provider.id, verificationStatus: generated.VerificationStatus.VERIFIED, verifiedAt: new Date() },
+          create: {
+            providerUserId: provider.id,
+            verificationStatus: generated.VerificationStatus.VERIFIED,
+            verifiedAt: new Date(),
+          },
         },
       },
     });
@@ -108,66 +127,106 @@ integration("normalized Property Guard lifecycle integration", () => {
 
   after(async () => {
     const userIds = [...users.values()].map((user) => user.id);
-    await prisma.providerGuardAssignment.deleteMany({ where: { propertyGuardMembership: { propertyId } } });
+    await prisma.providerGuardAssignment.deleteMany({
+      where: { propertyGuardMembership: { propertyId } },
+    });
     await prisma.propertyGuardMembership.deleteMany({ where: { propertyId } });
     await prisma.domainAuditEvent.deleteMany({ where: { propertyId } });
     await prisma.propertyProvider.deleteMany({ where: { propertyId } });
     await prisma.property.deleteMany({ where: { id: propertyId } });
-    await prisma.refreshSession.deleteMany({ where: { userId: { in: userIds } } });
+    await prisma.refreshSession.deleteMany({
+      where: { userId: { in: userIds } },
+    });
     await prisma.userRole.deleteMany({ where: { userId: { in: userIds } } });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
-    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
     await prisma.$disconnect();
     if (redis.isOpen) await redis.quit();
   });
 
   it("requires Guard consent before provider-specific assignment", async () => {
-    const invitation = await request(`/api/v1/properties/${propertyId}/guards`, {
-      method: "POST",
-      cookie: cookies.get("provider"),
-      body: JSON.stringify({ identifier: users.get("guard")!.email }),
-    });
+    const invitation = await request(
+      `/api/v1/properties/${propertyId}/guards`,
+      {
+        method: "POST",
+        cookie: cookies.get("provider"),
+        body: JSON.stringify({ identifier: users.get("guard")!.email }),
+      },
+    );
     assert.equal(invitation.status, 201);
-    const membershipId = (await invitation.json() as { data: { membership: { id: string } } }).data.membership.id;
+    const membershipId = (
+      (await invitation.json()) as { data: { membership: { id: string } } }
+    ).data.membership.id;
 
-    const sharedDirectory = await request(`/api/v1/properties/${propertyId}/guards`, {
-      cookie: cookies.get("other-provider"),
-    });
+    const sharedDirectory = await request(
+      `/api/v1/properties/${propertyId}/guards`,
+      {
+        cookie: cookies.get("other-provider"),
+      },
+    );
     assert.equal(sharedDirectory.status, 200);
     assert.equal(
-      (await sharedDirectory.json() as { data: { memberships: unknown[] } })
+      ((await sharedDirectory.json()) as { data: { memberships: unknown[] } })
         .data.memberships.length,
       1,
     );
 
-    const tooEarly = await request(`/api/v1/provider/properties/${propertyId}/guard-assignments`, {
-      method: "POST",
-      cookie: cookies.get("provider"),
-      body: JSON.stringify({ guardMembershipId: membershipId, shiftStart: "08:00", shiftEnd: "20:00" }),
-    });
+    const tooEarly = await request(
+      `/api/v1/provider/properties/${propertyId}/guard-assignments`,
+      {
+        method: "POST",
+        cookie: cookies.get("provider"),
+        body: JSON.stringify({
+          guardMembershipId: membershipId,
+          shiftStart: "08:00",
+          shiftEnd: "20:00",
+        }),
+      },
+    );
     assert.equal(tooEarly.status, 409);
 
-    const accepted = await request(`/api/v1/guard/property-memberships/${membershipId}/accept`, {
-      method: "POST",
-      cookie: cookies.get("guard"),
-    });
+    const accepted = await request(
+      `/api/v1/guard/property-memberships/${membershipId}/accept`,
+      {
+        method: "POST",
+        cookie: cookies.get("guard"),
+      },
+    );
     assert.equal(accepted.status, 200);
 
-    const assigned = await request(`/api/v1/provider/properties/${propertyId}/guard-assignments`, {
-      method: "POST",
-      cookie: cookies.get("provider"),
-      body: JSON.stringify({ guardMembershipId: membershipId, shiftStart: "08:00", shiftEnd: "20:00" }),
-    });
+    const assigned = await request(
+      `/api/v1/provider/properties/${propertyId}/guard-assignments`,
+      {
+        method: "POST",
+        cookie: cookies.get("provider"),
+        body: JSON.stringify({
+          guardMembershipId: membershipId,
+          shiftStart: "08:00",
+          shiftEnd: "20:00",
+        }),
+      },
+    );
     assert.equal(assigned.status, 201);
-    const providerAAssignmentId = (await assigned.json() as {
-      data: { assignment: { id: string } };
-    }).data.assignment.id;
+    const providerAAssignmentId = (
+      (await assigned.json()) as {
+        data: { assignment: { id: string } };
+      }
+    ).data.assignment.id;
 
-    const isolated = await request(`/api/v1/provider/guard-assignments?propertyId=${propertyId}`, {
-      cookie: cookies.get("other-provider"),
-    });
+    const isolated = await request(
+      `/api/v1/provider/guard-assignments?propertyId=${propertyId}`,
+      {
+        cookie: cookies.get("other-provider"),
+      },
+    );
     assert.equal(isolated.status, 200);
-    assert.equal((await isolated.json() as { data: { assignments: unknown[] } }).data.assignments.length, 0);
+    assert.equal(
+      ((await isolated.json()) as { data: { assignments: unknown[] } }).data
+        .assignments.length,
+      0,
+    );
 
     const crossProviderMutation = await request(
       `/api/v1/provider/guard-assignments/${providerAAssignmentId}`,

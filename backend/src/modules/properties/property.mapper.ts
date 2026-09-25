@@ -90,10 +90,17 @@ export function toOwnerPropertyDetail(
   };
 }
 
-export function toPublicPropertySummary(property: Pick<
-  Property,
-  "id" | "name" | "publicArea" | "approximateAddress" | "latitude" | "longitude"
->) {
+export function toPublicPropertySummary(
+  property: Pick<
+    Property,
+    | "id"
+    | "name"
+    | "publicArea"
+    | "approximateAddress"
+    | "latitude"
+    | "longitude"
+  >,
+) {
   return {
     id: property.id,
     name: property.name,

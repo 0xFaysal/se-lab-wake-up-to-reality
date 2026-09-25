@@ -108,7 +108,9 @@ export function findLiveManagerDelegation(
     where: {
       managerUserId,
       propertyId,
-      ...(providerMembershipId ? { grantorProviderMembershipId: providerMembershipId } : {}),
+      ...(providerMembershipId
+        ? { grantorProviderMembershipId: providerMembershipId }
+        : {}),
       status: ManagerDelegationStatus.ACTIVE,
       OR: [{ validFrom: null }, { validFrom: { lte: now } }],
       AND: [{ OR: [{ validUntil: null }, { validUntil: { gt: now } }] }],

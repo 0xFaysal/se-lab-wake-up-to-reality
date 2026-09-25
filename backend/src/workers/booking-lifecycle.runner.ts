@@ -22,11 +22,12 @@ export function startBookingLifecycleWorker(): BookingLifecycleWorker {
     try {
       const result = await reconcileMarketplaceLifecycle();
       if (
-        result.expiredHolds > 0
-        || result.expiredBookings.processed > 0
-        || result.noShows.processed > 0
-        || result.expiredCredentials > 0
-      ) logger.info(result, "Marketplace lifecycle reconciled");
+        result.expiredHolds > 0 ||
+        result.expiredBookings.processed > 0 ||
+        result.noShows.processed > 0 ||
+        result.expiredCredentials > 0
+      )
+        logger.info(result, "Marketplace lifecycle reconciled");
     } catch (error) {
       logger.error({ error }, "Booking lifecycle worker batch failed");
     } finally {
@@ -35,7 +36,10 @@ export function startBookingLifecycleWorker(): BookingLifecycleWorker {
     }
   }
 
-  logger.info({ pollIntervalMs: POLL_INTERVAL_MS }, "Booking lifecycle worker started");
+  logger.info(
+    { pollIntervalMs: POLL_INTERVAL_MS },
+    "Booking lifecycle worker started",
+  );
   void run();
 
   return {
