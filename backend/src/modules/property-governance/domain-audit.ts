@@ -3,7 +3,8 @@ import {
   type Prisma,
 } from "../../../generated/prisma/client.js";
 
-const forbiddenMetadataKey = /password|token|otp|secret|cipher|auth.?tag|\biv\b/i;
+const forbiddenMetadataKey =
+  /password|token|otp|secret|cipher|auth.?tag|\biv\b/i;
 
 export function createDomainAuditEvent(
   tx: Prisma.TransactionClient,
@@ -20,7 +21,9 @@ export function createDomainAuditEvent(
   if (input.metadata) {
     for (const key of Object.keys(input.metadata)) {
       if (forbiddenMetadataKey.test(key)) {
-        throw new Error("Sensitive metadata is not allowed in domain audit events");
+        throw new Error(
+          "Sensitive metadata is not allowed in domain audit events",
+        );
       }
     }
   }

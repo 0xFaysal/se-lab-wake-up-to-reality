@@ -35,7 +35,9 @@ function handler(
         res.status(204).send();
         return;
       }
-      res.status(statusCode).json({ success: true, data: result, meta: meta(req) });
+      res
+        .status(statusCode)
+        .json({ success: true, data: result, meta: meta(req) });
     } catch (error) {
       next(error);
     }

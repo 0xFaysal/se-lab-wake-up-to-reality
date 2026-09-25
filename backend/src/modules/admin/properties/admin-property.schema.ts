@@ -51,8 +51,11 @@ export const mergeAdminPropertiesSchema = z.object({
   body: mergeAdminPropertyBodySchema
     .extend({ duplicatePropertyId: z.uuid() })
     .strict()
-    .refine((value) => value.canonicalPropertyId !== value.duplicatePropertyId, {
-      path: ["duplicatePropertyId"],
-      message: "Canonical and duplicate Property must be different",
-    }),
+    .refine(
+      (value) => value.canonicalPropertyId !== value.duplicatePropertyId,
+      {
+        path: ["duplicatePropertyId"],
+        message: "Canonical and duplicate Property must be different",
+      },
+    ),
 });

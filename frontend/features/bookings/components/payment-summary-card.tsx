@@ -1,4 +1,4 @@
-import { CreditCard, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { PaymentSummary } from "@/types/driver";
 
 interface PaymentSummaryCardProps {

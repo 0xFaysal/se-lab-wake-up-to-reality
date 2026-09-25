@@ -35,25 +35,34 @@ export async function resolvePlatformFee(
 
   const rules = await prisma.platformFeeRule.findMany({
     where: {
-      status: { in: [PlatformFeeRuleStatus.ACTIVE, PlatformFeeRuleStatus.SCHEDULED] },
+      status: {
+        in: [PlatformFeeRuleStatus.ACTIVE, PlatformFeeRuleStatus.SCHEDULED],
+      },
       effectiveFrom: { lte: effectiveAt },
-      OR: [
-        { effectiveUntil: null },
-        { effectiveUntil: { gt: effectiveAt } },
+      OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: effectiveAt } }],
+      AND: [
+        {
+          OR: [
+            { scopeType: PlatformFeeScopeType.GLOBAL, scopeId: null },
+            {
+              scopeType: PlatformFeeScopeType.PROVIDER,
+              scopeId: listing.providerUserId,
+            },
+            {
+              scopeType: PlatformFeeScopeType.PROPERTY,
+              scopeId: listing.parkingSpot.propertyId,
+            },
+            { scopeType: PlatformFeeScopeType.LISTING, scopeId: listingId },
+          ],
+        },
       ],
-      AND: [{
-        OR: [
-          { scopeType: PlatformFeeScopeType.GLOBAL, scopeId: null },
-          { scopeType: PlatformFeeScopeType.PROVIDER, scopeId: listing.providerUserId },
-          { scopeType: PlatformFeeScopeType.PROPERTY, scopeId: listing.parkingSpot.propertyId },
-          { scopeType: PlatformFeeScopeType.LISTING, scopeId: listingId },
-        ],
-      }],
     },
     orderBy: { effectiveFrom: "desc" },
   });
 
-  const rule = rules.sort((left, right) => priority[right.scopeType] - priority[left.scopeType])[0];
+  const rule = rules.sort(
+    (left, right) => priority[right.scopeType] - priority[left.scopeType],
+  )[0];
   if (!rule) {
     return {
       amountPaisa: calculatePlatformFeePaisa(baseAmountPaisa),

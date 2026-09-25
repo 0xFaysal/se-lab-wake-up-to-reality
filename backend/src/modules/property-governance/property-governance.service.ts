@@ -89,33 +89,45 @@ async function invalidateGovernanceForProviderSetChange(
   tx: Prisma.TransactionClient,
 ) {
   const active = await repository.findActiveBuildingManager(propertyId, tx);
-  const pendingAssignments = await tx.propertyBuildingManagerAssignment.findMany({
-    where: {
-      propertyId,
-      status: {
-        in: [
-          BuildingManagerAssignmentStatus.PENDING_APPROVAL,
-          BuildingManagerAssignmentStatus.PENDING_RECONFIRMATION,
-        ],
+  const pendingAssignments =
+    await tx.propertyBuildingManagerAssignment.findMany({
+      where: {
+        propertyId,
+        status: {
+          in: [
+            BuildingManagerAssignmentStatus.PENDING_APPROVAL,
+            BuildingManagerAssignmentStatus.PENDING_RECONFIRMATION,
+          ],
+        },
       },
-    },
-    select: { id: true },
-  });
+      select: { id: true },
+    });
   if (pendingAssignments.length > 0) {
     await tx.propertyBuildingManagerVote.deleteMany({
-      where: { assignmentId: { in: pendingAssignments.map((item) => item.id) } },
+      where: {
+        assignmentId: { in: pendingAssignments.map((item) => item.id) },
+      },
     });
     await tx.propertyBuildingManagerAssignment.updateMany({
       where: { id: { in: pendingAssignments.map((item) => item.id) } },
       data: active
-        ? { status: BuildingManagerAssignmentStatus.CANCELLED, endedAt: new Date() }
+        ? {
+            status: BuildingManagerAssignmentStatus.CANCELLED,
+            endedAt: new Date(),
+          }
         : { status: BuildingManagerAssignmentStatus.PENDING_RECONFIRMATION },
     });
   }
   if (active) await moveManagerToReconfirmation(propertyId, tx);
   await tx.propertyChangeProposal.updateMany({
-    where: { propertyId, status: PropertyChangeProposalStatus.PENDING_APPROVAL },
-    data: { status: PropertyChangeProposalStatus.STALE, resolvedAt: new Date() },
+    where: {
+      propertyId,
+      status: PropertyChangeProposalStatus.PENDING_APPROVAL,
+    },
+    data: {
+      status: PropertyChangeProposalStatus.STALE,
+      resolvedAt: new Date(),
+    },
   });
 }
 
@@ -128,7 +140,10 @@ async function endActiveBuildingManager(
   if (!active) return;
   const changed = await tx.propertyBuildingManagerAssignment.updateMany({
     where: { id: active.id, status: BuildingManagerAssignmentStatus.ACTIVE },
-    data: { status: BuildingManagerAssignmentStatus.ENDED, endedAt: new Date() },
+    data: {
+      status: BuildingManagerAssignmentStatus.ENDED,
+      endedAt: new Date(),
+    },
   });
   if (changed.count !== 1) throw governanceErrors.conflict();
   await createDomainAuditEvent(tx, {
@@ -191,11 +206,15 @@ export async function leaveProviderMembership(
       propertyId,
       tx,
     );
-    const before = await repository.getActiveVerifiedProviderCount(propertyId, tx);
+    const before = await repository.getActiveVerifiedProviderCount(
+      propertyId,
+      tx,
+    );
     const parkingResourceCount = await tx.parkingSpot.count({
       where: { providerMembershipId: membership.id, deletedAt: null },
     });
-    if (parkingResourceCount > 0) throw governanceErrors.membershipExitBlocked();
+    if (parkingResourceCount > 0)
+      throw governanceErrors.membershipExitBlocked();
     await tx.propertyProvider.updateMany({
       where: {
         id: membership.id,
@@ -270,7 +289,10 @@ export async function verifyProviderMembership(
     if (membership.verificationStatus !== VerificationStatus.PENDING) {
       throw governanceErrors.conflict();
     }
-    const before = await repository.getActiveVerifiedProviderCount(propertyId, tx);
+    const before = await repository.getActiveVerifiedProviderCount(
+      propertyId,
+      tx,
+    );
     const verifiedAt = new Date();
     const updated = await tx.propertyProvider.update({
       where: { id: membership.id },
@@ -343,7 +365,9 @@ export async function nominateBuildingManager(
                 propertyId,
                 status: ManagerDelegationStatus.ACTIVE,
                 OR: [{ validFrom: null }, { validFrom: { lte: now } }],
-                AND: [{ OR: [{ validUntil: null }, { validUntil: { gt: now } }] }],
+                AND: [
+                  { OR: [{ validUntil: null }, { validUntil: { gt: now } }] },
+                ],
                 grantorProviderMembership: activeVerifiedProviderWhere,
               },
             },
@@ -354,20 +378,23 @@ export async function nominateBuildingManager(
     });
     if (!candidate) throw governanceErrors.managerRelationshipRequired();
 
-    const providerCount =
-      await repository.getActiveVerifiedProviderCount(propertyId, tx);
-    const pendingNomination = await tx.propertyBuildingManagerAssignment.findFirst({
-      where: {
-        propertyId,
-        status: {
-          in: [
-            BuildingManagerAssignmentStatus.PENDING_APPROVAL,
-            BuildingManagerAssignmentStatus.PENDING_RECONFIRMATION,
-          ],
+    const providerCount = await repository.getActiveVerifiedProviderCount(
+      propertyId,
+      tx,
+    );
+    const pendingNomination =
+      await tx.propertyBuildingManagerAssignment.findFirst({
+        where: {
+          propertyId,
+          status: {
+            in: [
+              BuildingManagerAssignmentStatus.PENDING_APPROVAL,
+              BuildingManagerAssignmentStatus.PENDING_RECONFIRMATION,
+            ],
+          },
         },
-      },
-      select: { id: true },
-    });
+        select: { id: true },
+      });
     if (pendingNomination) throw governanceErrors.conflict();
     const activateImmediately = providerCount === 1;
     if (activateImmediately) {
@@ -656,12 +683,16 @@ export async function updateTemporaryClosure(
   return prisma.$transaction(async (tx) => {
     await propertyRepository.lockPropertyForMutation(propertyId, tx);
     const property = await propertyRepository.findPropertyById(propertyId, tx);
-    if (!property || property.verificationStatus !== VerificationStatus.VERIFIED) {
+    if (
+      !property ||
+      property.verificationStatus !== VerificationStatus.VERIFIED
+    ) {
       throw governanceErrors.notFound();
     }
     if (
       (input.action === "CLOSE" && property.status !== PropertyStatus.ACTIVE) ||
-      (input.action === "REOPEN" && property.status !== PropertyStatus.TEMPORARILY_CLOSED)
+      (input.action === "REOPEN" &&
+        property.status !== PropertyStatus.TEMPORARILY_CLOSED)
     ) {
       throw governanceErrors.conflict();
     }
@@ -736,14 +767,29 @@ function revealProposalChanges(value: Prisma.JsonValue) {
 function identityLocationUpdateData(changes: Record<string, unknown>) {
   const data: Prisma.PropertyUncheckedUpdateManyInput = {
     ...(typeof changes.name === "string"
-      ? { name: changes.name, normalizedName: normalizePropertyName(changes.name) }
+      ? {
+          name: changes.name,
+          normalizedName: normalizePropertyName(changes.name),
+        }
       : {}),
-    ...(typeof changes.publicArea === "string" ? { publicArea: changes.publicArea } : {}),
-    ...(typeof changes.approximateAddress === "string" ? { approximateAddress: changes.approximateAddress } : {}),
-    ...(typeof changes.latitude === "number" ? { latitude: changes.latitude } : {}),
-    ...(typeof changes.longitude === "number" ? { longitude: changes.longitude } : {}),
-    ...(changes.entranceLatitude !== undefined ? { entranceLatitude: changes.entranceLatitude as number | null } : {}),
-    ...(changes.entranceLongitude !== undefined ? { entranceLongitude: changes.entranceLongitude as number | null } : {}),
+    ...(typeof changes.publicArea === "string"
+      ? { publicArea: changes.publicArea }
+      : {}),
+    ...(typeof changes.approximateAddress === "string"
+      ? { approximateAddress: changes.approximateAddress }
+      : {}),
+    ...(typeof changes.latitude === "number"
+      ? { latitude: changes.latitude }
+      : {}),
+    ...(typeof changes.longitude === "number"
+      ? { longitude: changes.longitude }
+      : {}),
+    ...(changes.entranceLatitude !== undefined
+      ? { entranceLatitude: changes.entranceLatitude as number | null }
+      : {}),
+    ...(changes.entranceLongitude !== undefined
+      ? { entranceLongitude: changes.entranceLongitude as number | null }
+      : {}),
     verificationStatus: VerificationStatus.PENDING,
     status: PropertyStatus.INACTIVE,
     verifiedByAdminId: null,
@@ -776,8 +822,11 @@ export async function createPropertyChangeProposal(
     );
     const property = await propertyRepository.findPropertyById(propertyId, tx);
     if (!property) throw governanceErrors.notFound();
-    if (property.version !== input.baseVersion) throw propertyErrors.staleVersion();
-    if ((await getPropertyGovernanceMode(propertyId, tx)) !== "MULTI_PROVIDER") {
+    if (property.version !== input.baseVersion)
+      throw propertyErrors.staleVersion();
+    if (
+      (await getPropertyGovernanceMode(propertyId, tx)) !== "MULTI_PROVIDER"
+    ) {
       throw governanceErrors.conflict();
     }
     const protectedChanges = protectProposalChanges(input.changes);
@@ -803,7 +852,10 @@ export async function createPropertyChangeProposal(
       propertyId,
       entityType: "PropertyChangeProposal",
       entityId: proposal.id,
-      metadata: { changeType: input.changeType, baseVersion: input.baseVersion },
+      metadata: {
+        changeType: input.changeType,
+        baseVersion: input.baseVersion,
+      },
     });
     return toPropertyChangeProposalDto(proposal, input.changes);
   });
@@ -886,11 +938,12 @@ async function applyApprovedProposal(
   tx: Prisma.TransactionClient,
 ) {
   const changes = revealProposalChanges(proposal.proposedChanges);
-  const updateData = proposal.changeType === PropertyChangeType.COMMON_RULES
-    ? commonRuleUpdateData(changes as Omit<CommonRulesInput, "version">)
-    : proposal.changeType === PropertyChangeType.TEMPORARY_CLOSURE
-      ? closureUpdateData(changes as TemporaryClosureChanges)
-      : identityLocationUpdateData(changes);
+  const updateData =
+    proposal.changeType === PropertyChangeType.COMMON_RULES
+      ? commonRuleUpdateData(changes as Omit<CommonRulesInput, "version">)
+      : proposal.changeType === PropertyChangeType.TEMPORARY_CLOSURE
+        ? closureUpdateData(changes as TemporaryClosureChanges)
+        : identityLocationUpdateData(changes);
   const updated = await propertyRepository.updatePropertyConditionally(
     proposal.propertyId,
     proposal.basePropertyVersion,
@@ -900,7 +953,10 @@ async function applyApprovedProposal(
   if (updated.count !== 1) {
     await tx.propertyChangeProposal.update({
       where: { id: proposal.id },
-      data: { status: PropertyChangeProposalStatus.STALE, resolvedAt: new Date() },
+      data: {
+        status: PropertyChangeProposalStatus.STALE,
+        resolvedAt: new Date(),
+      },
     });
     return PropertyChangeProposalStatus.STALE;
   }
@@ -1001,6 +1057,9 @@ export async function voteOnPropertyChangeProposal(
       const status = await applyApprovedProposal(proposal, voterUserId, tx);
       return { proposalId, status };
     }
-    return { proposalId, status: PropertyChangeProposalStatus.PENDING_APPROVAL };
+    return {
+      proposalId,
+      status: PropertyChangeProposalStatus.PENDING_APPROVAL,
+    };
   });
 }

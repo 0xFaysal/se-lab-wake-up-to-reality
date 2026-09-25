@@ -67,13 +67,15 @@ export const guardAssignmentErrors = {
     new AppError({
       statusCode: 409,
       code: "PROPERTY_GUARD_MEMBERSHIP_NOT_ACTIVE",
-      message: "Guard must accept the Property membership before provider assignment",
+      message:
+        "Guard must accept the Property membership before provider assignment",
     }),
   membershipRemovalBlocked: () =>
     new AppError({
       statusCode: 409,
       code: "PROPERTY_GUARD_REMOVAL_BLOCKED",
-      message: "End every active Provider Guard assignment before removing this Guard",
+      message:
+        "End every active Provider Guard assignment before removing this Guard",
     }),
   providerScopeRequired: () =>
     new AppError({

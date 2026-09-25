@@ -10,23 +10,14 @@ import {
   MapPin,
   Car,
   DollarSign,
-  Shield,
   ShieldCheck,
-  Clock,
   Zap,
   Camera,
-  Layers,
-  ArrowRight,
   ArrowLeft,
   ExternalLink,
   Eye,
   Rocket,
-  Sparkles,
-  Edit3,
   Lightbulb,
-  FileCheck,
-  AlertCircle,
-  HelpCircle,
 } from "lucide-react";
 import { ListingWizardShell } from "../listing-wizard-shell";
 

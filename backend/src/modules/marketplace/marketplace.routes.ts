@@ -10,7 +10,10 @@ import * as controller from "./marketplace.controller.js";
 import * as schema from "./marketplace.schema.js";
 
 export const marketplaceRouter = Router();
-const providerOrManager = requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER);
+const providerOrManager = requireRole(
+  UserRoleType.PROVIDER,
+  UserRoleType.MANAGER,
+);
 
 /**
  * @openapi
@@ -27,9 +30,21 @@ const providerOrManager = requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGE
  *       - { in: query, name: vehicleType, required: true, schema: { type: string } }
  *     responses: { 200: { description: Available Property summaries and offers. } }
  */
-marketplaceRouter.get("/parking/search", validate(schema.searchParkingSchema), controller.searchParking);
-marketplaceRouter.get("/parking/browse", validate(schema.browseParkingSchema), controller.browseParking);
-marketplaceRouter.get("/parking/properties/:propertyId", validate(schema.publicPropertyDetailSchema), controller.getPublicPropertyDetail);
+marketplaceRouter.get(
+  "/parking/search",
+  validate(schema.searchParkingSchema),
+  controller.searchParking,
+);
+marketplaceRouter.get(
+  "/parking/browse",
+  validate(schema.browseParkingSchema),
+  controller.browseParking,
+);
+marketplaceRouter.get(
+  "/parking/properties/:propertyId",
+  validate(schema.publicPropertyDetailSchema),
+  controller.getPublicPropertyDetail,
+);
 
 marketplaceRouter.use(authenticate, requireAccountReady);
 
@@ -50,17 +65,68 @@ marketplaceRouter.use(authenticate, requireAccountReady);
  * /api/v1/driver/recent-searches/{searchId}:
  *   delete: { tags: [Driver Discovery], summary: Remove one parking search from history, security: [{ accessCookie: [] }], responses: { 200: { description: Search history item removed. } } }
  */
-marketplaceRouter.get("/driver/favorites", requireRole(UserRoleType.DRIVER), controller.listDriverFavorites);
-marketplaceRouter.post("/driver/favorites/:propertyId", requireRole(UserRoleType.DRIVER), validate(schema.driverFavoriteParamsSchema), controller.addDriverFavorite);
-marketplaceRouter.delete("/driver/favorites/:propertyId", requireRole(UserRoleType.DRIVER), validate(schema.driverFavoriteParamsSchema), controller.removeDriverFavorite);
-marketplaceRouter.get("/driver/saved-locations", requireRole(UserRoleType.DRIVER), controller.listDriverSavedLocations);
-marketplaceRouter.post("/driver/saved-locations", requireRole(UserRoleType.DRIVER), validate(schema.createSavedLocationSchema), controller.createDriverSavedLocation);
-marketplaceRouter.patch("/driver/saved-locations/:locationId", requireRole(UserRoleType.DRIVER), validate(schema.updateSavedLocationSchema), controller.updateDriverSavedLocation);
-marketplaceRouter.delete("/driver/saved-locations/:locationId", requireRole(UserRoleType.DRIVER), validate(schema.savedLocationParamsSchema), controller.deleteDriverSavedLocation);
-marketplaceRouter.get("/driver/recent-searches", requireRole(UserRoleType.DRIVER), controller.listDriverSearchHistory);
-marketplaceRouter.post("/driver/recent-searches", requireRole(UserRoleType.DRIVER), validate(schema.createSearchHistorySchema), controller.addDriverSearchHistory);
-marketplaceRouter.delete("/driver/recent-searches", requireRole(UserRoleType.DRIVER), controller.clearDriverSearchHistory);
-marketplaceRouter.delete("/driver/recent-searches/:searchId", requireRole(UserRoleType.DRIVER), validate(schema.searchHistoryParamsSchema), controller.deleteDriverSearchHistoryItem);
+marketplaceRouter.get(
+  "/driver/favorites",
+  requireRole(UserRoleType.DRIVER),
+  controller.listDriverFavorites,
+);
+marketplaceRouter.post(
+  "/driver/favorites/:propertyId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.driverFavoriteParamsSchema),
+  controller.addDriverFavorite,
+);
+marketplaceRouter.delete(
+  "/driver/favorites/:propertyId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.driverFavoriteParamsSchema),
+  controller.removeDriverFavorite,
+);
+marketplaceRouter.get(
+  "/driver/saved-locations",
+  requireRole(UserRoleType.DRIVER),
+  controller.listDriverSavedLocations,
+);
+marketplaceRouter.post(
+  "/driver/saved-locations",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.createSavedLocationSchema),
+  controller.createDriverSavedLocation,
+);
+marketplaceRouter.patch(
+  "/driver/saved-locations/:locationId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.updateSavedLocationSchema),
+  controller.updateDriverSavedLocation,
+);
+marketplaceRouter.delete(
+  "/driver/saved-locations/:locationId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.savedLocationParamsSchema),
+  controller.deleteDriverSavedLocation,
+);
+marketplaceRouter.get(
+  "/driver/recent-searches",
+  requireRole(UserRoleType.DRIVER),
+  controller.listDriverSearchHistory,
+);
+marketplaceRouter.post(
+  "/driver/recent-searches",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.createSearchHistorySchema),
+  controller.addDriverSearchHistory,
+);
+marketplaceRouter.delete(
+  "/driver/recent-searches",
+  requireRole(UserRoleType.DRIVER),
+  controller.clearDriverSearchHistory,
+);
+marketplaceRouter.delete(
+  "/driver/recent-searches/:searchId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.searchHistoryParamsSchema),
+  controller.deleteDriverSearchHistoryItem,
+);
 
 /**
  * @openapi
@@ -80,12 +146,42 @@ marketplaceRouter.delete("/driver/recent-searches/:searchId", requireRole(UserRo
  *   patch: { tags: [Parking Resources], summary: Update parking resource, security: [{ accessCookie: [] }], responses: { 200: { description: Resource updated. } } }
  *   delete: { tags: [Parking Resources], summary: Soft-delete parking resource, security: [{ accessCookie: [] }], responses: { 200: { description: Resource deleted. } } }
  */
-marketplaceRouter.post("/provider/properties/:propertyId/parking-resources", providerOrManager, validate(schema.createResourceSchema), controller.createResource);
-marketplaceRouter.post("/provider/properties/:propertyId/parking-resources/bulk", providerOrManager, validate(schema.createBulkResourcesSchema), controller.createBulkResources);
-marketplaceRouter.get("/provider/properties/:propertyId/parking-resources", providerOrManager, validate(schema.propertyResourceParamsSchema), controller.listResources);
-marketplaceRouter.get("/provider/parking-resources/:resourceId", providerOrManager, validate(schema.resourceParamsSchema), controller.getResource);
-marketplaceRouter.patch("/provider/parking-resources/:resourceId", providerOrManager, validate(schema.updateResourceSchema), controller.updateResource);
-marketplaceRouter.delete("/provider/parking-resources/:resourceId", providerOrManager, validate(schema.resourceParamsSchema), controller.deleteResource);
+marketplaceRouter.post(
+  "/provider/properties/:propertyId/parking-resources",
+  providerOrManager,
+  validate(schema.createResourceSchema),
+  controller.createResource,
+);
+marketplaceRouter.post(
+  "/provider/properties/:propertyId/parking-resources/bulk",
+  providerOrManager,
+  validate(schema.createBulkResourcesSchema),
+  controller.createBulkResources,
+);
+marketplaceRouter.get(
+  "/provider/properties/:propertyId/parking-resources",
+  providerOrManager,
+  validate(schema.propertyResourceParamsSchema),
+  controller.listResources,
+);
+marketplaceRouter.get(
+  "/provider/parking-resources/:resourceId",
+  providerOrManager,
+  validate(schema.resourceParamsSchema),
+  controller.getResource,
+);
+marketplaceRouter.patch(
+  "/provider/parking-resources/:resourceId",
+  providerOrManager,
+  validate(schema.updateResourceSchema),
+  controller.updateResource,
+);
+marketplaceRouter.delete(
+  "/provider/parking-resources/:resourceId",
+  providerOrManager,
+  validate(schema.resourceParamsSchema),
+  controller.deleteResource,
+);
 
 /**
  * @openapi
@@ -100,30 +196,152 @@ marketplaceRouter.delete("/provider/parking-resources/:resourceId", providerOrMa
  * /api/v1/admin/parking-rights/{rightId}/verification:
  *   patch: { tags: [Parking Rights], summary: Verify, reject, dispute, or revoke a right, security: [{ accessCookie: [] }], responses: { 200: { description: Right updated. } } }
  */
-marketplaceRouter.post("/provider/parking-resources/:resourceId/rights/claims", providerOrManager, validate(schema.claimRightSchema), controller.claimRight);
-marketplaceRouter.post("/provider/properties/:propertyId/parking-right-claim-batches", providerOrManager, validate(schema.createRightClaimBatchSchema), controller.createRightClaimBatch);
-marketplaceRouter.get("/provider/parking-right-claim-batches", providerOrManager, controller.listProviderRightClaimBatches);
-marketplaceRouter.get("/provider/parking-rights", providerOrManager, controller.listRights);
-marketplaceRouter.get("/provider/parking-rights/:rightId", providerOrManager, validate(schema.rightParamsSchema), controller.getRight);
-marketplaceRouter.patch("/provider/parking-rights/:rightId", providerOrManager, validate(schema.updatePendingRightSchema), controller.updatePendingRight);
-marketplaceRouter.post("/provider/parking-rights/:rightId/amendments", providerOrManager, validate(schema.createRightAmendmentSchema), controller.createRightAmendment);
-marketplaceRouter.post("/provider/parking-rights/:rightId/documents", providerOrManager, rightDocumentUpload, validate(schema.rightDocumentUploadByRightSchema), controller.uploadRightDocuments);
-marketplaceRouter.get("/provider/parking-rights/:rightId/documents", providerOrManager, validate(schema.rightParamsSchema), controller.listRightDocuments);
-marketplaceRouter.get("/provider/parking-rights/:rightId/amendments", providerOrManager, validate(schema.rightParamsSchema), controller.listRightAmendments);
-marketplaceRouter.post("/provider/parking-right-amendments/:amendmentId/cancel", providerOrManager, validate(schema.rightAmendmentParamsSchema), controller.cancelRightAmendment);
-marketplaceRouter.post("/provider/parking-right-amendments/:amendmentId/documents", providerOrManager, rightDocumentUpload, validate(schema.rightDocumentUploadByAmendmentSchema), controller.uploadAmendmentDocuments);
-marketplaceRouter.get("/provider/parking-right-amendments/:amendmentId/documents", providerOrManager, validate(schema.rightAmendmentParamsSchema), controller.listAmendmentDocuments);
-marketplaceRouter.post("/provider/parking-right-claim-batches/:batchId/documents", providerOrManager, rightDocumentUpload, validate(schema.rightDocumentUploadByBatchSchema), controller.uploadBatchDocuments);
-marketplaceRouter.get("/provider/parking-right-claim-batches/:batchId/documents", providerOrManager, validate(schema.rightClaimBatchParamsSchema), controller.listBatchDocuments);
-marketplaceRouter.delete("/provider/parking-right-documents/:documentId", providerOrManager, sensitiveAccountRateLimit, validate(schema.rightDocumentParamsSchema), controller.deleteRightDocument);
-marketplaceRouter.get("/parking-right-documents/:documentId/download", validate(schema.rightDocumentParamsSchema), controller.downloadRightDocument);
-marketplaceRouter.get("/admin/parking-rights", requireRole(UserRoleType.ADMIN), validate(schema.adminParkingRightQuerySchema), controller.listAdminParkingRights);
-marketplaceRouter.get("/admin/parking-rights/pending", requireRole(UserRoleType.ADMIN), controller.listPendingRights);
-marketplaceRouter.patch("/admin/parking-rights/:rightId/verification", requireRole(UserRoleType.ADMIN), validate(schema.verifyRightSchema), controller.verifyRight);
-marketplaceRouter.get("/admin/parking-right-amendments", requireRole(UserRoleType.ADMIN), validate(schema.adminRightAmendmentQuerySchema), controller.listAdminRightAmendments);
-marketplaceRouter.patch("/admin/parking-right-amendments/:amendmentId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.reviewRightAmendmentSchema), controller.reviewRightAmendment);
-marketplaceRouter.get("/admin/parking-right-claim-batches", requireRole(UserRoleType.ADMIN), validate(schema.rightClaimBatchQuerySchema), controller.listAdminRightClaimBatches);
-marketplaceRouter.patch("/admin/parking-right-claim-batches/:batchId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.reviewRightClaimBatchSchema), controller.reviewRightClaimBatch);
+marketplaceRouter.post(
+  "/provider/parking-resources/:resourceId/rights/claims",
+  providerOrManager,
+  validate(schema.claimRightSchema),
+  controller.claimRight,
+);
+marketplaceRouter.post(
+  "/provider/properties/:propertyId/parking-right-claim-batches",
+  providerOrManager,
+  validate(schema.createRightClaimBatchSchema),
+  controller.createRightClaimBatch,
+);
+marketplaceRouter.get(
+  "/provider/parking-right-claim-batches",
+  providerOrManager,
+  controller.listProviderRightClaimBatches,
+);
+marketplaceRouter.get(
+  "/provider/parking-rights",
+  providerOrManager,
+  controller.listRights,
+);
+marketplaceRouter.get(
+  "/provider/parking-rights/:rightId",
+  providerOrManager,
+  validate(schema.rightParamsSchema),
+  controller.getRight,
+);
+marketplaceRouter.patch(
+  "/provider/parking-rights/:rightId",
+  providerOrManager,
+  validate(schema.updatePendingRightSchema),
+  controller.updatePendingRight,
+);
+marketplaceRouter.post(
+  "/provider/parking-rights/:rightId/amendments",
+  providerOrManager,
+  validate(schema.createRightAmendmentSchema),
+  controller.createRightAmendment,
+);
+marketplaceRouter.post(
+  "/provider/parking-rights/:rightId/documents",
+  providerOrManager,
+  rightDocumentUpload,
+  validate(schema.rightDocumentUploadByRightSchema),
+  controller.uploadRightDocuments,
+);
+marketplaceRouter.get(
+  "/provider/parking-rights/:rightId/documents",
+  providerOrManager,
+  validate(schema.rightParamsSchema),
+  controller.listRightDocuments,
+);
+marketplaceRouter.get(
+  "/provider/parking-rights/:rightId/amendments",
+  providerOrManager,
+  validate(schema.rightParamsSchema),
+  controller.listRightAmendments,
+);
+marketplaceRouter.post(
+  "/provider/parking-right-amendments/:amendmentId/cancel",
+  providerOrManager,
+  validate(schema.rightAmendmentParamsSchema),
+  controller.cancelRightAmendment,
+);
+marketplaceRouter.post(
+  "/provider/parking-right-amendments/:amendmentId/documents",
+  providerOrManager,
+  rightDocumentUpload,
+  validate(schema.rightDocumentUploadByAmendmentSchema),
+  controller.uploadAmendmentDocuments,
+);
+marketplaceRouter.get(
+  "/provider/parking-right-amendments/:amendmentId/documents",
+  providerOrManager,
+  validate(schema.rightAmendmentParamsSchema),
+  controller.listAmendmentDocuments,
+);
+marketplaceRouter.post(
+  "/provider/parking-right-claim-batches/:batchId/documents",
+  providerOrManager,
+  rightDocumentUpload,
+  validate(schema.rightDocumentUploadByBatchSchema),
+  controller.uploadBatchDocuments,
+);
+marketplaceRouter.get(
+  "/provider/parking-right-claim-batches/:batchId/documents",
+  providerOrManager,
+  validate(schema.rightClaimBatchParamsSchema),
+  controller.listBatchDocuments,
+);
+marketplaceRouter.delete(
+  "/provider/parking-right-documents/:documentId",
+  providerOrManager,
+  sensitiveAccountRateLimit,
+  validate(schema.rightDocumentParamsSchema),
+  controller.deleteRightDocument,
+);
+marketplaceRouter.get(
+  "/parking-right-documents/:documentId/download",
+  validate(schema.rightDocumentParamsSchema),
+  controller.downloadRightDocument,
+);
+marketplaceRouter.get(
+  "/admin/parking-rights",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminParkingRightQuerySchema),
+  controller.listAdminParkingRights,
+);
+marketplaceRouter.get(
+  "/admin/parking-rights/pending",
+  requireRole(UserRoleType.ADMIN),
+  controller.listPendingRights,
+);
+marketplaceRouter.patch(
+  "/admin/parking-rights/:rightId/verification",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.verifyRightSchema),
+  controller.verifyRight,
+);
+marketplaceRouter.get(
+  "/admin/parking-right-amendments",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminRightAmendmentQuerySchema),
+  controller.listAdminRightAmendments,
+);
+marketplaceRouter.patch(
+  "/admin/parking-right-amendments/:amendmentId",
+  requireRole(UserRoleType.ADMIN),
+  sensitiveAccountRateLimit,
+  validate(schema.reviewRightAmendmentSchema),
+  controller.reviewRightAmendment,
+);
+marketplaceRouter.get(
+  "/admin/parking-right-claim-batches",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.rightClaimBatchQuerySchema),
+  controller.listAdminRightClaimBatches,
+);
+marketplaceRouter.patch(
+  "/admin/parking-right-claim-batches/:batchId",
+  requireRole(UserRoleType.ADMIN),
+  sensitiveAccountRateLimit,
+  validate(schema.reviewRightClaimBatchSchema),
+  controller.reviewRightClaimBatch,
+);
 
 /**
  * @openapi
@@ -135,23 +353,81 @@ marketplaceRouter.patch("/admin/parking-right-claim-batches/:batchId", requireRo
  * /api/v1/provider/listings/{listingId}/pause:
  *   post: { tags: [Parking Listings], summary: Pause listing, security: [{ accessCookie: [] }], responses: { 200: { description: Listing paused. } } }
  */
-marketplaceRouter.post("/provider/listings", providerOrManager, validate(schema.createListingSchema), controller.createListing);
-marketplaceRouter.get("/provider/listings", providerOrManager, controller.listListings);
-marketplaceRouter.get("/provider/listings/:listingId", providerOrManager, validate(schema.listingParamsSchema), controller.getListing);
-marketplaceRouter.patch("/provider/listings/:listingId", providerOrManager, validate(schema.updateListingSchema), controller.updateListing);
-marketplaceRouter.post("/provider/listings/:listingId/activate", providerOrManager, validate(schema.listingParamsSchema), controller.activateListing);
-marketplaceRouter.post("/provider/listings/:listingId/pause", providerOrManager, validate(schema.listingParamsSchema), controller.pauseListing);
-marketplaceRouter.delete("/provider/listings/:listingId", providerOrManager, validate(schema.listingParamsSchema), controller.endListing);
+marketplaceRouter.post(
+  "/provider/listings",
+  providerOrManager,
+  validate(schema.createListingSchema),
+  controller.createListing,
+);
+marketplaceRouter.get(
+  "/provider/listings",
+  providerOrManager,
+  controller.listListings,
+);
+marketplaceRouter.get(
+  "/provider/listings/:listingId",
+  providerOrManager,
+  validate(schema.listingParamsSchema),
+  controller.getListing,
+);
+marketplaceRouter.patch(
+  "/provider/listings/:listingId",
+  providerOrManager,
+  validate(schema.updateListingSchema),
+  controller.updateListing,
+);
+marketplaceRouter.post(
+  "/provider/listings/:listingId/activate",
+  providerOrManager,
+  validate(schema.listingParamsSchema),
+  controller.activateListing,
+);
+marketplaceRouter.post(
+  "/provider/listings/:listingId/pause",
+  providerOrManager,
+  validate(schema.listingParamsSchema),
+  controller.pauseListing,
+);
+marketplaceRouter.delete(
+  "/provider/listings/:listingId",
+  providerOrManager,
+  validate(schema.listingParamsSchema),
+  controller.endListing,
+);
 /**
  * @openapi
  * /api/v1/admin/listings/{listingId}/suspend:
  *   post: { tags: [Parking Listings], summary: Suspend a marketplace listing with an audited reason, security: [{ accessCookie: [] }], responses: { 200: { description: Listing suspended. } } }
  */
-marketplaceRouter.get("/admin/listings", requireRole(UserRoleType.ADMIN), validate(schema.adminListingQuerySchema), controller.listAdminListings);
-marketplaceRouter.get("/admin/listings/:listingId", requireRole(UserRoleType.ADMIN), validate(schema.listingParamsSchema), controller.getAdminListing);
-marketplaceRouter.post("/admin/listings/:listingId/suspend", requireRole(UserRoleType.ADMIN), validate(schema.adminListingSuspensionSchema), controller.suspendListing);
-marketplaceRouter.post("/admin/listings/:listingId/resume", requireRole(UserRoleType.ADMIN), validate(schema.adminListingSuspensionSchema), controller.resumeListing);
-marketplaceRouter.post("/listings/:listingId/reports", validate(schema.listingReportSchema), controller.reportListing);
+marketplaceRouter.get(
+  "/admin/listings",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminListingQuerySchema),
+  controller.listAdminListings,
+);
+marketplaceRouter.get(
+  "/admin/listings/:listingId",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.listingParamsSchema),
+  controller.getAdminListing,
+);
+marketplaceRouter.post(
+  "/admin/listings/:listingId/suspend",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminListingSuspensionSchema),
+  controller.suspendListing,
+);
+marketplaceRouter.post(
+  "/admin/listings/:listingId/resume",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminListingSuspensionSchema),
+  controller.resumeListing,
+);
+marketplaceRouter.post(
+  "/listings/:listingId/reports",
+  validate(schema.listingReportSchema),
+  controller.reportListing,
+);
 
 /**
  * @openapi
@@ -161,11 +437,36 @@ marketplaceRouter.post("/listings/:listingId/reports", validate(schema.listingRe
  * /api/v1/provider/parking-resources/{resourceId}/availability/exceptions:
  *   post: { tags: [Availability], summary: Add date-specific availability override, security: [{ accessCookie: [] }], responses: { 201: { description: Exception created. } } }
  */
-marketplaceRouter.get("/provider/parking-resources/:resourceId/availability", providerOrManager, validate(schema.resourceParamsSchema), controller.listAvailability);
-marketplaceRouter.put("/provider/parking-resources/:resourceId/availability", providerOrManager, validate(schema.replaceAvailabilitySchema), controller.replaceAvailability);
-marketplaceRouter.post("/provider/parking-resources/:resourceId/availability/exceptions", providerOrManager, validate(schema.createAvailabilityExceptionSchema), controller.createAvailabilityException);
-marketplaceRouter.patch("/provider/availability/exceptions/:exceptionId", providerOrManager, validate(schema.updateAvailabilityExceptionSchema), controller.updateAvailabilityException);
-marketplaceRouter.delete("/provider/availability/exceptions/:exceptionId", providerOrManager, validate(schema.availabilityExceptionParamsSchema), controller.deleteAvailabilityException);
+marketplaceRouter.get(
+  "/provider/parking-resources/:resourceId/availability",
+  providerOrManager,
+  validate(schema.resourceParamsSchema),
+  controller.listAvailability,
+);
+marketplaceRouter.put(
+  "/provider/parking-resources/:resourceId/availability",
+  providerOrManager,
+  validate(schema.replaceAvailabilitySchema),
+  controller.replaceAvailability,
+);
+marketplaceRouter.post(
+  "/provider/parking-resources/:resourceId/availability/exceptions",
+  providerOrManager,
+  validate(schema.createAvailabilityExceptionSchema),
+  controller.createAvailabilityException,
+);
+marketplaceRouter.patch(
+  "/provider/availability/exceptions/:exceptionId",
+  providerOrManager,
+  validate(schema.updateAvailabilityExceptionSchema),
+  controller.updateAvailabilityException,
+);
+marketplaceRouter.delete(
+  "/provider/availability/exceptions/:exceptionId",
+  providerOrManager,
+  validate(schema.availabilityExceptionParamsSchema),
+  controller.deleteAvailabilityException,
+);
 
 /**
  * @openapi
@@ -177,26 +478,94 @@ marketplaceRouter.delete("/provider/availability/exceptions/:exceptionId", provi
  *   post: { tags: [Booking], summary: Create payment-pending booking from active hold, security: [{ accessCookie: [] }], responses: { 201: { description: Booking created idempotently. } } }
  *   get: { tags: [Booking], summary: List Driver bookings, security: [{ accessCookie: [] }], responses: { 200: { description: Driver-scoped bookings. } } }
  */
-marketplaceRouter.post("/parking/quotes", requireRole(UserRoleType.DRIVER), validate(schema.createQuoteSchema), controller.createQuote);
-marketplaceRouter.get("/parking/quotes/:quoteId", requireRole(UserRoleType.DRIVER), validate(schema.quoteParamsSchema), controller.getQuote);
-marketplaceRouter.post("/parking/holds", requireRole(UserRoleType.DRIVER), validate(schema.createHoldSchema), controller.createHold);
-marketplaceRouter.get("/parking/holds/:holdId", requireRole(UserRoleType.DRIVER), validate(schema.holdParamsSchema), controller.getHold);
-marketplaceRouter.delete("/parking/holds/:holdId", requireRole(UserRoleType.DRIVER), validate(schema.holdParamsSchema), controller.releaseHold);
-marketplaceRouter.post("/bookings", requireRole(UserRoleType.DRIVER), validate(schema.createBookingSchema), controller.createBooking);
-marketplaceRouter.get("/bookings", requireRole(UserRoleType.DRIVER), controller.listDriverBookings);
-marketplaceRouter.get("/bookings/:bookingId", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.getDriverBooking);
-marketplaceRouter.get("/bookings/:bookingId/cancellation-preview", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.previewBookingCancellation);
-marketplaceRouter.post("/bookings/:bookingId/cancel", requireRole(UserRoleType.DRIVER), validate(schema.cancelBookingSchema), controller.cancelBooking);
-marketplaceRouter.post("/bookings/:bookingId/checkout-request", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.requestCheckout);
-marketplaceRouter.get("/bookings/:bookingId/settlement", requireRole(UserRoleType.DRIVER), validate(schema.bookingParamsSchema), controller.getDriverBookingSettlement);
-marketplaceRouter.get("/provider/bookings", providerOrManager, controller.listProviderBookings);
+marketplaceRouter.post(
+  "/parking/quotes",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.createQuoteSchema),
+  controller.createQuote,
+);
+marketplaceRouter.get(
+  "/parking/quotes/:quoteId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.quoteParamsSchema),
+  controller.getQuote,
+);
+marketplaceRouter.post(
+  "/parking/holds",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.createHoldSchema),
+  controller.createHold,
+);
+marketplaceRouter.get(
+  "/parking/holds/:holdId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.holdParamsSchema),
+  controller.getHold,
+);
+marketplaceRouter.delete(
+  "/parking/holds/:holdId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.holdParamsSchema),
+  controller.releaseHold,
+);
+marketplaceRouter.post(
+  "/bookings",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.createBookingSchema),
+  controller.createBooking,
+);
+marketplaceRouter.get(
+  "/bookings",
+  requireRole(UserRoleType.DRIVER),
+  controller.listDriverBookings,
+);
+marketplaceRouter.get(
+  "/bookings/:bookingId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.bookingParamsSchema),
+  controller.getDriverBooking,
+);
+marketplaceRouter.get(
+  "/bookings/:bookingId/cancellation-preview",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.bookingParamsSchema),
+  controller.previewBookingCancellation,
+);
+marketplaceRouter.post(
+  "/bookings/:bookingId/cancel",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.cancelBookingSchema),
+  controller.cancelBooking,
+);
+marketplaceRouter.post(
+  "/bookings/:bookingId/checkout-request",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.bookingParamsSchema),
+  controller.requestCheckout,
+);
+marketplaceRouter.get(
+  "/bookings/:bookingId/settlement",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.bookingParamsSchema),
+  controller.getDriverBookingSettlement,
+);
+marketplaceRouter.get(
+  "/provider/bookings",
+  providerOrManager,
+  controller.listProviderBookings,
+);
 marketplaceRouter.get(
   "/provider/bookings/:bookingId",
   providerOrManager,
   validate(schema.bookingParamsSchema),
   controller.getProviderBooking,
 );
-marketplaceRouter.get("/provider/bookings/:bookingId/settlement", providerOrManager, validate(schema.bookingParamsSchema), controller.getProviderBookingSettlement);
+marketplaceRouter.get(
+  "/provider/bookings/:bookingId/settlement",
+  providerOrManager,
+  validate(schema.bookingParamsSchema),
+  controller.getProviderBookingSettlement,
+);
 
 /**
  * @openapi
@@ -205,12 +574,43 @@ marketplaceRouter.get("/provider/bookings/:bookingId/settlement", providerOrMana
  * /api/v1/guard/access/verify:
  *   post: { tags: [Guard Booking Operations], summary: Verify access credential within Guard scope, security: [{ accessCookie: [] }], responses: { 200: { description: Credential and booking details verified. } } }
  */
-marketplaceRouter.post("/payments/simulated/capture", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.capturePaymentSchema), controller.capturePayment);
-marketplaceRouter.post("/guard/access/verify", requireRole(UserRoleType.GUARD), validate(schema.verifyCredentialSchema), controller.verifyCredential);
-marketplaceRouter.get("/guard/bookings", requireRole(UserRoleType.GUARD), validate(schema.guardBookingQuerySchema), controller.listGuardBookings);
-marketplaceRouter.get("/guard/bookings/:bookingId", requireRole(UserRoleType.GUARD), validate(schema.bookingParamsSchema), controller.getGuardBooking);
-marketplaceRouter.post("/guard/bookings/:bookingId/check-in", requireRole(UserRoleType.GUARD), validate(schema.bookingParamsSchema.merge(schema.verifyCredentialSchema)), controller.checkIn);
-marketplaceRouter.post("/guard/bookings/:bookingId/check-out", requireRole(UserRoleType.GUARD), validate(schema.bookingParamsSchema), controller.checkOut);
+marketplaceRouter.post(
+  "/payments/simulated/capture",
+  requireRole(UserRoleType.DRIVER),
+  sensitiveAccountRateLimit,
+  validate(schema.capturePaymentSchema),
+  controller.capturePayment,
+);
+marketplaceRouter.post(
+  "/guard/access/verify",
+  requireRole(UserRoleType.GUARD),
+  validate(schema.verifyCredentialSchema),
+  controller.verifyCredential,
+);
+marketplaceRouter.get(
+  "/guard/bookings",
+  requireRole(UserRoleType.GUARD),
+  validate(schema.guardBookingQuerySchema),
+  controller.listGuardBookings,
+);
+marketplaceRouter.get(
+  "/guard/bookings/:bookingId",
+  requireRole(UserRoleType.GUARD),
+  validate(schema.bookingParamsSchema),
+  controller.getGuardBooking,
+);
+marketplaceRouter.post(
+  "/guard/bookings/:bookingId/check-in",
+  requireRole(UserRoleType.GUARD),
+  validate(schema.bookingParamsSchema.merge(schema.verifyCredentialSchema)),
+  controller.checkIn,
+);
+marketplaceRouter.post(
+  "/guard/bookings/:bookingId/check-out",
+  requireRole(UserRoleType.GUARD),
+  validate(schema.bookingParamsSchema),
+  controller.checkOut,
+);
 
 /**
  * @openapi
@@ -220,26 +620,129 @@ marketplaceRouter.post("/guard/bookings/:bookingId/check-out", requireRole(UserR
  *   get: { tags: [Wallet], summary: Get Provider earnings or delegated earnings view, security: [{ accessCookie: [] }], responses: { 200: { description: Aggregate earnings. } } }
  */
 marketplaceRouter.get("/wallet", controller.getWallet);
-marketplaceRouter.get("/wallet/transactions", controller.listWalletTransactions);
-marketplaceRouter.get("/provider/earnings/summary", providerOrManager, controller.earningsSummary);
-marketplaceRouter.get("/provider/earnings/transactions", providerOrManager, controller.listEarningsTransactions);
-marketplaceRouter.get("/provider/payout-methods", requireRole(UserRoleType.PROVIDER), controller.listPayoutMethods);
-marketplaceRouter.post("/provider/payout-methods", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutMethodSchema), controller.createPayoutMethod);
-marketplaceRouter.post("/provider/payout-methods/:payoutMethodId/default", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.setDefaultPayoutMethod);
-marketplaceRouter.post("/provider/payout-methods/:payoutMethodId/deactivate", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.deactivatePayoutMethod);
-marketplaceRouter.post("/payments/:paymentId/refunds", requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.refundSchema), controller.createRefund);
-marketplaceRouter.get("/refunds", requireRole(UserRoleType.DRIVER), validate(schema.driverRefundQuerySchema), controller.listDriverRefunds);
-marketplaceRouter.get("/refunds/:refundId", requireRole(UserRoleType.DRIVER), validate(schema.refundParamsSchema), controller.getDriverRefund);
-marketplaceRouter.post("/provider/payouts", requireRole(UserRoleType.PROVIDER), sensitiveAccountRateLimit, validate(schema.payoutSchema), controller.createPayout);
-marketplaceRouter.get("/provider/payouts", requireRole(UserRoleType.PROVIDER), validate(schema.providerPayoutQuerySchema), controller.listProviderPayouts);
-marketplaceRouter.get("/provider/payouts/:payoutId", requireRole(UserRoleType.PROVIDER), validate(schema.payoutParamsSchema), controller.getProviderPayout);
-marketplaceRouter.get("/driver/payout-methods", requireRole(UserRoleType.DRIVER), controller.listPayoutMethods);
-marketplaceRouter.post("/driver/payout-methods", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutMethodSchema), controller.createPayoutMethod);
-marketplaceRouter.post("/driver/payout-methods/:payoutMethodId/default", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.setDefaultPayoutMethod);
-marketplaceRouter.post("/driver/payout-methods/:payoutMethodId/deactivate", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutMethodParamsSchema), controller.deactivatePayoutMethod);
-marketplaceRouter.post("/driver/payouts", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.payoutSchema), controller.createPayout);
-marketplaceRouter.get("/driver/payouts", requireRole(UserRoleType.DRIVER), validate(schema.providerPayoutQuerySchema), controller.listProviderPayouts);
-marketplaceRouter.get("/driver/payouts/:payoutId", requireRole(UserRoleType.DRIVER), validate(schema.payoutParamsSchema), controller.getProviderPayout);
+marketplaceRouter.get(
+  "/wallet/transactions",
+  controller.listWalletTransactions,
+);
+marketplaceRouter.get(
+  "/provider/earnings/summary",
+  providerOrManager,
+  controller.earningsSummary,
+);
+marketplaceRouter.get(
+  "/provider/earnings/transactions",
+  providerOrManager,
+  controller.listEarningsTransactions,
+);
+marketplaceRouter.get(
+  "/provider/payout-methods",
+  requireRole(UserRoleType.PROVIDER),
+  controller.listPayoutMethods,
+);
+marketplaceRouter.post(
+  "/provider/payout-methods",
+  requireRole(UserRoleType.PROVIDER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutMethodSchema),
+  controller.createPayoutMethod,
+);
+marketplaceRouter.post(
+  "/provider/payout-methods/:payoutMethodId/default",
+  requireRole(UserRoleType.PROVIDER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutMethodParamsSchema),
+  controller.setDefaultPayoutMethod,
+);
+marketplaceRouter.post(
+  "/provider/payout-methods/:payoutMethodId/deactivate",
+  requireRole(UserRoleType.PROVIDER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutMethodParamsSchema),
+  controller.deactivatePayoutMethod,
+);
+marketplaceRouter.post(
+  "/payments/:paymentId/refunds",
+  requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER),
+  sensitiveAccountRateLimit,
+  validate(schema.refundSchema),
+  controller.createRefund,
+);
+marketplaceRouter.get(
+  "/refunds",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.driverRefundQuerySchema),
+  controller.listDriverRefunds,
+);
+marketplaceRouter.get(
+  "/refunds/:refundId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.refundParamsSchema),
+  controller.getDriverRefund,
+);
+marketplaceRouter.post(
+  "/provider/payouts",
+  requireRole(UserRoleType.PROVIDER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutSchema),
+  controller.createPayout,
+);
+marketplaceRouter.get(
+  "/provider/payouts",
+  requireRole(UserRoleType.PROVIDER),
+  validate(schema.providerPayoutQuerySchema),
+  controller.listProviderPayouts,
+);
+marketplaceRouter.get(
+  "/provider/payouts/:payoutId",
+  requireRole(UserRoleType.PROVIDER),
+  validate(schema.payoutParamsSchema),
+  controller.getProviderPayout,
+);
+marketplaceRouter.get(
+  "/driver/payout-methods",
+  requireRole(UserRoleType.DRIVER),
+  controller.listPayoutMethods,
+);
+marketplaceRouter.post(
+  "/driver/payout-methods",
+  requireRole(UserRoleType.DRIVER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutMethodSchema),
+  controller.createPayoutMethod,
+);
+marketplaceRouter.post(
+  "/driver/payout-methods/:payoutMethodId/default",
+  requireRole(UserRoleType.DRIVER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutMethodParamsSchema),
+  controller.setDefaultPayoutMethod,
+);
+marketplaceRouter.post(
+  "/driver/payout-methods/:payoutMethodId/deactivate",
+  requireRole(UserRoleType.DRIVER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutMethodParamsSchema),
+  controller.deactivatePayoutMethod,
+);
+marketplaceRouter.post(
+  "/driver/payouts",
+  requireRole(UserRoleType.DRIVER),
+  sensitiveAccountRateLimit,
+  validate(schema.payoutSchema),
+  controller.createPayout,
+);
+marketplaceRouter.get(
+  "/driver/payouts",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.providerPayoutQuerySchema),
+  controller.listProviderPayouts,
+);
+marketplaceRouter.get(
+  "/driver/payouts/:payoutId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.payoutParamsSchema),
+  controller.getProviderPayout,
+);
 /**
  * @openapi
  * /api/v1/admin/payouts:
@@ -247,8 +750,19 @@ marketplaceRouter.get("/driver/payouts/:payoutId", requireRole(UserRoleType.DRIV
  * /api/v1/admin/payouts/{payoutId}:
  *   patch: { tags: [Wallet], summary: Approve, reject, or record an approved manual payout as paid, security: [{ accessCookie: [] }], responses: { 200: { description: Payout and wallet reservation updated atomically. } } }
  */
-marketplaceRouter.get("/admin/payouts", requireRole(UserRoleType.ADMIN), validate(schema.adminPayoutQuerySchema), controller.listPayouts);
-marketplaceRouter.patch("/admin/payouts/:payoutId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.adminPayoutReviewSchema), controller.reviewPayout);
+marketplaceRouter.get(
+  "/admin/payouts",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminPayoutQuerySchema),
+  controller.listPayouts,
+);
+marketplaceRouter.patch(
+  "/admin/payouts/:payoutId",
+  requireRole(UserRoleType.ADMIN),
+  sensitiveAccountRateLimit,
+  validate(schema.adminPayoutReviewSchema),
+  controller.reviewPayout,
+);
 
 /**
  * @openapi
@@ -260,17 +774,67 @@ marketplaceRouter.patch("/admin/payouts/:payoutId", requireRole(UserRoleType.ADM
  *   post: { tags: [Disputes], summary: Open one dispute for a related booking, security: [{ accessCookie: [] }], responses: { 201: { description: Dispute opened. } } }
  */
 marketplaceRouter.get("/notifications", controller.listNotifications);
-marketplaceRouter.patch("/notifications/:notificationId/read", validate(schema.notificationParamsSchema), controller.readNotification);
-marketplaceRouter.post("/notifications/read-all", controller.readAllNotifications);
-marketplaceRouter.post("/bookings/:bookingId/reviews", requireRole(UserRoleType.DRIVER), validate(schema.createReviewSchema), controller.createReview);
-marketplaceRouter.get("/reviews", requireRole(UserRoleType.DRIVER), controller.listDriverReviews);
-marketplaceRouter.get("/provider/reviews", providerOrManager, controller.listProviderReviews);
-marketplaceRouter.post("/provider/reviews/:reviewId/reply", providerOrManager, validate(schema.replyReviewSchema), controller.replyReview);
-marketplaceRouter.post("/bookings/:bookingId/disputes", requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER), validate(schema.createDisputeSchema), controller.createDispute);
-marketplaceRouter.get("/disputes", requireRole(UserRoleType.DRIVER), validate(schema.disputeListQuerySchema), controller.listDriverDisputes);
-marketplaceRouter.get("/disputes/:disputeId", requireRole(UserRoleType.DRIVER), validate(schema.disputeParamsSchema), controller.getDriverDispute);
-marketplaceRouter.get("/provider/disputes", providerOrManager, validate(schema.disputeListQuerySchema), controller.listProviderDisputes);
-marketplaceRouter.get("/provider/disputes/:disputeId", providerOrManager, validate(schema.disputeParamsSchema), controller.getProviderDispute);
+marketplaceRouter.patch(
+  "/notifications/:notificationId/read",
+  validate(schema.notificationParamsSchema),
+  controller.readNotification,
+);
+marketplaceRouter.post(
+  "/notifications/read-all",
+  controller.readAllNotifications,
+);
+marketplaceRouter.post(
+  "/bookings/:bookingId/reviews",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.createReviewSchema),
+  controller.createReview,
+);
+marketplaceRouter.get(
+  "/reviews",
+  requireRole(UserRoleType.DRIVER),
+  controller.listDriverReviews,
+);
+marketplaceRouter.get(
+  "/provider/reviews",
+  providerOrManager,
+  controller.listProviderReviews,
+);
+marketplaceRouter.post(
+  "/provider/reviews/:reviewId/reply",
+  providerOrManager,
+  validate(schema.replyReviewSchema),
+  controller.replyReview,
+);
+marketplaceRouter.post(
+  "/bookings/:bookingId/disputes",
+  requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER),
+  validate(schema.createDisputeSchema),
+  controller.createDispute,
+);
+marketplaceRouter.get(
+  "/disputes",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.disputeListQuerySchema),
+  controller.listDriverDisputes,
+);
+marketplaceRouter.get(
+  "/disputes/:disputeId",
+  requireRole(UserRoleType.DRIVER),
+  validate(schema.disputeParamsSchema),
+  controller.getDriverDispute,
+);
+marketplaceRouter.get(
+  "/provider/disputes",
+  providerOrManager,
+  validate(schema.disputeListQuerySchema),
+  controller.listProviderDisputes,
+);
+marketplaceRouter.get(
+  "/provider/disputes/:disputeId",
+  providerOrManager,
+  validate(schema.disputeParamsSchema),
+  controller.getProviderDispute,
+);
 /**
  * @openapi
  * /api/v1/admin/disputes:
@@ -278,8 +842,19 @@ marketplaceRouter.get("/provider/disputes/:disputeId", providerOrManager, valida
  * /api/v1/admin/disputes/{disputeId}:
  *   patch: { tags: [Disputes], summary: Resolve or reject a booking dispute, security: [{ accessCookie: [] }], responses: { 200: { description: Dispute resolved and user notified. } } }
  */
-marketplaceRouter.get("/admin/disputes", requireRole(UserRoleType.ADMIN), validate(schema.adminDisputeQuerySchema), controller.listDisputes);
-marketplaceRouter.patch("/admin/disputes/:disputeId", requireRole(UserRoleType.ADMIN), sensitiveAccountRateLimit, validate(schema.resolveDisputeSchema), controller.resolveDispute);
+marketplaceRouter.get(
+  "/admin/disputes",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminDisputeQuerySchema),
+  controller.listDisputes,
+);
+marketplaceRouter.patch(
+  "/admin/disputes/:disputeId",
+  requireRole(UserRoleType.ADMIN),
+  sensitiveAccountRateLimit,
+  validate(schema.resolveDisputeSchema),
+  controller.resolveDispute,
+);
 
 /**
  * @openapi

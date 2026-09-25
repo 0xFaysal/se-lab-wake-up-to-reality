@@ -1,4 +1,7 @@
-import { ManagerDelegationPermission, UserRoleType } from "../../../generated/prisma/client.js";
+import {
+  ManagerDelegationPermission,
+  UserRoleType,
+} from "../../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import type { GovernanceClient } from "./property-governance.repository.js";
 import * as repository from "./property-governance.repository.js";
@@ -23,20 +26,21 @@ export async function canManagePropertyCommonRules(
   propertyId: string,
   db?: GovernanceClient,
 ): Promise<boolean> {
-  const [verifiedMembership, provisionalMembership, count, manager, admin] = await Promise.all([
-    repository.findActiveVerifiedProviderMembership(userId, propertyId, db),
-    repository.findProvisionalProviderMembership(userId, propertyId, db),
-    repository.getActiveVerifiedProviderCount(propertyId, db),
-    repository.findActiveBuildingManager(propertyId, db),
-    (db ?? prisma).user.findFirst({
-      where: {
-        id: userId,
-        deletedAt: null,
-        roles: { some: { role: UserRoleType.ADMIN } },
-      },
-      select: { id: true },
-    }),
-  ]);
+  const [verifiedMembership, provisionalMembership, count, manager, admin] =
+    await Promise.all([
+      repository.findActiveVerifiedProviderMembership(userId, propertyId, db),
+      repository.findProvisionalProviderMembership(userId, propertyId, db),
+      repository.getActiveVerifiedProviderCount(propertyId, db),
+      repository.findActiveBuildingManager(propertyId, db),
+      (db ?? prisma).user.findFirst({
+        where: {
+          id: userId,
+          deletedAt: null,
+          roles: { some: { role: UserRoleType.ADMIN } },
+        },
+        select: { id: true },
+      }),
+    ]);
   return (
     (count === 0 && Boolean(provisionalMembership)) ||
     (count === 1 && Boolean(verifiedMembership)) ||
@@ -81,15 +85,24 @@ export async function canReadProviderProperty(
   });
   if (admin) return true;
   return Boolean(
-    (await repository.findActiveVerifiedProviderMembership(userId, propertyId, db)) ||
-      (await repository.findProvisionalProviderMembership(userId, propertyId, db)) ||
-      (await repository.findActiveBuildingManager(propertyId, db))?.candidateUserId === userId ||
-      (await repository.findLiveManagerDelegation(
-        userId,
-        propertyId,
-        ManagerDelegationPermission.RESOURCE_VIEW,
-        undefined,
-        db,
-      )),
+    (await repository.findActiveVerifiedProviderMembership(
+      userId,
+      propertyId,
+      db,
+    )) ||
+    (await repository.findProvisionalProviderMembership(
+      userId,
+      propertyId,
+      db,
+    )) ||
+    (await repository.findActiveBuildingManager(propertyId, db))
+      ?.candidateUserId === userId ||
+    (await repository.findLiveManagerDelegation(
+      userId,
+      propertyId,
+      ManagerDelegationPermission.RESOURCE_VIEW,
+      undefined,
+      db,
+    )),
   );
 }

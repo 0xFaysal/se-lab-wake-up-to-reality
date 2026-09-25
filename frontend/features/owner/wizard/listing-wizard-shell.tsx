@@ -5,13 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check,
-  ChevronRight,
   Headphones,
   ArrowLeft,
   ArrowRight,
-  Save,
-  Building2,
-  Sparkles,
   Menu,
   X,
   Bell,

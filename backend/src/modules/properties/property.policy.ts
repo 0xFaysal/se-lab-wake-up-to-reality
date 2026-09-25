@@ -49,7 +49,9 @@ export function containsCriticalPropertyChange(fields: ReadonlySet<string>) {
   return [...fields].some((field) => criticalLocationFields.has(field));
 }
 
-export function containsOnlyCommonOperationChanges(fields: ReadonlySet<string>) {
+export function containsOnlyCommonOperationChanges(
+  fields: ReadonlySet<string>,
+) {
   return [...fields].every(
     (field) => field === "version" || commonOperationFields.has(field),
   );

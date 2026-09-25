@@ -17,10 +17,7 @@ integration("multi-provider Property governance integration", () => {
   let adminId!: string;
   let providerBMembershipId!: string;
 
-  async function createUser(
-    label: string,
-    role: "PROVIDER" | "ADMIN",
-  ) {
+  async function createUser(label: string, role: "PROVIDER" | "ADMIN") {
     const user = await prisma.user.create({
       data: {
         fullName: `Governance ${label}`,
@@ -41,9 +38,9 @@ integration("multi-provider Property governance integration", () => {
     return (error: unknown) =>
       Boolean(
         error &&
-          typeof error === "object" &&
-          "code" in error &&
-          error.code === expected,
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === expected,
       );
   }
 
@@ -68,12 +65,10 @@ integration("multi-provider Property governance integration", () => {
 
     generated = await import("../../../generated/prisma/client.js");
     prisma = (await import("../../../src/config/prisma.js")).prisma;
-    governance = await import(
-      "../../../src/modules/property-governance/property-governance.service.js"
-    );
-    governancePolicy = await import(
-      "../../../src/modules/property-governance/property-governance.policy.js"
-    );
+    governance =
+      await import("../../../src/modules/property-governance/property-governance.service.js");
+    governancePolicy =
+      await import("../../../src/modules/property-governance/property-governance.policy.js");
     await prisma.$connect();
 
     const providerA = await createUser("provider-a", "PROVIDER");

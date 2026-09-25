@@ -2,53 +2,73 @@ import { z } from "zod";
 import { env } from "../../config/env.js";
 import { AppError } from "../../common/errors/app-error.js";
 
-const gatewayOrigin = env.SSLCOMMERZ_ENVIRONMENT === "live"
-  ? "https://securepay.sslcommerz.com"
-  : "https://sandbox.sslcommerz.com";
+const gatewayOrigin =
+  env.SSLCOMMERZ_ENVIRONMENT === "live"
+    ? "https://securepay.sslcommerz.com"
+    : "https://sandbox.sslcommerz.com";
 
-const sessionResponseSchema = z.object({
-  status: z.string(),
-  sessionkey: z.string().optional(),
-  GatewayPageURL: z.url().optional(),
-  failedreason: z.string().optional(),
-}).passthrough();
+const sessionResponseSchema = z
+  .object({
+    status: z.string(),
+    sessionkey: z.string().optional(),
+    GatewayPageURL: z.url().optional(),
+    failedreason: z.string().optional(),
+  })
+  .passthrough();
 
-const validationResponseSchema = z.object({
-  status: z.string(),
-  tran_id: z.string(),
-  val_id: z.string(),
-  amount: z.coerce.number(),
-  currency: z.string(),
-  bank_tran_id: z.string().optional().default(""),
-  card_type: z.string().optional(),
-  card_brand: z.string().optional(),
-  card_issuer: z.string().optional(),
-  risk_level: z.coerce.number().int().optional(),
-  risk_title: z.string().optional(),
-}).passthrough();
+const validationResponseSchema = z
+  .object({
+    status: z.string(),
+    tran_id: z.string(),
+    val_id: z.string(),
+    amount: z.coerce.number(),
+    currency: z.string(),
+    bank_tran_id: z.string().optional().default(""),
+    card_type: z.string().optional(),
+    card_brand: z.string().optional(),
+    card_issuer: z.string().optional(),
+    risk_level: z.coerce.number().int().optional(),
+    risk_title: z.string().optional(),
+  })
+  .passthrough();
 
-const refundResponseSchema = z.object({
-  APIConnect: z.string(),
-  bank_tran_id: z.string().optional(),
-  trans_id: z.string().optional(),
-  refund_ref_id: z.string().optional(),
-  status: z.string().optional(),
-  errorReason: z.string().optional(),
-}).passthrough();
+const refundResponseSchema = z
+  .object({
+    APIConnect: z.string(),
+    bank_tran_id: z.string().optional(),
+    trans_id: z.string().optional(),
+    refund_ref_id: z.string().optional(),
+    status: z.string().optional(),
+    errorReason: z.string().optional(),
+  })
+  .passthrough();
 
-const transactionQueryResponseSchema = z.object({
-  APIConnect: z.string(),
-  no_of_trans_found: z.coerce.number().int(),
-  element: z.array(validationResponseSchema).default([]),
-}).passthrough();
+const transactionQueryResponseSchema = z
+  .object({
+    APIConnect: z.string(),
+    no_of_trans_found: z.coerce.number().int(),
+    element: z.array(validationResponseSchema).default([]),
+  })
+  .passthrough();
 
 export type SslCommerzValidation = z.infer<typeof validationResponseSchema>;
 
 function credentials() {
-  if (!env.SSLCOMMERZ_ENABLED || !env.SSLCOMMERZ_STORE_ID || !env.SSLCOMMERZ_STORE_PASSWORD) {
-    throw new AppError({ statusCode: 503, code: "PAYMENT_GATEWAY_NOT_CONFIGURED", message: "Online payment is not configured" });
+  if (
+    !env.SSLCOMMERZ_ENABLED ||
+    !env.SSLCOMMERZ_STORE_ID ||
+    !env.SSLCOMMERZ_STORE_PASSWORD
+  ) {
+    throw new AppError({
+      statusCode: 503,
+      code: "PAYMENT_GATEWAY_NOT_CONFIGURED",
+      message: "Online payment is not configured",
+    });
   }
-  return { store_id: env.SSLCOMMERZ_STORE_ID, store_passwd: env.SSLCOMMERZ_STORE_PASSWORD };
+  return {
+    store_id: env.SSLCOMMERZ_STORE_ID,
+    store_passwd: env.SSLCOMMERZ_STORE_PASSWORD,
+  };
 }
 
 async function requestJson(url: string, init: RequestInit): Promise<unknown> {
@@ -58,7 +78,8 @@ async function requestJson(url: string, init: RequestInit): Promise<unknown> {
       signal: AbortSignal.timeout(env.SSLCOMMERZ_REQUEST_TIMEOUT_MS),
       headers: { accept: "application/json", ...init.headers },
     });
-    if (!response.ok) throw new Error(`Gateway responded with HTTP ${response.status}`);
+    if (!response.ok)
+      throw new Error(`Gateway responded with HTTP ${response.status}`);
     return await response.json();
   } catch (cause) {
     throw new AppError({
@@ -80,7 +101,8 @@ export function paisaToGatewayAmount(amountPaisa: bigint): string {
 }
 
 export function gatewayAmountToPaisa(amount: number): bigint {
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Invalid gateway amount");
+  if (!Number.isFinite(amount) || amount <= 0)
+    throw new Error("Invalid gateway amount");
   return BigInt(Math.round(amount * 100));
 }
 
@@ -146,30 +168,63 @@ export async function createSession(input: {
   if (!parsed.success) {
     throw sessionFailureFromReason();
   }
-  if (parsed.data.status !== "SUCCESS" || !parsed.data.GatewayPageURL || !parsed.data.sessionkey) {
+  if (
+    parsed.data.status !== "SUCCESS" ||
+    !parsed.data.GatewayPageURL ||
+    !parsed.data.sessionkey
+  ) {
     throw sessionFailureFromReason(parsed.data.failedreason);
   }
-  return { checkoutUrl: parsed.data.GatewayPageURL, sessionKey: parsed.data.sessionkey };
+  return {
+    checkoutUrl: parsed.data.GatewayPageURL,
+    sessionKey: parsed.data.sessionkey,
+  };
 }
 
-export async function validateTransaction(validationId: string): Promise<SslCommerzValidation> {
+export async function validateTransaction(
+  validationId: string,
+): Promise<SslCommerzValidation> {
   const configured = credentials();
-  const query = new URLSearchParams({ val_id: validationId, ...configured, format: "json" });
-  const data = await requestJson(`${gatewayOrigin}/validator/api/validationserverAPI.php?${query}`, { method: "GET" });
+  const query = new URLSearchParams({
+    val_id: validationId,
+    ...configured,
+    format: "json",
+  });
+  const data = await requestJson(
+    `${gatewayOrigin}/validator/api/validationserverAPI.php?${query}`,
+    { method: "GET" },
+  );
   const parsed = validationResponseSchema.safeParse(data);
   if (!parsed.success || !["VALID", "VALIDATED"].includes(parsed.data.status)) {
-    throw new AppError({ statusCode: 409, code: "PAYMENT_VALIDATION_FAILED", message: "The gateway could not validate this payment" });
+    throw new AppError({
+      statusCode: 409,
+      code: "PAYMENT_VALIDATION_FAILED",
+      message: "The gateway could not validate this payment",
+    });
   }
   return parsed.data;
 }
 
-export async function queryTransaction(transactionId: string): Promise<SslCommerzValidation | null> {
+export async function queryTransaction(
+  transactionId: string,
+): Promise<SslCommerzValidation | null> {
   const configured = credentials();
-  const query = new URLSearchParams({ tran_id: transactionId, ...configured, format: "json" });
-  const data = await requestJson(`${gatewayOrigin}/validator/api/merchantTransIDvalidationAPI.php?${query}`, { method: "GET" });
+  const query = new URLSearchParams({
+    tran_id: transactionId,
+    ...configured,
+    format: "json",
+  });
+  const data = await requestJson(
+    `${gatewayOrigin}/validator/api/merchantTransIDvalidationAPI.php?${query}`,
+    { method: "GET" },
+  );
   const parsed = transactionQueryResponseSchema.safeParse(data);
   if (!parsed.success || parsed.data.APIConnect !== "DONE") {
-    throw new AppError({ statusCode: 502, code: "PAYMENT_STATUS_UNAVAILABLE", message: "Unable to verify the gateway transaction status" });
+    throw new AppError({
+      statusCode: 502,
+      code: "PAYMENT_STATUS_UNAVAILABLE",
+      message: "Unable to verify the gateway transaction status",
+    });
   }
   return parsed.data.element[0] ?? null;
 }
@@ -189,21 +244,49 @@ export async function initiateRefund(input: {
     refund_remarks: input.reason,
     format: "json",
   });
-  const data = await requestJson(`${gatewayOrigin}/validator/api/merchantTransIDvalidationAPI.php?${query}`, { method: "GET" });
+  const data = await requestJson(
+    `${gatewayOrigin}/validator/api/merchantTransIDvalidationAPI.php?${query}`,
+    { method: "GET" },
+  );
   const parsed = refundResponseSchema.safeParse(data);
-  if (!parsed.success || parsed.data.APIConnect !== "DONE" || !parsed.data.refund_ref_id) {
-    throw new AppError({ statusCode: 502, code: "REFUND_SUBMISSION_FAILED", message: "The gateway did not accept this refund" });
+  if (
+    !parsed.success ||
+    parsed.data.APIConnect !== "DONE" ||
+    !parsed.data.refund_ref_id
+  ) {
+    throw new AppError({
+      statusCode: 502,
+      code: "REFUND_SUBMISSION_FAILED",
+      message: "The gateway did not accept this refund",
+    });
   }
-  return { refundReferenceId: parsed.data.refund_ref_id, status: parsed.data.status ?? "submitted" };
+  return {
+    refundReferenceId: parsed.data.refund_ref_id,
+    status: parsed.data.status ?? "submitted",
+  };
 }
 
 export async function queryRefund(refundReferenceId: string) {
   const configured = credentials();
-  const query = new URLSearchParams({ ...configured, refund_ref_id: refundReferenceId, format: "json" });
-  const data = await requestJson(`${gatewayOrigin}/validator/api/merchantTransIDvalidationAPI.php?${query}`, { method: "GET" });
+  const query = new URLSearchParams({
+    ...configured,
+    refund_ref_id: refundReferenceId,
+    format: "json",
+  });
+  const data = await requestJson(
+    `${gatewayOrigin}/validator/api/merchantTransIDvalidationAPI.php?${query}`,
+    { method: "GET" },
+  );
   const parsed = refundResponseSchema.safeParse(data);
   if (!parsed.success || parsed.data.APIConnect !== "DONE") {
-    throw new AppError({ statusCode: 502, code: "REFUND_STATUS_UNAVAILABLE", message: "Unable to verify the refund status" });
+    throw new AppError({
+      statusCode: 502,
+      code: "REFUND_STATUS_UNAVAILABLE",
+      message: "Unable to verify the refund status",
+    });
   }
-  return { status: parsed.data.status ?? "unknown", rawStatus: parsed.data.status ?? "unknown" };
+  return {
+    status: parsed.data.status ?? "unknown",
+    rawStatus: parsed.data.status ?? "unknown",
+  };
 }

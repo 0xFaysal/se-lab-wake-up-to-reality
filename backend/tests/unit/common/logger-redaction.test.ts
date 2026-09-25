@@ -35,7 +35,10 @@ describe("logger redaction", () => {
       },
     });
 
-    assert.doesNotMatch(output, /request-secret|response-secret|refresh-secret/);
+    assert.doesNotMatch(
+      output,
+      /request-secret|response-secret|refresh-secret/,
+    );
     const entry = JSON.parse(output) as {
       req: { headers: { cookie: string } };
       res: { headers: { "set-cookie": string } };

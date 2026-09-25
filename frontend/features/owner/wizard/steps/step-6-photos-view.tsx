@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   UploadCloud,
   CheckCircle2,
@@ -14,14 +13,8 @@ import {
   Image as ImageIcon,
   Camera,
   Layers,
-  Sparkles,
-  Info,
   Lightbulb,
-  ExternalLink,
   Plus,
-  ArrowRight,
-  ArrowLeft,
-  X,
 } from "lucide-react";
 import { ListingWizardShell } from "../listing-wizard-shell";
 

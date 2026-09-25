@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Car } from "lucide-react";
+import { ArrowRight, Building2 } from "lucide-react";
 import { Booking } from "@/types/driver";
 
 interface BookingListItemProps {

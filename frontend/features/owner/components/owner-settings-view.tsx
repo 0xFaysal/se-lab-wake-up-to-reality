@@ -11,7 +11,6 @@ import {
   Lock,
   Smartphone,
   Laptop,
-  KeyRound,
   Download,
   FileText,
   Scale,
@@ -19,11 +18,8 @@ import {
   Camera,
   Check,
   X,
-  ChevronDown,
   Info,
-  CreditCard,
   Building,
-  RefreshCw,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import { MOCK_OWNER_PROFILE } from "@/lib/data/mock-owner-data";

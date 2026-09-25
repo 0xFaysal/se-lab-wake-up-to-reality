@@ -14,18 +14,13 @@ import {
   Save,
   CheckCircle2,
   Check,
-  Sliders,
-  DollarSign,
   Plus,
   Eye,
   Info,
   ExternalLink,
-  Edit,
   Sparkles,
   AlertTriangle,
-  RotateCcw,
   Compass,
-  Zap,
 } from "lucide-react";
 
 interface EditListingViewProps {
@@ -62,7 +57,7 @@ export function OwnerEditListingView({ propertyId }: EditListingViewProps) {
   const [hourlyRate, setHourlyRate] = useState(50);
   const [dailyMax, setDailyMax] = useState(400);
   const [securityDeposit, setSecurityDeposit] = useState(200);
-  const [peakPricing, setPeakPricing] = useState("+20%");
+  const peakPricing = "+20%";
   const [isPricingModified, setIsPricingModified] = useState(true);
 
   // Section 5: Amenities (12 toggles)

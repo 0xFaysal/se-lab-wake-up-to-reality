@@ -64,7 +64,9 @@ async function main() {
   }, 60_000);
 
   try {
-    console.log(`Sending one test email to ${recipient} using ${host}:${port}...`);
+    console.log(
+      `Sending one test email to ${recipient} using ${host}:${port}...`,
+    );
     const timestamp = new Date().toISOString();
     const info = await transporter.sendMail({
       from: { name: "ParkEase BD", address: username },
@@ -87,26 +89,44 @@ async function main() {
       return;
     }
 
-    console.log(JSON.stringify({
-      status: "SMTP_ACCEPTED",
-      recipient,
-      messageId: info.messageId,
-      durationMs: Date.now() - startedAt,
-    }, null, 2));
-    console.log("Check Inbox and Spam. SMTP acceptance alone does not guarantee inbox delivery.");
+    console.log(
+      JSON.stringify(
+        {
+          status: "SMTP_ACCEPTED",
+          recipient,
+          messageId: info.messageId,
+          durationMs: Date.now() - startedAt,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      "Check Inbox and Spam. SMTP acceptance alone does not guarantee inbox delivery.",
+    );
   } catch (error) {
     // Do not print raw SMTP errors, credentials, or message content.
-    console.error(JSON.stringify({
-      status: "EMAIL_TEST_FAILED",
-      smtpErrorCode: error?.code,
-      smtpCommand: error?.command,
-      smtpResponseCode: error?.responseCode,
-      durationMs: Date.now() - startedAt,
-    }, null, 2));
+    console.error(
+      JSON.stringify(
+        {
+          status: "EMAIL_TEST_FAILED",
+          smtpErrorCode: error?.code,
+          smtpCommand: error?.command,
+          smtpResponseCode: error?.responseCode,
+          durationMs: Date.now() - startedAt,
+        },
+        null,
+        2,
+      ),
+    );
     if (error?.code === "EAUTH") {
-      console.error("Check EMAIL_USERNAME and EMAIL_PASSWORD (Gmail App Password).");
+      console.error(
+        "Check EMAIL_USERNAME and EMAIL_PASSWORD (Gmail App Password).",
+      );
     } else {
-      console.error("Check SMTP connectivity and configuration. Check your mailbox before retrying; no automatic retry was made.");
+      console.error(
+        "Check SMTP connectivity and configuration. Check your mailbox before retrying; no automatic retry was made.",
+      );
     }
     process.exitCode = 1;
   } finally {

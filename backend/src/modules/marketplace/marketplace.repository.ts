@@ -54,10 +54,14 @@ export async function resolveProviderAuthority(
         { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
         { OR: [{ validUntil: null }, { validUntil: { gt: now } }] },
         ...(parkingSpotId
-          ? [{ OR: [
-              { resources: { none: {} } },
-              { resources: { some: { parkingSpotId } } },
-            ] }]
+          ? [
+              {
+                OR: [
+                  { resources: { none: {} } },
+                  { resources: { some: { parkingSpotId } } },
+                ],
+              },
+            ]
           : []),
       ],
       permissions: { some: { permission } },
@@ -69,7 +73,10 @@ export async function resolveProviderAuthority(
     include: { grantorProviderMembership: true },
   });
   return delegation
-    ? { membership: delegation.grantorProviderMembership, managed: true as const }
+    ? {
+        membership: delegation.grantorProviderMembership,
+        managed: true as const,
+      }
     : null;
 }
 
@@ -123,21 +130,26 @@ export async function listProviderAccessScopes(
   }
   for (const delegation of delegations) {
     const membership = delegation.grantorProviderMembership;
-    const resourceIds = delegation.resources.map((resource) => resource.parkingSpotId);
+    const resourceIds = delegation.resources.map(
+      (resource) => resource.parkingSpotId,
+    );
     const existing = scopes.get(membership.id);
     if (existing?.resourceIds === null) continue;
     scopes.set(membership.id, {
       providerMembershipId: membership.id,
       providerUserId: membership.providerUserId,
-      resourceIds: resourceIds.length === 0
-        ? null
-        : [...new Set([...(existing?.resourceIds ?? []), ...resourceIds])],
+      resourceIds:
+        resourceIds.length === 0
+          ? null
+          : [...new Set([...(existing?.resourceIds ?? []), ...resourceIds])],
     });
   }
   return [...scopes.values()];
 }
 
-export function activeRightWhere(now = new Date()): Prisma.ParkingRightWhereInput {
+export function activeRightWhere(
+  now = new Date(),
+): Prisma.ParkingRightWhereInput {
   return {
     status: "VERIFIED",
     validFrom: { lte: now },

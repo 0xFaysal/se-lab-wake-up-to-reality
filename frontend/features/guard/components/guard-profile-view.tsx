@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { guardApi } from "@/lib/api/guard-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
-import { formatDateTime, formatTime } from "@/lib/formatters";
+import { formatTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 
 export function GuardProfileView() {
