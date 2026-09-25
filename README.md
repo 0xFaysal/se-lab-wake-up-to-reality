@@ -5,6 +5,9 @@
 **UIU Software Engineering Lab | Section D | Lab 422 | Summer 2026**
 
 [![CI](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/ci.yml/badge.svg)](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/ci.yml)
+[![Uptime & Health](https://img.shields.io/badge/Uptime%20%26%20Health-Active-10b981?logo=githubactions&logoColor=white)](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/uptime-check.yml)
+[![Live Frontend](https://img.shields.io/badge/Frontend-Live%20on%20Vercel-success?logo=vercel&logoColor=white)](https://parkease-bd.vercel.app)
+[![Live API](https://img.shields.io/badge/API-Online-success?logo=nodedotjs&logoColor=white)](https://parkease-api.vercel.app/health/live)
 [![Figma](https://img.shields.io/badge/Figma-UI%2FUX%20Design-F24E1E?logo=figma&logoColor=white)](https://www.figma.com/design/xpGwQGsxbzN8kQK0IubMPU/ParkEase-BD-%E2%80%94-UI-UX-Design?node-id=0-1&t=wANRYM1Cb6R2qjlc-1)
 
 ## About the Project
@@ -303,6 +306,19 @@ The semester version will not integrate real banking, bKash, Nagad, or card paym
 
 `rejwanahmed007` has been added as **Read** collaborator for evaluation.
 Marks are tracked via GitHub commit history, PR reviews, and Issue activity per member.
+
+## Live System Availability & Health
+
+The production deployment is continuously monitored via automated uptime probes:
+
+| Service | Target URL | Health Endpoint | Status Indicator | Target Uptime |
+|---|---|---|---|---|
+| **Frontend Web App** | [`parkease-bd.vercel.app`](https://parkease-bd.vercel.app) | `/` | ![Operational](https://img.shields.io/badge/Status-Operational-10b981?style=flat-square&logo=vercel&logoColor=white) | 99.9% (Vercel Global Edge) |
+| **Backend API (Process)** | [`parkease-api.vercel.app`](https://parkease-api.vercel.app) | [`/health/live`](https://parkease-api.vercel.app/health/live) | ![Alive](https://img.shields.io/badge/Status-Alive-10b981?style=flat-square&logo=nodedotjs&logoColor=white) | 99.9% (Vercel Serverless) |
+| **Database & Cache Readiness** | Supabase & Upstash | [`/health/ready`](https://parkease-api.vercel.app/health/ready) | ![Connected](https://img.shields.io/badge/Postgres%20%26%20Redis-Connected-10b981?style=flat-square&logo=postgresql&logoColor=white) | Multi-Region Active |
+
+- **Automated Uptime Monitoring**: Probes production endpoints every 30 minutes via [`.github/workflows/uptime-check.yml`](./.github/workflows/uptime-check.yml).
+- **Latest Workflow Run**: View real-time status and probe response latency on [GitHub Actions](https://github.com/0xFaysal/se-lab-wake-up-to-reality/actions/workflows/uptime-check.yml).
 
 ## License
 
