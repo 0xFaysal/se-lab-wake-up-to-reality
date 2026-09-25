@@ -6,6 +6,7 @@ import {
   DisputeStatus,
   DomainAuditEventType,
   ManagerDelegationPermission,
+  OvertimeBillingMode,
   ParkingAllocationStatus,
   ParkingListingStatus,
   ParkingResourceType,
@@ -45,6 +46,13 @@ import {
 } from "./marketplace.repository.js";
 import { resolvePlatformFee } from "./platform-fee.service.js";
 import { requestAdminRefund } from "../payments/payment.service.js";
+import {
+  calculateCancellation,
+  calculateOvertime,
+  calculateParkingCharge,
+  calculateSettlement,
+  calculateWalletSplit,
+} from "../../common/finance/booking-finance.js";
 
 const DHAKA_TIME_ZONE = "Asia/Dhaka";
 const QUOTE_TTL_MS = 5 * 60 * 1000;
@@ -1009,6 +1017,8 @@ export async function verifyParkingRight(adminUserId: string, rightId: string, i
 export async function createListing(actorUserId: string, input: {
   parkingRightId: string; parkingResourceUnitId?: string; title: string; description?: string; pricePerHourPaisa: bigint;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[]; securityDepositPaisa: bigint;
+  overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps?: number | null;
+  overtimeRatePerHourPaisa?: bigint | null; overtimeGracePeriodMinutes: number;
 }) {
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "parking-right", input.parkingRightId);
@@ -1058,6 +1068,10 @@ export async function createListing(actorUserId: string, input: {
         maxDurationMinutes: input.maxDurationMinutes,
         allowedVehicleTypes: input.allowedVehicleTypes,
         securityDepositPaisa: input.securityDepositPaisa,
+        overtimeBillingMode: input.overtimeBillingMode,
+        overtimeMultiplierBps: input.overtimeBillingMode === OvertimeBillingMode.MULTIPLIER ? input.overtimeMultiplierBps ?? 15_000 : null,
+        overtimeRatePerHourPaisa: input.overtimeBillingMode === OvertimeBillingMode.FIXED_PER_HOUR ? input.overtimeRatePerHourPaisa : null,
+        overtimeGracePeriodMinutes: input.overtimeGracePeriodMinutes,
         settlementRecipientUserId: right.holderUserId,
         settlementWalletAccountId: wallet.id,
       },
@@ -1097,7 +1111,9 @@ export async function updateListing(actorUserId: string, listingId: string, inpu
     await lockEntity(tx, "parking-listing", listingId);
     const listing = await tx.parkingListing.findUnique({ where: { id: listingId }, include: { parkingSpot: true } });
     if (!listing) fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
-    const priceChange = input.pricePerHourPaisa !== undefined || input.securityDepositPaisa !== undefined;
+    const priceChange = input.pricePerHourPaisa !== undefined || input.securityDepositPaisa !== undefined
+      || input.overtimeBillingMode !== undefined || input.overtimeMultiplierBps !== undefined
+      || input.overtimeRatePerHourPaisa !== undefined || input.overtimeGracePeriodMinutes !== undefined;
     await requireAuthority(
       actorUserId,
       listing.parkingSpot.propertyId,
@@ -1113,7 +1129,19 @@ export async function updateListing(actorUserId: string, listingId: string, inpu
       const max = Number(input.maxDurationMinutes ?? listing.maxDurationMinutes);
       if (max < min) fail(400, "LISTING_DURATION_INVALID", "Maximum duration must be at least the minimum duration");
     }
-    const updated = await tx.parkingListing.update({ where: { id: listingId }, data: input as Prisma.ParkingListingUpdateInput });
+    const updateData: JsonObject = { ...input };
+    const overtimeMode = input.overtimeBillingMode ?? listing.overtimeBillingMode;
+    if (overtimeMode === OvertimeBillingMode.MULTIPLIER) {
+      updateData.overtimeMultiplierBps = input.overtimeMultiplierBps ?? listing.overtimeMultiplierBps ?? 15_000;
+      updateData.overtimeRatePerHourPaisa = null;
+    } else {
+      updateData.overtimeMultiplierBps = null;
+      updateData.overtimeRatePerHourPaisa = input.overtimeRatePerHourPaisa ?? listing.overtimeRatePerHourPaisa;
+      if (updateData.overtimeRatePerHourPaisa === null || updateData.overtimeRatePerHourPaisa === undefined) {
+        fail(400, "OVERTIME_RATE_REQUIRED", "A fixed overtime rate is required");
+      }
+    }
+    const updated = await tx.parkingListing.update({ where: { id: listingId }, data: updateData as Prisma.ParkingListingUpdateInput });
     if (input.pricePerHourPaisa !== undefined && BigInt(input.pricePerHourPaisa as string | number | bigint) !== listing.pricePerHourPaisa) {
       await tx.parkingListingPriceHistory.create({ data: { parkingListingId: listing.id, previousPricePaisa: listing.pricePerHourPaisa, pricePerHourPaisa: updated.pricePerHourPaisa, changedByUserId: actorUserId } });
     }
@@ -2101,16 +2129,31 @@ export async function createQuote(driverUserId: string, input: { listingId: stri
     fail(400, "BOOKING_DURATION_INVALID", "Requested duration is outside the listing limits");
   }
   if (!(await ensureListingAvailable(listing, startAt, endAt))) fail(409, "PARKING_NOT_AVAILABLE", "Parking is not available for the requested time");
-  const baseAmountPaisa = (listing.pricePerHourPaisa * BigInt(durationMinutes) + 59n) / 60n;
+  const baseAmountPaisa = calculateParkingCharge(listing.pricePerHourPaisa, durationMinutes);
   const resolvedFee = await resolvePlatformFee(listing.id, baseAmountPaisa, new Date());
   const platformFeePaisa = resolvedFee.amountPaisa;
+  const subtotalPaisa = baseAmountPaisa + platformFeePaisa;
   const totalAmountPaisa = baseAmountPaisa + platformFeePaisa + listing.securityDepositPaisa;
+  const driverWallet = await prisma.walletAccount.findUnique({
+    where: { userId_currency: { userId: driverUserId, currency: "BDT" } },
+    select: { status: true, availableBalancePaisa: true },
+  });
+  const driverWalletAvailablePaisa = driverWallet?.status === "ACTIVE" ? driverWallet.availableBalancePaisa : 0n;
+  const split = calculateWalletSplit(totalAmountPaisa, driverWalletAvailablePaisa);
   const quote = await prisma.$transaction(async (tx) => {
     const created = await tx.bookingQuote.create({ data: {
       driverUserId, listingId: listing.id, vehicleId: vehicle.id, parkingSpotId: listing.parkingSpotId,
-      startAt, endAt, durationMinutes, baseAmountPaisa, platformFeePaisa,
+      startAt, endAt, durationMinutes, baseRatePerHourPaisa: listing.pricePerHourPaisa,
+      baseAmountPaisa, platformFeePaisa, subtotalPaisa,
       platformFeeRuleId: resolvedFee.ruleId,
       depositPaisa: listing.securityDepositPaisa, totalAmountPaisa,
+      driverWalletAvailablePaisa,
+      driverWalletAppliedPaisa: split.walletAppliedPaisa,
+      gatewayAmountPaisa: split.gatewayAmountPaisa,
+      overtimeBillingMode: listing.overtimeBillingMode,
+      overtimeMultiplierBps: listing.overtimeMultiplierBps,
+      overtimeRatePerHourPaisa: listing.overtimeRatePerHourPaisa,
+      overtimeGracePeriodMinutes: listing.overtimeGracePeriodMinutes,
       expiresAt: new Date(Date.now() + QUOTE_TTL_MS),
     } });
     await audit(tx, DomainAuditEventType.QUOTE_CREATED, driverUserId, listing.parkingSpot.propertyId, "BookingQuote", created.id, {
@@ -2322,6 +2365,15 @@ export async function createBooking(driverUserId: string, input: { holdId: strin
       platformFeePaisa: hold.quote.platformFeePaisa,
       depositPaisa: hold.quote.depositPaisa,
       totalAmountPaisa: hold.quote.totalAmountPaisa,
+      baseRatePerHourPaisa: hold.quote.baseRatePerHourPaisa,
+      subtotalPaisa: hold.quote.subtotalPaisa,
+      driverWalletAppliedPaisa: hold.quote.driverWalletAppliedPaisa,
+      gatewayAmountPaisa: hold.quote.gatewayAmountPaisa,
+      overtimeBillingMode: hold.quote.overtimeBillingMode,
+      overtimeMultiplierBps: hold.quote.overtimeMultiplierBps,
+      overtimeRatePerHourPaisa: hold.quote.overtimeRatePerHourPaisa,
+      overtimeGracePeriodMinutes: hold.quote.overtimeGracePeriodMinutes,
+      cancellationPolicyVersion: hold.quote.cancellationPolicyVersion,
       idempotencyKey: input.idempotencyKey,
     } });
     await tx.reservationHold.update({ where: { id: hold.id }, data: { status: "CONSUMED" } });

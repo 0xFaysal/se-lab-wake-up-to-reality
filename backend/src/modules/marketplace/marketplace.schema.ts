@@ -213,7 +213,18 @@ const listingBodySchema = z.object({
     maxDurationMinutes: z.number().int().min(15).max(10080).default(720),
     allowedVehicleTypes: z.array(vehicleType).min(1).max(4),
     securityDepositPaisa: z.coerce.bigint().min(0n).default(0n),
-  }).strict();
+    overtimeBillingMode: z.enum(["MULTIPLIER", "FIXED_PER_HOUR"]).default("MULTIPLIER"),
+    overtimeMultiplierBps: z.number().int().min(10_000).max(50_000).nullable().optional(),
+    overtimeRatePerHourPaisa: z.coerce.bigint().min(100n).max(10_000_000n).nullable().optional(),
+    overtimeGracePeriodMinutes: z.number().int().min(0).max(180).default(15),
+  }).strict().superRefine((value, context) => {
+    if (value.overtimeBillingMode === "MULTIPLIER" && value.overtimeMultiplierBps === null) {
+      context.addIssue({ code: "custom", path: ["overtimeMultiplierBps"], message: "Multiplier is required" });
+    }
+    if (value.overtimeBillingMode === "FIXED_PER_HOUR" && (value.overtimeRatePerHourPaisa === undefined || value.overtimeRatePerHourPaisa === null)) {
+      context.addIssue({ code: "custom", path: ["overtimeRatePerHourPaisa"], message: "Fixed overtime rate is required" });
+    }
+  });
 
 export const createListingSchema = z.object({
   body: listingBodySchema.refine((value) => value.maxDurationMinutes >= value.minDurationMinutes, {

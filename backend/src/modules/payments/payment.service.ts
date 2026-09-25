@@ -6,6 +6,11 @@ import { env } from "../../config/env.js";
 import { createDomainAuditEvent } from "../property-governance/domain-audit.js";
 import { lockEntity } from "../marketplace/marketplace.repository.js";
 import { createSession, gatewayAmountToPaisa, initiateRefund, queryRefund, validateTransaction } from "./sslcommerz.gateway.js";
+import {
+  postSuccessfulBookingPayment,
+  releasePaymentWalletHolds,
+  reserveDriverWallet,
+} from "./payment-ledger.service.js";
 
 const SESSION_TTL_MS = 20 * 60 * 1000;
 
@@ -25,6 +30,8 @@ const paymentView = {
   id: true,
   bookingId: true,
   amountPaisa: true,
+  grossAmountPaisa: true,
+  walletAppliedPaisa: true,
   currency: true,
   status: true,
   provider: true,
@@ -41,7 +48,7 @@ const paymentView = {
 } satisfies Prisma.PaymentSelect;
 
 export async function initiateSslCommerzSession(driverUserId: string, bookingId: string, idempotencyKey: string) {
-  if (!env.SSLCOMMERZ_ENABLED) fail(503, "PAYMENT_GATEWAY_NOT_CONFIGURED", "Online payment is not configured");
+  const walletHoldExpiresAt = new Date(Date.now() + SESSION_TTL_MS);
   const prepared = await prisma.$transaction(async (tx) => {
     await lockEntity(tx, "booking", bookingId);
     const booking = await tx.booking.findFirst({
@@ -50,8 +57,6 @@ export async function initiateSslCommerzSession(driverUserId: string, bookingId:
     });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
     if (booking.status !== BookingStatus.PAYMENT_PENDING) fail(409, "BOOKING_NOT_AWAITING_PAYMENT", "Booking is not awaiting payment");
-    if (booking.totalAmountPaisa < 1000n) fail(409, "PAYMENT_AMOUNT_TOO_SMALL", "SSLCOMMERZ requires at least BDT 10.00");
-
     const paid = await tx.payment.findFirst({
       where: { bookingId, status: { in: [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED, PaymentStatus.PARTIALLY_REFUNDED, PaymentStatus.REFUNDED] } },
       select: { id: true },
@@ -71,16 +76,42 @@ export async function initiateSslCommerzSession(driverUserId: string, bookingId:
     if (payment && [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED].includes(payment.status as never)) {
       fail(409, "BOOKING_ALREADY_PAID", "This booking has already been paid");
     }
+    if (payment?.status === PaymentStatus.FAILED || payment?.status === PaymentStatus.CANCELLED || payment?.status === PaymentStatus.EXPIRED) {
+      fail(409, "PAYMENT_RETRY_KEY_REQUIRED", "Use a new payment attempt to retry checkout");
+    }
     payment ??= await tx.payment.create({ data: {
       bookingId,
       payerUserId: driverUserId,
       amountPaisa: booking.totalAmountPaisa,
+      grossAmountPaisa: booking.totalAmountPaisa,
       status: PaymentStatus.CREATED,
-      provider: "SSLCOMMERZ",
+      provider: "PENDING_FUNDING",
       environment: env.SSLCOMMERZ_ENVIRONMENT.toUpperCase(),
       idempotencyKey,
       initiatedAt: now,
     } });
+    const funding = await reserveDriverWallet(tx, {
+      bookingId,
+      paymentId: payment.id,
+      userId: driverUserId,
+      grossAmountPaisa: booking.totalAmountPaisa,
+      idempotencyKey,
+      expiresAt: walletHoldExpiresAt,
+    });
+    payment = await tx.payment.update({ where: { id: payment.id }, data: {
+      amountPaisa: funding.gatewayAmountPaisa,
+      grossAmountPaisa: booking.totalAmountPaisa,
+      walletAppliedPaisa: funding.walletAppliedPaisa,
+      provider: funding.gatewayAmountPaisa === 0n ? "INTERNAL_WALLET" : "SSLCOMMERZ",
+    } });
+    await tx.booking.update({ where: { id: booking.id }, data: {
+      driverWalletAppliedPaisa: funding.walletAppliedPaisa,
+      gatewayAmountPaisa: funding.gatewayAmountPaisa,
+    } });
+    if (funding.gatewayAmountPaisa === 0n) {
+      return { existing: false as const, walletOnly: true as const, payment, booking };
+    }
+    if (!env.SSLCOMMERZ_ENABLED) fail(503, "PAYMENT_GATEWAY_NOT_CONFIGURED", "Online payment is not configured");
     const attemptNumber = await tx.paymentAttempt.count({ where: { paymentId: payment.id } }) + 1;
     const merchantTransactionId = transactionId();
     const attempt = await tx.paymentAttempt.create({ data: { paymentId: payment.id, attemptNumber, merchantTransactionId } });
@@ -93,17 +124,22 @@ export async function initiateSslCommerzSession(driverUserId: string, bookingId:
       failedAt: null,
       cancelledAt: null,
     } });
-    return { existing: false as const, payment, booking, attempt };
+    return { existing: false as const, walletOnly: false as const, payment, booking, attempt };
   }, { isolationLevel: "Serializable" });
 
   if (prepared.existing) {
-    return serialize({ paymentId: prepared.payment.id, status: prepared.payment.status, gateway: "SSLCOMMERZ", checkoutUrl: prepared.payment.checkoutUrl, expiresAt: prepared.payment.sessionExpiresAt });
+    return serialize({ paymentId: prepared.payment.id, status: prepared.payment.status, gateway: "SSLCOMMERZ", walletAppliedPaisa: prepared.payment.walletAppliedPaisa, gatewayAmountPaisa: prepared.payment.amountPaisa, checkoutUrl: prepared.payment.checkoutUrl, expiresAt: prepared.payment.sessionExpiresAt });
+  }
+
+  if (prepared.walletOnly) {
+    const payment = await captureWalletOnlyPayment(prepared.payment.id);
+    return serialize({ paymentId: payment.id, status: payment.status, gateway: "INTERNAL_WALLET", walletAppliedPaisa: payment.walletAppliedPaisa, gatewayAmountPaisa: 0n, checkoutUrl: null, expiresAt: null });
   }
 
   try {
     const gateway = await createSession({
       transactionId: prepared.payment.merchantTransactionId!,
-      amountPaisa: prepared.booking.totalAmountPaisa,
+      amountPaisa: prepared.payment.amountPaisa,
       customer: { name: prepared.booking.driver.fullName, email: prepared.booking.driver.email, phone: prepared.booking.driver.phone },
       productName: `Parking at ${prepared.booking.property.name}`.slice(0, 255),
     });
@@ -117,14 +153,52 @@ export async function initiateSslCommerzSession(driverUserId: string, bookingId:
         sessionExpiresAt: expiresAt,
       } });
     });
-    return serialize({ paymentId: payment.id, status: payment.status, gateway: "SSLCOMMERZ", checkoutUrl: gateway.checkoutUrl, expiresAt });
+    return serialize({ paymentId: payment.id, status: payment.status, gateway: "SSLCOMMERZ", walletAppliedPaisa: payment.walletAppliedPaisa, gatewayAmountPaisa: payment.amountPaisa, checkoutUrl: gateway.checkoutUrl, expiresAt });
   } catch (error) {
-    await prisma.$transaction([
-      prisma.paymentAttempt.update({ where: { id: prepared.attempt.id }, data: { status: PaymentStatus.FAILED, completedAt: new Date() } }),
-      prisma.payment.update({ where: { id: prepared.payment.id }, data: { status: PaymentStatus.FAILED, failedAt: new Date() } }),
-    ]).catch(() => undefined);
+    await prisma.$transaction(async (tx) => {
+      await releasePaymentWalletHolds(tx, prepared.payment.id, driverUserId);
+      await tx.paymentAttempt.update({ where: { id: prepared.attempt.id }, data: { status: PaymentStatus.FAILED, completedAt: new Date() } });
+      await tx.payment.update({ where: { id: prepared.payment.id }, data: { status: PaymentStatus.FAILED, failedAt: new Date() } });
+    }).catch(() => undefined);
     throw error;
   }
+}
+
+async function captureWalletOnlyPayment(paymentId: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "payment", paymentId);
+    const current = await tx.payment.findUnique({ where: { id: paymentId }, include: { booking: true } });
+    if (!current) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
+    if (current.status === PaymentStatus.SUCCEEDED) return tx.payment.findUniqueOrThrow({ where: { id: paymentId }, select: paymentView });
+    if (current.amountPaisa !== 0n || current.provider !== "INTERNAL_WALLET") {
+      fail(409, "PAYMENT_GATEWAY_REQUIRED", "This payment requires gateway validation");
+    }
+    const now = new Date();
+    const credentialId = randomUUID();
+    const rawCredential = `parkease-access:${credentialId}`;
+    const funding = await postSuccessfulBookingPayment(tx, {
+      paymentId: current.id,
+      bookingId: current.booking.id,
+      actorUserId: current.payerUserId,
+      propertyId: current.booking.propertyId,
+      bookingCode: current.booking.bookingCode,
+      grossAmountPaisa: current.grossAmountPaisa,
+      gatewayAmountPaisa: 0n,
+    });
+    await tx.booking.update({ where: { id: current.booking.id }, data: { status: BookingStatus.CONFIRMED, confirmedAt: now } });
+    await tx.accessCredential.create({ data: {
+      id: credentialId,
+      bookingId: current.booking.id,
+      tokenHash: createHash("sha256").update(rawCredential).digest("hex"),
+      expiresAt: new Date(current.booking.effectiveEndAt.getTime() + 24 * 60 * 60 * 1000),
+    } });
+    await tx.notification.createMany({ data: [
+      { userId: current.payerUserId, type: "PAYMENT_SUCCEEDED", title: "Payment successful", message: `Refund Balance paid booking ${current.booking.bookingCode}.`, entityType: "Payment", entityId: current.id, idempotencyKey: `payment-success:${current.id}:driver` },
+      { userId: current.booking.providerUserId, type: "BOOKING_CONFIRMED", title: "New confirmed booking", message: `Booking ${current.booking.bookingCode} is confirmed.`, entityType: "Booking", entityId: current.booking.id, idempotencyKey: `booking-confirmed:${current.booking.id}:provider` },
+    ], skipDuplicates: true });
+    await createDomainAuditEvent(tx, { eventType: DomainAuditEventType.PAYMENT_SUCCEEDED, actorUserId: current.payerUserId, propertyId: current.booking.propertyId, entityType: "Payment", entityId: current.id, metadata: { ledgerTransactionId: funding.ledgerTransactionId, gateway: "INTERNAL_WALLET" } });
+    return tx.payment.update({ where: { id: current.id }, data: { status: PaymentStatus.SUCCEEDED, gatewayStatus: "WALLET_ONLY", succeededAt: now, capturedAt: now }, select: paymentView });
+  }, { isolationLevel: "Serializable" });
 }
 
 export async function validateAndCaptureSslCommerz(transactionIdValue: string, validationId: string) {
@@ -151,22 +225,15 @@ export async function validateAndCaptureSslCommerz(transactionIdValue: string, v
     const now = new Date();
     const credentialId = randomUUID();
     const rawCredential = `parkease-access:${credentialId}`;
-    const creditTotal = current.booking.baseAmountPaisa + current.booking.platformFeePaisa + current.booking.depositPaisa;
-    if (creditTotal !== current.amountPaisa) fail(500, "LEDGER_UNBALANCED", "Payment ledger transaction is not balanced");
-
-    const ledger = await tx.ledgerTransaction.create({ data: {
-      referenceType: "BOOKING_PAYMENT",
-      referenceId: current.id,
-      description: `SSLCOMMERZ payment for booking ${current.booking.bookingCode}`,
+    const funding = await postSuccessfulBookingPayment(tx, {
+      paymentId: current.id,
+      bookingId: current.booking.id,
       actorUserId: current.payerUserId,
-      entries: { create: [
-        { accountCode: "EXTERNAL_PAYMENT_CLEARING", entrySide: "DEBIT", amountPaisa: current.amountPaisa },
-        { accountCode: "PROVIDER_PAYABLE", walletAccountId: current.booking.settlementWalletAccountId, entrySide: "CREDIT", amountPaisa: current.booking.baseAmountPaisa },
-        { accountCode: "PLATFORM_REVENUE", entrySide: "CREDIT", amountPaisa: current.booking.platformFeePaisa },
-        { accountCode: "CUSTOMER_DEPOSIT_LIABILITY", entrySide: "CREDIT", amountPaisa: current.booking.depositPaisa },
-      ] },
-    } });
-    await tx.walletAccount.update({ where: { id: current.booking.settlementWalletAccountId }, data: { pendingBalancePaisa: { increment: current.booking.baseAmountPaisa }, balanceVersion: { increment: 1 } } });
+      propertyId: current.booking.propertyId,
+      bookingCode: current.booking.bookingCode,
+      grossAmountPaisa: current.grossAmountPaisa,
+      gatewayAmountPaisa: current.amountPaisa,
+    });
     await tx.booking.update({ where: { id: current.booking.id }, data: { status: BookingStatus.CONFIRMED, confirmedAt: now } });
     await tx.accessCredential.create({ data: {
       id: credentialId,
@@ -178,7 +245,7 @@ export async function validateAndCaptureSslCommerz(transactionIdValue: string, v
       { userId: current.payerUserId, type: "PAYMENT_SUCCEEDED", title: "Payment successful", message: `Payment for booking ${current.booking.bookingCode} succeeded.`, entityType: "Payment", entityId: current.id, idempotencyKey: `payment-success:${current.id}:driver` },
       { userId: current.booking.providerUserId, type: "BOOKING_CONFIRMED", title: "New confirmed booking", message: `Booking ${current.booking.bookingCode} is confirmed.`, entityType: "Booking", entityId: current.booking.id, idempotencyKey: `booking-confirmed:${current.booking.id}:provider` },
     ], skipDuplicates: true });
-    await createDomainAuditEvent(tx, { eventType: DomainAuditEventType.PAYMENT_SUCCEEDED, actorUserId: current.payerUserId, propertyId: current.booking.propertyId, entityType: "Payment", entityId: current.id, metadata: { ledgerTransactionId: ledger.id, gateway: "SSLCOMMERZ" } });
+    await createDomainAuditEvent(tx, { eventType: DomainAuditEventType.PAYMENT_SUCCEEDED, actorUserId: current.payerUserId, propertyId: current.booking.propertyId, entityType: "Payment", entityId: current.id, metadata: { ledgerTransactionId: funding.ledgerTransactionId, gateway: "SSLCOMMERZ" } });
     await tx.paymentAttempt.updateMany({ where: { paymentId: current.id, merchantTransactionId: transactionIdValue }, data: { status: PaymentStatus.SUCCEEDED, completedAt: now } });
     const updated = await tx.payment.update({ where: { id: current.id }, data: {
       status: PaymentStatus.SUCCEEDED,
@@ -205,10 +272,20 @@ export async function recordGatewayExit(transactionIdValue: string, status: "FAI
   const finalStatuses: PaymentStatus[] = [PaymentStatus.SUCCEEDED, PaymentStatus.CAPTURED, PaymentStatus.REFUNDED];
   if (finalStatuses.includes(payment.status)) return payment.id;
   const now = new Date();
-  await prisma.$transaction([
-    prisma.payment.update({ where: { id: payment.id }, data: status === "FAILED" ? { status: PaymentStatus.FAILED, failedAt: now, checkoutUrl: null } : { status: PaymentStatus.CANCELLED, cancelledAt: now, checkoutUrl: null } }),
-    prisma.paymentAttempt.updateMany({ where: { paymentId: payment.id, merchantTransactionId: transactionIdValue }, data: { status: status === "FAILED" ? PaymentStatus.FAILED : PaymentStatus.CANCELLED, completedAt: now } }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await lockEntity(tx, "payment", payment.id);
+    await releasePaymentWalletHolds(tx, payment.id, payment.payerUserId);
+    await tx.payment.update({ where: { id: payment.id }, data: status === "FAILED" ? { status: PaymentStatus.FAILED, failedAt: now, checkoutUrl: null } : { status: PaymentStatus.CANCELLED, cancelledAt: now, checkoutUrl: null } });
+    await tx.paymentAttempt.updateMany({ where: { paymentId: payment.id, merchantTransactionId: transactionIdValue }, data: { status: status === "FAILED" ? PaymentStatus.FAILED : PaymentStatus.CANCELLED, completedAt: now } });
+    const booking = await tx.booking.findUnique({ where: { id: payment.bookingId }, select: { propertyId: true } });
+    if (booking) await createDomainAuditEvent(tx, {
+      eventType: status === "FAILED" ? DomainAuditEventType.PAYMENT_FAILED : DomainAuditEventType.PAYMENT_CANCELLED,
+      actorUserId: payment.payerUserId,
+      propertyId: booking.propertyId,
+      entityType: "Payment",
+      entityId: payment.id,
+    });
+  });
   return payment.id;
 }
 
