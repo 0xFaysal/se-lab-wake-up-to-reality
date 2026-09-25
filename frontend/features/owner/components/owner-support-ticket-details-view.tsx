@@ -2,27 +2,20 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   MessageSquare,
   CheckCircle2,
   Check,
   Clock,
-  ShieldCheck,
   AlertCircle,
   Paperclip,
   Send,
   ArrowLeft,
-  Building2,
-  Banknote,
   FileText,
   Image as ImageIcon,
   ExternalLink,
-  HelpCircle,
   AlertTriangle,
   Sliders,
-  ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { MOCK_OWNER_PROFILE } from "@/lib/data/mock-owner-data";
 
@@ -69,7 +62,6 @@ const INITIAL_MESSAGES: SupportMessage[] = [
 ];
 
 export function OwnerSupportTicketDetailsView({ ticketId = "SUP-1048" }: { ticketId?: string }) {
-  const router = useRouter();
   const [messages, setMessages] = useState<SupportMessage[]>(INITIAL_MESSAGES);
   const [replyText, setReplyText] = useState("");
   const [ticketStatus, setTicketStatus] = useState<"Open" | "Resolved">("Open");
@@ -285,7 +277,6 @@ export function OwnerSupportTicketDetailsView({ ticketId = "SUP-1048" }: { ticke
               {messages.map((msg) => {
                 const isOwner = msg.senderType === "owner";
                 const isSupport = msg.senderType === "support";
-                const isSystem = msg.senderType === "system";
 
                 return (
                   <div

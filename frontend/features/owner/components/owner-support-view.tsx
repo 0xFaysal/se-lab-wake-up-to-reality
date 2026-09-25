@@ -1,19 +1,15 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   Search,
   BookOpen,
   AlertTriangle,
-  ChevronRight,
   ChevronDown,
   Plus,
-  ExternalLink,
   MessageCircle,
   Mail,
   Phone,
-  Clock,
-  CheckCircle2,
   HelpCircle,
   Building2,
   Calendar,
@@ -23,7 +19,6 @@ import {
   Lock,
   X,
   Check,
-  Sparkles,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import {
@@ -32,7 +27,6 @@ import {
   MOCK_FAQS,
   MOCK_OWNER_PROPERTIES,
   SupportTicket,
-  HelpTopic,
 } from "@/lib/data/mock-owner-data";
 
 export function OwnerSupportView() {

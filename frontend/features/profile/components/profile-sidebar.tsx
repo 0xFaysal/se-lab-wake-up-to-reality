@@ -7,7 +7,6 @@ import {
   History,
   HelpCircle,
   ChevronRight,
-  ShieldCheck,
   CheckCircle2,
   Shield,
 } from "lucide-react";

@@ -12,10 +12,8 @@ import {
   Phone,
   Mail,
   Building2,
-  Lock,
   CheckCircle2,
   XCircle,
-  Users,
   Shield,
   Send,
   MoreVertical,
@@ -24,7 +22,6 @@ import {
   Briefcase,
   AlertCircle,
   Check,
-  ArrowUpRight,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import {

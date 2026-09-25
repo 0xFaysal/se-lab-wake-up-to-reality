@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, QrCode, Navigation, ArrowRight } from "lucide-react";
+import { MapPin, QrCode, Navigation } from "lucide-react";
 import { Booking } from "@/types/driver";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

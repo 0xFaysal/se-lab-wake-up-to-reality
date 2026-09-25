@@ -8,14 +8,10 @@ import {
   TrendingUp,
   Shield,
   Sliders,
-  CheckCircle2,
   Lightbulb,
   Copy,
-  Edit2,
   Check,
   X,
-  Clock,
-  Sparkles,
   Info,
 } from "lucide-react";
 import { ListingWizardShell } from "../listing-wizard-shell";

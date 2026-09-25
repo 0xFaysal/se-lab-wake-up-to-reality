@@ -4,38 +4,24 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
   ArrowLeft,
   Building2,
   Check,
   CheckCircle2,
   ChevronRight,
-  Clock,
   Info,
-  Lock,
-  Mail,
-  Phone,
   Plus,
-  RotateCcw,
   Save,
-  Shield,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Trash2,
-  User,
-  UserCheck,
-  UserX,
   Users,
-  X,
-  XCircle,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import {
   MOCK_OWNER_MANAGERS,
   MOCK_OWNER_PROPERTIES,
   OwnerManager,
-  OwnerProperty,
   DEFAULT_MANAGER_PERMISSIONS,
   ManagerPermissions,
   countEnabledPermissions,

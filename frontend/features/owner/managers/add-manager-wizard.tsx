@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Building2,
@@ -16,13 +15,11 @@ import {
   Phone,
   Send,
   Shield,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
   User,
   UserCheck,
   Users,
-  X,
 } from "lucide-react";
 import { OwnerHeader } from "@/components/owner/owner-header";
 import {
@@ -109,7 +106,6 @@ const TEAM_PERMISSIONS: PermissionItem[] = [
 ];
 
 export function AddManagerWizard() {
-  const router = useRouter();
 
   // Form states
   const [fullName, setFullName] = useState("");

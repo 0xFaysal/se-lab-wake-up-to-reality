@@ -1,21 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Building2,
-  Building,
   MapPin,
   FileText,
   ShieldCheck,
   CheckCircle2,
-  Info,
   Lightbulb,
-  ArrowRight,
-  ArrowLeft,
-  Warehouse,
-  Check,
 } from "lucide-react";
 import { ListingWizardShell } from "../listing-wizard-shell";
 
