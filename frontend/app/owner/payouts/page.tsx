@@ -43,7 +43,7 @@ export default function PayoutPage() {
   const payout = useMutation({
     mutationFn: () => financeApi.requestPayout(requestedPaisa.toString(), selectedMethodId, key.current),
     onSuccess: async () => {
-      toast.success("Simulated payout request submitted");
+      toast.success("Payout request submitted for review");
       setAmount("");
       key.current = crypto.randomUUID();
       await Promise.all([
@@ -95,10 +95,10 @@ export default function PayoutPage() {
             Request payout review
           </Button>
         </div>
-        <aside className="border-l-4 border-amber-500 bg-amber-50 p-5 text-sm text-amber-950">
+        <aside className="border-l-4 border-emerald-600 bg-emerald-50 p-5 text-sm text-emerald-950">
           <Banknote className="size-5" />
-          <h2 className="mt-3 font-bold">Simulation notice</h2>
-          <p className="mt-2 leading-6">This environment records and reviews payout state, but does not transfer money to a bank or mobile wallet.</p>
+          <h2 className="mt-3 font-bold">Manual transfer</h2>
+          <p className="mt-2 leading-6">ParkEase reviews the destination, sends the money outside the platform, then records the transfer reference here.</p>
         </aside>
       </section>
       <section>

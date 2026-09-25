@@ -134,10 +134,11 @@ integration("marketplace end-to-end and concurrency", () => {
       await prisma.review.deleteMany({ where: { booking: { propertyId } } });
       await prisma.dispute.deleteMany({ where: { booking: { propertyId } } });
       await prisma.refund.deleteMany({ where: { payment: { booking: { propertyId } } } });
+      await prisma.bookingCancellation.deleteMany({ where: { booking: { propertyId } } });
       await prisma.accessCredential.deleteMany({ where: { booking: { propertyId } } });
       await prisma.notification.deleteMany({ where: { userId: { in: userIds } } });
-      await prisma.ledgerEntry.deleteMany({ where: { ledgerTransaction: { OR: [{ actorUserId: { in: userIds } }, { referenceType: "BOOKING_PAYMENT" }] } } });
-      await prisma.ledgerTransaction.deleteMany({ where: { OR: [{ actorUserId: { in: userIds } }, { referenceType: "BOOKING_PAYMENT" }] } });
+      await prisma.ledgerEntry.deleteMany({ where: { ledgerTransaction: { OR: [{ actorUserId: { in: userIds } }, { referenceType: "BOOKING_PAYMENT_HELD" }] } } });
+      await prisma.ledgerTransaction.deleteMany({ where: { OR: [{ actorUserId: { in: userIds } }, { referenceType: "BOOKING_PAYMENT_HELD" }] } });
       await prisma.payment.deleteMany({ where: { booking: { propertyId } } });
       await prisma.payoutRequest.deleteMany({ where: { providerUserId: providerId } });
       await prisma.providerPayoutMethod.deleteMany({ where: { providerUserId: providerId } });
@@ -296,7 +297,7 @@ integration("marketplace end-to-end and concurrency", () => {
     assert.equal(await prisma.availabilityException.count({ where: { id: offer.availabilityException.id } }), 0);
 
     const transaction = await prisma.ledgerTransaction.findFirstOrThrow({
-      where: { referenceType: "BOOKING_PAYMENT", referenceId: paid.payment.id }, include: { entries: true },
+      where: { referenceType: "BOOKING_PAYMENT_HELD", referenceId: paid.payment.id }, include: { entries: true },
     });
     const debit = transaction.entries.filter((entry) => entry.entrySide === "DEBIT").reduce((sum, entry) => sum + entry.amountPaisa, 0n);
     const credit = transaction.entries.filter((entry) => entry.entrySide === "CREDIT").reduce((sum, entry) => sum + entry.amountPaisa, 0n);
@@ -407,5 +408,112 @@ integration("marketplace end-to-end and concurrency", () => {
       quoteId: quotes[rejectedIndex]!.id, idempotencyKey: `shared-retry-${randomUUID()}`,
     });
     assert.equal(retried.status, "ACTIVE");
+  });
+
+  it("blocks marketplace setup for an ineligible Property", async () => {
+    await prisma.property.update({
+      where: { id: propertyId },
+      data: { status: "INACTIVE", verificationStatus: "PENDING" },
+    });
+    try {
+      await assert.rejects(() => marketplace.createResource(providerId, propertyId, {
+        type: generated.ParkingResourceType.FIXED_SPACE,
+        displayName: "Blocked setup",
+        spotCode: `BLOCKED-${randomUUID().slice(0, 4)}`,
+        capacity: 1,
+        supportedVehicleTypes: [generated.VehicleType.SEDAN],
+        isCovered: false,
+        hasCctv: false,
+        hasGuard: false,
+      }));
+    } finally {
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { status: "ACTIVE", verificationStatus: "VERIFIED" },
+      });
+    }
+  });
+
+  it("does not cancel a booking while a hosted payment checkout can still complete", async () => {
+    const offer = await createActiveOffer("FIXED_SPACE", 1, 1);
+    const quote = await marketplace.createQuote(driverIds[0]!, {
+      listingId: offer.listing.id,
+      vehicleId: vehicleIds[0]!,
+      startAt: offer.startAt.toISOString(),
+      endAt: offer.endAt.toISOString(),
+    });
+    const hold = await marketplace.createHold(driverIds[0]!, {
+      quoteId: quote.id,
+      idempotencyKey: `checkout-hold-${randomUUID()}`,
+    });
+    const booking = await marketplace.createBooking(driverIds[0]!, {
+      holdId: hold.id,
+      idempotencyKey: `checkout-booking-${randomUUID()}`,
+    });
+    const payment = await prisma.payment.create({ data: {
+      bookingId: booking.id,
+      payerUserId: driverIds[0]!,
+      amountPaisa: BigInt(booking.totalAmountPaisa),
+      grossAmountPaisa: BigInt(booking.totalAmountPaisa),
+      status: "SESSION_CREATED",
+      provider: "SSLCOMMERZ",
+      idempotencyKey: `checkout-payment-${randomUUID()}`,
+      initiatedAt: new Date(),
+      sessionExpiresAt: new Date(Date.now() + 20 * 60 * 1000),
+      checkoutUrl: "https://sandbox.example.test/checkout",
+    } });
+
+    const detail = await marketplace.getDriverBooking(driverIds[0]!, booking.id);
+    assert.equal(detail.canCancel, false);
+    await assert.rejects(() => marketplace.cancelBooking(driverIds[0]!, booking.id, {
+      idempotencyKey: `checkout-cancel-blocked-${randomUUID()}`,
+    }));
+    await assert.rejects(() => marketplace.cancelBookingAsAdmin(adminId, booking.id, "Support cancellation test"));
+
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "CANCELLED", cancelledAt: new Date(), sessionExpiresAt: null, checkoutUrl: null },
+    });
+    const cancelled = await marketplace.cancelBooking(driverIds[0]!, booking.id, {
+      idempotencyKey: `checkout-cancel-${randomUUID()}`,
+    });
+    assert.equal(cancelled.booking.status, "CANCELLED");
+    assert.equal((await prisma.parkingAllocation.findUniqueOrThrow({ where: { id: booking.allocationId } })).status, "RELEASED");
+  });
+
+  it("requires a full refund before an Admin cancels a paid booking", async () => {
+    const offer = await createActiveOffer("FIXED_SPACE", 1, 1);
+    const quote = await marketplace.createQuote(driverIds[0]!, {
+      listingId: offer.listing.id,
+      vehicleId: vehicleIds[0]!,
+      startAt: offer.startAt.toISOString(),
+      endAt: offer.endAt.toISOString(),
+    });
+    const hold = await marketplace.createHold(driverIds[0]!, {
+      quoteId: quote.id,
+      idempotencyKey: `admin-refund-hold-${randomUUID()}`,
+    });
+    const booking = await marketplace.createBooking(driverIds[0]!, {
+      holdId: hold.id,
+      idempotencyKey: `admin-refund-booking-${randomUUID()}`,
+    });
+    await prisma.payment.create({ data: {
+      bookingId: booking.id,
+      payerUserId: driverIds[0]!,
+      amountPaisa: BigInt(booking.totalAmountPaisa),
+      grossAmountPaisa: BigInt(booking.totalAmountPaisa),
+      status: "SUCCEEDED",
+      provider: "SSLCOMMERZ",
+      idempotencyKey: `admin-refund-payment-${randomUUID()}`,
+      succeededAt: new Date(),
+      capturedAt: new Date(),
+    } });
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: "CONFIRMED", confirmedAt: new Date() },
+    });
+
+    await assert.rejects(() => marketplace.cancelBookingAsAdmin(adminId, booking.id, "Paid booking cancellation test"));
+    assert.equal((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status, "CONFIRMED");
   });
 });

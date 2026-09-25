@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Bell, CalendarDays, Car, CheckCircle2, Clock3, Heart, MapPin, Search, ShieldCheck } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -21,9 +22,12 @@ export function DriverDashboardView() {
   const firstName = user.data?.fullName.trim().split(/\s+/)[0] ?? "Driver";
   const savedVehicles = vehicles.data ?? [];
   const defaultVehicle = savedVehicles.find((vehicle) => vehicle.isDefault) ?? savedVehicles[0];
-  const now = Date.now();
+  const [now] = useState(Date.now);
   const allBookings = bookings.data ?? [];
-  const activeBooking = allBookings.find((booking) => ["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED"].includes(booking.status) && new Date(booking.scheduledEndAt).getTime() >= now);
+  const activeBooking = allBookings.find((booking) =>
+    ["CHECKED_IN", "CHECKOUT_REQUESTED"].includes(booking.status)
+    || (booking.status === "CONFIRMED" && new Date(booking.scheduledEndAt).getTime() >= now),
+  );
   const upcoming = allBookings.filter((booking) => booking.status === "CONFIRMED" && new Date(booking.startAt).getTime() > now).slice(0, 3);
   const unread = notifications.data?.filter((item) => !item.readAt).length ?? 0;
 

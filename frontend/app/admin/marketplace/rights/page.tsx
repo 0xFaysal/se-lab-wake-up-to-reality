@@ -22,6 +22,7 @@ import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { AdminParkingRightDto, ParkingRightStatus } from "@/lib/api/marketplace-types";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
+import { DocumentViewerModal, type DocumentViewerTarget } from "@/components/common/document-viewer-modal";
 
 type Decision = Exclude<ParkingRightStatus, "PENDING_VERIFICATION" | "EXPIRED">;
 type Review = { right: AdminParkingRightDto; decision: Decision };
@@ -53,6 +54,7 @@ export default function RightsQueuePage() {
   const holderUserId = params.get("holderUserId") || undefined;
   const [review, setReview] = useState<Review | null>(null);
   const [reason, setReason] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState<DocumentViewerTarget | null>(null);
 
   const filters = { page, limit: 20, status, propertyId, holderUserId };
   const query = useQuery({
@@ -84,13 +86,14 @@ export default function RightsQueuePage() {
     setReason("");
   }
 
-  async function openDocument(documentId: string) {
-    try {
-      const result = await parkingRightsApi.documentDownload(documentId);
-      window.open(result.url, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      toast.error(getApiErrorMessage(error));
-    }
+  function openDocument(document: AdminParkingRightDto["documents"][number]) {
+    setSelectedDoc({
+      id: document.id,
+      originalName: document.originalName,
+      mimeType: document.mimeType,
+      sizeBytes: document.sizeBytes,
+      category: document.category,
+    });
   }
 
   return <div className="space-y-6">
@@ -131,7 +134,33 @@ export default function RightsQueuePage() {
             </div>
           </div>
           {right.rejectionReason && <p className="mt-4 border-l-2 border-red-500 bg-red-50 px-3 py-2 text-xs text-red-800">Recorded reason: {right.rejectionReason}</p>}
-          {right.documents.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{right.documents.map((document) => <Button key={document.id} size="sm" variant="outline" onClick={() => void openDocument(document.id)}><FileText className="size-4" />{document.originalName}</Button>)}</div>}
+          {right.documents.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {right.documents.map((document) => {
+                const isPdf =
+                  document.mimeType === "application/pdf" ||
+                  document.originalName.toLowerCase().endsWith(".pdf");
+                return (
+                  <Button
+                    key={document.id}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 border-slate-200 bg-slate-50/80 text-slate-800 hover:bg-slate-100"
+                    onClick={() => openDocument(document)}
+                  >
+                    <FileText
+                      className={`size-4 ${
+                        isPdf ? "text-rose-600" : "text-emerald-600"
+                      }`}
+                    />
+                    <span className="max-w-[240px] truncate">
+                      {document.originalName}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          )}
           {decisions.length > 0 && <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
             {decisions.map((decision) => <Button key={decision} size="sm" variant={decision === "VERIFIED" ? "default" : decision === "REVOKED" ? "destructive" : "outline"} onClick={() => openReview(right, decision)}>
               {decision === "VERIFIED" ? <ShieldCheck className="size-4" /> : <AlertTriangle className="size-4" />}{decision.replaceAll("_", " ")}
@@ -150,6 +179,12 @@ export default function RightsQueuePage() {
         <DialogFooter><Button variant="outline" disabled={mutation.isPending} onClick={() => setReview(null)}>Cancel</Button><Button variant={review?.decision === "REVOKED" ? "destructive" : "default"} disabled={mutation.isPending || reason.trim().length < 5} onClick={() => mutation.mutate()}>{mutation.isPending && <Loader2 className="size-4 animate-spin" />}Confirm decision</Button></DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <DocumentViewerModal
+      document={selectedDoc}
+      isOpen={Boolean(selectedDoc)}
+      onClose={() => setSelectedDoc(null)}
+    />
   </div>;
 }
 

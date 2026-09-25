@@ -37,6 +37,8 @@ export default function EmailTemplateDetailPage() {
     const item = query.data;
     if (!item) return;
 
+    // The editor keeps a local draft that is reset when a different server version loads.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm({ name: item.name, subject: item.subject, preheader: item.preheader ?? "", htmlBody: item.htmlBody, textBody: item.textBody, allowedVariables: item.allowedVariables.join(", ") });
     setSampleValues(Object.fromEntries(item.allowedVariables.map((key) => [key, SAMPLE_VARIABLE_VALUES[key] ?? `Sample ${key}`])));
   }, [query.data]);

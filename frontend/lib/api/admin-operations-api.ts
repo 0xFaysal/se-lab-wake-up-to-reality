@@ -157,6 +157,30 @@ export interface AdminParkingOperationsSnapshot {
   sharedPools: Array<{ id: string; displayName: string | null; status: string; capacity: number; verifiedEntitlement: number; held: number; booked: number; checkedIn: number; remaining: number; property: { id: string; name: string } }>;
 }
 
+export interface AdminFinanceOverview {
+  captured: { amountPaisa: number; count: number };
+  gatewayRefunds: { amountPaisa: number; count: number };
+  ledger: { heldBookingFundsPaisa: number; platformRevenuePaisa: number; providerPayablePaisa: number; driverRefundLiabilityPaisa: number };
+  providerWallets: { count: number; availablePaisa: number; pendingPaisa: number; heldPaisa: number };
+  driverWallets: { count: number; availablePaisa: number; pendingPaisa: number; heldPaisa: number };
+  recentSettlements: Array<{
+    id: string; status: string; providerNetPaisa: number; platformRevenuePaisa: number;
+    driverRefundCreditPaisa: number; overtimeChargePaisa: number; completedAt: string | null; createdAt: string;
+    booking: { id: string; bookingCode: string; provider: { id: string; fullName: string }; property: { id: string; name: string } };
+  }>;
+  recentRefundCredits: Array<{
+    id: string; amountPaisa: number; createdAt: string;
+    walletAccount: { user: { id: string; fullName: string; email: string } } | null;
+    ledgerTransaction: { referenceType: string; referenceId: string | null; description: string };
+  }>;
+}
+
+export interface AdminFinancialReconciliation {
+  checkedWallets: number; discrepancyCount: number; reservedPayoutPaisa: number; pendingPayoutCount: number;
+  failedFinancialEvents: { payments: number; refunds: number };
+  discrepancies: Array<{ walletAccountId: string; userId: string; projectedPaisa: number; ledgerPaisa: number; differencePaisa: number }>;
+}
+
 function queryString(input: Record<string, string | number | boolean | undefined>) {
   const search = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => {
@@ -198,7 +222,8 @@ export const adminOperationsApi = {
   sharedPools: () => apiClient.get<Array<Record<string, unknown>>>("/admin/parking-rights/shared-pools"),
   parkingOperations: () => apiClient.get<AdminParkingOperationsSnapshot>("/admin/parking-operations"),
   vehicleSearch: (q: string) => apiClient.get<Array<Record<string, unknown>>>(`/admin/parking-operations/vehicle-search${queryString({ q })}`),
-  reconciliation: () => apiClient.get<Record<string, unknown>>("/admin/finance/reconciliation"),
+  reconciliation: () => apiClient.get<AdminFinancialReconciliation>("/admin/finance/reconciliation"),
+  financeOverview: () => apiClient.get<AdminFinanceOverview>("/admin/finance/overview"),
   analyticsOverview: (filters: Record<string, string | undefined> = {}) => apiClient.get<AdminAnalyticsOverview>(`/admin/analytics/overview${queryString(filters)}`),
   riskFlags: (filters: Record<string, string | number | boolean | undefined>) => apiClient.get<{ flags: Array<Record<string, unknown>>; pagination: PaginationDto }>(`/admin/risk-flags${queryString(filters)}`),
   createRiskFlag: (body: { targetType: string; targetId: string; level: string; reason: string }) => apiClient.post<Record<string, unknown>>("/admin/risk-flags", body),

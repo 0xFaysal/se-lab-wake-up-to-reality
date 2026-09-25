@@ -42,13 +42,13 @@ function moduleConfig(section: string): ModuleConfig {
     case "sessions": return standard("Operations", "Parking sessions", "Check-in, checkout requests, payment-due sessions and overtime signals.", [
       { label: "Booking", value: (row) => row.bookingCode }, { label: "Property", value: (row) => propertyName(row.property) }, { label: "Driver", value: (row) => personName(row.driver) }, { label: "Scheduled end", value: (row) => row.scheduledEndAt ? new Date(String(row.scheduledEndAt)).toLocaleString("en-BD") : "—" }, { label: "Status", value: (row) => row.status, status: true },
     ], async ({ page }) => { const data = await adminOperationsApi.sessions({ page, limit: 20 }); return pageResult(data.bookings as unknown[], data.pagination.total); });
-    case "payments": return { ...standard("Finance", "Payments", "Read-only simulated gateway payment inspection.", [
+    case "payments": return { ...standard("Finance", "Payments", "Read-only gateway payment inspection with captured and refunded states.", [
       { label: "Payment", value: (row) => row.id }, { label: "Booking", value: (row) => record(row.booking).bookingCode }, { label: "Payer", value: (row) => personName(row.payer) }, { label: "Amount", value: (row) => row.amountPaisa, money: true }, { label: "Gateway", value: (row) => row.provider }, { label: "Status", value: (row) => row.status, status: true },
-    ], async ({ page, search }) => { const data = await adminOperationsApi.payments({ page, limit: 20, search }); return pageResult(data.payments as unknown[], data.pagination.total, "Payments are simulated; no bank transfer is implied."); }, true), detailHref: (row) => `/admin/payments/${text(row.id)}` };
+    ], async ({ page, search }) => { const data = await adminOperationsApi.payments({ page, limit: 20, search }); return pageResult(data.payments as unknown[], data.pagination.total, "Gateway records are read-only; settlement and wallet movements are recorded separately in the ledger."); }, true), detailHref: (row) => `/admin/payments/${text(row.id)}` };
     case "ledger": return { ...standard("Finance", "Ledger explorer", "Immutable double-entry transactions with balance checks.", [
       { label: "Reference", value: (row) => row.referenceType }, { label: "Description", value: (row) => row.description }, { label: "Debit", value: (row) => row.debitPaisa, money: true }, { label: "Credit", value: (row) => row.creditPaisa, money: true }, { label: "Balanced", value: (row) => row.balanced ? "BALANCED" : "MISMATCH", status: true },
     ], async ({ page, search }) => { const data = await adminOperationsApi.ledger({ page, limit: 20, search }); return pageResult(data.transactions as unknown[], data.pagination.total); }, true), detailHref: (row) => `/admin/ledger/${text(row.id)}` };
-    case "refunds": return standard("Finance", "Refunds", "Full and partial refunds posted through the ledger workflow.", [
+    case "refunds": return standard("Finance", "Gateway refunds", "External payment refunds. Deposit returns and cancellation credits appear in the ledger and the Driver Refund Balance.", [
       { label: "Refund", value: (row) => row.id }, { label: "Booking", value: (row) => record(record(row.payment).booking).bookingCode }, { label: "Amount", value: (row) => row.amountPaisa, money: true }, { label: "Reason", value: (row) => row.reason }, { label: "Status", value: (row) => row.status, status: true },
     ], async ({ page }) => { const data = await adminOperationsApi.refunds({ page, limit: 20 }); return pageResult(data.refunds, data.pagination.total); });
     case "reviews": return standard("Trust & Safety", "Reviews", "Customer feedback and reported review oversight.", [
@@ -123,7 +123,10 @@ function AdminCollectionPage({ section }: { section: string }) {
   function updateUrl(values: { page?: number; search?: string }) {
     const next = new URLSearchParams(searchParams.toString());
     if (values.page !== undefined) next.set("page", String(values.page));
-    if (values.search !== undefined) values.search ? next.set("search", values.search) : next.delete("search");
+    if (values.search !== undefined) {
+      if (values.search) next.set("search", values.search);
+      else next.delete("search");
+    }
     router.replace(`${pathname}?${next.toString()}`);
   }
 
@@ -267,7 +270,7 @@ function AdminReadOnlyDetailModule({ kind, id }: { kind: "payment" | "ledger"; i
   const item = record(query.data);
   const children = kind === "payment" ? (Array.isArray(item.refunds) ? item.refunds.map(record) : []) : (Array.isArray(item.entries) ? item.entries.map(record) : []);
   const hidden = new Set(["refunds", "entries", "payer", "booking", "actor"]);
-  return <div className="space-y-6"><AdminPageHeader eyebrow={`Finance / ${kind}`} title={kind === "payment" ? `Payment ${id}` : text(item.description)} description={kind === "payment" ? "Read-only simulated gateway record" : "Immutable double-entry transaction"} />
+  return <div className="space-y-6"><AdminPageHeader eyebrow={`Finance / ${kind}`} title={kind === "payment" ? `Payment ${id}` : text(item.description)} description={kind === "payment" ? "Read-only payment gateway record" : "Immutable double-entry transaction"} />
     <section className="grid gap-px border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(item).filter(([key, value]) => !hidden.has(key) && typeof value !== "object").map(([key, value]) => <Info key={key} label={key.replaceAll(/([A-Z])/g, " $1")} value={key.toLowerCase().includes("paisa") ? formatBDTFromPaisa(Number(value ?? 0)) : text(value)} />)}</section>
     <section className="border border-slate-200 bg-white"><h2 className="border-b border-slate-100 px-4 py-3 text-sm font-bold">{kind === "payment" ? "Refund history" : "Ledger entries"}</h2>{children.length ? <div className="divide-y divide-slate-100">{children.map((child, index) => <div key={text(child.id ?? index)} className="grid gap-2 px-4 py-3 text-xs sm:grid-cols-4"><span>{text(child.accountCode ?? child.reason ?? child.id)}</span><span>{text(child.entrySide ?? child.status)}</span><span>{formatBDTFromPaisa(Number(child.amountPaisa ?? 0))}</span><span>{child.createdAt ? new Date(String(child.createdAt)).toLocaleString("en-BD") : "—"}</span></div>)}</div> : <p className="p-4 text-sm text-slate-500">No related records.</p>}</section>
   </div>;

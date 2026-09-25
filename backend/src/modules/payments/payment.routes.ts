@@ -66,16 +66,19 @@ paymentRouter.post(
   }, 201),
 );
 
+paymentRouter.post(
+  "/bookings/:bookingId/settlement/payments/sslcommerz/session",
+  requireRole(UserRoleType.DRIVER),
+  sensitiveAccountRateLimit,
+  action(async (req) => {
+    const bookingId = uuid.parse(req.params.bookingId);
+    const key = idempotencyKey.parse(req.header("idempotency-key") ?? req.body?.idempotencyKey);
+    return service.initiateSettlementSession(req.auth!.userId, bookingId, key);
+  }, 201),
+);
+
 paymentRouter.get("/payments/:paymentId", requireRole(UserRoleType.DRIVER), action(async (req) =>
   service.getDriverPayment(req.auth!.userId, uuid.parse(req.params.paymentId))));
-
-paymentRouter.get("/payments/:paymentId/refunds/preview", requireRole(UserRoleType.DRIVER), action(async (req) =>
-  service.previewDriverRefund(req.auth!.userId, uuid.parse(req.params.paymentId))));
-
-paymentRouter.post("/payments/:paymentId/refunds", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, action(async (req) => {
-  const input = z.object({ reason: z.string().trim().min(5).max(500), idempotencyKey }).strict().parse(req.body);
-  return service.requestDriverRefund(req.auth!.userId, uuid.parse(req.params.paymentId), input);
-}, 201));
 
 paymentRouter.get("/refunds/:refundId", requireRole(UserRoleType.DRIVER), action(async (req) =>
   service.getAndReconcileDriverRefund(req.auth!.userId, uuid.parse(req.params.refundId))));

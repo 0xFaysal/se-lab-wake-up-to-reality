@@ -23,7 +23,10 @@ export default function ActiveSessionPage() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   const query = useQuery({ queryKey: queryKeys.bookings.driver(), queryFn: bookingsApi.driverList, refetchInterval: 30_000 });
-  const booking = query.data?.find((item) => ["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED"].includes(item.status) && new Date(item.scheduledEndAt).getTime() >= now);
+  const booking = query.data?.find((item) =>
+    ["CHECKED_IN", "CHECKOUT_REQUESTED"].includes(item.status)
+    || (item.status === "CONFIRMED" && new Date(item.scheduledEndAt).getTime() >= now),
+  );
   const isUpcoming = booking ? now < new Date(booking.startAt).getTime() : false;
 
   return <div className="mx-auto max-w-3xl space-y-5 px-4 py-5 sm:px-6 sm:py-7"><header><h1 className="text-2xl font-extrabold">Active session</h1><p className="mt-1 text-sm text-slate-600">Live parking status, remaining time, and access controls.</p></header>

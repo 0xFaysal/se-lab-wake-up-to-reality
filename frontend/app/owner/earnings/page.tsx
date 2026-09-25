@@ -45,7 +45,7 @@ export default function EarningsPage() {
     <ProviderPage>
       <ProviderPageHeader
         title="Earnings"
-        description="Track your available, pending, and payout-held balances."
+        description="See settled earnings, upcoming booking income, and payout reservations."
         breadcrumbs={[{ label: "Finance" }, { label: "Earnings" }]}
         actions={
           availablePaisa > BigInt(0) ? (
@@ -57,7 +57,7 @@ export default function EarningsPage() {
       />
       <section className="grid gap-4 sm:grid-cols-3">
         <Metric icon={Wallet} label="Available" value={summary.data.availableBalancePaisa} detail="Ready for payout request" />
-        <Metric icon={Clock3} label="Pending" value={summary.data.pendingBalancePaisa} detail="Waiting for booking settlement" />
+        <Metric icon={Clock3} label="Awaiting settlement" value={summary.data.unsettledBalancePaisa} detail={`${summary.data.unsettledBookingCount} paid booking${summary.data.unsettledBookingCount === 1 ? "" : "s"} not settled yet`} />
         <Metric icon={LockKeyhole} label="Held for payout" value={summary.data.heldBalancePaisa} detail="Reserved in payout requests" />
       </section>
       <section>
