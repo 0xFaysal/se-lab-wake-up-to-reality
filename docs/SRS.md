@@ -13,101 +13,104 @@
 | Anisa Akter Mahi | [@0xAnisa](https://github.com/0xAnisa) | Project Coordination & UI/UX Design |
 | Marjia Islam | [@MarjiaIslam](https://github.com/MarjiaIslam) | STQA & System Analysis |
 
+**Revision history**
+
+| Version | Date | Changes |
+|---|---|---|
+| 1.0 | 11 September 2026 | First release. |
+| 1.1 | 27 September 2026 | Updated according to the decision from the last team meeting |
+
 
 ## 1. Introduction
 
 ### 1.1 Purpose
 
-This document specifies the functional and non-functional requirements of **ParkEase BD**, a shared residential parking platform being built for the UIU Software Engineering Lab (Section D, Lab 422) semester project. It is the single reference that the frontend, backend, and QA members of the team use to agree on *what the system must do* before agreeing on *how it is built*. It is intended for:
+This document specifies the functional and non-functional requirements of **ParkEase BD**, a shared residential parking platform built for the UIU Software Engineering Lab (Section D, Lab 422) semester project. The deployed code is the reference: every requirement here describes behavior the system implements at `main` commit `8fc5fd9`. The document is intended for:
 
-- the four project team members, to plan and estimate implementation work;
+- the four project team members, to agree on behavior and trace it to code;
 - the course instructor and faculty evaluator, to assess scope and completeness;
 - future contributors, to understand system behavior without re-reading source code.
 
-This SRS defines *observable, testable behavior*: what a Driver, Parking Owner, Building Manager, Security Guard, or Administrator can do, and what the system guarantees in return. Database columns and API payloads are defined in the architecture documents listed in section 1.4; they appear here only where a requirement cannot be stated without them.
+This SRS defines *observable, testable behavior*: what a User, Provider, Manager, Security Guard, or Administrator can do, and what the system guarantees in return. Database columns and API payloads are defined in the architecture documents listed in §1.4; they appear here only where a requirement cannot be stated without them.
 
 ### 1.2 Scope
 
-ParkEase BD is a single Next.js web application backed by an Express/TypeScript API, PostgreSQL, and Redis. It connects two primary markets in Dhaka:
+ParkEase BD is a single Next.js web application backed by an Express/TypeScript API, PostgreSQL, and Redis. It connects two sides of a parking marketplace in Dhaka:
 
-- **Residential property owners** with parking spaces that sit unused during the day, and
-- **Drivers** who need short-term, hourly parking near hospitals, offices, malls, and universities.
+- **Providers**: residential property owners, or people with a verified right to rent out a space, whose parking sits unused during the day; and
+- **Users**: drivers who need short-term, hourly parking near hospitals, offices, malls, and universities.
 
-In Dhaka apartment buildings, parking is usually a shared area run by a building manager or owners' association, not by the individual flat owner. ParkEase BD therefore adds a Building Manager who approves a listing on behalf of the building and runs day-to-day parking operations for the Owners who delegate to them.
+A Provider registers a property, proves the right to rent each parking space, and publishes priced listings with weekly availability. A User searches, gets a server-priced quote, holds a space for five minutes, books, and pays. At the gate, an assigned Security Guard scans the User's QR pass to check the vehicle in and out. The platform collects the payment, keeps a platform fee, pays the Provider, and returns unused deposits to the User. Administrators verify properties and parking rights, handle disputes and payouts, and run the platform.
 
-The platform lets an Owner list individual parking spots with weekly availability, lets a Building Manager approve and operate listings in a shared building, lets a Driver search, quote, and reserve a spot for a specific time window, lets a Security Guard verify vehicle entry and exit with a QR code or OTP, and lets an Administrator verify listings, resolve disputes, and approve owner payouts.
+Because parking in Dhaka apartment buildings is often shared, one property can have several Providers. The system then applies shared governance: a Building Manager can be appointed, and shared changes need the approval of every verified Provider. A Provider can also delegate day-to-day work to a Manager with an explicit set of permissions.
 
-**In scope for the semester build:**
+**In scope:**
 
-- Role-based accounts for Driver, Parking Owner, Building Manager, Security Guard, and Administrator. Only Driver and Parking Owner can self-register; Manager and Guard accounts are created through a controlled process by an Owner or Admin; the Administrator account is the website's own admin account, provisioned at deployment.
-- Vehicle management for Drivers.
-- Property, parking-spot, weekly-availability, and exception management for Owners, gated by building approval (for shared-building properties) and Admin verification.
-- Property-scoped delegation from an Owner to a Building Manager, with no Manager access to money.
-- Location- and time-based parking search with a map view.
-- Backend-priced quotation, a five-minute conflict-safe booking hold, and sandbox payment via SSLCOMMERZ.
-- Purpose-bound QR/OTP verification for entry and exit, performed by an assigned Guard.
-- Overtime, cancellation, no-show, and refund handling.
-- Owner earnings, an internal double-entry wallet ledger, and a simulated payout-approval workflow.
-- Reviews and a dispute-resolution workflow.
-- Admin oversight: property verification, user, Guard, and Manager management, booking overrides, payment and wallet reconciliation, and audit logs.
-- Realtime UI updates via Socket.IO, with REST as the source of truth.
+- Self-registered User and Provider accounts; Manager and Guard accounts created by a Provider or Admin; Admin-created accounts; one Administrator account provisioned at deployment.
+- Vehicles, map search, favorites, saved places, and recent searches for Users.
+- Properties with images, duplicate detection, Admin verification, multiple Providers per property, Building Manager appointment, and shared change proposals.
+- Parking resources (fixed spaces and shared pools), parking-right claims with evidence and Admin verification, listings, weekly availability, and date exceptions.
+- Guard membership and shift assignment; Manager delegation with fine-grained permissions.
+- Quotes, five-minute holds, bookings, payment through the SSLCOMMERZ sandbox and the User's Refund Balance, cancellation, QR gate verification, overtime, and no-show settlement.
+- A double-entry ledger, wallets, Provider earnings, platform fee rules, and Admin-processed payouts for Providers and User withdrawals.
+- Reviews with Provider replies, disputes, listing reports, and in-app notifications.
+- Admin operations: accounts, risk flags and notes, analytics, ledger and reconciliation, audit and security events, legal documents, help content, email templates and campaigns, and broadcasts.
+- Realtime updates through Socket.IO, with REST as the source of truth and polling as a fallback.
 
-**Out of scope for the semester build:**
+**Out of scope:**
 
-- Integration with real payment gateways (bKash, Nagad, card networks, or live SSLCOMMERZ); only the SSLCOMMERZ **sandbox** is used.
-- Physical IoT hardware: automated barriers, parking sensors, or license-plate-recognition cameras.
-- A native mobile application (the web app is responsive/mobile-first instead).
-- City-wide government traffic-system integration or guaranteed parking availability across Dhaka.
-- Multilingual (Bangla) localization, loyalty/rewards programs, dynamic pricing, and recurring/subscription bookings.
-- Formal legal verification that a Building Manager is authorized by the building's owners' association; the platform records the Manager's approval and the Admin reviews it, but does not verify the association's internal records.
+- Live payment processing; only the SSLCOMMERZ **sandbox** is used, and payouts are transferred manually outside the system.
+- Short numeric OTPs for gate entry; the gate credential is a QR code only.
+- Physical IoT hardware such as barriers, sensors, or number-plate cameras.
+- A native mobile app; the web app is responsive instead.
+- Bangla localization, loyalty programs, dynamic pricing, and recurring bookings.
 
 ### 1.3 Definitions, Acronyms and Abbreviations
 
+In this document, **User** (capitalized) always means the parking customer role, and **Provider** means the person who rents out parking space. Any registered person, whatever their role, is called an *account holder*.
+
 | Term | Definition |
 |---|---|
-| Driver | A registered user searching for and booking parking for a vehicle. |
-| Parking Owner | A registered user who owns a property and lists its parking spots for booking. The Owner alone receives earnings for the property. |
-| Building Manager | A controlled account, created only by an Owner or Admin, that approves listings in a shared building and operates properties delegated to it. |
-| Security Guard | A controlled account, created only by an Owner, Manager, or Admin, that verifies entry/exit at an assigned property. |
-| Admin | The website's own administrator account, operated by the ParkEase BD platform team. It is provisioned when the system is deployed, not registered or granted through the application, and it verifies listings, resolves disputes, approves payouts, and oversees all other accounts. |
-| Controlled role | A role (`MANAGER` or `GUARD`) that a user cannot self-select; it is granted only when an Owner or Admin creates or invites the account. |
-| Property | A physical location owned by a Parking Owner that contains one or more parking spots. |
-| Shared-building property | A property inside a building whose parking area is run by a Building Manager or owners' association. It requires building approval before Admin verification. |
-| Manager Link | A property-scoped assignment between one property and one Manager, with status `PENDING_ACCEPTANCE`, `ACTIVE`, `SUSPENDED`, `ENDED`, or `CANCELLED`. Only an `ACTIVE` link grants the Manager access to that property. |
-| Building Approval | The Manager's recorded approve/reject decision on a shared-building property, required before the Admin can verify it. |
-| Guard Assignment | A property-scoped assignment between one property and one Guard, with the same five statuses as a Manager Link. |
-| Setup link | A single-use, time-limited email link that a controlled account (Guard or Manager) uses to set its first password. No plaintext temporary password is ever created or shown. |
-| Account ready | A user whose password setup is complete, whose email is verified, and whose status is `ACTIVE`. Most operational actions require a ready account. |
-| Parking Spot | One physical, individually bookable parking space belonging to a property. |
-| Quote | A time-limited, backend-calculated price offer for a specific spot, vehicle, and time range. |
-| Hold | A five-minute reservation (`HELD` booking) created from an unused quote, before payment. |
-| Booking | The record of a Driver's reservation of a parking spot for a time range, tracked through a defined status lifecycle. |
-| Access Token (QR/OTP) | A short-lived, purpose-bound (`ENTRY` or `EXIT`) credential used by a Guard to authorize physical entry or exit. |
-| Overtime / Overstay | Time a vehicle remains parked beyond the booking's effective end time plus its grace period. |
-| Grace Period | A configured buffer after the booking end time before overtime charges apply. |
-| Security Deposit | A refundable amount collected at booking time to cover potential overtime charges. |
-| Wallet Account | A per-user internal balance record (available, pending, and held balances in paisa) maintained only through ledger entries. |
-| Ledger | An append-only, double-entry record of every financial movement (payment, refund, commission, payout); every ledger transaction's debits equal its credits. |
-| Owner Earning | The net amount owed to an Owner for a completed booking, after platform commission and adjustments. |
-| Payout | A simulated, Admin-approved transfer of available owner earnings to a payout account. |
-| Dispute | A formal complaint raised by a Driver or Owner about a specific booking, resolved by Admin. |
-| Legal document | A versioned policy (Terms of Service, Privacy Policy, or a role operational policy) whose acceptance by each user is recorded with a timestamp and source. |
-| Idempotency Key | A client-generated identifier ensuring a repeated request for the same user intent has exactly one effect. |
+| User | A registered person who searches for and books parking for a vehicle, that is, the driver. Stored with the role code `DRIVER`. |
+| Provider | A registered person who owns a property's parking spaces, or holds a verified right to rent them out, and lists them for booking. Formerly called "Parking Owner"; stored with the role code `PROVIDER`. |
+| Manager | A controlled account (role `MANAGER`) created by a Provider or Admin. The role itself grants nothing; authority comes from a Manager Delegation or a Building Manager appointment. |
+| Security Guard | A controlled account (role `GUARD`) created by a Provider, a Manager with permission, or an Admin. It verifies vehicles at the gate of properties where it is an active member with an active shift. |
+| Admin | The platform's own administrator account (role `ADMIN`), provisioned at deployment and never granted through the application. |
+| Property | A physical building or site that contains parking. A property records who created it, but authority over it comes only from Provider memberships. |
+| Provider Membership | The link between a Provider and a property (`PENDING`, `ACTIVE`, `SUSPENDED`, `ENDED`), which an Admin verifies. Only an active, verified membership grants Provider authority. |
+| Governance mode | Derived, not stored: `SINGLE_PROVIDER` when the property has at most one active verified Provider, `MULTI_PROVIDER` when it has two or more. |
+| Building Manager | A Manager appointed to a whole property. It may set common rules and temporarily close the property, but has no commercial authority. |
+| Change Proposal | A versioned proposal to change a multi-provider property's common rules, closure, or identity and location, which every active verified Provider must approve. |
+| Manager Delegation | A grant from one Provider to one Manager for one property, with a set of permissions and a scope of either the whole property or selected parking resources. |
+| Parking Resource | A reservable parking unit of a property: a `FIXED_SPACE` (one space, capacity 1) or a `SHARED_POOL` (capacity N). Status `ACTIVE`, `BLOCKED`, `MAINTENANCE`, or `INACTIVE`. |
+| Parking Right | A Provider's claim to be allowed to rent out a resource: `OWNERSHIP`, `USE_ONLY`, `COMMERCIAL_LEASE`, or `AUTHORIZED_OPERATION`. It is verified by an Admin and carries commercial permissions such as "can list" and "can set price". |
+| Listing | A priced, bookable offer for a resource (or one unit of it) backed by a verified Parking Right. Status `DRAFT`, `ACTIVE`, `PAUSED`, `SUSPENDED`, or `ENDED`. |
+| Guard Membership | A Guard's shared membership of a property, which the Guard must accept. |
+| Guard Assignment | A Provider-scoped shift (start and end time) given to a Guard who is already a member of the property. |
+| Quote | A server-calculated price for one listing, vehicle, and time range, valid for 5 minutes and usable once. |
+| Hold | A 5-minute reservation created from a quote, protected against double-booking by a database constraint. |
+| Booking | A User's reservation, tracked through the states in §3.4. |
+| Access Credential | The QR pass issued to a User when a booking is confirmed. One credential per booking; it is looked up by hash and can be used once for check-in. |
+| Refund Balance | The User's wallet balance of returned deposits and refunds. It is applied automatically to the next booking or can be withdrawn. |
+| Settlement | The accounting at the end of a booking that splits the held payment between the Provider, the platform, and the User. |
+| Platform fee | The platform's revenue on a booking, charged to the User on top of the parking charge. |
+| Ledger | Append-only double-entry records of every money movement; each transaction's debits equal its credits. |
+| Payout | An Admin-processed transfer from a Provider's available balance, or a User's Refund Balance, to a saved bank or mobile-wallet account. |
+| IPN | Instant Payment Notification, the SSLCOMMERZ server-to-server callback. |
 | RBAC | Role-Based Access Control. |
-| DTO | Data Transfer Object: the shape of data returned by the API, distinct from internal database rows. |
-| IPN | Instant Payment Notification: the SSLCOMMERZ server-to-server payment callback. |
 | DFD | Data Flow Diagram. |
 
 ### 1.4 References
 
 | Document | Description |
 |---|---|
-| [Project proposal](./project-idea.md) | Problem statement, target users (including apartment and building managers), and technology justification. |
-| [Backend Architecture Blueprint](./Backend-Architecture.md) | Database schema, booking/payment state machines, and API contracts. |
-| [Frontend Architecture & UX Specification](./Frontend-Architecture.md)  | Route map, screen inventory, and UX rules. |
+| [Project proposal](./project-idea.md) | Problem statement, target users, and technology justification. |
+| [Backend Architecture Blueprint](./Backend-Architecture.md) | Database schema, state machines, and API contracts. |
+| [Frontend Architecture & UX Specification](./Frontend-Architecture.md) | Route map, screen inventory, and UX rules. |
+| [Property governance](../backend/docs/property-governance.md) | Multi-provider authority matrix and lifecycle rules. |
+| [SSLCOMMERZ payments](../backend/docs/sslcommerz-payments.md) | Payment, validation, and refund architecture. |
 | [Design system](./DESIGN.md) | Visual identity and component conventions. |
-| [Architecture overview](./ARCHITECTURE.md) and [API design](./api-design.md) | Course template documents for system structure and API conventions. |
-| [Cancellation & Refund Policy](./policies/Cancellation_&_Refund_Policy.md) and [Terms of Service & Privacy Policy](./policies/Terms_of_Service_&_Privacy_Policy.md) | Policy text that the legal-document acceptance requirements refer to. |
+| [Cancellation & Refund Policy](./policies/Cancellation_&_Refund_Policy.md) and [Terms of Service & Privacy Policy](./policies/Terms_of_Service_&_Privacy_Policy.md) | Policy text that users accept. |
 | [Contributing guide](../CONTRIBUTING.md) | Branching, commit, and review workflow. |
 
 ---
@@ -116,129 +119,125 @@ The platform lets an Owner list individual parking spots with weekly availabilit
 
 ### 2.1 Product Perspective
 
-ParkEase BD is a new, standalone product; it does not replace or integrate with an existing system. It is built as a **modular monolith**, one Next.js frontend and one Express API, so a four-person team can deliver a complete, demonstrable workflow within a semester without the operational overhead of microservices.
-
-The system sits between five human actors and two external services: the SSLCOMMERZ sandbox payment gateway and the OpenStreetMap tile service. PostgreSQL is the single source of truth for users, bookings, payments, wallets, and earnings; Redis is used only for caching, rate limiting, and delayed jobs and is never the final authority for booking availability.
+ParkEase BD is a new, standalone product built as a **modular monolith**: one Next.js frontend and one Express API. PostgreSQL is the single source of truth for accounts, properties, bookings, payments, wallets, and the ledger; Redis holds only short-lived data such as rate-limit counters and verification codes.
 
 **Figure 2.1: System Context Diagram (DFD Level 0)**
 
 ![System Context Diagram](./diagrams/context-diagram.png)
 
-The context diagram shows the system as a single process. Drivers search, book, pay, and verify; Owners manage listings, delegation, and earnings; Building Managers approve shared-building listings and run delegated operations; Guards verify entry/exit; Admins oversee the platform; and the two external systems are used strictly for payment validation and map rendering. Every arrow into the system crosses an authorization boundary: the backend, not the browser, decides what each actor is allowed to see or do.
+Five human actors use the system. It depends on four external services: the SSLCOMMERZ sandbox for payments and refunds, OpenStreetMap for map tiles and address search, Cloudinary for property images, and an SMTP email service for verification codes, setup links, and campaigns. Every request crosses an authorization boundary: the backend, not the browser, decides what each actor may see or do.
 
 ### 2.2 Product Functions
 
-At a high level, ParkEase BD provides:
+1. **Accounts:** registration with legal acceptance, email and phone verification, login, session management, password reset, setup links for controlled accounts, and Admin-created accounts.
+2. **Discovery:** map and list search by location, time, and vehicle type, with favorites, saved places, and recent searches.
+3. **Supply:** properties, images, duplicate detection, multiple Providers per property, Building Manager appointment, change proposals, parking resources, parking rights, listings, and availability.
+4. **Staff:** Guard membership and shifts, and Manager delegation with permissions.
+5. **Booking:** quote, five-minute hold, booking, cancellation, and checkout request.
+6. **Payment:** SSLCOMMERZ hosted checkout with server-side validation, Refund Balance applied first, refunds, and outstanding-amount payment.
+7. **Gate:** QR verification, check-in, and check-out by an assigned Guard.
+8. **Money:** settlement, ledger, wallets, platform fee rules, Provider earnings, and payouts.
+9. **Trust:** reviews and Provider replies, disputes, listing reports, and notifications.
+10. **Administration:** verification queues, account moderation, finance operations, analytics, audit, content, and communications.
 
-1. **Account & role management:** registration with legal-document acceptance, login, email/phone verification, setup-link onboarding for controlled accounts, and role-based dashboards.
-2. **Listing management:** property creation, image upload, building approval, Admin verification, individual parking-spot configuration, and weekly availability/exception scheduling.
-3. **Property staff management:** Owner-to-Manager delegation through Manager Links, and Guard assignments managed by the Owner or the property's Manager.
-4. **Discovery:** map- and filter-based parking search with distance, price, and facility filters.
-5. **Conflict-safe booking:** price quotation, a five-minute hold, and double-booking prevention enforced at the database level.
-6. **Payment:** sandbox payment-session creation and backend-validated confirmation.
-7. **Physical verification:** purpose-bound QR/OTP generation and Guard-confirmed check-in/check-out.
-8. **Financial settlement:** overtime calculation, deposit refund, owner earnings, wallet ledger, and simulated payouts.
-9. **Trust & safety:** reviews, disputes, incident reports, and full audit logging.
-10. **Operational oversight:** Admin queues for verification, disputes, payouts, reconciliation, controlled accounts, and system settings.
+### 2.3 Actor Classes and Characteristics
 
-### 2.3 User Classes and Characteristics
-
-| User Class | Description | Technical Expertise | Frequency of Use |
+| Actor | Description | Technical expertise | Frequency of use |
 |---|---|---|---|
-| Driver | Searches for and books parking; uses the app primarily on a mobile device while traveling. | General smartphone user; no technical background assumed. | Frequent, short sessions (search → book → verify). |
-| Parking Owner | Lists properties and parking spots, delegates to a Manager, manages Guards, and tracks earnings; primarily uses a desktop/laptop browser. | Comfortable with forms and dashboards; not necessarily technical. | Regular, longer sessions (setup, then periodic monitoring). |
-| Building Manager | Approves listings in the building they manage and runs daily operations (spots, availability, Guards, arrivals, incidents) for one or more properties, often for several Owners in the same building. Uses desktop at the office and a phone around the building. | Comfortable with dashboards and tables; handles many properties at once. | Daily, medium-length sessions during working hours. |
-| Security Guard | Verifies entry/exit at one or more assigned properties; uses a phone at the gate. | Basic smartphone user; needs a very simple, fast interface. | Frequent, very short interactions during a shift. |
-| Administrator | The website's own admin, operated by the ParkEase BD platform team. Verifies listings, resolves disputes, approves payouts, manages Manager and Guard accounts, and audits the platform. | Power user; comfortable with tables, filters, and detail panels. | Regular, task-queue-driven sessions. |
+| User | Searches for, books, and pays for parking; mostly on a phone while traveling. | General smartphone user. | Frequent, short sessions. |
+| Provider | Lists properties and spaces, sets prices and availability, staffs the gate, and tracks earnings; mostly on a laptop. | Comfortable with forms and dashboards. | Regular sessions: setup, then monitoring. |
+| Manager | Runs operations for one or more Providers within the permissions they grant; may be a Building Manager for a shared property. | Comfortable with dashboards. | Daily during working hours. |
+| Security Guard | Scans QR passes and confirms entry and exit at the gate; uses a phone. | Basic smartphone user; needs a very simple interface. | Many very short interactions per shift. |
+| Administrator | Operates the platform: verification, disputes, payouts, fees, content, and audit. | Power user. | Queue-driven sessions. |
 
-A single account may hold more than one role (for example, a Building Manager who also owns a flat can hold `MANAGER` and `PARKING_OWNER`). Each role's permissions apply only within that role's dashboard and scope.
+One account may hold several roles (for example `PROVIDER` and `MANAGER`). Each role's permissions apply only in that role's portal and scope.
 
 ### 2.4 Role Permission Matrix
 
-The matrix summarizes who may perform each capability. "Linked" means the Manager holds an `ACTIVE` Manager Link to the property; "assigned" means the Guard holds an `ACTIVE` Guard Assignment. The backend enforces every cell; the frontend only hides what the backend would reject.
+"Delegated" means the Manager holds an `ACTIVE` delegation that includes the named permission for that property or resource. "Assigned" means the Guard is an active member of the property **and** has an active assignment for the booking's Provider. The backend enforces every cell.
 
-| Capability | Driver | Owner | Manager | Guard | Admin |
+| Capability | User | Provider | Manager | Guard | Admin |
 |---|---|---|---|---|---|
 | Self-register | Yes | Yes | No | No | No |
-| Manage own vehicles | Yes | | | | |
-| Search parking, view public details | Yes | Yes | Yes | Yes | Yes |
-| Quote, hold, pay, cancel, extend, check out a booking | Yes (own) | | | | Override only |
-| Create, edit, delete a property; manage property images | | Own | No | | |
-| Mark a property as a shared-building property | | Own | | | Yes |
-| Approve / reject a shared-building listing | | | Linked | | Waiver only |
-| Verify / reject / suspend a property | | | | | Yes |
-| View exact address and access instructions | Confirmed booking only | Own | Linked | Assigned | Yes |
-| Create and invite Managers; suspend / end Manager Links | | Own properties | No | | Yes |
-| Accept / reject a Manager Link | | | Own link | | |
-| Manage parking spots, availability, exceptions | | Own | Linked | | |
-| Temporarily close / reopen a property | | Own | Linked | | |
-| Create Guard accounts; invite Guards; manage Guard Assignments | | Own properties | Linked properties | | Yes |
-| Accept / reject a Guard Assignment | | | | Own | |
-| View property bookings, arrivals, active sessions | Own bookings | Own | Linked (no amounts) | Assigned | Yes |
-| Verify entry/exit, confirm check-in/check-out, report incidents | | | | Assigned | |
-| View incident reports | | Own | Linked | Own reports | Yes |
-| Open a dispute | Own booking | Own | No | | |
-| Respond to a dispute with evidence | Own | Own | Linked | | Yes |
-| View earnings, wallet, payout accounts; request payouts | | Own | No | | Approve only |
-| Suspend / restore / block a global account | | | | | Yes |
-| View audit logs, settings, reconciliation, failed jobs | | | | | Yes |
+| Manage own vehicles, favorites, saved places | Yes | | | | |
+| Search parking (signed in, verified account) | Yes | Yes | Yes | Yes | Yes |
+| Quote, hold, book, pay, request checkout | Own | | | | |
+| Cancel a booking | Own | | | | Any |
+| Create a property or join an existing one | | Yes | | | |
+| Edit property identity and location | | Sole Provider, or by proposal | | | Yes |
+| Common rules, temporary closure | | Sole Provider | Building Manager | | Yes |
+| Manage property images | | Yes | `IMAGE_MANAGE` (single-provider only) | | Yes |
+| Manage parking resources | | Own scope | `RESOURCE_MANAGE` | | Status only |
+| Claim parking rights | | Yes | | | Verify |
+| Manage listings, pricing, availability | | Own rights | `LISTING_MANAGE`, `PRICE_MANAGE`, `AVAILABILITY_MANAGE` | | Suspend, resume |
+| View bookings and live sessions | Own | Own | `BOOKING_VIEW` | Assigned | All |
+| Add Guards to a property | | Yes | `GUARD_ADD_TO_PROPERTY` | | Remove only |
+| Assign Guard shifts | | Own scope | `GUARD_ASSIGN` | | |
+| Accept a property invitation or delegation | | | Own | Own | |
+| Verify QR, check in, check out | | | | Assigned | |
+| Create Manager accounts, delegate, end delegation | | Own | | | Create accounts |
+| View earnings | | Own | `EARNINGS_VIEW` (read only) | | All |
+| Payout methods and payout requests | Refund Balance | Available earnings | | | Hold, approve, reject, mark paid |
+| Write a review / reply to a review | Own completed booking | Reply | | | View |
+| Open a dispute | Own booking | Own booking | | | Review, resolve, reject |
+| Report a listing | Yes | | | | Resolve, dismiss |
+| Suspend, block, or create accounts; audit, finance, content | | | | | Yes |
 
 ### 2.5 Operating Environment
 
-- **Client:** Modern evergreen browsers (Chrome, Firefox, Edge, Safari) on desktop, tablet, and mobile; no native app.
-- **Frontend runtime:** Next.js (App Router) with React and TypeScript, deployed to a Node.js-compatible host (e.g., Vercel).
-- **Backend runtime:** Node.js LTS running Express.js and TypeScript, deployed to a container-friendly host (e.g., Render/Railway).
-- **Data tier:** PostgreSQL (managed) accessed through Prisma ORM; Redis (managed) for cache, rate limits, and BullMQ job queues.
-- **External services:** SSLCOMMERZ sandbox for payment; OpenStreetMap tile servers for maps; Cloudinary for property images; an email/SMS provider for verification codes and setup links.
-- **Local development:** Docker Compose provisions PostgreSQL and Redis identically across all team members' machines.
+- **Client:** current Chrome, Firefox, Edge, and Safari on desktop, tablet, and phone.
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, deployed on Vercel.
+- **Backend:** Node.js 22, Express 5, TypeScript, Prisma 7, deployed on Vercel as a serverless function.
+- **Data:** Supabase PostgreSQL (Singapore) as the system of record; Upstash Redis for rate limits and verification codes.
+- **External services:** SSLCOMMERZ sandbox, OpenStreetMap, Cloudinary, SMTP email.
+- **Scheduled work:** a daily Vercel cron runs the email-campaign worker. Hold expiry and no-show settlement run when an affected booking or resource is next read.
+- **Local development:** Docker Compose for PostgreSQL and Redis.
 
 ### 2.6 Design and Implementation Constraints
 
-- The technology stack is fixed by the project proposal: Next.js/React/TypeScript/Tailwind on the frontend; Express/TypeScript/PostgreSQL/Prisma/Redis on the backend. No substitution without team agreement.
-- Only the SSLCOMMERZ **sandbox** may be used; no real money moves through the system this semester.
-- The backend is the sole authority for booking availability, price, payment validation, refunds, owner earnings, and role and scope authorization. The frontend must never treat an optimistic UI state as confirmed.
-- Double-booking must be prevented at the database level (PostgreSQL exclusion constraint), not only in application code.
-- All monetary values are stored and transmitted as integer paisa, never floating-point currency.
-- Exact residential addresses, access instructions, payout account numbers, and raw QR/OTP values must never be exposed to an unauthorized party, logged, or persisted in browser storage.
-- Manager access is property-scoped and money-free by design; a new Manager capability that touches earnings, wallets, or payouts requires an SRS change first.
-- The team has four members and one semester; scope decisions favor a complete, demonstrable end-to-end workflow over breadth of edge-case coverage.
-- All work follows GitFlow branching and Conventional Commits as defined in the [Contributing guide](../CONTRIBUTING.md). 
+- The backend is the sole authority for availability, price, fee, payment validation, refunds, earnings, and authorization. The browser never sends an amount to be charged.
+- Double-booking is prevented in the database by PostgreSQL exclusion constraints on parking allocations, not only in application code.
+- All money is stored and calculated as integer paisa. SSLCOMMERZ receives a decimal amount only at the gateway boundary, and the gateway amount must be at least ৳10.
+- Exact addresses, access instructions, and payout account numbers are encrypted at rest (AES-256-GCM) and returned only to authorized parties, masked where applicable.
+- Authority over a property comes from Provider memberships, delegations, and assignments that are checked on every request, never from who created a record.
+- Only the SSLCOMMERZ sandbox may be used; production must keep simulated payments disabled.
+- Work follows GitFlow branching and Conventional Commits as described in the [Contributing guide](../CONTRIBUTING.md).
 
 ### 2.7 Assumptions and Dependencies
 
-- Team members have continuous access to GitHub, a local Docker environment, and a shared understanding of the two architecture documents referenced in §1.4.
-- The SSLCOMMERZ sandbox, OpenStreetMap tile service, Cloudinary, and the email provider remain available and free to use throughout the semester.
-- Seed/demo data (sample properties, spots, and users, including at least one Manager and one shared-building property) will be used for evaluation rather than real-world onboarding.
-- A Building Manager who approves a listing is assumed to be authorized by the building; the platform relies on the Admin's review, not on external records, to catch misuse.
-- Users are assumed to access the platform from within Bangladesh with reasonably reliable mobile or broadband internet; the system degrades to polling rather than failing outright when a realtime connection is unavailable.
+- SSLCOMMERZ sandbox, OpenStreetMap, Cloudinary, Supabase, Upstash, and the SMTP provider remain available and free to use during the semester.
+- Providers upload honest evidence for parking rights; the Admin's review, not an external registry, is the control against false claims.
+- Users access the platform from Bangladesh; all times are shown and entered in Asia/Dhaka time.
+- Realtime delivery is best-effort. Screens refetch over REST and poll critical data, so a missing Socket.IO connection delays updates but does not break any flow.
 
 ---
 
 ## 3. System Models
 
-### 3.1 Use Case Diagram
+### 3.1 Use Case Diagrams
 
-With five actors, the use case model is split into two figures so each stays readable. Figure 3.1a covers the booking lifecycle and gate operations (Driver, Security Guard, and `SSLCOMMERZ`, which participates only as a secondary actor included by the Driver's payment use case). Figure 3.1b covers property management and oversight (Parking Owner, Building Manager, and Administrator). *Register / Login* appears in both because every actor uses it.
-
-In Figure 3.1b, use cases that both the Owner and the Manager can perform sit in a shared **Property Operations** package, so the diagram shows delegation directly instead of duplicating use cases. Owner-only use cases (property ownership, delegation, and money) stay in their own package, and the Manager has no association with any of them.
+The use case model is split into three figures. Figure 3.1a covers booking and gate operations for the User and Security Guard, with SSLCOMMERZ as a secondary actor. Figure 3.1b covers the Provider and Manager; operations both can perform are linked to an abstract *Property Operator* actor that both specialize, and a Manager performs them only with the matching delegated permission. Figure 3.1c covers the Administrator.
 
 **Figure 3.1a: Use Case Diagram: Booking & Gate Operations**
 
 ![Use Case Diagram: Booking and Gate Operations](./diagrams/use-case-booking.png)
 
-**Figure 3.1b: Use Case Diagram: Property Management & Oversight**
+**Figure 3.1b: Use Case Diagram: Provider & Manager**
 
-![Use Case Diagram: Property Management and Oversight](./diagrams/use-case-property.png)
+![Use Case Diagram: Provider and Manager](./diagrams/use-case-property.png)
 
-Key relationships shown on the diagrams:
+**Figure 3.1c: Use Case Diagram: Administrator Oversight**
 
-- **«include»:** *Create Booking Hold* and *Request Extension* always include *Request Quote*; *Make Payment* always includes the SSLCOMMERZ session; *Manage Properties* includes submitting to the Admin's *Verify / Reject / Suspend Property* use case.
-- **«extend»:** *Request Checkout* extends *View Booking & Access QR/OTP*, since checkout depends on an already-issued access credential. *Approve / Reject Building Listing* extends *Manage Properties* only for shared-building properties, and *Waive Building Approval* extends it only when no Manager can act.
-- **«precedes»:** *Accept / Reject Manager Link* must occur before *Approve / Reject Building Listing* and before any Property Operations use case; *Verify Entry* must occur before *Confirm Check-in*, and *Verify Exit* must occur before *Confirm Checkout*. The Guard's verification step is deliberately separate from the transition it authorizes, so that resolving a credential never by itself changes booking state.
+![Use Case Diagram: Administrator Oversight](./diagrams/use-case-admin.png)
+
+Key relationships:
+
+- **«include»:** *Hold Parking* includes *Request Quote*; *Create Booking* includes *Hold Parking*; *Pay* includes the SSLCOMMERZ session when the Refund Balance does not cover the total.
+- **«extend»:** *Request Checkout* extends *View Booking & QR Access Pass*; it is optional, because the Guard can confirm the exit without it.
+- **«requires»:** *Manage Listings & Pricing* requires a verified Parking Right.
+- **«precedes»:** a Guard must accept the property invitation before seeing bookings; a Manager must accept a delegation before operating; a QR credential is verified before check-in is confirmed.
 
 ### 3.2 Data Flow Diagram (Level 1)
-
-The Level 1 DFD decomposes the single system process from the context diagram into ten functional processes and nine persistent data stores. It traces how a request from an actor moves through processing before it is written to a data store or forwarded to another process.
 
 **Figure 3.2: Data Flow Diagram (Level 1)**
 
@@ -246,215 +245,316 @@ The Level 1 DFD decomposes the single system process from the context diagram in
 
 | Process | Responsibility |
 |---|---|
-| 1.0 Manage Accounts, Authentication & Roles | Registration with legal acceptance, login, session/refresh handling, email/phone verification, setup-link onboarding, forced password change, role self-enablement. |
-| 2.0 Manage Properties, Spots & Availability | Property/spot CRUD, images, weekly availability, exceptions, and routing properties into building approval or Admin verification. |
-| 3.0 Manage Property Staff & Building Approval | Manager and Guard account creation, Manager Links, Guard Assignments, invitation acceptance, and Manager approve/reject decisions on shared-building properties. |
-| 4.0 Search & Discover Parking | Location/time/vehicle filtering and ranked, privacy-safe result presentation. |
-| 5.0 Generate Quote & Booking Hold | Backend pricing, five-minute conflict-safe hold creation, and idempotent hold requests. |
-| 6.0 Process Payments & Refunds | SSLCOMMERZ session creation, IPN validation, and refund handling. |
-| 7.0 Verify Entry/Exit & Manage Sessions | Purpose-bound QR/OTP issuance, Guard-confirmed check-in/check-out, and overtime calculation. |
-| 8.0 Manage Wallets, Earnings & Payouts | Double-entry ledger postings, wallet balances, owner earning calculation, payout accounts, and payout requests. Never reachable by a Manager. |
-| 9.0 Manage Reviews, Disputes & Incidents | Review submission, dispute lifecycle, Owner/Manager dispute responses, and Guard incident reports. |
-| 10.0 Admin Oversight, Settings & Audit | Verification decisions, building-approval waivers, controlled-account management, dispute resolution, payout approval, reconciliation, and audit logging. |
+| 1.0 Manage Accounts, Authentication & Sessions | Registration, legal acceptance, verification codes, login, refresh-token sessions, password reset, setup links, Admin-created accounts. |
+| 2.0 Manage Properties, Memberships & Governance | Property create and edit, images, duplicate matching and merge, Provider memberships, Building Manager nominations and votes, common rules, closure, change proposals. |
+| 3.0 Manage Resources, Parking Rights, Listings & Availability | Resources and units, right claims with evidence, amendments and batches, listings, weekly availability, exceptions. |
+| 4.0 Manage Guards & Manager Delegations | Controlled account creation, Guard memberships and shift assignments, Manager delegations and permissions. |
+| 5.0 Search & Discover Parking | Location, time, and vehicle search over active listings; favorites, saved places, recent searches. |
+| 6.0 Quote, Hold & Booking | Quotes, holds, bookings, cancellation, checkout requests. |
+| 7.0 Payments, Refunds & Settlement | Refund Balance application, SSLCOMMERZ sessions and validation, refunds, settlement, outstanding-amount payment. |
+| 8.0 Gate Verification & Sessions | QR verification, check-in, check-out, overtime. |
+| 9.0 Wallets, Earnings & Payouts | Wallet balances, Provider earnings, payout methods, payout requests. |
+| 10.0 Reviews, Disputes, Reports & Notifications | Reviews and replies, disputes, listing reports, notifications. |
+| 11.0 Admin Oversight, Content & Audit | Verification decisions, account moderation, finance operations, fee rules, legal documents, content, email, analytics, audit. |
 
-| Data Store | Contents |
+| Data store | Contents |
 |---|---|
-| D1 | Users, roles, sessions, verification and setup tokens, legal-document acceptances |
-| D2 | Vehicles |
-| D3 | Properties, images, parking spots, facilities, availability rules and exceptions |
-| D4 | Manager Links, Guard Assignments, building-approval decisions |
-| D5 | Quotes, bookings, and status history |
-| D6 | Payments and refunds |
-| D7 | Wallet accounts, ledger transactions and entries, owner earnings, payout accounts, payout requests, wallet reconciliations |
-| D8 | Reviews, disputes, incidents, and notifications |
-| D9 | Audit logs and platform settings |
+| D1 | Accounts, roles, sessions, verification and setup tokens, legal acceptances |
+| D2 | Vehicles, favorites, saved places, recent searches |
+| D3 | Properties, images, Provider memberships, Building Manager appointments, votes, change proposals |
+| D4 | Parking resources and units, parking rights and evidence, listings, availability rules and exceptions |
+| D5 | Guard memberships and assignments, Manager delegations |
+| D6 | Quotes, holds, allocations, bookings, access credentials |
+| D7 | Payments, refunds, settlements, ledger, wallets, payout methods and requests, platform fee rules |
+| D8 | Reviews, disputes, listing reports, notifications |
+| D9 | Audit events, risk flags, notes, legal documents and content, email templates, campaigns and deliveries |
+
+### 3.3 UML Class Diagram
+
+Figure 3.3 shows the main classes behind the functional requirements, grouped into accounts and vehicles, supply, the booking lifecycle, and payments and money. Only attributes that a requirement depends on are shown.
+
+**Figure 3.3: UML Class Diagram (Core Domain)**
+
+![UML Class Diagram](./diagrams/uml-class-diagram.png)
+
+- One **Account** can hold several roles. A User is an account with the `DRIVER` role; a Provider is an account with the `PROVIDER` role.
+- A Provider's authority over a **Property** comes from a **PropertyProvider** membership. A property can have several Providers.
+- A **ParkingResource** can be listed only through a verified **ParkingRight**, and each **ParkingListing** carries the price, deposit, and duration limits Users see.
+- A **Quote** becomes a **ReservationHold**, which becomes a **Booking**. A Booking has at most one **AccessCredential**, one or more **Payments**, and at most one **BookingSettlement**.
+- Every money movement is a balanced **LedgerTransaction** of two or more **LedgerEntries**; wallet balances change only through them.
+
+### 3.4 Booking State Machine
+
+**Figure 3.4: UML State Machine Diagram (Booking)**
+
+![Booking State Machine](./diagrams/uml-booking-state.png)
+
+A booking starts in `PAYMENT_PENDING` and becomes `CONFIRMED` once payment is validated, at which point the QR credential is issued. A Guard can check it in from one hour before the start until the end of the booking (`CHECKED_IN`). The User may request checkout (`CHECKOUT_REQUESTED`), which alerts the Guard; the Guard's exit confirmation completes the booking (`COMPLETED`), or leaves it `PAYMENT_DUE` when overtime is more than the deposit and Refund Balance can cover. An unpaid booking whose hold runs out becomes `EXPIRED`; a paid booking that is never checked in becomes `NO_SHOW` after its end time plus grace period. The User (or an Admin) can cancel before the start. Opening a dispute moves the booking to `DISPUTED`; the Admin's decision is recorded on the dispute.
+
+### 3.5 Core Business Flows
+
+This section describes the five flows that make ParkEase BD a marketplace: how a Provider puts a space up for rent, how a User rents it, how the User pays, how the Provider receives the money, and how the platform earns.
+
+#### 3.5.1 How a Provider adds a parking space for rent
+
+**Figure 3.5: Flow Diagram - Provider Listing a Parking Space**
+
+![Provider listing flow](./diagrams/flow-provider-listing.png)
+
+1. **Register.** The person registers as a Provider and verifies their email (FR-AUTH-01, FR-AUTH-05).
+2. **Add the property.** The Provider enters the name, public area, approximate public address, and exact private address; picks the location on the map (search, click, drag, or current location); adds access instructions, parking and safety rules, height limit, entry cut-off, and whether visitor ID is required; uploads photos; and submits. If a matching property already exists, the Provider can ask to join it instead. The property starts as `PENDING` / `INACTIVE` (FR-PROP-01 to FR-PROP-05).
+3. **Admin verifies.** The Admin checks the details, map location, photos, and Provider, and approves (`VERIFIED` / `ACTIVE`) or rejects with a reason (FR-ADM-02).
+4. **Add parking resources.** One fixed space, up to 100 fixed spaces in one batch, or a shared pool with a capacity, each with vehicle types, size limits, and facilities (FR-RES-01, FR-RES-02).
+5. **Prove the right to rent.** For each resource, the Provider claims a Parking Right with optional evidence files; the Admin verifies, rejects, or disputes it (FR-RES-04 to FR-RES-08).
+6. **Activate the resource and create the listing.** The Provider sets the resource status to `ACTIVE` and creates a draft listing with the hourly price, deposit, minimum and maximum duration, overtime rule, and grace period (FR-RES-03, FR-LST-01).
+7. **Set availability.** The Provider ticks each open day, sets up to two time ranges per day, and adds date exceptions (FR-LST-04, FR-LST-05).
+8. **Activate the listing.** The system activates it only if the property is verified and active, the resource is active, the right is verified and valid, and weekly availability exists (FR-LST-02). It then appears in search.
+9. **Staff the gate (optional).** The Provider adds Guards to the property, who accept and then receive a shift, and may delegate work to a Manager (FR-STF-01 to FR-STF-06, FR-MGR-01 to FR-MGR-06).
+
+#### 3.5.2 How a User rents a parking space
+
+**Figure 3.6: Flow Diagram - User Renting a Parking Space**
+
+![User rental flow](./diagrams/flow-user-rental.png)
+
+1. **Register and add a vehicle** (FR-AUTH-01, FR-VEH-01).
+2. **Search** by destination, date, time, and vehicle type on a map and list (FR-DSC-01).
+3. **Quote.** The User opens a location, picks the date, arrival, and departure, and receives a server-priced quote: parking charge + platform fee + refundable deposit, valid for 5 minutes (FR-BKG-01).
+4. **Hold and book.** "Hold this parking" reserves the space for 5 minutes; "Create booking" creates it in `PAYMENT_PENDING` (FR-BKG-02, FR-BKG-03).
+5. **Pay** as described in §3.5.3. The booking becomes `CONFIRMED` and the User receives a QR access pass (FR-PAY-01 to FR-PAY-04).
+6. **Arrive.** From one hour before the start, the Guard scans the QR pass, checks the vehicle, plate, and assigned space, and confirms check-in (FR-GATE-01 to FR-GATE-03).
+7. **Leave.** The User may tap "Request checkout". The Guard confirms that the vehicle has left; the system calculates overtime after the grace period, takes it from the deposit first, and asks the User to pay only what is left (FR-GATE-04, FR-GATE-05, FR-PAY-06).
+8. **Settle and review.** The booking is `COMPLETED` and settled (§3.5.4). The User may leave one review (FR-TRS-01).
+9. **No-show or cancellation.** If the User never arrives, the booking is settled as `NO_SHOW` and the deposit is returned. If the User cancels before the start, the refund follows the cancellation rules (FR-BKG-05, FR-FIN-06).
+
+#### 3.5.3 How the User pays
+
+**Figure 3.7: UML Sequence Diagram - User Payment**
+
+![User payment sequence](./diagrams/seq-user-payment.png)
+
+1. The User presses **Pay** on the booking. The browser never sends an amount; the backend loads the booking total in paisa.
+2. The User's **Refund Balance** is applied first. The rest goes through the gateway and must be at least ৳10; if the balance covers everything, no gateway is used.
+3. The backend creates a Payment and an SSLCOMMERZ hosted-checkout session, and the User pays by card, mobile banking, or net banking.
+4. SSLCOMMERZ calls back (IPN or success URL). The backend calls the validation API and matches the transaction ID, amount, currency, and risk status.
+5. In one serializable transaction, the backend posts the balanced ledger entry into **Booking Held Funds**, credits the Provider's share to their **pending** balance, marks the payment `SUCCEEDED`, confirms the booking, and issues the QR credential.
+6. The browser's return page only reads the status; replaying it cannot confirm a booking.
+
+#### 3.5.4 How the Provider gets paid
+
+**Figure 3.8: UML Sequence Diagram - Provider Payout**
+
+![Provider payout sequence](./diagrams/seq-provider-payout.png)
+
+1. **Earning.** On payment, the Provider's share appears as **pending**. At settlement (check-out, no-show, or cancellation), the ledger moves the held money: parking charge and paid overtime (or the non-refunded part of a cancelled booking) to **Provider Payable**, the platform fee to **Platform Revenue**, and the unused deposit to the User's **Refund Balance**. The Provider's share becomes **available** (FR-FIN-02, FR-FIN-03).
+2. **Payout method.** The Provider saves a Bank, bKash, Nagad, Rocket, or other MFS account; the number is encrypted and shown masked (FR-FIN-07).
+3. **Request.** The Provider requests up to their available balance. The amount moves from **available** to **held**, and the destination is snapshotted (FR-FIN-08).
+4. **Admin processing.** The Admin can hold the request with a note and release it, reject it (money returns to available), or approve it (FR-FIN-09).
+5. **Transfer.** The Admin sends the money outside the system and marks the request **PAID** with the transfer reference. The ledger clears Provider Payable to External Payout Clearing, and the Provider is notified.
+
+A User's Refund Balance withdrawal follows the same steps.
+
+#### 3.5.5 How the platform (the ParkEase system admins) gets paid
+
+**Figure 3.9: Money Flow - Who Pays, Who Gets Paid, and How the Platform Earns**
+
+![Money flow](./diagrams/flow-money.png)
+
+ParkEase BD earns through a **platform fee added on top of the parking charge**; the Provider's price is not reduced.
+
+- **Where the money lands.** Gateway payments are collected in ParkEase BD's SSLCOMMERZ merchant account, which SSLCOMMERZ settles to the platform's bank account. Inside the system, the money waits in Booking Held Funds until settlement.
+- **What the platform keeps.** At settlement, the platform fee becomes **Platform Revenue**. Everything else is owed: the Provider's share (paid out as in §3.5.4) and unused deposits and refunds (kept as the User's Refund Balance).
+- **How the fee is set.** The default is **10% of the parking charge**, rounded up to the next paisa. An Admin can create fee rules at the global, Provider, property, or listing level, as a percentage or a fixed amount, with start and end dates. The most specific active rule wins, and each quote stores the rule it used (FR-FIN-05).
+- **Cancellations.** The platform fee is never refunded. The parking charge is refunded on a sliding scale: 100% at 12 hours or more before the start, 90% at 6 hours, 75% at 3 hours, 50% at 1 hour, and nothing later; the deposit is always returned. The part of the parking charge that isn't refunded goes to the Provider (FR-FIN-06).
+- **Gateway charges.** SSLCOMMERZ deducts its processing fee from what it settles to ParkEase BD; the platform bears it, and it is not recorded in the ledger.
+
+**Worked example (from acceptance testing, 26 September 2026).** One hour at a listing priced ৳12/hour with a ৳400 deposit:
+
+| Item | Amount |
+|---|---|
+| Parking charge (paid to the Provider) | ৳12.00 |
+| Platform fee, 10% (kept by ParkEase BD) | ৳1.20 |
+| Refundable deposit (returned to the User) | ৳400.00 |
+| **Total the User paid through SSLCOMMERZ** | **৳413.20** |
+
+The User didn't arrive, so the booking was settled as a no-show: the Provider was credited ৳12.00, the platform recognized ৳1.20, and ৳400.00 went back to the User's Refund Balance.
 
 ---
 
 ## 4. Functional Requirements
 
-Each requirement has a Priority of **High** (required for the semester MVP demonstration), **Medium** (expected but can slip past the first milestone), or **Low** (stretch goal if time permits).
+Each requirement has a Priority of **High** (core to the marketplace), **Medium** (expected), or **Low** (supporting).
 
-### 4.1 Authentication, Accounts & Roles
-
-| ID | Requirement | Priority |
-|---|---|---|
-| FR-AUTH-01 | The system shall allow a new user to self-register as Driver or Parking Owner with full name, email, Bangladesh mobile number, and password, and shall require explicit acceptance of the current Terms of Service and Privacy Policy. | High |
-| FR-AUTH-02 | The system shall never allow public self-registration for the Manager or Guard role, and shall never grant the Admin role through registration or any application API. | High |
-| FR-AUTH-03 | The system shall enforce a password policy of 12 to 128 characters with at least one uppercase letter, one lowercase letter, one digit, and one special character, and no whitespace. | High |
-| FR-AUTH-04 | The system shall authenticate users via a single normalized identifier field accepting either email or phone, plus a password and an optional "remember this device" flag. | High |
-| FR-AUTH-05 | The system shall issue HttpOnly, Secure session cookies with a rotating refresh token on successful login. | High |
-| FR-AUTH-06 | The system shall enforce CSRF protection on all cookie-authenticated, state-changing requests. | High |
-| FR-AUTH-07 | The system shall block access to every protected route except password setup/change, session list, and logout while `mustChangePassword` is true. | High |
-| FR-AUTH-08 | The system shall refuse operational actions (for example, creating a Guard or Manager, accepting an assignment, or managing a property) until the account is ready: password setup complete, email verified, and status `ACTIVE`. | High |
-| FR-AUTH-09 | The system shall allow a user to self-enable only the DRIVER or PARKING_OWNER role; MANAGER and GUARD shall be granted only through controlled onboarding by an Owner or Admin. | High |
-| FR-AUTH-10 | The system shall onboard every controlled account (Manager or Guard) by emailing a single-use, time-limited setup link; it shall never generate, display, or return a plaintext temporary password. If the email cannot be delivered, the system shall roll back the new account. | High |
-| FR-AUTH-11 | The system shall allow a user to view and revoke their own active sessions, individually or all at once, and to change their password (which revokes all other sessions). | Medium |
-| FR-AUTH-12 | The system shall support password reset via a time-limited, single-use token sent to a verified contact. | Medium |
-| FR-AUTH-13 | The system shall support email and phone verification using 6-digit codes. | High |
-| FR-AUTH-14 | The system shall record each user's acceptance of each versioned legal document with the acceptance time and source (registration, first login, policy update, staff creation, assignment acceptance, or Admin action). | Medium |
-| FR-AUTH-15 | The system shall rate-limit registration, login (5 per 15 minutes per IP address), refresh, password reset, and sensitive account actions. | High |
-| FR-AUTH-16 | The Admin account shall be provisioned at deployment by the database seed from environment configuration, with a verified contact and a forced password change on first login. The seed shall refuse to add the Admin role to an existing non-admin account. | High |
-
-### 4.2 Vehicle Management
+### 4.1 Authentication, Accounts & Sessions
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-VEH-01 | A Driver shall be able to add a vehicle with type (motorcycle, sedan, SUV, or microbus), registration number, brand, model, color, and optional dimensions. | High |
-| FR-VEH-02 | The system shall normalize registration numbers and reject a number already registered to another vehicle. | High |
-| FR-VEH-03 | A Driver shall be able to edit or delete their own vehicle, and mark one vehicle as the default for bookings. | High |
-| FR-VEH-04 | The system shall validate vehicle dimensions against a parking spot's maximum dimensions at quote time. | Medium |
+| FR-AUTH-01 | The system shall let a visitor self-register as a User or a Provider with full name, email, Bangladesh mobile number, and password, and shall reject the registration unless the current Terms of Service and Privacy Policy are accepted. | High |
+| FR-AUTH-02 | The system shall never allow self-registration as Manager, Guard, or Admin. | High |
+| FR-AUTH-03 | Passwords shall be 12 to 128 characters with an upper-case letter, a lower-case letter, a digit, and a special character, and no spaces. | High |
+| FR-AUTH-04 | The system shall authenticate with one identifier field (email or phone) and a password, with an optional "remember this device" choice that extends the refresh-token lifetime from 1 day to 30 days. | High |
+| FR-AUTH-05 | The system shall verify email and phone with 6-digit codes. | High |
+| FR-AUTH-06 | The system shall issue HttpOnly cookie sessions with rotating refresh tokens, and shall require a CSRF token on every state-changing cookie request. | High |
+| FR-AUTH-07 | An account holder shall be able to list and revoke their sessions, change their password, and reset a forgotten password through a time-limited, single-use link. | Medium |
+| FR-AUTH-08 | Manager and Guard accounts, and accounts created by an Admin, shall be onboarded through a single-use setup link emailed to the person; no temporary password is created or shown. | High |
+| FR-AUTH-09 | An account whose `mustChangePassword` flag is set shall be limited to changing its password until it does so. | High |
+| FR-AUTH-10 | Operational actions shall require an account that is ready: password set, email verified, and status `ACTIVE`. | High |
+| FR-AUTH-11 | The system shall record each acceptance of each versioned legal document with its time and source. | Medium |
+| FR-AUTH-12 | The Admin account shall be provisioned by the database seed from environment configuration. | High |
 
-### 4.3 Property & Parking Spot Management
-
-| ID | Requirement | Priority |
-|---|---|---|
-| FR-PROP-01 | A Parking Owner shall be able to create a property with name, description, public area, approximate and exact address, coordinates, optional entrance coordinates, and access instructions. | High |
-| FR-PROP-02 | The system shall encrypt the exact address and access instructions at rest and return them only to the Owner, a linked Manager, an assigned Guard, an Admin, or the Driver of a confirmed booking. | High |
-| FR-PROP-03 | When creating or editing a property, the Owner shall indicate whether it is a shared-building property. | High |
-| FR-PROP-04 | On creation, a shared-building property shall enter `AWAITING_MANAGER_APPROVAL`; any other property shall enter `PENDING` Admin verification. Neither is searchable until `VERIFIED`. | High |
-| FR-PROP-05 | A Parking Owner shall be able to upload, reorder, and delete property images (Cloudinary-hosted, type- and size-validated) with an image type and a cover image. | High |
-| FR-PROP-06 | The system shall allow Admin approval only if the property has at least one image, valid coordinates, and an owner whose account is ready. | High |
-| FR-PROP-07 | Changing the exact address, coordinates, or images of a `VERIFIED` property, or editing a `REJECTED` property, shall reset verification to `AWAITING_MANAGER_APPROVAL` for a shared-building property, or to `PENDING` for any other property, and set the property `INACTIVE`. | High |
-| FR-PROP-08 | A Parking Owner shall not be able to edit a `SUSPENDED` property, and shall be able to delete a property only while it has no images, no parking spots, and no active staff links or assignments. | Medium |
-| FR-PROP-09 | A Parking Owner or linked Manager shall be able to add individual parking spots with a unique spot code, vehicle type, hourly rate, min/max duration, buffer, grace period, overtime multiplier, minimum deposit, dimensions, and facilities (CCTV, guard, covered, EV charging, wheelchair access). | High |
-| FR-PROP-10 | A Parking Owner or linked Manager shall be able to block, unblock, or set a parking spot to maintenance. | Medium |
-| FR-PROP-11 | A Parking Owner or linked Manager shall be able to define recurring weekly availability rules per parking spot. | High |
-| FR-PROP-12 | A Parking Owner or linked Manager shall be able to create date-specific availability exceptions (blocked or special-available) with a reason; the system shall record who created each exception. | Medium |
-| FR-PROP-13 | A Parking Owner or linked Manager shall be able to temporarily close and reopen a property. | Low |
-
-### 4.4 Building Manager Accounts, Links & Building Approval
+### 4.2 Vehicles & Discovery
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-MGR-01 | A ready Parking Owner shall be able to create a Manager account for one of their own non-suspended properties by providing full name, email, and phone. The system shall create the account with the `MANAGER` role, send a setup link (FR-AUTH-10), and create a `PENDING_ACCEPTANCE` Manager Link to that property. | High |
-| FR-MGR-02 | A ready Parking Owner shall be able to invite an existing Manager to one of their properties by email or phone. If no eligible Manager matches, the system shall return a generic error that reveals nothing about whether the contact is registered or which roles it holds. | Medium |
-| FR-MGR-03 | The system shall allow at most one non-terminal (`PENDING_ACCEPTANCE`, `ACTIVE`, or `SUSPENDED`) Manager Link per property. A Manager may hold links to many properties across different Owners. | High |
-| FR-MGR-04 | A Manager shall be able to view and accept or reject a pending Manager Link. Acceptance shall require a ready Manager account and acceptance of the current Manager operational policy. Only an `ACTIVE` link grants access to the property. | High |
-| FR-MGR-05 | Before acceptance, a Manager shall see only the invited property's name, public area, and inviting Owner's display name; no exact address, bookings, or staff data. | High |
-| FR-MGR-06 | A Parking Owner shall be able to suspend, resume, or end a Manager Link on their own property, and cancel a pending one. Ending or suspending a link shall immediately remove the Manager's access to that property. | High |
-| FR-MGR-07 | A linked Manager of a shared-building property in `AWAITING_MANAGER_APPROVAL` shall be able to approve it (moving it to `PENDING`) or reject it with a required reason (moving it to `REJECTED`). The decision, actor, time, and reason shall be recorded. | High |
-| FR-MGR-08 | The system shall prevent Admin verification of a shared-building property that has neither a recorded Manager approval nor an Admin waiver. | High |
-| FR-MGR-09 | A linked Manager shall be able to perform the property operations granted in FR-PROP-09 to FR-PROP-13 and FR-GRD-01 to FR-GRD-06 for that property only. | Medium |
-| FR-MGR-10 | A linked Manager shall be able to view the property's bookings, expected arrivals, active sessions, and Guard incident reports, with Driver contact and vehicle data masked as for Owners and with all payment, earning, and commission amounts omitted. | Medium |
-| FR-MGR-11 | A linked Manager shall be able to respond to, and upload evidence for, a dispute concerning a booking at that property. | Low |
-| FR-MGR-12 | The system shall deny a Manager any access to earnings, wallet balances, ledger entries, payout accounts, and payout requests, including for linked properties. | High |
-| FR-MGR-13 | The system shall deny a Manager the ability to edit a property's identity, location, or images; delete a property; create or invite other Managers; or suspend or reset the password of any global account. | High |
-| FR-MGR-14 | The system shall prevent an Owner from browsing or searching a global directory of Manager accounts; an existing Manager's profile becomes visible to a new Owner only after the Manager accepts that Owner's link. | Medium |
-| FR-MGR-15 | The system shall notify the Owner when a Manager accepts or rejects a link or approves or rejects a listing, and notify the Manager when a link is created, suspended, or ended. | Medium |
+| FR-VEH-01 | A User shall be able to add a vehicle with type (motorcycle, sedan, SUV, or microbus), brand, model, registration number, and colour. | High |
+| FR-VEH-02 | The system shall normalize registration numbers and reject one that is already registered. | High |
+| FR-VEH-03 | A User shall be able to edit and delete their vehicles and mark one as the default. | Medium |
+| FR-DSC-01 | A signed-in account holder with a ready account shall be able to search active listings by location, radius, time range, and vehicle type, on a map and in a list. | High |
+| FR-DSC-02 | Search results and property details shall show only verified, active properties with active listings, the approximate location and public address, facilities, and the price; they shall never show the exact address or access instructions. | High |
+| FR-DSC-03 | A User shall be able to save favorite properties, save named places, and keep and clear a list of recent searches. | Low |
 
-### 4.5 Guard Accounts & Assignments
+### 4.3 Properties, Memberships & Governance
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-GRD-01 | A ready Parking Owner, a linked Manager, or an Admin shall be able to create a Guard account by providing full name, email, and phone. The system shall send a setup link (FR-AUTH-10) and record the creator. | High |
-| FR-GRD-02 | If the submitted email or phone is already registered, the system shall return a generic conflict without disclosing the existing account's name, roles, or properties. | High |
-| FR-GRD-03 | A Parking Owner or linked Manager shall be able to invite an existing Guard to a `VERIFIED`, `ACTIVE` property by email or phone with a shift start and end time, creating a `PENDING_ACCEPTANCE` assignment. Only one non-terminal assignment may exist per property/Guard pair. | High |
-| FR-GRD-04 | A Guard shall be able to accept or reject a pending assignment. Acceptance shall require a ready Guard account and an eligible (verified, active) property. Only an `ACTIVE` assignment grants operational access. | High |
-| FR-GRD-05 | A Parking Owner or linked Manager shall be able to suspend, resume, or end an assignment at the property, or cancel a pending one. Changing the shift of an `ACTIVE` or `SUSPENDED` assignment shall return it to `PENDING_ACCEPTANCE` so the Guard re-accepts the new terms. | High |
-| FR-GRD-06 | Neither an Owner nor a Manager shall be able to suspend, block, or reset the password of a Guard's global account. | High |
-| FR-GRD-07 | Only an Admin shall be able to suspend, restore, or block a Guard's global account. | High |
-| FR-GRD-08 | The system shall prevent Owners and Managers from browsing or searching a global directory of Guard accounts. | Medium |
+| FR-PROP-01 | A Provider shall be able to create a property with name, public area, approximate public address, exact private address, coordinates, optional entrance coordinates, access instructions, parking and safety rules, vehicle height limit, entry cut-off time, and whether visitor ID is required. | High |
+| FR-PROP-02 | The system shall encrypt the exact address and access instructions at rest and return them only to the property's Providers, authorized Managers, and Admins. | High |
+| FR-PROP-03 | Before creation, the system shall offer possible matching properties (by address fingerprint and location), and a Provider shall be able to request to join an existing property instead of creating a duplicate. | Medium |
+| FR-PROP-04 | A new property shall be `PENDING` verification and `INACTIVE` until an Admin verifies it. | High |
+| FR-PROP-05 | A Provider shall be able to upload up to 10 images (JPEG, PNG, or WebP, 5 MB each), reorder them, choose a cover, and delete them. | High |
+| FR-PROP-06 | Changing the location of a verified property shall require re-verification. | High |
+| FR-PROP-07 | A Provider membership shall count for authority only while it is `ACTIVE` and Admin-verified. | High |
+| FR-GOV-01 | The system shall derive governance mode on every request: `SINGLE_PROVIDER` with at most one active verified Provider, `MULTI_PROVIDER` with two or more. | High |
+| FR-GOV-02 | In single-provider mode, the Provider shall control common rules, temporary closure, and images directly. | High |
+| FR-GOV-03 | In multi-provider mode, a change to common rules or to identity and location shall be made as a versioned change proposal that every active verified Provider must approve; any rejection, with a reason, ends the proposal. | Medium |
+| FR-GOV-04 | Providers shall be able to nominate a Building Manager for a property; in multi-provider mode every active verified Provider must approve. An active Building Manager may set common rules and temporarily close the property, and has no commercial authority. | Medium |
+| FR-GOV-05 | When a second Provider is verified, a sole-provider Building Manager shall move to `PENDING_RECONFIRMATION`; when a Provider leaves, their Manager delegations and Guard assignments shall end in the same transaction. | Medium |
+| FR-GOV-06 | Temporary closure shall be allowed only to a sole Provider, an active Building Manager, or an Admin. | Medium |
 
-### 4.6 Parking Search & Discovery
-
-| ID | Requirement | Priority |
-|---|---|---|
-| FR-SRCH-01 | The system shall allow any user, including unauthenticated visitors, to search parking by location, radius, date/time range, and vehicle type. | High |
-| FR-SRCH-02 | The system shall support filtering by price range, covered parking, CCTV, and guard presence. | Medium |
-| FR-SRCH-03 | The system shall support sorting results by distance, price, or rating. | Medium |
-| FR-SRCH-04 | Public search results shall include only `VERIFIED`, `ACTIVE` properties and show only approximate coordinates, public area, facility badges, and estimated price. | High |
-| FR-SRCH-05 | Public and unauthenticated responses shall exclude exact address, exact entrance coordinates, access instructions, and any Owner, Manager, or Guard identity. | High |
-| FR-SRCH-06 | The system shall paginate search results and never return an unbounded result set. | Medium |
-
-### 4.7 Booking Quote & Hold
+### 4.4 Parking Resources & Parking Rights
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-BKG-01 | The system shall generate a price quotation (base amount, platform fee, refundable deposit, discount) from backend-held pricing rules for a selected spot, vehicle, and time range. | High |
-| FR-BKG-02 | A quotation shall expire after a fixed backend-configured duration and shall be usable at most once. | High |
-| FR-BKG-03 | A Driver shall be able to convert an unexpired, unused quotation into a HELD booking that reserves the spot for five minutes. | High |
-| FR-BKG-04 | The system shall reject a hold request that overlaps an existing active booking for the same spot, with a clear conflict error. | High |
-| FR-BKG-05 | The system shall automatically release an unpaid HELD booking after its hold-expiry window, returning the spot to available status. | High |
-| FR-BKG-06 | The system shall honor an Idempotency-Key header on hold creation so repeated submissions of one user intent create at most one booking. | High |
-| FR-BKG-07 | A Driver shall be able to cancel a booking according to the cancellation policy applicable to its current status. | Medium |
-| FR-BKG-08 | A Driver shall be able to request a time extension for an active booking, subject to a new quote and availability check. | Medium |
-| FR-BKG-09 | Blocking a spot, adding a blocking exception, or closing a property (by an Owner or Manager) shall not cancel already-confirmed bookings; the system shall warn the actor and list the affected bookings. | Medium |
+| FR-RES-01 | A Provider shall be able to add a parking resource as a fixed space (with a unique spot code) or a shared pool (with a capacity), with display name, floor, zone, supported vehicle types, size limits, and covered, CCTV, and guard facilities. | High |
+| FR-RES-02 | A Provider shall be able to create up to 100 fixed spaces in one transaction from a pattern, a range, or a pasted list, with duplicate codes rejected before anything is saved. | Medium |
+| FR-RES-03 | A Provider shall be able to edit a resource and set its status to `ACTIVE`, `BLOCKED`, `MAINTENANCE`, or `INACTIVE`. New resources are created `INACTIVE`. A resource with unfinished bookings cannot be deleted. | High |
+| FR-RES-04 | A Provider shall be able to claim a Parking Right for a resource, choosing the right type, quantity, validity dates, and commercial permissions (publish listings, set pricing, manage bookings, delegate to a Manager). | High |
+| FR-RES-05 | A claim may include up to 5 evidence files (PDF, JPEG, PNG, or WebP, 10 MB each), checked by content type, stored privately, and downloaded only through short-lived signed links. | Medium |
+| FR-RES-06 | An Admin shall be able to mark a claim `VERIFIED`, `REJECTED`, `DISPUTED`, or `REVOKED`. A pending claim can be edited by the Provider, with version checks against stale edits. | High |
+| FR-RES-07 | A verified right shall not be edited in place; the Provider requests an amendment with evidence, and the right changes only when an Admin approves it. | Medium |
+| FR-RES-08 | A Provider shall be able to submit claims for many resources as one batch, which the Admin can review together or one by one. | Low |
 
-### 4.8 Payment Processing
-
-| ID | Requirement | Priority |
-|---|---|---|
-| FR-PAY-01 | The system shall create an SSLCOMMERZ sandbox payment session only after a Driver explicitly initiates payment for a held booking. | High |
-| FR-PAY-02 | The system shall confirm a booking only after validating payment through the SSLCOMMERZ IPN/validation API; a browser return URL alone shall never confirm a booking. | High |
-| FR-PAY-03 | The system shall process duplicate payment callbacks idempotently, producing exactly one confirmed booking and one ledger effect. | High |
-| FR-PAY-04 | The system shall record every payment, refund, and financial adjustment as an immutable, double-entry ledger transaction whose debits equal its credits. | High |
-| FR-PAY-05 | If payment validates after the booking hold has already expired, the system shall attempt controlled recovery when the spot remains available, or trigger a refund/manual-review flow when it does not. | Medium |
-| FR-PAY-06 | The system shall support a purpose-specific outstanding-payment session for post-checkout amounts such as uncovered overtime. | Medium |
-| FR-PAY-07 | A Driver shall be able to view their payment and refund history with status, purpose, and timestamps. | Medium |
-
-### 4.9 Entry/Exit Verification & Parking Sessions
+### 4.5 Listings & Availability
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-VER-01 | The system shall issue a purpose-bound (ENTRY) QR code and OTP to the Driver only after a booking reaches a payment-confirmed state. | High |
-| FR-VER-02 | An assigned, ACTIVE Guard shall be able to resolve a Driver's entry credential and view masked vehicle/booking details before confirming check-in. | High |
-| FR-VER-03 | The system shall atomically validate and consume an entry credential during check-in, preventing reuse. | High |
-| FR-VER-04 | A Driver shall be able to request checkout for a checked-in booking, triggering issuance of a short-lived, purpose-bound (EXIT) QR code and OTP. | High |
-| FR-VER-05 | A booking shall not be marked complete from a Driver's checkout request alone; completion requires explicit Guard confirmation of physical exit. | High |
-| FR-VER-06 | The system shall reject an entry credential presented for an exit operation and vice versa. | High |
-| FR-VER-07 | The system shall calculate overtime charges when actual exit exceeds the effective booking end time plus grace period, deducting first from the security deposit. | High |
-| FR-VER-08 | A Guard shall be able to report an incident, with an optional evidence upload, linked to a specific booking; the Owner and linked Manager shall be notified. | Medium |
-| FR-VER-09 | The system shall rate-limit OTP verification attempts per booking and lock further attempts after repeated failures. | Medium |
-| FR-VER-10 | Check-in and check-out shall be performed only by a Guard; an Owner or Manager shall not be able to check a vehicle in or out. | High |
+| FR-LST-01 | A Provider shall be able to create a draft listing from a verified right, for a whole resource or one unit, with title, hourly price, refundable deposit, minimum and maximum duration, overtime rule (multiplier of the hourly rate or a fixed hourly rate), and grace period. | High |
+| FR-LST-02 | The system shall activate a listing only when the property is `VERIFIED` and `ACTIVE`, the resource (and unit) is `ACTIVE`, the right is `VERIFIED`, currently valid, and allows listing, and weekly availability exists. | High |
+| FR-LST-03 | A Provider shall be able to edit, pause, resume, and end a listing; an Admin shall be able to suspend and resume any listing. | Medium |
+| FR-LST-04 | A Provider shall be able to set weekly availability per resource, with up to two time ranges per day, in Asia/Dhaka time. | High |
+| FR-LST-05 | A Provider shall be able to add, edit, and delete date-specific exceptions, either blocking time or adding special availability, with a reason. | Medium |
 
-### 4.10 Wallets, Owner Earnings & Payouts
+### 4.6 Guards & Manager Delegation
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-FIN-01 | The system shall calculate an Owner's net earning per completed booking as gross parking amount minus platform commission, plus/minus dispute or penalty adjustments. Earnings always belong to the property's Owner, never to a Manager. | High |
-| FR-FIN-02 | Owner earnings shall remain PENDING or ON_HOLD until the booking's dispute window has passed, after which they become AVAILABLE. | Medium |
-| FR-FIN-03 | The system shall maintain one wallet account per user and currency with available, pending, and held balances that change only through ledger postings, using optimistic versioning to reject concurrent conflicting updates. | High |
-| FR-FIN-04 | A Parking Owner shall be able to add a payout account (Bank, bKash, or Nagad) whose account number is masked after saving. | Medium |
-| FR-FIN-05 | A Parking Owner shall be able to request a payout only from an ACTIVE, Admin-verified payout account and only up to their available balance. | Medium |
-| FR-FIN-06 | The system shall prevent two concurrent payout requests from spending the same available balance twice. | Medium |
-| FR-FIN-07 | An Admin shall be able to approve, reject, or mark a payout request as paid (simulated payout). | Medium |
+| FR-STF-01 | A Provider, or a Manager with `GUARD_ADD_TO_PROPERTY`, shall be able to create a Guard account (full name, email, phone) or add an existing Guard by email or phone to a property, creating a `PENDING_ACCEPTANCE` property membership. | High |
+| FR-STF-02 | A Guard shall be able to accept or reject a property invitation; a Guard shall have no access to a property's bookings before accepting. | High |
+| FR-STF-03 | A Provider, or a Manager with `GUARD_ASSIGN`, shall be able to give an accepted Guard a shift (start and end time) for that Provider's bookings at the property, and edit or end it. | High |
+| FR-STF-04 | Property Guard membership shall be shared between Providers, while each assignment stays isolated to the Provider that created it. | Medium |
+| FR-STF-05 | Only an Admin shall be able to remove a Guard from a property, and only after every Provider assignment for that Guard has ended. | Medium |
+| FR-STF-06 | Providers and Managers shall not be able to browse a global directory of Guard accounts; they see only Guards of their own properties. | Medium |
+| FR-MGR-01 | A Provider shall be able to create a Manager account, or invite an existing Manager by email or phone, and delegate one of their verified properties. | High |
+| FR-MGR-02 | A delegation shall carry a set of permissions chosen from: `RESOURCE_VIEW`, `RESOURCE_MANAGE`, `LISTING_VIEW`, `LISTING_MANAGE`, `PRICE_MANAGE`, `AVAILABILITY_MANAGE`, `BOOKING_VIEW`, `BOOKING_MANAGE`, `IMAGE_MANAGE`, `GUARD_VIEW`, `GUARD_ADD_TO_PROPERTY`, `GUARD_ASSIGN`, `EARNINGS_VIEW`, and `REPORTS_VIEW`. | High |
+| FR-MGR-03 | A delegation shall cover either the whole property (all current and future resources) or selected resources, and may have an expiry date. | High |
+| FR-MGR-04 | A Manager shall be able to accept or reject a delegation; only an `ACTIVE` delegation grants access. | High |
+| FR-MGR-05 | A Provider shall be able to change a delegation's permissions or end it; access is removed immediately. | High |
+| FR-MGR-06 | A Manager shall see earnings only when granted `EARNINGS_VIEW`, and shall never request payouts or manage payout methods. | High |
 
-### 4.11 Reviews, Disputes & Notifications
-
-| ID | Requirement | Priority |
-|---|---|---|
-| FR-RVW-01 | A Driver shall be able to submit exactly one review per completed booking, rating overall experience, security, location accuracy, and cleanliness. | Medium |
-| FR-RVW-02 | A Driver or Parking Owner shall be able to open a dispute on a booking with a category, description, and optional evidence. | Medium |
-| FR-RVW-03 | An open dispute shall place the associated owner earning on hold until resolution. | Medium |
-| FR-RVW-04 | Only the parties to a dispute (the Driver, the Owner, and the property's linked Manager) shall be able to view and respond to it; Admin shall see the complete case. A Manager's view shall omit refund and earning amounts. | Medium |
-| FR-RVW-05 | The system shall generate and deliver in-app notifications for key booking, payment, dispute, payout, assignment, link, and building-approval events, and allow marking them read. | Medium |
-
-### 4.12 Admin Oversight & Platform Operations
+### 4.7 Quote, Hold & Booking
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-ADM-01 | An Admin shall be able to list pending properties and review one, including images, exact address, access instructions, and any building-approval record, then approve or reject it with a reason. | High |
-| FR-ADM-02 | An Admin shall be able to suspend a verified property. | Medium |
-| FR-ADM-03 | An Admin shall be able to suspend, restore, or block any user account, including Manager and Guard accounts. | Medium |
-| FR-ADM-04 | An Admin shall be able to create Manager and Guard accounts, link or assign them to eligible properties, and view or end any Manager Link or Guard Assignment. | Medium |
-| FR-ADM-05 | An Admin shall be able to waive building approval for a shared-building property with a required reason (for example, when the building has no Manager on the platform); the waiver moves the property to `PENDING` and is audited. | Low |
-| FR-ADM-06 | An Admin shall be able to review and override a booking's state through a controlled, reason-required, fully audited action. | Low |
-| FR-ADM-07 | An Admin shall be able to resolve a dispute with a resolution type, details, and optional refund/earning adjustment. | Medium |
-| FR-ADM-08 | An Admin shall be able to verify or reject a payout account and approve, reject, or mark a payout request as paid. | Medium |
-| FR-ADM-09 | An Admin shall be able to review payment mismatches (local vs. gateway) and wallet reconciliation mismatches (cached balance vs. ledger-derived balance) and mark them resolved with notes. | Low |
-| FR-ADM-10 | An Admin shall be able to browse a filterable, immutable audit log of sensitive actions across the platform, including all Manager decisions. | Medium |
-| FR-ADM-11 | An Admin shall be able to edit only an allowlisted set of non-secret operational settings, with a required reason and version-conflict handling. | Low |
-| FR-ADM-12 | An Admin shall be able to view and retry failed background jobs. | Low |
+| FR-BKG-01 | The system shall quote a listing for a User's vehicle and future time range from server-held prices: parking charge, platform fee, and deposit. A quote expires after 5 minutes and can be used once. | High |
+| FR-BKG-02 | A User shall be able to turn an unexpired quote into a 5-minute hold; overlapping holds on the same resource or unit shall be rejected by the database. | High |
+| FR-BKG-03 | A User shall be able to create a booking from an active hold, starting in `PAYMENT_PENDING`. | High |
+| FR-BKG-04 | An unpaid booking whose hold has run out shall become `EXPIRED` and release the space. | High |
+| FR-BKG-05 | A User shall be able to preview and cancel a booking before its start; a paid booking is refunded according to FR-FIN-06. | High |
+| FR-BKG-06 | A User shall be able to request checkout for a checked-in booking, which moves it to `CHECKOUT_REQUESTED` and alerts the Guard. | Medium |
+| FR-BKG-07 | A User shall be able to list their bookings and view each booking's details, payment summary, QR pass, and final settlement. | High |
+
+### 4.8 Payments & Refunds
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-PAY-01 | When a User pays, the system shall apply the User's Refund Balance first and charge the rest through SSLCOMMERZ, keeping the gateway amount at least ৳10; if the balance covers the full amount, the booking shall be confirmed without the gateway. | High |
+| FR-PAY-02 | The system shall confirm a payment only after server-side validation with SSLCOMMERZ; the browser return page shall never confirm a booking. | High |
+| FR-PAY-03 | Duplicate callbacks shall be processed idempotently, producing one confirmed booking and one ledger effect. | High |
+| FR-PAY-04 | Every payment, refund, settlement, and payout shall be recorded as a balanced ledger transaction. | High |
+| FR-PAY-05 | A validated payment for a booking whose hold has expired shall be recovered if the space is still free, or refunded if it is not. | Medium |
+| FR-PAY-06 | A User shall be able to pay an outstanding settlement amount (for example uncovered overtime) through a separate payment session. | Medium |
+| FR-PAY-07 | Refund amounts shall always be calculated by the server; a User or Provider may request a refund on a payment, an Admin may issue a partial refund bounded by the remaining amount, and gateway refunds stay `PROCESSING` until SSLCOMMERZ confirms them. | Medium |
+| FR-PAY-08 | A User shall be able to view their payments and refunds with status and time. | Medium |
+
+### 4.9 Gate Verification & Parking Sessions
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-GATE-01 | On confirmation, the system shall issue one QR access credential per booking, shown on the User's booking page. | High |
+| FR-GATE-02 | A Guard shall be able to verify a credential by scanning it or pasting it, and see the booking code, User name, vehicle, registration, and assigned space; the credential is accepted only if the Guard is an active member of the property with an active assignment for the booking's Provider. | High |
+| FR-GATE-03 | A Guard shall be able to check a booking in from one hour before its start until its end time; the credential shall be consumed at check-in. | High |
+| FR-GATE-04 | A Guard shall be able to confirm check-out of a `CHECKED_IN` or `CHECKOUT_REQUESTED` booking. | High |
+| FR-GATE-05 | At check-out, the system shall charge overtime for time beyond the end plus grace period (at the listing's multiplier or fixed rate), take it first from the deposit and then from the Refund Balance, and leave any remainder as `PAYMENT_DUE`. | High |
+| FR-GATE-06 | A Guard shall see bookings for their assigned scope from 12 hours before now to 24 hours ahead, including expected arrivals and active sessions. | Medium |
+| FR-GATE-07 | Only Guards shall check vehicles in and out. | High |
+
+### 4.10 Settlement, Wallets, Earnings & Payouts
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-FIN-01 | The system shall keep one wallet per account holder with available, pending, and held balances that change only through ledger postings. | High |
+| FR-FIN-02 | At settlement, the Provider shall be credited the parking charge plus paid overtime (or the non-refunded part of a cancellation); the platform fee shall be recognized as platform revenue; the unused deposit shall go to the User's Refund Balance. | High |
+| FR-FIN-03 | A Provider's share shall be pending from payment until settlement, then available for payout. | High |
+| FR-FIN-04 | A Provider shall be able to see an earnings summary and transaction history. | Medium |
+| FR-FIN-05 | The platform fee shall default to 10% of the parking charge, rounded up to the next paisa. An Admin shall be able to create, schedule, activate, deactivate, clone, and archive percentage or fixed fee rules at the global, Provider, property, or listing level; the most specific active rule applies, and each quote shall record the rule it used. | High |
+| FR-FIN-06 | When a paid booking is cancelled, the parking charge shall be refunded at 100% if cancelled 12 hours or more before the start, 90% at 6 hours, 75% at 3 hours, 50% at 1 hour, and 0% within 1 hour; the deposit shall always be returned, the platform fee shall never be refunded, and the refund shall be credited to the User's Refund Balance. | High |
+| FR-FIN-07 | A Provider or User shall be able to add payout methods (Bank, bKash, Nagad, Rocket, or other MFS), stored encrypted and shown masked, set a default, and deactivate one. | Medium |
+| FR-FIN-08 | A Provider shall be able to request a payout up to their available balance, and a User up to their Refund Balance; the amount shall be moved to held immediately so it cannot be spent twice, and the destination shall be snapshotted. | High |
+| FR-FIN-09 | An Admin shall be able to hold (with a note), release, approve, or reject a payout, and mark an approved payout paid with a transfer reference; rejection returns the held amount to available. | High |
+
+### 4.11 Reviews, Disputes, Reports & Notifications
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-TRS-01 | A User shall be able to leave one review per completed booking, with a 1 to 5 rating and an optional comment. | Medium |
+| FR-TRS-02 | A Provider shall be able to reply to reviews of their properties. | Low |
+| FR-TRS-03 | The User or the Provider of a booking shall be able to open one dispute on it with a category (payment, access, parking condition, overcharge, vehicle damage, or other) and a description; the booking becomes `DISPUTED`. | Medium |
+| FR-TRS-04 | The User and Provider shall be able to view their disputes; an Admin shall be able to begin a review with a target time (24 or 48 hours, optionally escalated), then resolve or reject it with a required note. Any financial remedy is processed through the refund workflow. | Medium |
+| FR-TRS-05 | A User shall be able to report a listing; an Admin shall be able to resolve or dismiss the report. | Low |
+| FR-TRS-06 | The system shall create in-app notifications for bookings, payments, refunds, payouts, Guard and Manager invitations, governance, parking rights, disputes, and Admin broadcasts, and let the account holder mark them read. | Medium |
+
+### 4.12 Administration
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-ADM-01 | An Admin shall be able to create accounts (sent a setup link), edit safe profile fields, resend setup links, suspend, unsuspend, block, unblock, and sign an account out everywhere. | High |
+| FR-ADM-02 | An Admin shall be able to review a pending property with its exact address, location, images, and Providers, and approve or reject it with a reason; verify Provider memberships; change a property's operating status; and merge duplicate properties after a preview. | High |
+| FR-ADM-03 | An Admin shall be able to review parking rights, amendments, and batches, and see rights that are expiring or in conflict. | High |
+| FR-ADM-04 | An Admin shall be able to change a parking resource's status, and cancel or refund a booking with a reason. | Medium |
+| FR-ADM-05 | An Admin shall be able to keep private notes and raise and resolve risk flags on accounts, separately from account status. | Medium |
+| FR-ADM-06 | An Admin shall be able to browse bookings, parking sessions, payments, refunds, the ledger, reconciliation figures, audit events, security events, and reviews. | Medium |
+| FR-ADM-07 | An Admin shall see analytics for bookings, finance, occupancy, and accounts, and a system health view. | Low |
+| FR-ADM-08 | An Admin shall be able to draft, publish, and archive versioned legal documents (published versions are never edited) and see acceptance counts. | Medium |
+| FR-ADM-09 | An Admin shall be able to manage FAQ and help articles. | Low |
+| FR-ADM-10 | An Admin shall be able to manage email templates (versioned, with safe placeholders, preview, and test send), and create, preview, test, schedule, send, and cancel email campaigns with delivery history and retry. | Low |
+| FR-ADM-11 | An Admin shall be able to send in-app broadcast notifications to an audience. | Low |
 
 ### 4.13 Realtime Updates
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-RT-01 | The system shall push realtime updates for booking, payment, availability, assignment, link, building-approval, and dispute state changes to authorized, room-scoped clients. | Medium |
-| FR-RT-02 | The system shall authorize every realtime room join server-side based on the connected user's roles, ownership, Manager Link, or Guard Assignment. A Manager shall never receive earning or payout events. | High |
-| FR-RT-03 | On socket reconnection, the frontend shall refetch REST state for all currently visible resources. | Medium |
-| FR-RT-04 | When realtime connectivity is unavailable, the system shall fall back to polling critical screens every 15 to 30 seconds. | Medium |
+| FR-RT-01 | The system shall push booking, payment, wallet, and assignment events to the affected account holders over Socket.IO. | Medium |
+| FR-RT-02 | Screens shall refetch REST data on reconnection and poll critical data, so every flow works without a realtime connection. | High |
 
 ---
 
@@ -462,61 +562,62 @@ Each requirement has a Priority of **High** (required for the semester MVP demon
 
 | ID | Type | Requirement |
 |---|---|---|
-| NFR-01 | Performance | Standard read API endpoints shall respond within 500 ms at the 95th percentile under expected demonstration load. |
-| NFR-02 | Performance | Search and availability data shall be cached with short TTLs (15 to 30 s search, 10 to 20 s availability) to stay near-real-time without overloading PostgreSQL. |
-| NFR-03 | Security | All passwords shall be hashed with Argon2id; no plaintext password shall ever be stored, logged, emailed, or returned by the API. Setup and reset tokens shall be stored only as hashes. |
-| NFR-04 | Security | All cookie-authenticated, state-changing requests shall require a valid CSRF token. |
-| NFR-05 | Security | Exact address, access instructions, and payout account numbers shall be encrypted at rest (authenticated encryption with a per-value IV) and masked in every response to an unauthorized party. |
-| NFR-06 | Security | Registration, login, OTP, booking-hold, payment-session, search, and staff-invitation endpoints shall enforce documented per-user/IP rate limits. |
-| NFR-07 | Security | Every Owner, Manager, and Guard request shall be checked against the specific property's ownership, Manager Link, or Guard Assignment on the server; a request for an unrelated property shall return the same not-found response as a missing one. |
-| NFR-08 | Reliability | A PostgreSQL exclusion constraint shall guarantee zero double-booking under concurrent load, verified by an automated test issuing 20 simultaneous hold requests for the same spot and time window, of which exactly one succeeds. |
-| NFR-09 | Reliability | State changes to assignments, links, and property verification shall use conditional (compare-and-set) updates inside a transaction so that two concurrent actions on the same record cannot both succeed. |
-| NFR-10 | Reliability | The system shall reject writes with a 503 response (never silently corrupt data) if PostgreSQL is unreachable, and shall degrade gracefully (skipping cache and delaying non-critical jobs) if Redis is unreachable. |
-| NFR-11 | Reliability | Every background job shall be idempotent and safely retryable using a deterministic job ID. |
-| NFR-12 | Availability | Booking, payment, and verification flows shall not depend on Socket.IO availability. |
-| NFR-13 | Usability | Guard and Driver interfaces shall be mobile-first with touch-friendly targets; Owner, Manager, and Admin interfaces shall be desktop-optimized with tables and filters, with the Manager dashboard also usable on a phone. |
-| NFR-14 | Usability | Every page shall provide loading, empty, and error states; every destructive or financial action shall require explicit confirmation. |
-| NFR-15 | Accessibility | All form inputs shall have visible labels and associated error messages; status shall never be conveyed by color alone. |
-| NFR-16 | Auditability | Every booking status transition and every sensitive Admin, Owner, or Manager action (including link changes, building approvals and waivers, Guard assignment changes, and spot blocks) shall be recorded with actor, role, timestamp, and before/after data. |
-| NFR-17 | Maintainability | Backend modules shall follow a consistent layered structure (route/controller/service/repository/policy/schema/mapper); frontend features shall follow a consistent feature-folder structure. The Manager module shall reuse the Guard Assignment lifecycle rules rather than duplicate them. |
-| NFR-18 | Compatibility | The web application shall function on current versions of Chrome, Firefox, Edge, and Safari, and shall be responsive across mobile, tablet, and desktop breakpoints. |
-| NFR-19 | Privacy | Exact residential address, access instructions, and unmasked vehicle/contact data shall be visible only to an authorized Driver, assigned Guard, linked Manager, owning Owner, or Admin. |
-| NFR-20 | Privacy (least privilege) | A Manager shall be unable to obtain any financial amount belonging to an Owner through any API response, realtime event, notification, export, or error message. |
-| NFR-21 | Data Integrity | All monetary values shall be stored and computed as integer paisa; the frontend shall never derive a final payable amount from displayed, formatted text. |
-| NFR-22 | Testability | Booking-hold concurrency, duplicate-IPN handling, duplicate-checkout, Manager scope isolation, and building-approval gating shall each have an automated regression test before the corresponding feature is considered complete. |
-| NFR-23 | Scalability | The system shall be architected as a modular monolith sufficient for a semester demonstration load; horizontal auto-scaling is not required. |
+| NFR-01 | Security | Passwords shall be hashed with Argon2id; setup, reset, and verification tokens shall be stored only as hashes. |
+| NFR-02 | Security | Access and refresh tokens shall be signed with separate secrets and sent only in HttpOnly cookies; refresh tokens rotate on use. |
+| NFR-03 | Security | Every state-changing cookie request shall carry a valid CSRF token; responses shall use Helmet security headers and a CORS allow-list. |
+| NFR-04 | Security | Exact addresses, access instructions, and payout account numbers shall be encrypted with AES-256-GCM; payout numbers shall be masked in every response. |
+| NFR-05 | Security | Rate limits shall apply: registration 5 per hour, login 5 per 15 minutes, refresh 30 per 15 minutes, password reset 3 per hour, verification requests 6 and confirmations 10 per 15 minutes, sensitive account and staff-invitation actions 5 per 15 minutes, plus limits on payment sessions. |
+| NFR-06 | Security | Every Provider, Manager, and Guard request shall be checked against current memberships, delegations, and assignments; roles are loaded from the database on each request. |
+| NFR-07 | Integrity | PostgreSQL exclusion constraints shall make overlapping allocations of the same resource or unit impossible. |
+| NFR-08 | Integrity | Money shall be integer paisa; every ledger transaction shall balance; payment capture shall run in a serializable transaction. |
+| NFR-09 | Integrity | Property, right, delegation, and assignment changes shall use optimistic versions or conditional updates so two concurrent changes cannot both succeed. |
+| NFR-10 | Reliability | Payment callbacks, holds, payouts, and settlements shall be idempotent. |
+| NFR-11 | Availability | Booking, payment, and gate flows shall not depend on Socket.IO. |
+| NFR-12 | Privacy | Search, property pages, and Guard views shall never expose exact addresses or payout details; Guard views shall show only what is needed to verify the vehicle. |
+| NFR-13 | Usability | Guard and User screens shall be mobile-first; Provider, Manager, and Admin screens shall work on desktop and phone. |
+| NFR-14 | Usability | Every page shall have loading, empty, and error states, and every destructive or financial action shall ask for confirmation. |
+| NFR-15 | Auditability | Booking transitions and every sensitive Admin, Provider, Manager, and Guard action shall be recorded as audit events with actor, time, and before-and-after data. |
+| NFR-16 | Maintainability | Backend modules shall follow the route / controller / service / repository / schema layering; frontend features shall follow the feature-folder structure. |
+| NFR-17 | Compatibility | The app shall work in current Chrome, Firefox, Edge, and Safari at phone, tablet, and desktop widths. |
 
 ---
 
 ## 6. Acceptance Criteria
 
-The system is considered functionally complete for evaluation when all of the following are demonstrable:
+The system is complete for evaluation when each of the following can be demonstrated on the deployed site:
 
-1. **Double-booking prevention:** an automated test issues 20 concurrent hold requests for the same parking spot and overlapping time window; exactly one succeeds, and the rest receive a clear `BOOKING_SLOT_UNAVAILABLE` error. Adjacent, non-overlapping bookings on the same spot both succeed.
-2. **Hold expiry:** an unpaid `HELD` booking automatically expires within its configured window, and the parking spot becomes searchable again without manual intervention.
-3. **End-to-end Driver flow:** register → verify email → add a vehicle → search parking → request a quote → create a hold → pay via the SSLCOMMERZ sandbox → receive a confirmed booking → view the entry QR/OTP → get checked in by a Guard → request checkout → get checked out by a Guard → see the correct overtime/refund settlement.
-4. **End-to-end Owner flow (standalone property):** create a property → upload images → Admin approves → create a parking spot → define weekly availability → receive and manage a booking → see the earning appear once the dispute window passes → request a (simulated) payout.
-5. **End-to-end Manager flow (shared-building property):** an Owner creates a shared-building property and a Manager account → the Manager sets a password through the setup link, verifies email, and accepts the link → the Manager approves the listing → the Admin verifies it → the Manager creates a spot, sets availability, and assigns a Guard → a Driver books and is checked in by that Guard → the Manager sees the booking and session without any amounts → the Owner ends the link and the Manager immediately loses access.
-6. **Building-approval gate:** an Admin approval attempt on a shared-building property with no Manager approval and no waiver is rejected; after a Manager rejection with reason, the Owner edits the property and it returns to `AWAITING_MANAGER_APPROVAL`.
-7. **Manager isolation:** automated tests confirm that a Manager receives not-found for properties without an `ACTIVE` link (including a `SUSPENDED` or `ENDED` one), and forbidden for every earnings, wallet, payout-account, and payout endpoint, including on linked properties.
-8. **End-to-end Guard flow:** an Owner, Manager, or Admin creates a Guard → the Guard sets a password through the setup link and verifies email → the Guard accepts the property assignment → the Guard has zero operational access before acceptance and full access after.
-9. **End-to-end Admin flow:** the pending-property queue, approve/reject-with-reason, building-approval waiver, dispute resolution, payout approval, payment and wallet reconciliation, controlled-account suspension, and audit-log browsing are each demonstrable against seed data.
-10. **Privacy guarantee:** manual and automated review confirms that exact address, access instructions, raw QR/OTP values, full payout account numbers, setup tokens, and passwords are never observable in an unauthorized API response, browser storage, log, or analytics event.
-11. **Traceability:** every High-priority requirement in Section 4 maps to at least one implemented backend endpoint and, where user-facing, one implemented frontend screen.
-12. **Regression safety:** the mandatory concurrency and security test suite referenced in NFR-08 and NFR-22 passes in CI before a phase is marked complete.
-13. **Diagram consistency:** the Context, Use Case, and Data Flow diagrams in Sections 2 and 3 are re-validated against the implemented route map and database schema at each major milestone review, and updated if they drift.
+1. **Provider onboarding:** register → add a property with images → Admin verifies → add a resource → claim a right → Admin verifies → activate the resource → create a listing → set availability → activate → the listing appears in search.
+2. **User rental:** register → verify email → add a vehicle → search → quote → hold → book → pay in the SSLCOMMERZ sandbox → confirmed booking with a QR pass.
+3. **Gate:** an accepted Guard with an active shift verifies the QR pass, checks the vehicle in, and checks it out; overtime beyond the grace period is charged from the deposit.
+4. **Settlement:** after check-out or a no-show, the Provider's available balance, the platform revenue, and the User's Refund Balance each change by the amounts in §3.5.5.
+5. **Payouts:** a Provider requests a payout and an Admin holds, approves, and marks it paid; a User withdraws their Refund Balance the same way.
+6. **Cancellation:** a paid booking cancelled at each notice level refunds the parking charge at the rates in FR-FIN-06 and always returns the deposit.
+7. **Double-booking:** concurrent holds for the same resource and overlapping time produce exactly one success.
+8. **Delegation:** a Manager with a limited permission set can do exactly those operations and nothing else, and loses access as soon as the delegation ends.
+9. **Governance:** with two verified Providers, a change proposal takes effect only after both approve.
+10. **Disputes:** a User opens a dispute, and an Admin begins review and resolves it with a note.
+11. **Privacy:** the exact address, payout numbers, tokens, and passwords never appear in search results, Guard views, browser storage, or logs.
+12. **Diagram consistency:** the diagrams in §2 and §3 are re-checked against the route map and schema at each milestone.
 
 ---
 
 ## Appendix A: Diagram Sources
 
-The diagrams in Sections 2 and 3 are generated from PlantUML source files kept alongside this document, so they can be regenerated after any change to the route map or data model:
+All diagrams are generated from PlantUML sources kept beside this document:
 
 ```text
 docs/diagrams/context-diagram.puml             → docs/diagrams/context-diagram.png
 docs/diagrams/use-case-booking.puml            → docs/diagrams/use-case-booking.png
 docs/diagrams/use-case-property.puml           → docs/diagrams/use-case-property.png
+docs/diagrams/use-case-admin.puml              → docs/diagrams/use-case-admin.png
 docs/diagrams/dfd-level1.puml                  → docs/diagrams/dfd-level1.png
+docs/diagrams/uml-class-diagram.puml           → docs/diagrams/uml-class-diagram.png
+docs/diagrams/uml-booking-state.puml           → docs/diagrams/uml-booking-state.png
+docs/diagrams/flow-provider-listing.puml       → docs/diagrams/flow-provider-listing.png
+docs/diagrams/flow-user-rental.puml            → docs/diagrams/flow-user-rental.png
+docs/diagrams/seq-user-payment.puml            → docs/diagrams/seq-user-payment.png
+docs/diagrams/seq-provider-payout.puml         → docs/diagrams/seq-provider-payout.png
+docs/diagrams/flow-money.puml                  → docs/diagrams/flow-money.png
 ```
 
 To regenerate after editing a `.puml` file (requires Java and Graphviz):
