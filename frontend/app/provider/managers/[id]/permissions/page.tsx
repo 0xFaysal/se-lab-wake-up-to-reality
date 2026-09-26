@@ -13,7 +13,7 @@ import { parkingResourcesApi } from "@/lib/api/parking-resources-api";
 import { queryKeys } from "@/lib/query-keys";
 
 const ALL: ManagerPermission[] = [
-  "RESOURCE_VIEW", "LISTING_VIEW", "LISTING_MANAGE", "PRICE_MANAGE",
+  "RESOURCE_VIEW", "RESOURCE_MANAGE", "LISTING_VIEW", "LISTING_MANAGE", "PRICE_MANAGE",
   "AVAILABILITY_MANAGE", "BOOKING_VIEW", "BOOKING_MANAGE", "IMAGE_MANAGE",
   "GUARD_VIEW", "GUARD_ADD_TO_PROPERTY", "GUARD_ASSIGN", "EARNINGS_VIEW",
   "REPORTS_VIEW",

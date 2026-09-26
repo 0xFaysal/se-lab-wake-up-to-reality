@@ -1,13 +1,56 @@
 import { apiClient } from "./api-client";
 
-export type ManagerPermission = "RESOURCE_VIEW" | "LISTING_VIEW" | "LISTING_MANAGE" | "PRICE_MANAGE" | "AVAILABILITY_MANAGE" | "BOOKING_VIEW" | "BOOKING_MANAGE" | "IMAGE_MANAGE" | "GUARD_VIEW" | "GUARD_ADD_TO_PROPERTY" | "GUARD_ASSIGN" | "EARNINGS_VIEW" | "REPORTS_VIEW";
+export type ManagerPermission =
+  | "RESOURCE_VIEW"
+  | "RESOURCE_MANAGE"
+  | "LISTING_VIEW"
+  | "LISTING_MANAGE"
+  | "PRICE_MANAGE"
+  | "AVAILABILITY_MANAGE"
+  | "BOOKING_VIEW"
+  | "BOOKING_MANAGE"
+  | "IMAGE_MANAGE"
+  | "GUARD_VIEW"
+  | "GUARD_ADD_TO_PROPERTY"
+  | "GUARD_ASSIGN"
+  | "EARNINGS_VIEW"
+  | "REPORTS_VIEW";
+
+export interface ManagerCapabilities {
+  resources: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  listings: {
+    view: boolean;
+    create: boolean;
+    edit: boolean;
+    pause: boolean;
+    resume: boolean;
+    price: boolean;
+    end: boolean;
+  };
+  availability: { view: boolean; manage: boolean };
+  bookings: { view: boolean; manage: boolean };
+  guards: { view: boolean; add: boolean; assign: boolean };
+  images: { manage: boolean };
+  earnings: { view: boolean };
+  reports: { view: boolean };
+}
+
 export interface ManagerDelegationDto {
   id: string;
-  property: { id: string; name: string; publicArea: string };
-  manager: { id: string; fullName: string };
-  provider?: { id: string; fullName: string };
+  propertyId?: string;
+  property: {
+    id: string;
+    name: string;
+    publicArea: string;
+    approximateAddress?: string;
+    description?: string | null;
+  };
+  manager: { id: string; fullName: string; email?: string; phone?: string };
+  provider?: { id: string; fullName: string; email?: string; phone?: string };
   status: string;
   permissions: ManagerPermission[];
+  effectivePermissions?: ManagerPermission[];
+  capabilities?: ManagerCapabilities;
   resourceIds: string[];
   validFrom: string | null;
   validUntil: string | null;

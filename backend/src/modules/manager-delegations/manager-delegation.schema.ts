@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const managerPermissionValues = [
   "RESOURCE_VIEW",
+  "RESOURCE_MANAGE",
   "LISTING_VIEW",
   "LISTING_MANAGE",
   "PRICE_MANAGE",
@@ -16,7 +17,7 @@ export const managerPermissionValues = [
   "REPORTS_VIEW",
 ] as const;
 
-const permissionList = z.array(z.enum(managerPermissionValues)).min(1).max(13);
+const permissionList = z.array(z.enum(managerPermissionValues)).min(1).max(14);
 
 export const createManagerDelegationSchema = z.object({
   body: z

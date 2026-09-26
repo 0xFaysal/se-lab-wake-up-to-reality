@@ -13,7 +13,16 @@ export type FinancialRealtimeEvent =
   | "booking:settlement_completed"
   | "booking:payment_due"
   | "wallet:balance_changed"
-  | "payout:status_changed";
+  | "payout:status_changed"
+  | "resource:created"
+  | "resource:updated"
+  | "listing:created"
+  | "listing:updated"
+  | "listing:price_updated"
+  | "listing:status_changed"
+  | "availability:updated"
+  | "guard:assignment_updated"
+  | "booking:updated";
 
 let io: Server | null = null;
 
@@ -62,7 +71,14 @@ export function configureRealtime(server: HttpServer) {
 export function notifyUser(
   userId: string,
   event: FinancialRealtimeEvent,
-  entity: { bookingId?: string; payoutId?: string },
+  entity: {
+    bookingId?: string;
+    payoutId?: string;
+    resourceId?: string;
+    listingId?: string;
+    propertyId?: string;
+    [key: string]: unknown;
+  },
 ) {
   if (!io) return;
   io.to(`user:${userId}`).emit(event, {

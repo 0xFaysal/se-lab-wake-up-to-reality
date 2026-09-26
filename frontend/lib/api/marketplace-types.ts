@@ -182,6 +182,7 @@ export interface BookingDto {
   parkingSpot?: { id: string; displayName: string | null; spotCode: string | null; resourceType: ParkingResourceType; floor: string | null; zone: string | null };
   parkingResourceUnit?: { id: string; spotCode: string; displayName: string | null; status: ParkingResourceStatus } | null;
   listing?: { id: string; title: string; providerMembershipId?: string }; payments?: PaymentDto[];
+  driver?: { id: string; fullName: string; phone?: string; email?: string };
   accessCredential?: string | null;
   canCancel: boolean;
   canPay: boolean;
