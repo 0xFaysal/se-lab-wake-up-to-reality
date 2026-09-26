@@ -12,7 +12,7 @@ import { bookingsApi } from "@/lib/api/bookings-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
-import type { MarketplaceBookingStatus } from "@/lib/api/marketplace-types";
+import type { BookingDto, MarketplaceBookingStatus } from "@/lib/api/marketplace-types";
 
 const STATUS_CONFIG: Record<
   MarketplaceBookingStatus,
@@ -42,8 +42,8 @@ export function ManagerBookingsSection({
   resourceIds: string[];
 }) {
   const query = useQuery({
-    queryKey: queryKeys.bookings.provider({}),
-    queryFn: bookingsApi.providerList,
+    queryKey: queryKeys.bookings.provider({ propertyId }),
+    queryFn: () => bookingsApi.providerList({ propertyId }),
   });
 
   if (query.isPending) {
@@ -62,8 +62,9 @@ export function ManagerBookingsSection({
   }
 
   // Filter to this property and the delegated resource scope
-  const allBookings = (query.data ?? []).filter(
-    (b) =>
+  const rawBookings: BookingDto[] = Array.isArray(query.data) ? query.data : [];
+  const allBookings = rawBookings.filter(
+    (b: BookingDto) =>
       b.propertyId === propertyId &&
       (resourceIds.length === 0 || resourceIds.includes(b.parkingSpotId)),
   );

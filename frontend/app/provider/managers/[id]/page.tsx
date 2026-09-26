@@ -42,6 +42,7 @@ import { queryKeys } from "@/lib/query-keys";
 
 const PERMISSION_LABELS: Record<ManagerPermission, { label: string; description: string }> = {
   RESOURCE_VIEW: { label: "View Resources", description: "See assigned parking inventory." },
+  RESOURCE_MANAGE: { label: "Manage Resources", description: "Create and configure parking inventory." },
   LISTING_VIEW: { label: "View Listings", description: "See listing state and pricing." },
   LISTING_MANAGE: { label: "Manage Listings", description: "Create, pause, and update listings." },
   PRICE_MANAGE: { label: "Manage Pricing", description: "Change hourly prices and deposits." },

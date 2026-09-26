@@ -96,6 +96,8 @@ export function findActiveBuildingManager(
   });
 }
 
+import { permissionsSatisfying } from "../../common/auth/business-actor-context.js";
+
 export function findLiveManagerDelegation(
   managerUserId: string,
   propertyId: string,
@@ -104,6 +106,7 @@ export function findLiveManagerDelegation(
   db: GovernanceClient = prisma,
 ) {
   const now = new Date();
+  const satisfying = permissionsSatisfying(permission);
   return db.providerManagerDelegation.findFirst({
     where: {
       managerUserId,
@@ -115,7 +118,14 @@ export function findLiveManagerDelegation(
       OR: [{ validFrom: null }, { validFrom: { lte: now } }],
       AND: [{ OR: [{ validUntil: null }, { validUntil: { gt: now } }] }],
       grantorProviderMembership: activeVerifiedProviderWhere,
-      permissions: { some: { permission } },
+      permissions: {
+        some: {
+          permission:
+            satisfying.length === 1 && satisfying[0] === permission
+              ? permission
+              : { in: satisfying },
+        },
+      },
     },
   });
 }

@@ -17,6 +17,24 @@ interface UpdateParkingResourceInput {
   maxLengthCm?: number | null;
 }
 
+export interface PropertyReportsDto {
+  propertyId: string;
+  metrics: {
+    totalResources: number;
+    totalListings: number;
+    activeListings: number;
+    totalBookings: number;
+    activeBookings: number;
+    completedBookings: number;
+    cancelledBookings: number;
+  };
+  financial?: {
+    totalEarningsPaisa: number;
+    averageBookingValuePaisa: number;
+    pendingSettlementPaisa: number;
+  };
+}
+
 export const parkingResourcesApi = {
   list: (propertyId: string) => apiClient.get<ParkingResourceDto[]>(`/provider/properties/${propertyId}/parking-resources`),
   detail: (resourceId: string) => apiClient.get<ParkingResourceDto>(`/provider/parking-resources/${resourceId}`),
@@ -29,4 +47,5 @@ export const parkingResourcesApi = {
   addException: (resourceId: string, input: { startsAt: string; endsAt: string; exceptionType: "BLOCKED" | "SPECIAL_AVAILABLE"; reason?: string }) => apiClient.post<AvailabilityExceptionDto>(`/provider/parking-resources/${resourceId}/availability/exceptions`, input),
   updateException: (exceptionId: string, input: Partial<{ startsAt: string; endsAt: string; exceptionType: "BLOCKED" | "SPECIAL_AVAILABLE"; reason: string | null }>) => apiClient.patch<AvailabilityExceptionDto>(`/provider/availability/exceptions/${exceptionId}`, input),
   removeException: (exceptionId: string) => apiClient.delete<{ deleted: true }>(`/provider/availability/exceptions/${exceptionId}`),
+  reports: (propertyId: string) => apiClient.get<PropertyReportsDto>(`/provider/properties/${propertyId}/reports`),
 };

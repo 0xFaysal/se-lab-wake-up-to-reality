@@ -368,7 +368,7 @@ export async function createResource(
       const authority = await requireAuthority(
         actorUserId,
         propertyId,
-        undefined,
+        ManagerDelegationPermission.RESOURCE_MANAGE,
         undefined,
         tx,
       );
@@ -436,7 +436,25 @@ export async function createResource(
         propertyId,
         "ParkingResource",
         resource.id,
+        authority.managed
+          ? {
+              actorRole: "MANAGER",
+              authorityType: "MANAGER_DELEGATION",
+              delegationId: authority.delegationId,
+              providerUserId: authority.membership.providerUserId,
+            }
+          : undefined,
       );
+      notifyUser(authority.membership.providerUserId, "resource:created", {
+        resourceId: resource.id,
+        propertyId,
+      });
+      if (authority.managed) {
+        notifyUser(actorUserId, "resource:created", {
+          resourceId: resource.id,
+          propertyId,
+        });
+      }
       return serialize(resource);
     },
     { isolationLevel: "Serializable" },
@@ -485,7 +503,7 @@ export async function createBulkFixedResources(
       const authority = await requireAuthority(
         actorUserId,
         propertyId,
-        undefined,
+        ManagerDelegationPermission.RESOURCE_MANAGE,
         undefined,
         tx,
       );
@@ -595,8 +613,28 @@ export async function createBulkFixedResources(
         propertyId,
         "ParkingResource",
         resource.id,
-        { createdUnitCount: rows.length },
+        {
+          createdUnitCount: rows.length,
+          ...(authority.managed
+            ? {
+                actorRole: "MANAGER",
+                authorityType: "MANAGER_DELEGATION",
+                delegationId: authority.delegationId,
+                providerUserId: authority.membership.providerUserId,
+              }
+            : {}),
+        },
       );
+      notifyUser(authority.membership.providerUserId, "resource:created", {
+        resourceId: resource.id,
+        propertyId,
+      });
+      if (authority.managed) {
+        notifyUser(actorUserId, "resource:created", {
+          resourceId: resource.id,
+          propertyId,
+        });
+      }
       return serialize({
         resource,
         units: resource.units,
@@ -677,10 +715,10 @@ export async function updateResource(
           "PARKING_RESOURCE_NOT_FOUND",
           "Parking resource was not found",
         );
-      await requireAuthority(
+      const authority = await requireAuthority(
         actorUserId,
         resource.propertyId,
-        ManagerDelegationPermission.LISTING_MANAGE,
+        ManagerDelegationPermission.RESOURCE_MANAGE,
         resourceId,
         tx,
       );
@@ -728,6 +766,16 @@ export async function updateResource(
           data: { status: input.status as ParkingSpotStatus },
         });
       }
+      notifyUser(authority.membership.providerUserId, "resource:updated", {
+        resourceId,
+        propertyId: resource.propertyId,
+      });
+      if (authority.managed) {
+        notifyUser(actorUserId, "resource:updated", {
+          resourceId,
+          propertyId: resource.propertyId,
+        });
+      }
       return serialize(updated);
     },
     { isolationLevel: "Serializable" },
@@ -742,10 +790,10 @@ export async function deleteResource(actorUserId: string, resourceId: string) {
     });
     if (!resource)
       fail(404, "PARKING_RESOURCE_NOT_FOUND", "Parking resource was not found");
-    await requireAuthority(
+    const authority = await requireAuthority(
       actorUserId,
       resource.propertyId,
-      undefined,
+      ManagerDelegationPermission.RESOURCE_MANAGE,
       resourceId,
       tx,
     );
@@ -773,6 +821,16 @@ export async function deleteResource(actorUserId: string, resourceId: string) {
       where: { id: resourceId },
       data: { deletedAt: new Date(), status: "INACTIVE" },
     });
+    notifyUser(authority.membership.providerUserId, "resource:updated", {
+      resourceId,
+      propertyId: resource.propertyId,
+    });
+    if (authority.managed) {
+      notifyUser(actorUserId, "resource:updated", {
+        resourceId,
+        propertyId: resource.propertyId,
+      });
+    }
   });
 }
 
@@ -2748,6 +2806,16 @@ export async function createListing(
           changedByUserId: actorUserId,
         },
       });
+      notifyUser(authority.membership.providerUserId, "listing:created", {
+        listingId: listing.id,
+        propertyId: right.parkingSpot.propertyId,
+      });
+      if (authority.managed) {
+        notifyUser(actorUserId, "listing:created", {
+          listingId: listing.id,
+          propertyId: right.parkingSpot.propertyId,
+        });
+      }
       return serialize(listing);
     },
     { isolationLevel: "Serializable" },
@@ -2826,15 +2894,33 @@ export async function updateListing(
       input.overtimeMultiplierBps !== undefined ||
       input.overtimeRatePerHourPaisa !== undefined ||
       input.overtimeGracePeriodMinutes !== undefined;
-    await requireAuthority(
+    const nonPriceChange =
+      input.title !== undefined ||
+      input.description !== undefined ||
+      input.minDurationMinutes !== undefined ||
+      input.maxDurationMinutes !== undefined ||
+      input.allowedVehicleTypes !== undefined;
+    let requiredPermission: ManagerDelegationPermission =
+      ManagerDelegationPermission.LISTING_MANAGE;
+    if (priceChange && !nonPriceChange) {
+      requiredPermission = ManagerDelegationPermission.PRICE_MANAGE;
+    }
+    const authority = await requireAuthority(
       actorUserId,
       listing.parkingSpot.propertyId,
-      priceChange
-        ? ManagerDelegationPermission.PRICE_MANAGE
-        : ManagerDelegationPermission.LISTING_MANAGE,
+      requiredPermission,
       listing.parkingSpotId,
       tx,
     );
+    if (priceChange && nonPriceChange && authority.managed) {
+      await requireAuthority(
+        actorUserId,
+        listing.parkingSpot.propertyId,
+        ManagerDelegationPermission.PRICE_MANAGE,
+        listing.parkingSpotId,
+        tx,
+      );
+    }
     if (
       listing.status === ParkingListingStatus.ENDED ||
       listing.status === ParkingListingStatus.SUSPENDED
@@ -2902,6 +2988,32 @@ export async function updateListing(
         },
       });
     }
+    notifyUser(authority.membership.providerUserId, "listing:updated", {
+      listingId: listing.id,
+      propertyId: listing.parkingSpot.propertyId,
+    });
+    if (priceChange) {
+      notifyUser(
+        authority.membership.providerUserId,
+        "listing:price_updated",
+        {
+          listingId: listing.id,
+          propertyId: listing.parkingSpot.propertyId,
+        },
+      );
+    }
+    if (authority.managed) {
+      notifyUser(actorUserId, "listing:updated", {
+        listingId: listing.id,
+        propertyId: listing.parkingSpot.propertyId,
+      });
+      if (priceChange) {
+        notifyUser(actorUserId, "listing:price_updated", {
+          listingId: listing.id,
+          propertyId: listing.parkingSpot.propertyId,
+        });
+      }
+    }
     return serialize(updated);
   });
 }
@@ -2924,7 +3036,7 @@ async function changeListingStatus(
       });
       if (!listing)
         fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
-      await requireAuthority(
+      const authority = await requireAuthority(
         actorUserId,
         listing.parkingSpot.propertyId,
         ManagerDelegationPermission.LISTING_MANAGE,
@@ -3018,7 +3130,35 @@ async function changeListingStatus(
         listing.parkingSpot.propertyId,
         "ParkingListing",
         listing.id,
+        authority.managed
+          ? {
+              actorRole: "MANAGER",
+              authorityType: "MANAGER_DELEGATION",
+              delegationId: authority.delegationId,
+              providerUserId: authority.membership.providerUserId,
+            }
+          : undefined,
       );
+      notifyUser(authority.membership.providerUserId, "listing:status_changed", {
+        listingId: listing.id,
+        propertyId: listing.parkingSpot.propertyId,
+        status: activate ? "ACTIVE" : "PAUSED",
+      });
+      notifyUser(authority.membership.providerUserId, "listing:updated", {
+        listingId: listing.id,
+        propertyId: listing.parkingSpot.propertyId,
+      });
+      if (authority.managed) {
+        notifyUser(actorUserId, "listing:status_changed", {
+          listingId: listing.id,
+          propertyId: listing.parkingSpot.propertyId,
+          status: activate ? "ACTIVE" : "PAUSED",
+        });
+        notifyUser(actorUserId, "listing:updated", {
+          listingId: listing.id,
+          propertyId: listing.parkingSpot.propertyId,
+        });
+      }
       return serialize(updated);
     },
     { isolationLevel: "Serializable" },
@@ -3037,18 +3177,29 @@ export async function endListing(actorUserId: string, listingId: string) {
   });
   if (!listing)
     fail(404, "PARKING_LISTING_NOT_FOUND", "Parking listing was not found");
-  await requireAuthority(
+  const authority = await requireAuthority(
     actorUserId,
     listing.parkingSpot.propertyId,
     ManagerDelegationPermission.LISTING_MANAGE,
     listing.parkingSpotId,
   );
-  return serialize(
-    await prisma.parkingListing.update({
-      where: { id: listingId },
-      data: { status: ParkingListingStatus.ENDED, deactivatedAt: new Date() },
-    }),
-  );
+  const updated = await prisma.parkingListing.update({
+    where: { id: listingId },
+    data: { status: ParkingListingStatus.ENDED, deactivatedAt: new Date() },
+  });
+  notifyUser(authority.membership.providerUserId, "listing:status_changed", {
+    listingId,
+    propertyId: listing.parkingSpot.propertyId,
+    status: "ENDED",
+  });
+  if (authority.managed) {
+    notifyUser(actorUserId, "listing:status_changed", {
+      listingId,
+      propertyId: listing.parkingSpot.propertyId,
+      status: "ENDED",
+    });
+  }
+  return serialize(updated);
 }
 
 const adminListingInclude = {
@@ -5253,6 +5404,7 @@ const bookingInclude = {
   },
   listing: { select: { id: true, title: true } },
   payments: { orderBy: { createdAt: "desc" as const } },
+  driver: { select: { id: true, fullName: true, phone: true, email: true } },
 } satisfies Prisma.BookingInclude;
 
 const ACCESS_CREDENTIAL_PREFIX = "parkease-access:";
@@ -5805,7 +5957,10 @@ export async function getDriverBooking(
   return serialize({ ...presentBooking(details), accessCredential });
 }
 
-export async function listProviderBookings(actorUserId: string) {
+export async function listProviderBookings(
+  actorUserId: string,
+  filters: { propertyId?: string; status?: BookingStatus } = {},
+) {
   await reconcileMarketplaceLifecycle();
   const scopes = await listProviderAccessScopes(
     actorUserId,
@@ -5818,6 +5973,8 @@ export async function listProviderBookings(actorUserId: string) {
           in: scopes.map((scope) => scope.providerMembershipId),
         },
       },
+      ...(filters.propertyId ? { propertyId: filters.propertyId } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
     },
     include: {
       ...bookingInclude,
@@ -8325,3 +8482,109 @@ export async function listDisputes(input: {
     pagination: pagination(input.page, input.limit, total),
   });
 }
+
+export async function getPropertyReports(
+  actorUserId: string,
+  propertyId: string,
+) {
+  const authority = await requireAuthority(
+    actorUserId,
+    propertyId,
+    ManagerDelegationPermission.REPORTS_VIEW,
+  );
+
+  const canEarnings =
+    !authority.managed ||
+    (await resolveProviderAuthority(
+      actorUserId,
+      propertyId,
+      ManagerDelegationPermission.EARNINGS_VIEW,
+    )) !== null;
+
+  const [bookingCounts, resources, activeListings] = await Promise.all([
+    prisma.booking.groupBy({
+      by: ["status"],
+      where: {
+        propertyId,
+        ...(authority.managed
+          ? { providerUserId: authority.membership.providerUserId }
+          : {}),
+      },
+      _count: true,
+    }),
+    prisma.parkingSpot.findMany({
+      where: {
+        propertyId,
+        deletedAt: null,
+        ...(authority.managed
+          ? { providerMembershipId: authority.membership.id }
+          : {}),
+      },
+      select: { id: true, status: true, capacity: true },
+    }),
+    prisma.parkingListing.count({
+      where: {
+        parkingSpot: { propertyId },
+        status: ParkingListingStatus.ACTIVE,
+        ...(authority.managed
+          ? { providerMembershipId: authority.membership.id }
+          : {}),
+      },
+    }),
+  ]);
+
+  const bookingStatusBreakdown: Record<string, number> = {};
+  let totalBookings = 0;
+  for (const b of bookingCounts) {
+    bookingStatusBreakdown[b.status] = b._count;
+    totalBookings += b._count;
+  }
+
+  let totalCapacity = 0;
+  let activeResources = 0;
+  for (const r of resources) {
+    totalCapacity += r.capacity;
+    if (r.status === ParkingSpotStatus.ACTIVE) activeResources++;
+  }
+
+  let financialMetrics: {
+    totalRevenuePaisa: string;
+    settledRevenuePaisa: string;
+  } | null = null;
+
+  if (canEarnings) {
+    const revenue = await prisma.booking.aggregate({
+      where: {
+        propertyId,
+        status: { in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
+        ...(authority.managed
+          ? { providerUserId: authority.membership.providerUserId }
+          : {}),
+      },
+      _sum: { totalAmountPaisa: true, baseAmountPaisa: true },
+    });
+    financialMetrics = {
+      totalRevenuePaisa: String(revenue._sum.totalAmountPaisa ?? 0n),
+      settledRevenuePaisa: String(revenue._sum.baseAmountPaisa ?? 0n),
+    };
+  }
+
+  return serialize({
+    propertyId,
+    totalBookings,
+    activeBookings:
+      (bookingStatusBreakdown["ACTIVE"] ?? 0) +
+      (bookingStatusBreakdown["CONFIRMED"] ?? 0),
+    completedBookings: bookingStatusBreakdown["COMPLETED"] ?? 0,
+    cancelledBookings: bookingStatusBreakdown["CANCELLED"] ?? 0,
+    bookingStatusBreakdown,
+    resourceMetrics: {
+      totalResources: resources.length,
+      activeResources,
+      totalCapacity,
+    },
+    activeListingCount: activeListings,
+    financialMetrics,
+  });
+}
+

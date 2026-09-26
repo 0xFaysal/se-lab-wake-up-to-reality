@@ -321,7 +321,7 @@ export const getDriverBooking = action((req) =>
   service.getDriverBooking(userId(req), param(req, "bookingId")),
 );
 export const listProviderBookings = action((req) =>
-  service.listProviderBookings(userId(req)),
+  service.listProviderBookings(userId(req), req.query as never),
 );
 export const getProviderBooking = action((req) =>
   service.getProviderBooking(userId(req), param(req, "bookingId")),
@@ -473,3 +473,7 @@ export const listAdminListings = action((req) =>
 export const getAdminListing = action((req) =>
   service.getAdminListing(param(req, "listingId")),
 );
+export const getPropertyReports = action((req) =>
+  service.getPropertyReports(userId(req), param(req, "propertyId")),
+);
+

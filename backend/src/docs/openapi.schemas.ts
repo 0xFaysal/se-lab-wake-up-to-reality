@@ -993,6 +993,7 @@ export const openApiSchemas = {
     type: "string",
     enum: [
       "RESOURCE_VIEW",
+      "RESOURCE_MANAGE",
       "LISTING_VIEW",
       "LISTING_MANAGE",
       "PRICE_MANAGE",

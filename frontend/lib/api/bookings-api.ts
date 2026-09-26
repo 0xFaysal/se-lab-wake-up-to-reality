@@ -5,7 +5,13 @@ export const bookingsApi = {
   create: (holdId: string, idempotencyKey: string) => apiClient.post<BookingDto>("/bookings", { holdId, idempotencyKey }),
   driverList: () => apiClient.get<BookingDto[]>("/bookings"),
   driverDetail: (bookingId: string) => apiClient.get<BookingDto>(`/bookings/${bookingId}`),
-  providerList: () => apiClient.get<BookingDto[]>("/provider/bookings"),
+  providerList: (filters?: { propertyId?: string; status?: string }) => {
+    const query = new URLSearchParams();
+    if (filters?.propertyId) query.set("propertyId", filters.propertyId);
+    if (filters?.status) query.set("status", filters.status);
+    const q = query.toString();
+    return apiClient.get<BookingDto[]>(`/provider/bookings${q ? `?${q}` : ""}`);
+  },
   providerDetail: (bookingId: string) => apiClient.get<BookingDto>(`/provider/bookings/${bookingId}`),
   cancellationPreview: (bookingId: string) => apiClient.get<BookingCancellationPreview>(`/bookings/${bookingId}/cancellation-preview`),
   cancel: (bookingId: string, input: { reason?: string; idempotencyKey: string }) => apiClient.post<{ booking: BookingDto }>(`/bookings/${bookingId}/cancel`, input),
