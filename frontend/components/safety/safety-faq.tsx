@@ -15,7 +15,7 @@ const SAFETY_FAQS = [
   {
     question: "How are residential security guards trained and assigned?",
     answer:
-      "Security guards are assigned directly by verified property owners or building management committees. Guards receive dedicated portal logins locked specifically to their gate with plate-matching tools.",
+      "Security guards are assigned directly by verified parking providers or building management committees. Guards receive dedicated portal logins locked specifically to their gate with plate-matching tools.",
   },
   {
     question: "What happens if an unauthorized vehicle occupies my booked slot?",

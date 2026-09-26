@@ -47,7 +47,7 @@ export default function AboutPage() {
               <p className="max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
                 A location-based shared parking platform built to transform unused
                 residential space into safe, accessible parking for drivers and
-                reliable income for property owners.
+                reliable income for parking providers.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-2">
@@ -62,7 +62,7 @@ export default function AboutPage() {
                   Find Parking
                 </Link>
                 <Link
-                  href="/register?role=owner"
+                  href="/register?role=provider"
                   className={cn(
                     buttonVariants({ variant: "outline", size: "lg" }),
                     "border-border font-bold text-sm gap-2 hover:bg-muted/50 px-8 py-3 rounded-lg"
@@ -92,7 +92,7 @@ export default function AboutPage() {
       {/* 2. Three Pillars */}
       <AboutPillars />
 
-      {/* 3. Role Cards (For Drivers, For Owners, For Security Guards) */}
+      {/* 3. Role Cards (For Drivers, For Providers, For Security Guards) */}
       <AboutRoles />
 
       {/* 4. Connected Journey Ribbon */}

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ManagerSidebar } from "@/components/manager/manager-sidebar";
-import { OwnerFooter } from "@/components/owner/owner-footer";
+import { OwnerFooter } from "@/components/provider/provider-footer";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { RoleGuard } from "@/components/auth/role-guard";

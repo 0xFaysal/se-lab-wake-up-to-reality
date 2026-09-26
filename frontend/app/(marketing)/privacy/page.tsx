@@ -107,8 +107,8 @@ export default function PrivacyPage() {
             <div className="space-y-2.5 text-sm leading-relaxed text-muted-foreground">
               <p>
                 <strong>Mandatory Consent:</strong> A tenant (Renter) may only list a
-                parking space if they have explicit, written consent from the property owner
-                (Landlord) or the Flat Owners&apos; Association.
+                parking space if they have explicit, written consent from the parking provider
+                (Landlord) or the Property Management Association.
               </p>
               <p>
                 <strong>Conflict Resolution:</strong> If a Driver is denied entry by the

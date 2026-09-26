@@ -5,7 +5,7 @@ const PRINCIPLES = [
   },
   {
     title: "Control",
-    desc: "Property owners decide when, how, and which vehicle types are authorized to park.",
+    desc: "Parking providers decide when, how, and which vehicle types are authorized to park.",
   },
   {
     title: "Fairness",
@@ -29,7 +29,7 @@ export function AboutPrinciples() {
             Simple principles. Better parking decisions.
           </h2>
           <p className="mt-3 text-base text-muted-foreground leading-relaxed">
-            The foundation of trust between drivers, property owners, and security teams across Dhaka.
+            The foundation of trust between drivers, parking providers, and security teams across Dhaka.
           </p>
         </div>
 
