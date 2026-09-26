@@ -476,4 +476,3 @@ export const getAdminListing = action((req) =>
 export const getPropertyReports = action((req) =>
   service.getPropertyReports(userId(req), param(req, "propertyId")),
 );
-

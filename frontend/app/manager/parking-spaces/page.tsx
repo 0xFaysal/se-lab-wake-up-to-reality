@@ -4,22 +4,11 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle,
   ArrowRight,
   Building2,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  Filter,
-  Grid,
-  Info,
   Layers,
-  Lock,
   Search,
-  Settings,
   ShieldCheck,
-  Zap,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
 import { Button } from "@/components/ui/button";
@@ -60,7 +49,10 @@ export default function ManagerParkingSpacesPage() {
     retry: false,
   });
 
-  const activeDelegations = delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [];
+  const activeDelegations = useMemo(
+    () => delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [],
+    [delegationsQuery.data]
+  );
   const primaryOwner = activeDelegations[0]?.provider?.fullName || "Property Principal";
 
   // Load real resources across all active delegations

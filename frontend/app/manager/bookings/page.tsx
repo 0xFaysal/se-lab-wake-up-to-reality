@@ -4,21 +4,15 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowRight,
-  Building2,
   Calendar,
   Car,
   CheckCircle2,
   Clock,
   Download,
   Eye,
-  Filter,
   Layers,
-  Lock,
-  Phone,
   Search,
   ShieldCheck,
-  User,
   Users,
   X,
 } from "lucide-react";
@@ -75,7 +69,10 @@ export default function ManagerBookingsPage() {
     queryFn: () => bookingsApi.providerList(propertyFilter === "ALL" ? {} : { propertyId: propertyFilter }),
   });
 
-  const rawBookings = bookingsQuery.data ?? [];
+  const rawBookings: BookingDto[] = useMemo(
+    () => (Array.isArray(bookingsQuery.data) ? bookingsQuery.data : []),
+    [bookingsQuery.data],
+  );
 
   // Filtered bookings
   const filteredBookings = useMemo(() => {
@@ -111,10 +108,9 @@ export default function ManagerBookingsPage() {
   }, [rawBookings, searchTerm, propertyFilter, statusTab]);
 
   // Live KPI Calculations
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
   const metrics = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     let todayCount = 0;
     let upcomingCount = 0;
     let activeCount = 0;
@@ -138,7 +134,7 @@ export default function ManagerBookingsPage() {
     }
 
     return { todayCount, upcomingCount, activeCount, completedToday };
-  }, [rawBookings, todayStart, now]);
+  }, [rawBookings]);
 
   // Next arrivals sorted asc
   const nextArrivals = useMemo(() => {

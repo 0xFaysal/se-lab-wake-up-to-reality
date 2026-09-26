@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, ChevronDown, HelpCircle, ShieldCheck } from "lucide-react";
+import { Bell, Building2, HelpCircle } from "lucide-react";
 import { managerApi } from "@/lib/api/manager-api";
 import { queryKeys } from "@/lib/query-keys";
 import { useCurrentUser } from "@/hooks/use-current-user";

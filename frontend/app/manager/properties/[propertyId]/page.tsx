@@ -8,22 +8,14 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  Building2,
   Calendar,
-  CheckCircle2,
   Clock,
-  DollarSign,
-  Eye,
-  ExternalLink,
   Layers,
   Lock,
-  Plus,
-  Radio,
   Settings,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
@@ -34,7 +26,6 @@ import { ManagerListingsSection } from "@/components/manager/sections/manager-li
 import { ManagerAvailabilitySection } from "@/components/manager/sections/manager-availability-section";
 import { ManagerBookingsSection } from "@/components/manager/sections/manager-bookings-section";
 import { ManagerGuardsSection } from "@/components/manager/sections/manager-guards-section";
-import { ManagerImagesSection } from "@/components/manager/sections/manager-images-section";
 import { ManagerReportsSection } from "@/components/manager/sections/manager-reports-section";
 import { managerApi, type ManagerPermission } from "@/lib/api/manager-api";
 import { parkingResourcesApi } from "@/lib/api/parking-resources-api";
@@ -99,6 +90,43 @@ export default function ManagerPropertyDetailPage() {
         (can("GUARD_VIEW") || can("GUARD_ASSIGN") || can("GUARD_ADD_TO_PROPERTY")),
     ),
   });
+
+  const rawBookings: BookingDto[] = useMemo(
+    () => (Array.isArray(bookingsQuery.data) ? bookingsQuery.data : []),
+    [bookingsQuery.data],
+  );
+  const propertyBookings = useMemo(
+    () => rawBookings.filter((b: BookingDto) => b.propertyId === propertyId),
+    [rawBookings, propertyId],
+  );
+  const occupiedSpots = useMemo(() => {
+    return new Set(
+      propertyBookings
+        .filter((b) => b.status === "CHECKED_IN" || b.status === "CHECKOUT_REQUESTED")
+        .map((b) => b.parkingSpotId)
+        .filter(Boolean),
+    );
+  }, [propertyBookings]);
+
+  const nextDeparture = useMemo(() => {
+    const active = propertyBookings
+      .filter((b) => b.status === "CHECKED_IN" || b.status === "CHECKOUT_REQUESTED")
+      .sort((a, b) => new Date(a.scheduledEndAt).getTime() - new Date(b.scheduledEndAt).getTime())[0];
+    if (!active) return "None scheduled";
+    const timeStr = new Date(active.scheduledEndAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const spot = active.parkingSpot?.spotCode || active.parkingSpot?.displayName || "Bay";
+    return `${timeStr} (${spot})`;
+  }, [propertyBookings]);
+
+  const nextArrival = useMemo(() => {
+    const upcoming = propertyBookings
+      .filter((b) => b.status === "CONFIRMED")
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
+    if (!upcoming) return "None scheduled";
+    const timeStr = new Date(upcoming.startAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const spot = upcoming.parkingSpot?.spotCode || upcoming.parkingSpot?.displayName || "Bay";
+    return `${timeStr} (${spot})`;
+  }, [propertyBookings]);
 
   if (delegationsQuery.isPending) {
     return (
@@ -167,13 +195,7 @@ export default function ManagerPropertyDetailPage() {
   const propertyName = delegation.property.name;
   const ownerName = delegation.provider?.fullName || "Property Principal";
   const resourceCount = resourcesQuery.data?.length ?? 0;
-  const rawBookings: BookingDto[] = Array.isArray(bookingsQuery.data) ? bookingsQuery.data : [];
-  const propertyBookings = rawBookings.filter(
-    (b: BookingDto) => b.propertyId === propertyId,
-  );
-  const occupiedCount = propertyBookings.filter(
-    (b: BookingDto) => b.status === "CHECKED_IN" || b.status === "CHECKOUT_REQUESTED",
-  ).length;
+  const occupiedCount = occupiedSpots.size;
   const availableCount = Math.max(0, resourceCount - occupiedCount);
   const todayBookingsCount = propertyBookings.length;
   const rawListings: ParkingListingDto[] = Array.isArray(listingsQuery.data) ? listingsQuery.data : [];
@@ -182,38 +204,8 @@ export default function ManagerPropertyDetailPage() {
     ? `৳${Math.round(Number(activeListing.pricePerHourPaisa) / 100)}`
     : "Not Set";
   const canPrice = can("PRICE_MANAGE");
-
   const resources = resourcesQuery.data ?? [];
   const propertyGuards = guardsQuery.data?.assignments ?? [];
-  const occupiedSpots = useMemo(() => {
-    return new Set(
-      propertyBookings
-        .filter((b) => b.status === "CHECKED_IN" || b.status === "CHECKOUT_REQUESTED")
-        .map((b) => b.parkingSpotId)
-        .filter(Boolean),
-    );
-  }, [propertyBookings]);
-
-  const nextDeparture = useMemo(() => {
-    const active = propertyBookings
-      .filter((b) => b.status === "CHECKED_IN" || b.status === "CHECKOUT_REQUESTED")
-      .sort((a, b) => new Date(a.scheduledEndAt).getTime() - new Date(b.scheduledEndAt).getTime())[0];
-    if (!active) return "None scheduled";
-    const timeStr = new Date(active.scheduledEndAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    const spot = active.parkingSpot?.spotCode || active.parkingSpot?.displayName || "Bay";
-    return `${timeStr} (${spot})`;
-  }, [propertyBookings]);
-
-  const nextArrival = useMemo(() => {
-    const upcoming = propertyBookings
-      .filter((b) => b.status === "CONFIRMED")
-      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
-    if (!upcoming) return "None scheduled";
-    const timeStr = new Date(upcoming.startAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    const spot = upcoming.parkingSpot?.spotCode || upcoming.parkingSpot?.displayName || "Bay";
-    return `${timeStr} (${spot})`;
-  }, [propertyBookings]);
-
   const vacancyPct = resourceCount > 0 ? Math.round((availableCount / resourceCount) * 100) : 0;
 
   return (

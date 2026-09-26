@@ -4,21 +4,13 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   ArrowRight,
-  Building2,
   Calendar,
-  CheckCircle2,
   Clock,
   DoorOpen,
-  Eye,
-  Filter,
-  Lock,
   Plus,
   Search,
-  ShieldAlert,
   ShieldCheck,
-  UserCheck,
   UserPlus,
   Users,
   X,
@@ -27,7 +19,7 @@ import { ManagerHeader } from "@/components/manager/manager-header";
 import { Button } from "@/components/ui/button";
 import { managerApi } from "@/lib/api/manager-api";
 import { guardApi } from "@/lib/api/guard-api";
-import type { GuardAssignmentDto } from "@/lib/api/api-types";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 
@@ -59,7 +51,10 @@ export default function ManagerGuardsPage() {
     queryFn: () => guardApi.listForProvider(propertyFilter === "ALL" ? {} : { propertyId: propertyFilter }),
   });
 
-  const rawAssignments = assignmentsQuery.data?.assignments ?? [];
+  const rawAssignments = useMemo(
+    () => assignmentsQuery.data?.assignments ?? [],
+    [assignmentsQuery.data?.assignments],
+  );
 
   // Invite guard mutation
   const inviteMutation = useMutation({
@@ -72,8 +67,8 @@ export default function ManagerGuardsPage() {
       setInviteIdentifier("");
       queryClient.invalidateQueries({ queryKey: queryKeys.ownerGuardAssignments.root });
     },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to invite security guard");
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err));
     },
   });
 

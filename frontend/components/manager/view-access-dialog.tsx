@@ -6,9 +6,6 @@ import {
   Lock,
   ShieldAlert,
   ShieldCheck,
-  Building2,
-  Calendar,
-  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -174,15 +171,17 @@ export function ViewAccessDialog({ delegation, trigger }: ViewAccessDialogProps)
             </span>
           </div>
 
-          <h2 className="mt-2 text-xl font-bold text-white">
-            {delegation.property.name}
-          </h2>
-          <p className="text-xs text-emerald-100/90 mt-0.5">
-            {delegation.property.publicArea} · Delegated by{" "}
-            <span className="font-semibold text-white">
-              {delegation.provider?.fullName ?? "Property Owner"}
-            </span>
-          </p>
+          <DialogHeader className="mt-2 text-left space-y-0.5">
+            <DialogTitle className="text-xl font-bold text-white">
+              {delegation.property.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-emerald-100/90">
+              {delegation.property.publicArea} · Delegated by{" "}
+              <span className="font-semibold text-white">
+                {delegation.provider?.fullName ?? "Property Owner"}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="mt-3 flex flex-wrap gap-4 text-xs text-emerald-200/90 pt-3 border-t border-emerald-700/60">
             <span>

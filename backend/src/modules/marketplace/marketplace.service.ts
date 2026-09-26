@@ -2993,14 +2993,10 @@ export async function updateListing(
       propertyId: listing.parkingSpot.propertyId,
     });
     if (priceChange) {
-      notifyUser(
-        authority.membership.providerUserId,
-        "listing:price_updated",
-        {
-          listingId: listing.id,
-          propertyId: listing.parkingSpot.propertyId,
-        },
-      );
+      notifyUser(authority.membership.providerUserId, "listing:price_updated", {
+        listingId: listing.id,
+        propertyId: listing.parkingSpot.propertyId,
+      });
     }
     if (authority.managed) {
       notifyUser(actorUserId, "listing:updated", {
@@ -3139,11 +3135,15 @@ async function changeListingStatus(
             }
           : undefined,
       );
-      notifyUser(authority.membership.providerUserId, "listing:status_changed", {
-        listingId: listing.id,
-        propertyId: listing.parkingSpot.propertyId,
-        status: activate ? "ACTIVE" : "PAUSED",
-      });
+      notifyUser(
+        authority.membership.providerUserId,
+        "listing:status_changed",
+        {
+          listingId: listing.id,
+          propertyId: listing.parkingSpot.propertyId,
+          status: activate ? "ACTIVE" : "PAUSED",
+        },
+      );
       notifyUser(authority.membership.providerUserId, "listing:updated", {
         listingId: listing.id,
         propertyId: listing.parkingSpot.propertyId,
@@ -8587,4 +8587,3 @@ export async function getPropertyReports(
     financialMetrics,
   });
 }
-

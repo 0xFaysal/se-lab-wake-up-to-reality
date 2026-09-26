@@ -21,7 +21,6 @@ import { managerApi } from "@/lib/api/manager-api";
 import { queryKeys } from "@/lib/query-keys";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
-import { apiClient } from "@/lib/api/api-client";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import { notificationsApi } from "@/lib/api/notifications-api";
 

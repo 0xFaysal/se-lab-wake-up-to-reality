@@ -19,7 +19,9 @@ describe("BusinessActorContext & Permission Authority Invariants", () => {
     const resourceEffective = deriveEffectivePermissions([
       ManagerDelegationPermission.RESOURCE_MANAGE,
     ]);
-    assert.ok(resourceEffective.has(ManagerDelegationPermission.RESOURCE_MANAGE));
+    assert.ok(
+      resourceEffective.has(ManagerDelegationPermission.RESOURCE_MANAGE),
+    );
     assert.ok(resourceEffective.has(ManagerDelegationPermission.RESOURCE_VIEW));
 
     // LISTING_MANAGE implies LISTING_VIEW
@@ -40,7 +42,9 @@ describe("BusinessActorContext & Permission Authority Invariants", () => {
     const availEffective = deriveEffectivePermissions([
       ManagerDelegationPermission.AVAILABILITY_MANAGE,
     ]);
-    assert.ok(availEffective.has(ManagerDelegationPermission.AVAILABILITY_MANAGE));
+    assert.ok(
+      availEffective.has(ManagerDelegationPermission.AVAILABILITY_MANAGE),
+    );
     assert.ok(availEffective.has(ManagerDelegationPermission.RESOURCE_VIEW));
 
     // GUARD_ASSIGN implies GUARD_VIEW
@@ -55,15 +59,31 @@ describe("BusinessActorContext & Permission Authority Invariants", () => {
     const satisfyingResourceView = permissionsSatisfying(
       ManagerDelegationPermission.RESOURCE_VIEW,
     );
-    assert.ok(satisfyingResourceView.includes(ManagerDelegationPermission.RESOURCE_VIEW));
-    assert.ok(satisfyingResourceView.includes(ManagerDelegationPermission.RESOURCE_MANAGE));
+    assert.ok(
+      satisfyingResourceView.includes(
+        ManagerDelegationPermission.RESOURCE_VIEW,
+      ),
+    );
+    assert.ok(
+      satisfyingResourceView.includes(
+        ManagerDelegationPermission.RESOURCE_MANAGE,
+      ),
+    );
 
     const satisfyingListingView = permissionsSatisfying(
       ManagerDelegationPermission.LISTING_VIEW,
     );
-    assert.ok(satisfyingListingView.includes(ManagerDelegationPermission.LISTING_VIEW));
-    assert.ok(satisfyingListingView.includes(ManagerDelegationPermission.LISTING_MANAGE));
-    assert.ok(satisfyingListingView.includes(ManagerDelegationPermission.PRICE_MANAGE));
+    assert.ok(
+      satisfyingListingView.includes(ManagerDelegationPermission.LISTING_VIEW),
+    );
+    assert.ok(
+      satisfyingListingView.includes(
+        ManagerDelegationPermission.LISTING_MANAGE,
+      ),
+    );
+    assert.ok(
+      satisfyingListingView.includes(ManagerDelegationPermission.PRICE_MANAGE),
+    );
 
     const satisfyingResourceManage = permissionsSatisfying(
       ManagerDelegationPermission.RESOURCE_MANAGE,
@@ -107,7 +127,6 @@ describe("BusinessActorContext & Permission Authority Invariants", () => {
 
     const ctx = await requireBusinessAuthority({
       actorUserId: "provider-user-1",
-      actorRole: UserRoleType.PROVIDER,
       propertyId: "property-1",
       permission: ManagerDelegationPermission.LISTING_MANAGE,
       db: mockDb,
@@ -163,7 +182,6 @@ describe("BusinessActorContext & Permission Authority Invariants", () => {
 
     const ctx = await requireBusinessAuthority({
       actorUserId: "manager-user-1",
-      actorRole: UserRoleType.MANAGER,
       propertyId: "property-1",
       resourceId: "resource-zone-a",
       permission: ManagerDelegationPermission.LISTING_MANAGE,
@@ -222,7 +240,6 @@ describe("BusinessActorContext & Permission Authority Invariants", () => {
       async () => {
         await requireBusinessAuthority({
           actorUserId: "manager-user-1",
-          actorRole: UserRoleType.MANAGER,
           propertyId: "property-1",
           resourceId: "resource-zone-b", // Out of scope!
           permission: ManagerDelegationPermission.LISTING_MANAGE,

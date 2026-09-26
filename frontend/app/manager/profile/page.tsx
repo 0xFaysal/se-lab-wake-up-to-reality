@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -9,18 +9,10 @@ import {
   Building2,
   Camera,
   CheckCircle2,
-  Globe,
-  HelpCircle,
-  KeyRound,
-  Layers,
   Lock,
   LogOut,
-  Mail,
-  Phone,
   Save,
   ShieldCheck,
-  Smartphone,
-  User,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
 import { Button } from "@/components/ui/button";
@@ -36,16 +28,6 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase() || "M";
 }
 
-function formatDate(isoString: string | null | undefined): string {
-  if (!isoString) return "August 2026";
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
-  } catch {
-    return isoString;
-  }
-}
-
 export default function ManagerProfilePage() {
   const router = useRouter();
   const { data: user } = useCurrentUser();
@@ -58,18 +40,13 @@ export default function ManagerProfilePage() {
   const activeDelegations = delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [];
   const primaryOwner = activeDelegations[0]?.provider?.fullName || "Property Owner";
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [customFullName, setFullName] = useState<string | null>(null);
+  const [customPhone, setPhone] = useState<string | null>(null);
   const [city, setCity] = useState("Dhaka, Bangladesh");
 
-  useEffect(() => {
-    if (user) {
-      setFullName(user.fullName || "");
-      setEmail(user.email || "");
-      setPhone(user.phone || "");
-    }
-  }, [user]);
+  const fullName = customFullName ?? user?.fullName ?? "";
+  const email = user?.email ?? "";
+  const phone = customPhone ?? user?.phone ?? "";
 
   const handleSaveInfo = (e: React.FormEvent) => {
     e.preventDefault();

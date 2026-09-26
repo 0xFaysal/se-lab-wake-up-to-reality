@@ -34,7 +34,9 @@ const delegationInclude = {
   grantorProviderMembership: {
     select: {
       id: true,
-      provider: { select: { id: true, fullName: true, email: true, phone: true } },
+      provider: {
+        select: { id: true, fullName: true, email: true, phone: true },
+      },
     },
   },
 } satisfies Prisma.ProviderManagerDelegationInclude;

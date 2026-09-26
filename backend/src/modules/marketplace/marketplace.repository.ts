@@ -43,7 +43,12 @@ export async function resolveProviderAuthority(
       property: { deletedAt: null, canonicalPropertyId: null },
     },
   });
-  if (direct) return { membership: direct, managed: false as const, delegationId: undefined };
+  if (direct)
+    return {
+      membership: direct,
+      managed: false as const,
+      delegationId: undefined,
+    };
   if (!permission) return null;
 
   const satisfying = permissionsSatisfying(permission);

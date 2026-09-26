@@ -17,12 +17,7 @@ import { getApiErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING_ACCEPTANCE: "bg-amber-100 text-amber-800",
-  ACTIVE: "bg-emerald-100 text-emerald-800",
-  ENDED: "bg-slate-100 text-slate-400",
-  CANCELLED: "bg-slate-100 text-slate-400",
-};
+
 
 function AssignShiftForm({
   propertyId,

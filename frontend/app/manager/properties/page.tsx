@@ -8,22 +8,16 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
-  Eye,
-  Filter,
-  Grid,
-  Info,
-  Layers,
   LayoutGrid,
   List,
   Lock,
   Search,
-  ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
 import { ViewAccessDialog } from "@/components/manager/view-access-dialog";
 import { Button } from "@/components/ui/button";
-import { managerApi, type ManagerDelegationDto } from "@/lib/api/manager-api";
+import { managerApi } from "@/lib/api/manager-api";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import { queryKeys } from "@/lib/query-keys";
 import { formatDateTime } from "@/lib/formatters";
@@ -45,7 +39,7 @@ export default function ManagerPropertiesPage() {
     retry: false,
   });
 
-  const delegations = delegationsQuery.data ?? [];
+  const delegations = useMemo(() => delegationsQuery.data ?? [], [delegationsQuery.data]);
   const active = useMemo(
     () => delegations.filter((d) => d.status === "ACTIVE"),
     [delegations],

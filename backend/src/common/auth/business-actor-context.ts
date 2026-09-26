@@ -107,8 +107,7 @@ export function deriveEffectivePermissions(
  */
 export function buildCapabilities(
   effectivePermissionsInput:
-    | Set<ManagerDelegationPermission>
-    | ManagerDelegationPermission[],
+    Set<ManagerDelegationPermission> | ManagerDelegationPermission[],
   isProvider = false,
 ) {
   const effectivePermissions =
@@ -187,7 +186,9 @@ export function buildCapabilities(
       ),
     },
     images: {
-      manage: effectivePermissions.has(ManagerDelegationPermission.IMAGE_MANAGE),
+      manage: effectivePermissions.has(
+        ManagerDelegationPermission.IMAGE_MANAGE,
+      ),
     },
     earnings: {
       view: effectivePermissions.has(ManagerDelegationPermission.EARNINGS_VIEW),
@@ -257,7 +258,8 @@ export async function requireBusinessAuthority(params: {
     throw new AppError({
       statusCode: 403,
       code: "MANAGER_DELEGATION_REQUIRED",
-      message: "You must be an active Provider or Manager to perform this action",
+      message:
+        "You must be an active Provider or Manager to perform this action",
     });
   }
 

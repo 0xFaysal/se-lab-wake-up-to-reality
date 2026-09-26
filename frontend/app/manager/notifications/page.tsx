@@ -4,15 +4,10 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   ArrowRight,
   Bell,
   Calendar,
   Car,
-  CheckCircle2,
-  Clock,
-  Layers,
-  Lock,
   Mail,
   Search,
   Settings,
@@ -55,7 +50,10 @@ export default function ManagerNotificationsPage() {
     queryFn: managerApi.listForManager,
   });
 
-  const activeDelegations = delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [];
+  const activeDelegations = useMemo(
+    () => delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [],
+    [delegationsQuery.data]
+  );
   const primaryOwner = activeDelegations[0]?.provider?.fullName || "Property Owner";
 
   const notificationsQuery = useQuery({
@@ -63,7 +61,7 @@ export default function ManagerNotificationsPage() {
     queryFn: notificationsApi.list,
   });
 
-  const rawNotifications = notificationsQuery.data ?? [];
+  const rawNotifications = useMemo(() => notificationsQuery.data ?? [], [notificationsQuery.data]);
 
   // Mutations
   const readMutation = useMutation({

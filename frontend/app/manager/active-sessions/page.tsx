@@ -4,24 +4,14 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertTriangle,
-  ArrowRight,
-  Building2,
-  Calendar,
   Car,
   CheckCircle2,
   Clock,
-  ExternalLink,
   Layers,
-  MessageSquare,
   Phone,
-  Radio,
   RefreshCw,
   Search,
-  Send,
   ShieldCheck,
-  Star,
-  Users,
   X,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
@@ -91,7 +81,7 @@ export default function ManagerActiveSessionsPage() {
     refetchInterval: 30000,
   });
 
-  const allBookings = bookingsQuery.data ?? [];
+  const allBookings = useMemo(() => bookingsQuery.data ?? [], [bookingsQuery.data]);
   const activeSessions = useMemo(() => {
     return allBookings.filter(
       (b) => b.status === "CHECKED_IN" || b.status === "CHECKOUT_REQUESTED",

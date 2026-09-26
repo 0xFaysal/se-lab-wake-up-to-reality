@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -12,9 +12,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  FileText,
   HelpCircle,
-  Layers,
   Lock,
   MessageSquare,
   Phone,
@@ -40,21 +38,21 @@ export default function ManagerSupportPage() {
     queryFn: managerApi.listForManager,
   });
 
-  const activeDelegations = delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [];
+  const activeDelegations = useMemo(
+    () => delegationsQuery.data?.filter((d) => d.status === "ACTIVE") ?? [],
+    [delegationsQuery.data],
+  );
   const primaryOwner = activeDelegations[0]?.provider?.fullName || "Property Owner";
 
   // Form state
   const [category, setCategory] = useState("Permission Issue");
   const [property, setProperty] = useState("");
+  const defaultPropertyName = activeDelegations[0]?.property?.name || activeDelegations[0]?.property?.id || "";
+  const selectedProperty = property || defaultPropertyName;
+
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"normal" | "urgent">("normal");
-
-  useEffect(() => {
-    if (activeDelegations.length > 0 && !property) {
-      setProperty(activeDelegations[0]!.property?.name || activeDelegations[0]!.property.id);
-    }
-  }, [activeDelegations, property]);
 
   const faqs = [
     {
@@ -89,7 +87,7 @@ export default function ManagerSupportPage() {
       toast.error("Please fill in subject and description");
       return;
     }
-    toast.success(`Support ticket submitted successfully for ${property || "assigned property"}. Ref: #SUP-${Math.floor(1000 + Math.random() * 9000)}`);
+    toast.success(`Support ticket submitted successfully for ${selectedProperty || "assigned property"}. Ref: #SUP-${Math.floor(1000 + Math.random() * 9000)}`);
     setSubject("");
     setDescription("");
   };
@@ -434,7 +432,7 @@ export default function ManagerSupportPage() {
                   Assigned Property (Scoped to your access)
                 </label>
                 <select
-                  value={property}
+                  value={selectedProperty}
                   onChange={(e) => setProperty(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-[#064E3B] focus:outline-hidden"
                 >

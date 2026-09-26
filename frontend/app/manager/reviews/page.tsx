@@ -5,24 +5,18 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  ArrowRight,
-  Building2,
-  CheckCircle2,
-  Flag,
-  Lock,
   MessageSquare,
   Reply,
   Search,
   ShieldCheck,
   Star,
   ThumbsUp,
-  X,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
 import { Button } from "@/components/ui/button";
 import { managerApi } from "@/lib/api/manager-api";
 import { reviewsApi } from "@/lib/api/reviews-api";
-import type { ReviewDto } from "@/lib/api/marketplace-types";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 
@@ -58,7 +52,7 @@ export default function ManagerReviewsPage() {
     queryFn: () => reviewsApi.providerList(),
   });
 
-  const rawReviews = reviewsQuery.data ?? [];
+  const rawReviews = useMemo(() => reviewsQuery.data ?? [], [reviewsQuery.data]);
 
   // Reply mutation
   const replyMutation = useMutation({
@@ -71,8 +65,8 @@ export default function ManagerReviewsPage() {
       setReplyText("");
       queryClient.invalidateQueries({ queryKey: queryKeys.reviews.root });
     },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to publish reply");
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err));
     },
   });
 

@@ -4,27 +4,21 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
   ArrowRight,
   Building2,
   Calendar,
   Car,
   CheckCircle2,
   Clock,
-  ExternalLink,
   Layers,
   Lock,
-  PlusCircle,
-  RefreshCw,
   ShieldCheck,
-  TrendingUp,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ManagerHeader } from "@/components/manager/manager-header";
 import { ViewAccessDialog } from "@/components/manager/view-access-dialog";
-import { managerApi, type ManagerDelegationDto } from "@/lib/api/manager-api";
+import { managerApi } from "@/lib/api/manager-api";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import { notificationsApi } from "@/lib/api/notifications-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
@@ -113,7 +107,10 @@ export default function ManagerDashboardPage() {
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });
 
-  const delegations = delegationsQuery.data ?? [];
+  const delegations = useMemo(
+    () => delegationsQuery.data ?? [],
+    [delegationsQuery.data],
+  );
   const pending = useMemo(
     () => delegations.filter((d) => d.status === "PENDING_ACCEPTANCE"),
     [delegations],
@@ -132,7 +129,10 @@ export default function ManagerDashboardPage() {
   const primaryOwnerName =
     active[0]?.provider?.fullName || "Property Principal";
 
-  const allBookings = bookingsQuery.data ?? [];
+  const allBookings = useMemo(
+    () => bookingsQuery.data ?? [],
+    [bookingsQuery.data],
+  );
 
   // Filter bookings by selected property
   const filteredBookings = useMemo(() => {
