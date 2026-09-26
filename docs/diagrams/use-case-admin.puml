@@ -1,0 +1,52 @@
+@startuml use-case-admin
+!theme plain
+title ParkEase BD: Use Case Diagram (c) Administrator Oversight
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+skinparam actor {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+
+left to right direction
+
+actor "Administrator" as Admin
+
+rectangle "ParkEase BD" {
+  usecase "Login" as UC1
+  package "Administrator Use Cases" {
+    usecase "Verify / Reject Property\n& Provider Membership" as UC60
+    usecase "Verify Parking Rights,\nAmendments & Batches" as UC61
+    usecase "Suspend / Resume Listings,\nResolve Listing Reports" as UC62
+    usecase "Manage Accounts\n(create, suspend, block,\nnotes, risk flags)" as UC63
+    usecase "Refund / Cancel Booking" as UC64
+    usecase "Review & Resolve Disputes" as UC65
+    usecase "Process Payouts\n(hold, approve, reject, paid)" as UC66
+    usecase "Manage Platform Fees" as UC67
+    usecase "Ledger, Reconciliation,\nAnalytics, Audit" as UC68
+    usecase "Legal Documents, Content,\nEmail & Broadcasts" as UC69
+    usecase "Merge Duplicate Properties" as UC70
+  }
+}
+
+Admin -- UC1
+Admin -- UC60
+Admin -- UC61
+Admin -- UC62
+Admin -- UC63
+Admin -- UC64
+Admin -- UC65
+Admin -- UC66
+Admin -- UC67
+Admin -- UC68
+Admin -- UC69
+Admin -- UC70
+
+@enduml
