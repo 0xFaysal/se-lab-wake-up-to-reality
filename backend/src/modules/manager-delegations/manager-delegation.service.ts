@@ -21,10 +21,23 @@ import type {
 const delegationInclude = {
   permissions: { select: { permission: true } },
   resources: { select: { parkingSpotId: true } },
-  property: { select: { id: true, name: true, publicArea: true } },
-  manager: { select: { id: true, fullName: true } },
+  property: {
+    select: {
+      id: true,
+      name: true,
+      publicArea: true,
+      approximateAddress: true,
+      description: true,
+    },
+  },
+  manager: { select: { id: true, fullName: true, email: true, phone: true } },
   grantorProviderMembership: {
-    select: { id: true, provider: { select: { id: true, fullName: true } } },
+    select: {
+      id: true,
+      provider: {
+        select: { id: true, fullName: true, email: true, phone: true },
+      },
+    },
   },
 } satisfies Prisma.ProviderManagerDelegationInclude;
 

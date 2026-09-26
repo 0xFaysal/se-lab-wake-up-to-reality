@@ -165,6 +165,12 @@ marketplaceRouter.get(
   controller.listResources,
 );
 marketplaceRouter.get(
+  "/provider/properties/:propertyId/reports",
+  providerOrManager,
+  validate(schema.propertyResourceParamsSchema),
+  controller.getPropertyReports,
+);
+marketplaceRouter.get(
   "/provider/parking-resources/:resourceId",
   providerOrManager,
   validate(schema.resourceParamsSchema),

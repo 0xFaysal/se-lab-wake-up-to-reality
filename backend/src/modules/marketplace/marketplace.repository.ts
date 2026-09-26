@@ -25,6 +25,8 @@ export async function lockEntity(
   `;
 }
 
+import { permissionsSatisfying } from "../../common/auth/business-actor-context.js";
+
 export async function resolveProviderAuthority(
   actorUserId: string,
   propertyId: string,
@@ -41,9 +43,15 @@ export async function resolveProviderAuthority(
       property: { deletedAt: null, canonicalPropertyId: null },
     },
   });
-  if (direct) return { membership: direct, managed: false as const };
+  if (direct)
+    return {
+      membership: direct,
+      managed: false as const,
+      delegationId: undefined,
+    };
   if (!permission) return null;
 
+  const satisfying = permissionsSatisfying(permission);
   const now = new Date();
   const delegation = await db.providerManagerDelegation.findFirst({
     where: {
@@ -64,7 +72,7 @@ export async function resolveProviderAuthority(
             ]
           : []),
       ],
-      permissions: { some: { permission } },
+      permissions: { some: { permission: { in: satisfying } } },
       grantorProviderMembership: {
         status: PropertyProviderStatus.ACTIVE,
         verificationStatus: VerificationStatus.VERIFIED,
@@ -76,6 +84,7 @@ export async function resolveProviderAuthority(
     ? {
         membership: delegation.grantorProviderMembership,
         managed: true as const,
+        delegationId: delegation.id,
       }
     : null;
 }
@@ -86,6 +95,7 @@ export async function listProviderAccessScopes(
   db: MarketplaceDb | typeof prisma = prisma,
 ): Promise<ProviderAccessScope[]> {
   const now = new Date();
+  const satisfying = permissionsSatisfying(permission);
   const [directMemberships, delegations] = await Promise.all([
     db.propertyProvider.findMany({
       where: {
@@ -104,7 +114,7 @@ export async function listProviderAccessScopes(
           { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
           { OR: [{ validUntil: null }, { validUntil: { gt: now } }] },
         ],
-        permissions: { some: { permission } },
+        permissions: { some: { permission: { in: satisfying } } },
         property: { deletedAt: null, canonicalPropertyId: null },
         grantorProviderMembership: {
           status: PropertyProviderStatus.ACTIVE,

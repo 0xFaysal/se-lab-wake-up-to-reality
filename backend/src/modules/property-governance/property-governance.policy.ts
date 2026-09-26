@@ -57,8 +57,6 @@ export async function canManageSharedPropertyImages(
   db?: GovernanceClient,
 ): Promise<boolean> {
   if (await canManagePropertyCommonRules(userId, propertyId, db)) return true;
-  const count = await repository.getActiveVerifiedProviderCount(propertyId, db);
-  if (count !== 1) return false;
   return Boolean(
     await repository.findLiveManagerDelegation(
       userId,

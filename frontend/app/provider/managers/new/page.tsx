@@ -20,6 +20,7 @@ import { queryKeys } from "@/lib/query-keys";
 
 const PERMISSIONS: Array<{ value: ManagerPermission; label: string; description: string }> = [
   { value: "RESOURCE_VIEW", label: "View resources", description: "See assigned parking inventory." },
+  { value: "RESOURCE_MANAGE", label: "Manage resources", description: "Create and configure parking inventory." },
   { value: "LISTING_VIEW", label: "View listings", description: "See listing state and pricing." },
   { value: "LISTING_MANAGE", label: "Manage listings", description: "Create, pause, and update listings." },
   { value: "PRICE_MANAGE", label: "Manage pricing", description: "Change hourly prices and deposits." },

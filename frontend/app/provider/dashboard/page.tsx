@@ -39,7 +39,7 @@ export default function ProviderDashboardPage() {
   });
   const bookings = useQuery({
     queryKey: queryKeys.bookings.provider(),
-    queryFn: bookingsApi.providerList,
+    queryFn: () => bookingsApi.providerList(),
   });
   const earnings = useQuery({
     queryKey: queryKeys.earnings.summary(),
