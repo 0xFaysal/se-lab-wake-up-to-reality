@@ -5,7 +5,7 @@ import { RegisterForm } from "@/components/auth/register-form";
 export const metadata: Metadata = {
   title: "Create Account",
   description:
-    "Join ParkEase BD as a Driver or Parking Owner in Dhaka. Fast, secure parking management.",
+    "Join ParkEase BD as a Driver or Parking Provider in Dhaka. Fast, secure parking management.",
 };
 
 export default function RegisterPage() {

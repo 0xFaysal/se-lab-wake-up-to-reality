@@ -110,7 +110,7 @@ export default function SafetyPage() {
       {/* 6. Pricing & Confirmation Transparency */}
       <SafetyConfirmationPreview />
 
-      {/* 7. Shared Responsibilities (3 Columns: Drivers, Owners, Guards) */}
+      {/* 7. Shared Responsibilities (3 Columns: Drivers, Providers, Guards) */}
       <SafetyResponsibilities />
 
       {/* 8. Common Safety Questions */}

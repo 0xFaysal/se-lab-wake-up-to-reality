@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Laptop, Loader2, LogOut, ShieldCheck, Smartphone } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { PageEmptyState, PageErrorState, PageSkeleton } from "@/components/owner/provider-page";
+import { PageEmptyState, PageErrorState, PageSkeleton } from "@/components/provider/provider-page";
 import { authApi } from "@/lib/api/auth-api";
 import type { SessionDto } from "@/lib/api/api-types";
 import { getApiErrorMessage } from "@/lib/api/api-error";

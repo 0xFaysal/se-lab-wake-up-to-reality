@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { HowItWorksFourSteps } from "@/components/landing/how-it-works-four-steps";
 import { StatusTimelineSection } from "@/components/landing/status-timeline-section";
 import { TrustFeatureGrid } from "@/components/landing/trust-feature-grid";
-import { OwnerFeatureSection } from "@/components/landing/owner-feature-section";
+import { OwnerFeatureSection } from "@/components/landing/provider-feature-section";
 import { GuardFeatureSection } from "@/components/landing/guard-feature-section";
 import { LifecycleRibbon } from "@/components/landing/lifecycle-ribbon";
 import { FaqSection } from "@/components/landing/faq-section";
@@ -62,7 +62,7 @@ export default function HowItWorksPage() {
                   Find Parking
                 </Link>
                 <Link
-                  href="/register?role=owner"
+                  href="/register?role=provider"
                   className={cn(
                     buttonVariants({ variant: "outline", size: "lg" }),
                     "border-border font-bold text-sm gap-2 hover:bg-muted/50 px-8 py-3 rounded-lg"
@@ -98,7 +98,7 @@ export default function HowItWorksPage() {
       {/* 4. Value Props: Verified Parking. Controlled Access. */}
       <TrustFeatureGrid />
 
-      {/* 5. Property Owner Pitch */}
+      {/* 5. Parking Provider Pitch */}
       <OwnerFeatureSection />
 
       {/* 6. Security Guard Verification Section */}

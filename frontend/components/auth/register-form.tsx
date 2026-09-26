@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +47,13 @@ export function RegisterForm() {
 
   const selectedRole = useWatch({ control, name: "role" });
   const agreeToPrivacy = useWatch({ control, name: "agreeToPrivacy" });
+
+  useEffect(() => {
+    const roleParam = searchParams.get("role")?.toLowerCase();
+    if (roleParam === "provider" || roleParam === "owner") {
+      setValue("role", "PARKING_OWNER");
+    }
+  }, [searchParams, setValue]);
 
   async function onSubmit(data: RegisterFormValues) {
     setSubmitError("");
@@ -107,7 +114,7 @@ export function RegisterForm() {
               )}
             >
               <Building2 className="size-4" />
-              <span className="text-xs">Parking Owner</span>
+              <span className="text-xs">Parking Provider</span>
             </button>
           </div>
           {errors.role && (

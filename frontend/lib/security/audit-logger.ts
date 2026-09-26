@@ -116,7 +116,7 @@ const INITIAL_APPROVAL_REQUESTS: ApprovalRequest[] = [
     payload: { zone: "Basement B", reason: "Waterproofing renovation" },
     timestamp: new Date(Date.now() - 28 * 3600 * 1000).toISOString(),
     status: "APPROVED",
-    reviewedBy: "Tanvir Chowdhury (Owner)",
+    reviewedBy: "Tanvir Chowdhury (Provider)",
     reviewedAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
   },
 ];
@@ -323,7 +323,7 @@ class ApprovalStoreService {
     // Log to Audit Log as PENDING_APPROVAL
     auditLogger.log({
       actionType: "REQUEST_APPROVAL",
-      actionDescription: `Requested Owner Approval: ${validated.actionType}`,
+      actionDescription: `Requested Provider Approval: ${validated.actionType}`,
       resource: validated.resource,
       resourceId: validated.resourceId,
       managerId: validated.managerId,
@@ -336,7 +336,7 @@ class ApprovalStoreService {
     return validated;
   }
 
-  public approve(requestId: string, reviewedBy: string = "Property Owner"): boolean {
+  public approve(requestId: string, reviewedBy: string = "Parking Provider"): boolean {
     const target = this.requests.find((r) => r.id === requestId);
     if (!target) return false;
 
@@ -348,7 +348,7 @@ class ApprovalStoreService {
     // Log to Audit Log as APPROVE
     auditLogger.log({
       actionType: "APPROVE",
-      actionDescription: `Owner approved request: ${target.actionType}`,
+      actionDescription: `Provider approved request: ${target.actionType}`,
       resource: target.resource,
       resourceId: target.resourceId,
       managerId: target.managerId,
@@ -361,7 +361,7 @@ class ApprovalStoreService {
     return true;
   }
 
-  public reject(requestId: string, reason: string = "Declined by owner", reviewedBy: string = "Property Owner"): boolean {
+  public reject(requestId: string, reason: string = "Declined by provider", reviewedBy: string = "Parking Provider"): boolean {
     const target = this.requests.find((r) => r.id === requestId);
     if (!target) return false;
 
@@ -374,7 +374,7 @@ class ApprovalStoreService {
     // Log to Audit Log as REJECT
     auditLogger.log({
       actionType: "REJECT",
-      actionDescription: `Owner rejected request: ${target.actionType} (Reason: ${reason})`,
+      actionDescription: `Provider rejected request: ${target.actionType} (Reason: ${reason})`,
       resource: target.resource,
       resourceId: target.resourceId,
       managerId: target.managerId,

@@ -12,13 +12,13 @@ export const backendCapabilities = {
 } as const;
 
 export const portalHome: Record<UserRole, string> = {
-  DRIVER: "/driver/dashboard", PROVIDER: "/owner/dashboard", PARKING_OWNER: "/owner/dashboard", MANAGER: "/manager/dashboard",
+  DRIVER: "/driver/dashboard", PROVIDER: "/provider/dashboard", PARKING_OWNER: "/provider/dashboard", MANAGER: "/manager/dashboard",
   GUARD: "/guard", ADMIN: "/admin/properties/pending",
 };
 
 export const routeRoles = [
   { prefix: "/driver", roles: ["DRIVER"] },
-  { prefix: "/owner", roles: ["PROVIDER", "PARKING_OWNER"] },
+  { prefix: "/provider", roles: ["PROVIDER", "PARKING_OWNER"] },
   { prefix: "/manager", roles: ["MANAGER"] },
   { prefix: "/guard", roles: ["GUARD"] },
   { prefix: "/admin", roles: ["ADMIN"] },

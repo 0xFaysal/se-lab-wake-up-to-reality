@@ -17,7 +17,7 @@ const LOCAL_POINTS = [
   },
   {
     title: "Neighborhood Privacy Protection",
-    desc: "Exact building addresses and owner details are strictly masked until a confirmed booking is in place.",
+    desc: "Exact building addresses and provider details are strictly masked until a confirmed booking is in place.",
   },
 ];
 

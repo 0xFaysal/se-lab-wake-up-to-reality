@@ -52,7 +52,7 @@ export function PermissionGuard({
   // Fallback Mode: Disable with Lock Icon & Tooltip
   const defaultMsg =
     fallbackMessage ||
-    `Restricted: Requires '${permsArray.join(" or ")}' scope. Contact Property Owner.`;
+    `Restricted: Requires '${permsArray.join(" or ")}' scope. Contact Parking Provider.`;
 
   return (
     <div
