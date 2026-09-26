@@ -1,0 +1,59 @@
+@startuml seq-user-payment
+!theme plain
+title ParkEase BD: UML Sequence Diagram - How a User Pays for a Booking
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam sequence {
+  ParticipantBackgroundColor #FFF3E0
+  ParticipantBorderColor #E65100
+  ActorBackgroundColor #E8F5E9
+  ActorBorderColor #2E7D32
+  LifeLineBorderColor #9E9E9E
+}
+autonumber
+
+actor User
+participant "Web App\n(Next.js)" as Web
+participant "ParkEase API\n(Express)" as API
+database "PostgreSQL\n(bookings, payments,\nledger, wallets)" as DB
+participant "SSLCOMMERZ\n(gateway)" as SSL
+
+User -> Web : Open booking, press\n"Pay Tk X with SSLCOMMERZ"
+Web -> API : POST create checkout session (bookingId)
+API -> DB : Load booking total (paisa) and\nUser's Refund Balance
+API -> API : Split total: part from Refund Balance,\nrest via gateway (gateway part >= Tk 10)
+API -> DB : Create Payment + PaymentAttempt,\nhold the Refund Balance part
+alt Whole amount covered by Refund Balance
+  API -> DB : Capture immediately (no gateway)
+else Gateway amount > 0
+  API -> SSL : Create hosted session (amount BDT,\ntran_id, success/fail/cancel/IPN URLs)
+  SSL --> API : GatewayPageURL
+  API --> Web : GatewayPageURL
+  Web -> SSL : Redirect User to hosted checkout
+  User -> SSL : Pay by card, bKash, Nagad,\nor net banking
+  SSL -> API : IPN / success callback (tran_id, val_id)
+  API -> SSL : Validation API (val_id)
+  SSL --> API : VALID, amount, currency, risk
+  API -> API : Match tran_id, amount, currency,\nbooking and payment state
+end
+group One serializable DB transaction
+  API -> DB : Ledger: DEBIT External Payment Clearing\n(+ User Refund Balance used),\nCREDIT Booking Held Funds (full total)
+  API -> DB : Credit Provider share to Provider\nwallet **pending** balance
+  API -> DB : Payment SUCCEEDED,\nbooking CONFIRMED
+  API -> DB : Create the QR access credential
+end
+SSL -> Web : Redirect back to /driver/payments/return
+Web -> API : Get payment status
+API --> Web : SUCCEEDED
+Web --> User : "Payment confirmed" + gate QR pass
+
+note over API, SSL
+  The browser redirect is only navigation.
+  A booking is confirmed only after the
+  server-side validation call succeeds, and a
+  repeated IPN cannot confirm it twice.
+end note
+
+@enduml
