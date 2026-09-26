@@ -1,0 +1,49 @@
+@startuml uml-booking-state
+!theme plain
+title ParkEase BD: UML State Machine Diagram (Booking)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam state {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+
+[*] --> PAYMENT_PENDING : User creates booking\nfrom a 5-minute hold
+
+PAYMENT_PENDING --> CONFIRMED : payment validated by SSLCOMMERZ\n(or paid fully from Refund Balance)\n/ issue QR access credential
+PAYMENT_PENDING --> EXPIRED : hold runs out unpaid
+PAYMENT_PENDING --> CANCELLED : User cancels before paying
+
+CONFIRMED --> CHECKED_IN : Guard verifies the QR credential\nand confirms check-in\n(from 1 hour before start)
+CONFIRMED --> CANCELLED : User or Admin cancels\n/ refund by cancellation policy
+CONFIRMED --> NO_SHOW : end time + grace passes\nwithout check-in\n/ settle, return deposit
+
+CHECKED_IN --> CHECKOUT_REQUESTED : User requests checkout\n(optional; alerts the Guard)
+CHECKED_IN --> COMPLETED : Guard confirms exit,\novertime covered / settle
+CHECKOUT_REQUESTED --> COMPLETED : Guard confirms exit,\novertime covered by deposit\nand Refund Balance / settle
+CHECKOUT_REQUESTED --> PAYMENT_DUE : Guard confirms exit,\novertime exceeds deposit\nand Refund Balance
+CHECKED_IN --> PAYMENT_DUE : Guard confirms exit,\novertime not covered
+PAYMENT_DUE --> COMPLETED : User pays the outstanding\namount / settle
+
+CONFIRMED --> DISPUTED : User or Provider\nopens a dispute
+CHECKED_IN --> DISPUTED : dispute opened
+COMPLETED --> DISPUTED : dispute opened
+DISPUTED --> [*] : Admin resolves or rejects\nthe dispute (outcome kept\non the Dispute record)
+
+COMPLETED --> [*]
+CANCELLED --> [*]
+EXPIRED --> [*]
+NO_SHOW --> [*]
+
+note right of COMPLETED
+  Settlement moves the Provider's share
+  from pending to available balance,
+  recognizes the platform fee as
+  platform revenue, and returns any
+  unused deposit to the User's
+  Refund Balance.
+end note
+
+@enduml
