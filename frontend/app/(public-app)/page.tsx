@@ -46,7 +46,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Connect with residential property owners renting out vacant daytime
+                Connect with residential parking providers renting out vacant daytime
                 parking spaces. Reserve by the hour, enter with QR/OTP, and avoid
                 congested roadside parking.
               </p>

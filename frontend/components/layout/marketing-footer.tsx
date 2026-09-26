@@ -5,7 +5,7 @@ const PRODUCT_LINKS = [
   { href: "/parking", label: "Find Parking" },
   { href: "/how-it-works", label: "How It Works" },
   { href: "/safety", label: "Safety & Verification" },
-  { href: "/register?role=owner", label: "List Your Space" },
+  { href: "/register?role=provider", label: "List Your Space" },
 ] as const;
 
 const COMPANY_LINKS = [

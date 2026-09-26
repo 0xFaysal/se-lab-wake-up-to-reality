@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CheckCircle2, PlusCircle, BookOpen } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import ownerDashboardImg from "@/assets/owner-dashboard.jpg";
+import ownerDashboardImg from "@/assets/provider-dashboard.jpg";
 
 const HOST_PERKS = [
   "Set your own schedule, operating hours & vehicle rules",
@@ -26,7 +26,7 @@ export function HostShowcaseSection() {
             {/* Left: Text & Benefits */}
             <div className="lg:col-span-6 space-y-6">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-100 backdrop-blur-sm border border-white/20">
-                For Property Owners & Hosts
+                For Parking Providers & Hosts
               </span>
 
               <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl leading-[1.15] font-heading">
@@ -77,7 +77,7 @@ export function HostShowcaseSection() {
               <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-card/10 backdrop-blur-md p-2.5 shadow-2xl">
                 <Image
                   src={ownerDashboardImg}
-                  alt="ParkEase BD Property Owner Dashboard"
+                  alt="ParkEase BD Parking Provider Dashboard"
                   className="w-full h-auto rounded-xl object-cover"
                 />
               </div>

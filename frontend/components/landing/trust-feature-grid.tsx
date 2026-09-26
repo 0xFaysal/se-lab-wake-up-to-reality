@@ -35,7 +35,7 @@ export function TrustFeatureGrid() {
             Verified parking. Controlled access.
           </h2>
           <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-            Engineered to safeguard property owners while guaranteeing secure parking for drivers.
+            Engineered to safeguard parking providers while guaranteeing secure parking for drivers.
           </p>
         </div>
 

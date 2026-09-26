@@ -27,7 +27,7 @@ Authentication is cookie based. Requests include the backend's HttpOnly access a
 Account readiness is centralized in `lib/auth-routing.ts`. Protected portal layouts support current backend roles:
 
 - Driver: `/driver/*`
-- Provider UI (legacy URL retained): `/owner/*`
+- Provider UI: `/provider/*`
 - Guard: `/guard/*`
 - Admin: `/admin/*`
 - Manager: delegated Provider UI scope

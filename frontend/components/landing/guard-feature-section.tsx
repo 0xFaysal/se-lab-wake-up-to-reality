@@ -88,7 +88,7 @@ export function GuardFeatureSection() {
             </div>
 
             <p className="text-xs text-muted-foreground pt-1 italic">
-              * Note: Guard accounts are assigned directly by property owners or platform administrators.
+              * Note: Guard accounts are assigned directly by parking providers or platform administrators.
             </p>
           </div>
         </div>

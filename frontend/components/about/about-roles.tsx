@@ -17,7 +17,7 @@ const ROLES = [
     actionText: "Find Parking",
   },
   {
-    role: "For Property Owners",
+    role: "For Parking Providers",
     tagline: "Turn available parking into managed inventory.",
     icon: Building2,
     features: [
@@ -27,7 +27,7 @@ const ROLES = [
       "Dedicated dispute mediation & platform safeguards",
       "Real-time parking slot occupancy & utilization insights",
     ],
-    actionLink: "/register?role=owner",
+    actionLink: "/register?role=provider",
     actionText: "List Your Space",
   },
   {
@@ -43,7 +43,7 @@ const ROLES = [
     ],
     actionLink: null,
     actionText: null,
-    footerNote: "Guard accounts are assigned directly by property owners.",
+    footerNote: "Guard accounts are assigned directly by parking providers.",
   },
 ];
 
@@ -60,7 +60,7 @@ export function AboutRoles() {
           </h2>
           <p className="mt-3 text-base text-muted-foreground leading-relaxed">
             Every feature on ParkEase BD is engineered specifically for Dhaka&apos;s
-            drivers, property owners, and on-site building security personnel.
+            drivers, parking providers, and on-site building security personnel.
           </p>
         </div>
 

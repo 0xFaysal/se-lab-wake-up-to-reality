@@ -62,7 +62,7 @@ export interface OwnerActivity {
 
 export const MOCK_OWNER_PROFILE: OwnerProfile = {
   name: "Tanvir Chowdhury",
-  role: "Property Owner",
+  role: "Parking Provider",
   initials: "TC",
   email: "tanvir.chowdhury@parkease.bd",
   phone: "+880 1711-928471",
@@ -536,7 +536,7 @@ export const MOCK_OWNER_GUARDS: OwnerGuard[] = [
     shiftEnd: "10:00 PM",
     shiftWindow: "2:00 PM – 10:00 PM",
     status: "OFF_DUTY",
-    assignedBy: "Tanvir Chowdhury (Property Owner)",
+    assignedBy: "Tanvir Chowdhury (Parking Provider)",
   },
   {
     id: "guard-3",
@@ -566,7 +566,7 @@ export const MOCK_OWNER_GUARDS: OwnerGuard[] = [
     gate: "Gate 2",
     status: "PENDING_ACTIVATION",
     invitationNote: "Invitation: Sent Today",
-    assignedBy: "Tanvir Chowdhury (Property Owner)",
+    assignedBy: "Tanvir Chowdhury (Parking Provider)",
   },
 ];
 
@@ -641,7 +641,7 @@ export const GUARD_ACCESS_SCOPE = {
   ],
   cannotAccess: [
     "Pricing, Earnings & Payouts",
-    "Ownership controls & Manager controls",
+    "Provider controls & Manager controls",
   ],
 };
 
@@ -940,7 +940,7 @@ export const MOCK_REVIEW_ACTIVITY: ReviewActivityItem[] = [
   {
     id: "act-rev-2",
     type: "reply_published",
-    title: "Owner Reply Published",
+    title: "Provider Reply Published",
     subtext: "Sadia Rahman • 45 mins ago",
     dotColor: "bg-blue-500",
   },
@@ -1013,7 +1013,7 @@ export const MOCK_OWNER_NOTIFICATIONS: OwnerNotificationItem[] = [
     isUnread: true,
     actionType: "view_earnings",
     actionLabel: "View Earnings",
-    targetId: "/owner/earnings",
+    targetId: "/provider/earnings",
   },
   {
     id: "notif-4",
@@ -1025,7 +1025,7 @@ export const MOCK_OWNER_NOTIFICATIONS: OwnerNotificationItem[] = [
     isUnread: true,
     actionType: "request_payout",
     actionLabel: "Request Payout",
-    targetId: "/owner/earnings",
+    targetId: "/provider/earnings",
   },
   {
     id: "notif-5",
@@ -1049,7 +1049,7 @@ export const MOCK_OWNER_NOTIFICATIONS: OwnerNotificationItem[] = [
     isUnread: false,
     actionType: "view_review",
     actionLabel: "View Review",
-    targetId: "/owner/reviews",
+    targetId: "/provider/reviews",
   },
 ];
 
@@ -1169,7 +1169,7 @@ export const MOCK_FAQS: FAQItem[] = [
   },
   {
     id: "faq-2",
-    question: "How are owner payouts calculated?",
+    question: "How are provider payouts calculated?",
     answer:
       "ParkEase BD deducts a flat 10% platform fee from gross completed parking transactions. The remaining 90% is credited directly to your Available Balance and disbursed automatically every Sunday to your verified bank account.",
   },
@@ -1183,7 +1183,7 @@ export const MOCK_FAQS: FAQItem[] = [
     id: "faq-4",
     question: "How do Manager permissions work?",
     answer:
-      "Property Managers can be invited by the Owner with granular capabilities: 'Manage Guards', 'View Bookings', and 'View Analytics'. Payout bank accounts and root ownership settings can only be altered by the Property Owner.",
+      "Property Managers can be invited by the Provider with granular capabilities: 'Manage Guards', 'View Bookings', and 'View Analytics'. Payout bank accounts and root provider settings can only be altered by the Parking Provider.",
   },
 ];
 

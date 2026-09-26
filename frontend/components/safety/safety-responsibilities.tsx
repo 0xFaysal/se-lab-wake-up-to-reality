@@ -12,7 +12,7 @@ const ROLES = [
     ],
   },
   {
-    role: "Property Owners",
+    role: "Parking Providers",
     icon: Building2,
     responsibilities: [
       "Ensure clear, unobstructed driveway and gate access",
@@ -45,7 +45,7 @@ export function SafetyResponsibilities() {
             Safer parking depends on everyone following the process.
           </h2>
           <p className="mt-3 text-base text-muted-foreground leading-relaxed">
-            Community trust and security succeed when drivers, property owners, and
+            Community trust and security succeed when drivers, parking providers, and
             security guards adhere to standard procedures.
           </p>
         </div>

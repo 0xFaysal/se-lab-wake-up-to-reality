@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
   ),
   title: {
-    default: "ParkEase BD — Property Owner Portal",
+    default: "ParkEase BD — Parking Provider Portal",
     template: "%s | ParkEase BD",
   },
   description:

@@ -9,8 +9,8 @@ import type { UserRole } from "@/lib/api/api-types";
 
 const portalAccountRoots: Partial<Record<UserRole, string>> = {
   ADMIN: "/admin/account",
-  PROVIDER: "/owner/account",
-  PARKING_OWNER: "/owner/account",
+  PROVIDER: "/provider/account",
+  PARKING_OWNER: "/provider/account",
   MANAGER: "/manager/account",
   GUARD: "/guard/account",
   DRIVER: "/driver/account",
