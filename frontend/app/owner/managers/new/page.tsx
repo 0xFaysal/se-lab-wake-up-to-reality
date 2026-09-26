@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
@@ -56,6 +56,14 @@ export default function InviteManagerPage() {
     queryFn: () => parkingResourcesApi.list(propertyId),
     enabled: Boolean(propertyId),
   });
+
+  // When resources load and there are none, automatically use whole-property scope
+  // so the submit button becomes available without confusing the user
+  React.useEffect(() => {
+    if (resources.data && resources.data.length === 0) {
+      setWholeProperty(true);
+    }
+  }, [resources.data]);
   const verifiedProperties = (properties.data ?? []).filter(
     (property) => property.verificationStatus === "VERIFIED" && property.status === "ACTIVE",
   );

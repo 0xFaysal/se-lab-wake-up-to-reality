@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import { OwnerSidebar } from "@/components/owner/owner-sidebar";
+import { OwnerHeader } from "@/components/owner/owner-header";
 import { OwnerFooter } from "@/components/owner/owner-footer";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { RoleGuard } from "@/components/auth/role-guard";
 import { BrandIcon } from "@/components/common/app-logo";
+
 
 export default function OwnerPortalLayout({
   children,
@@ -55,6 +57,7 @@ export default function OwnerPortalLayout({
 
       {/* Main Workspace Column */}
       <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
+        <OwnerHeader />
         <main className="flex-1 pb-8"><RoleGuard roles={["PROVIDER", "PARKING_OWNER"]}>{children}</RoleGuard></main>
         <OwnerFooter />
       </div>
