@@ -17,44 +17,45 @@ skinparam actor {
 
 left to right direction
 
-actor "Driver" as Driver
-actor "Parking Owner" as Owner
-actor "Building Manager" as Manager
+actor "User" as User
+actor "Provider" as Provider
+actor "Manager" as Manager
 actor "Security Guard" as Guard
 actor "Administrator" as Admin
 
 rectangle "0.0\nParkEase BD\nShared Parking Platform" as System
 
 rectangle "SSLCOMMERZ\nPayment Gateway (Sandbox)" as SSL #E3F2FD
-rectangle "OpenStreetMap\nTile Service" as OSM #E3F2FD
+rectangle "OpenStreetMap\nTiles & Geocoding" as OSM #E3F2FD
+rectangle "Cloudinary\n(property images)" as CDN #E3F2FD
+rectangle "Email (SMTP)" as Mail #E3F2FD
 
-Driver --> System : Search filters, vehicle data,\nquote/hold/payment requests,\ncheckout requests, reviews, disputes
-System --> Driver : Search results, quotes, booking\nstatus, QR/OTP credential,\npayment & refund status, notifications
+User --> System : Vehicles, search filters,\nquote / hold / booking / payment,\ncheckout request, reviews, disputes,\nRefund Balance withdrawals
+System --> User : Search results, quotes, booking\nstatus, QR access pass, payment,\nrefund and payout status, notifications
 
-Owner --> System : Property & spot data, availability\nrules, Manager & Guard invitations,\npayout account & payout requests
-System --> Owner : Verification & building-approval\nstatus, bookings, active sessions,\nearnings, payout status, notifications
+Provider --> System : Properties, images, parking resources,\nparking-right claims and evidence,\nlistings, availability, Guards, Manager\ndelegations, payout methods and requests
+System --> Provider : Verification decisions, bookings,\nlive sessions, earnings, payouts,\nreviews, disputes, notifications
 
-Manager --> System : Link acceptance, building-approval\ndecisions, spot & availability updates,\nGuard assignments, dispute responses
-System --> Manager : Link invitations, pending approvals,\nbookings & sessions (no amounts),\nincident reports, notifications
+Manager --> System : Delegation acceptance, operations\nwithin granted permissions, Building\nManager votes and common rules
+System --> Manager : Delegated properties, resources,\nlistings, bookings and Guards\n(earnings only with EARNINGS_VIEW)
 
-Guard --> System : Assignment acceptance, verification\ncredential, check-in/out confirmation,\nincident reports
-System --> Guard : Assigned properties, expected\narrivals, active vehicles
+Guard --> System : Property invitation response,\nQR credential, check-in / check-out
+System --> Guard : Assigned properties and shifts,\nexpected arrivals, active sessions
 
-Admin --> System : Verification decisions, approval\nwaivers, account actions, dispute\nresolutions, payout approvals, settings
-System --> Admin : Pending reviews, disputes,\nreconciliation data, audit logs
+Admin --> System : Property, Provider and parking-right\ndecisions, account actions, refunds,\npayout actions, dispute resolutions,\nfees, content and communications
+System --> Admin : Review queues, analytics, ledger,\nreconciliation, audit and security events
 
-System --> SSL : Payment session request
-SSL --> System : IPN payment validation callback
+System --> SSL : Hosted checkout session,\nvalidation and refund calls
+SSL --> System : IPN / success callback
 
-System --> OSM : Map tile requests
-OSM --> System : Map tile images
+System --> OSM : Map tiles, address search
+System --> CDN : Image upload / delete
+System --> Mail : Verification codes,\nsetup links, campaigns
 
 note bottom of System
-  The system is the single authority for
-  booking availability, price, payment
-  validation, refunds, owner earnings,
-  and role- and property-scoped authorization.
-  Managers never receive financial data.
+  The backend is the single authority for
+  availability, price, payment validation,
+  refunds, earnings and authorization.
 end note
 
 @enduml
