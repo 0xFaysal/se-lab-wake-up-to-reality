@@ -38,7 +38,7 @@
 | Concurrency testing | Three simultaneous holds on a 2-car pool (B29) and three simultaneous payout requests (PO07) |
 | Acceptance checks | Each test case is linked to an SRS requirement; a mismatch with the SRS is recorded as a defect in Part 3 |
 
-The system tests are automated and repeatable: `node backend/scripts/qa/run-postman-tests.mjs` runs all 20 folders and writes the raw results to `docs/testing/evidence/postman/`. The same collection can be run by hand in the Postman app; [`docs/testing/postman/README.md`](postman/README.md) explains both.
+The system tests are automated and repeatable: `node backend/scripts/qa/run-postman-tests.mjs` runs the 19 regular folders, `--with-slow` adds the 20th folder (`09 Hold expiry`, test H01, about 6 minutes), and both write the raw results to `docs/testing/evidence/postman/`. The same collection can be run by hand in the Postman app; [`docs/testing/postman/README.md`](postman/README.md) explains both.
 
 ## 1.3 Test environment
 
