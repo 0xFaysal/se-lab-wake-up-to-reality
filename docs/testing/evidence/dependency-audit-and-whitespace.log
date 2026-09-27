@@ -1,0 +1,112 @@
+# Dependency audit and whitespace check
+# Run: 2026-09-20 08:12:00 +0600 | npm 11.6.2 | commit 8efe713
+
+$ git diff --check
+[exit code: 0]
+
+$ cd backend && npm audit --audit-level=high
+# npm audit report
+
+deepmerge-ts  <8.0.0
+Severity: high
+DeepmergeTS has stack exhaustion when merging recursive object graphs - https://github.com/advisories/GHSA-ggr8-5vv4-36mx
+fix available via `npm audit fix --force`
+Will install prisma@6.19.3, which is a breaking change
+node_modules/deepmerge-ts
+  @prisma/config  6.13.0-dev.1 - 8.1.0-dev.4
+  Depends on vulnerable versions of deepmerge-ts
+  node_modules/@prisma/config
+    prisma  6.13.0-dev.1 - 8.1.0-dev.6
+    Depends on vulnerable versions of @prisma/config
+    Depends on vulnerable versions of mysql2
+    node_modules/prisma
+
+mysql2  <=3.23.0
+Severity: high
+MySQL2: Auth Plugin Downgrade to mysql_clear_password Leaks Plaintext Credentials - https://github.com/advisories/GHSA-3f6p-5ww8-9rcr
+MySQL2: Unbounded zlib inflate in compressed MySQL protocol handler allows decompression-bomb DoS - https://github.com/advisories/GHSA-rgwj-5xj2-c3m3
+fix available via `npm audit fix --force`
+Will install prisma@6.19.3, which is a breaking change
+node_modules/mysql2
+
+4 high severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+[exit code: 1]
+
+$ cd frontend && npm audit --audit-level=high
+# npm audit report
+
+fast-uri  3.0.0 - 3.1.5
+Severity: high
+fast-uri vulnerable to host confusion via skipped IDN canonicalization on scheme-relative references - https://github.com/advisories/GHSA-5jgf-p345-68v8
+fast-uri vulnerable to server-side request forgery via malformed IPv6 normalization - https://github.com/advisories/GHSA-f65p-4m7j-42xc
+fast-uri vulnerable to server-side request forgery via repeated hostname percent-decoding - https://github.com/advisories/GHSA-fph4-wmhf-6fwf
+fast-uri vulnerable to host confusion via percent-encoded scheme normalization - https://github.com/advisories/GHSA-jqff-g426-hqxp
+fix available via `npm audit fix`
+node_modules/fast-uri
+
+hono  <=4.13.4
+Severity: moderate
+Hono: Incomplete fix for CVE-2026-39408: `toSSG()` still writes files outside the output directory - https://github.com/advisories/GHSA-gqvv-2mrq-wpjv
+Hono: Unbounded dot-notation nesting in `parseBody()` can cause memory exhaustion - https://github.com/advisories/GHSA-g6gw-c38x-mqfc
+Hono: Query parser reads parameters after the URL fragment, causing cache-key and proxy interpretation differentials - https://github.com/advisories/GHSA-crvj-82cr-hjcx
+fix available via `npm audit fix`
+node_modules/hono
+
+js-yaml  4.0.0 - 4.3.1
+Severity: high
+js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources - https://github.com/advisories/GHSA-2883-xcg3-v3hh
+fix available via `npm audit fix`
+node_modules/js-yaml
+
+nanoid  <3.3.18
+Severity: high
+nanoid: custom generators can loop indefinitely when size is zero - https://github.com/advisories/GHSA-2v37-7h3g-55p8
+fix available via `npm audit fix`
+node_modules/nanoid
+
+next  9.3.4-canary.0 - 16.3.2
+Severity: critical
+Next.js: Unauthenticated Remote Code Execution on windows-hosted servers - https://github.com/advisories/GHSA-p293-qw3h-jr36
+Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used - https://github.com/advisories/GHSA-2xp9-vwfh-vxw4
+Depends on vulnerable versions of postcss
+Depends on vulnerable versions of sharp
+fix available via `npm audit fix --force`
+Will install next@16.3.5, which is outside the stated dependency range
+node_modules/next
+
+postcss  <=8.5.22
+Severity: high
+PostCSS has XSS via Unescaped </style> in its CSS Stringify Output - https://github.com/advisories/GHSA-qx2v-qp2m-jg93
+PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments - https://github.com/advisories/GHSA-6g55-p6wh-862q
+PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset - https://github.com/advisories/GHSA-fxqj-rqcc-2cmp
+PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure - https://github.com/advisories/GHSA-r28c-9q8g-f849
+fix available via `npm audit fix --force`
+Will install next@16.3.5, which is outside the stated dependency range
+node_modules/next/node_modules/postcss
+
+qs  2.2.5 - 6.15.3
+Severity: moderate
+qs array-limit bypass via bracket-key comma parsing - https://github.com/advisories/GHSA-x5fp-wj9c-mxmx
+qs: Denial of Service via Attacker Controlled isBuffer - https://github.com/advisories/GHSA-4mjr-xmp4-gh2g
+fix available via `npm audit fix`
+node_modules/qs
+
+sharp  <=0.35.4-rc.0
+Severity: high
+sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591 - https://github.com/advisories/GHSA-f88m-g3jw-g9cj
+sharp: Vulnerabilities in libheif: GHSA-g89c-p67h-r497 and GHSA-2jg2-4ch7-h545 - https://github.com/advisories/GHSA-rgj7-g3m4-5g8c
+fix available via `npm audit fix --force`
+Will install next@16.3.5, which is outside the stated dependency range
+node_modules/sharp
+
+8 vulnerabilities (2 moderate, 5 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues, run:
+  npm audit fix --force
+[exit code: 1]
