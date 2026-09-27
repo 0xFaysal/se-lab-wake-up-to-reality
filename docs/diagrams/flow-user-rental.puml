@@ -82,7 +82,7 @@ if (Arrives at the gate?) then (yes)
   :Leave a review (optional);
 else (no)
   |System|
-  :After end time + grace, mark
+  :After the scheduled end time, mark
   **NO_SHOW**; return deposit to the
   User's Refund Balance;
 endif
