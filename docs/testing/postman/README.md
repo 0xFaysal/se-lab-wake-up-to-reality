@@ -16,6 +16,10 @@ Black-box system tests for the ParkEase BD API, organised by the test suites (TS
    ```
    In `backend/.env`, set `EMAIL_HOST=localhost`, `EMAIL_PORT=1025`, any `EMAIL_USERNAME`/`EMAIL_PASSWORD`, and `EXPOSE_DEVELOPMENT_AUTH_CODES=true`.
 2. Apply migrations and seed data: `npx prisma migrate deploy`, `npx prisma db seed`, `npm run db:seed:demo`. The demo seed is needed by tests S08–S11.
+   On a plain local PostgreSQL, `migrate deploy` stops at `20260919090000_restrict_supabase_data_api` with `role "anon" does not exist`, because that migration expects Supabase's `anon` and `authenticated` roles (defect D1, test BLD-01). Create the two roles once, then run `migrate deploy` again:
+   ```bash
+   docker exec parkease-postgres psql -U parkease -d parkease -c "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;"
+   ```
 3. Start the API. Mailpit uses a self-signed certificate, so the local API has to accept it:
    ```bash
    NODE_TLS_REJECT_UNAUTHORIZED=0 npm run dev          # Git Bash
