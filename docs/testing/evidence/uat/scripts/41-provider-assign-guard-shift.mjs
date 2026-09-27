@@ -1,0 +1,15 @@
+import { open } from "./sess.mjs";
+const s = await open("owner");
+const p = s.page;
+const api = []; p.on("response", async r => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/,"")} => ${(await r.text().catch(()=>"")).slice(0,200)}`); });
+await s.go("/provider/guards");
+await p.getByRole("button", { name: /assign shift/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /assign shift/i }).click(); await p.waitForTimeout(3000);
+await p.getByText("Choose a ready Guard").click(); await p.waitForTimeout(1500);
+await p.getByRole("option").first().click().catch(async()=>{ await p.getByText("QA Test Guard").last().click(); }); await p.waitForTimeout(1000);
+const submit = p.locator("main button[type=submit]:visible").first();
+console.log("submit:", await submit.innerText().catch(()=>"none"));
+await submit.click().catch(e=>console.log(e.message.slice(0,80))); await p.waitForTimeout(10000);
+console.log(api.join("\n"));
+await s.shot("assign_shift");
+await s.close();

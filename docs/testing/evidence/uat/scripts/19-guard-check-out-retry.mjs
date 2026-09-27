@@ -1,0 +1,12 @@
+import { open } from "./sess.mjs";
+const id = "e3dbd0db-b7fd-4225-9584-1e0791e12771";
+const s = await open("guard", { width: 390, height: 844 }); const p = s.page;
+const api = []; p.on("response", async (r) => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/, "")} => ${(await r.text().catch(() => "")).slice(0, 300)}`); });
+await s.go(`/guard/bookings/${id}/active`); await p.waitForTimeout(10000);
+await p.getByRole("button", { name: /confirm vehicle exit/i }).click(); await p.waitForTimeout(3000);
+const dlg = p.locator("[role=alertdialog],[role=dialog]");
+await dlg.getByRole("button", { name: /vehicle has exited/i }).click(); await p.waitForTimeout(12000);
+console.log("TOASTS:", await p.locator("[data-sonner-toast]").allInnerTexts());
+await s.shot("checkout_error");
+console.log(api.join("\n"));
+await s.close();

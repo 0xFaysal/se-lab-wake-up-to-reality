@@ -1,0 +1,13 @@
+import fs from "node:fs";
+import { open } from "./sess.mjs";
+import { OUT } from "./lib.mjs";
+const id = process.argv[2];
+const s = await open("driver");
+const p = s.page;
+let cred = null;
+p.on("response", async (r) => { if (r.url().endsWith(`/bookings/${id}`)) { try { const j = await r.json(); const d = j.data; cred = d.accessCredential?.credential || d.accessCredential?.token || d.accessCredential || d.activeAccessCredential?.credential || null; if (typeof cred === "object") cred = JSON.stringify(cred); console.log("status", d.status, "keys", Object.keys(d).filter(k => /access|credential|otp|qr/i.test(k))); } catch {} } });
+await s.go(`/driver/bookings/${id}`); await p.waitForTimeout(12000);
+const svgTitle = await p.locator("[aria-label='Booking access QR code'] svg").count();
+console.log("QR present:", svgTitle > 0, "credential:", cred ? String(cred).slice(0, 12) + "…(" + String(cred).length + " chars)" : null);
+if (cred) fs.writeFileSync(OUT + "../cred.txt", String(cred));
+await s.close();

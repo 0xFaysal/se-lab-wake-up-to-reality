@@ -1,0 +1,15 @@
+import { open } from "./sess.mjs";
+const s = await open("admin");
+const p = s.page;
+await s.go("/admin/properties/795fd2b7-c729-436d-9442-36581085ee2f");
+await p.getByRole("button", { name: /approve property/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /approve property/i }).click(); await p.waitForTimeout(2000);
+const dlg = p.locator("[role=dialog], [role=alertdialog]");
+console.log("DIALOG:", (await dlg.innerText().catch(()=>"none")).slice(0, 800));
+const ta = dlg.locator("textarea, input[type=text]").first();
+if (await ta.isVisible().catch(()=>false)) await ta.fill("QA test approval");
+await dlg.getByRole("button", { name: /approve|confirm/i }).last().click().catch(e=>console.log("no confirm", e.message.slice(0,80)));
+await p.waitForTimeout(10000);
+console.log((await p.locator("main").innerText()).slice(0, 400));
+console.log(s.failed());
+await s.close();
