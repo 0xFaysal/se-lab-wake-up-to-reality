@@ -133,7 +133,7 @@ export function RegisterForm() {
             placeholder="e.g. Tanvir Ahmed"
             autoComplete="name"
             aria-invalid={!!errors.fullName}
-            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-10 text-sm rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
             {...register("fullName")}
           />
           {errors.fullName && (
@@ -152,7 +152,7 @@ export function RegisterForm() {
             placeholder="name@example.com"
             autoComplete="email"
             aria-invalid={!!errors.email}
-            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-10 text-sm rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
             {...register("email")}
           />
           {errors.email && (
@@ -171,7 +171,7 @@ export function RegisterForm() {
             placeholder="017XXXXXXXX"
             autoComplete="tel"
             aria-invalid={!!errors.phone}
-            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-10 text-sm rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
             {...register("phone")}
           />
           {errors.phone && (
@@ -191,7 +191,7 @@ export function RegisterForm() {
               placeholder="At least 8 chars, 1 uppercase, 1 number"
               autoComplete="new-password"
               aria-invalid={!!errors.password}
-              className="h-10 text-sm pr-10 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+              className="h-10 text-sm pr-10 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
               {...register("password")}
             />
             <button
@@ -226,7 +226,7 @@ export function RegisterForm() {
             placeholder="Re-enter your password"
             autoComplete="new-password"
             aria-invalid={!!errors.confirmPassword}
-            className="h-10 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-10 text-sm rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
             {...register("confirmPassword")}
           />
           {errors.confirmPassword && (

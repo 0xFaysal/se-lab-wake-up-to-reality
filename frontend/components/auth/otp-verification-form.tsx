@@ -296,7 +296,7 @@ export function OtpVerificationForm() {
                 onKeyDown={(e) => handleKeyDown(idx, e)}
                 onPaste={handlePaste}
                 autoFocus={idx === 0}
-                className="size-12 sm:size-14 rounded-xl border border-border bg-[#F3F4F6] text-center text-xl sm:text-2xl font-black font-mono text-foreground focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-hidden"
+                className="size-12 sm:size-14 rounded-xl border-2 border-slate-300 bg-white text-center text-xl sm:text-2xl font-black font-mono text-foreground hover:border-slate-400 focus:bg-white focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition-all outline-hidden shadow-2xs dark:bg-slate-900 dark:border-slate-600 dark:focus:border-[#10B981]"
               />
             ))}
           </div>

@@ -78,7 +78,7 @@ export default function SupportPage() {
             placeholder="e.g. booking cancellation, payment issue, access OTP"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-11 pr-10 rounded-xl urban-input bg-[#F3F4F6] focus:bg-white text-sm text-foreground placeholder:text-muted-foreground border border-transparent focus:border-primary shadow-2xs outline-hidden"
+            className="w-full h-12 pl-11 pr-10 rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 text-sm text-foreground placeholder:text-slate-400 shadow-2xs outline-hidden transition-colors"
           />
           {searchQuery && (
             <button
