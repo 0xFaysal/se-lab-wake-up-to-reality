@@ -18,7 +18,7 @@ PAYMENT_PENDING --> CANCELLED : User cancels before paying
 
 CONFIRMED --> CHECKED_IN : Guard verifies the QR credential\nand confirms check-in\n(from 1 hour before start)
 CONFIRMED --> CANCELLED : User or Admin cancels\n/ refund by cancellation policy
-CONFIRMED --> NO_SHOW : end time + grace passes\nwithout check-in\n/ settle, return deposit
+CONFIRMED --> NO_SHOW : scheduled end time passes\nwithout check-in\n/ settle, return deposit
 
 CHECKED_IN --> CHECKOUT_REQUESTED : User requests checkout\n(optional; alerts the Guard)
 CHECKED_IN --> COMPLETED : Guard confirms exit,\novertime covered / settle
