@@ -281,7 +281,7 @@ export function OwnerGuardsView() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search guard by name, phone, property, or gate"
-                  className="w-full h-9.5 pl-9.5 pr-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition"
+                  className="w-full h-9.5 pl-9.5 pr-3 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 />
               </div>
 
@@ -291,7 +291,7 @@ export function OwnerGuardsView() {
                   aria-label="Filter by guard status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9.5 pl-3 pr-7 rounded-lg border border-[#E5E7EB] bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition appearance-none cursor-pointer"
+                  className="h-9.5 pl-3 pr-7 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition appearance-none cursor-pointer"
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="ON_DUTY">On-Duty</option>
@@ -307,7 +307,7 @@ export function OwnerGuardsView() {
                   aria-label="Filter by property"
                   value={propertyFilter}
                   onChange={(e) => setPropertyFilter(e.target.value)}
-                  className="h-9.5 pl-3 pr-7 rounded-lg border border-[#E5E7EB] bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition appearance-none cursor-pointer"
+                  className="h-9.5 pl-3 pr-7 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition appearance-none cursor-pointer"
                 >
                   <option value="ALL">All Properties</option>
                   <option value="Gulshan">Gulshan Property</option>
@@ -322,7 +322,7 @@ export function OwnerGuardsView() {
                   aria-label="Filter by gate"
                   value={gateFilter}
                   onChange={(e) => setGateFilter(e.target.value)}
-                  className="h-9.5 pl-3 pr-7 rounded-lg border border-[#E5E7EB] bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition appearance-none cursor-pointer"
+                  className="h-9.5 pl-3 pr-7 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition appearance-none cursor-pointer"
                 >
                   <option value="ALL">All Gates</option>
                   <option value="Gate 1">Gate 1</option>
@@ -778,7 +778,7 @@ export function OwnerGuardsView() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Rafiqul Islam"
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B]"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 />
               </div>
 
@@ -793,7 +793,7 @@ export function OwnerGuardsView() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+880 17XX-XXXXXX"
-                    className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B]"
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -806,7 +806,7 @@ export function OwnerGuardsView() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="guard@example.com"
-                    className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B]"
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
               </div>
@@ -819,7 +819,7 @@ export function OwnerGuardsView() {
                   <select
                     value={selectedPropertyId}
                     onChange={(e) => setSelectedPropertyId(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] bg-white"
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 bg-white transition"
                   >
                     {MOCK_OWNER_PROPERTIES.map((prop) => (
                       <option key={prop.id} value={prop.id}>
@@ -836,7 +836,7 @@ export function OwnerGuardsView() {
                   <select
                     value={assignedGate}
                     onChange={(e) => setAssignedGate(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] bg-white"
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 bg-white transition"
                   >
                     <option value="Gate 1">Gate 1 (Main Entrance)</option>
                     <option value="Gate 2">Gate 2 (Basement Ramp)</option>
@@ -855,7 +855,7 @@ export function OwnerGuardsView() {
                     value={shiftStart}
                     onChange={(e) => setShiftStart(e.target.value)}
                     placeholder="08:00 AM"
-                    className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
                 <div>

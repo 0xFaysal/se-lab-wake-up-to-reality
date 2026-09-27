@@ -391,7 +391,7 @@ export function AddManagerWizard() {
                           className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]/20 transition-all ${
                             errors.fullName
                               ? "border-rose-400 bg-rose-50/20"
-                              : "border-[#E5E7EB] bg-white focus:border-[#064E3B]"
+                              : "border-slate-300 bg-white focus:border-[#064E3B]"
                           }`}
                         />
                       </div>
@@ -429,7 +429,7 @@ export function AddManagerWizard() {
                             className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]/20 transition-all ${
                               errors.email
                                 ? "border-rose-400 bg-rose-50/20"
-                                : "border-[#E5E7EB] bg-white focus:border-[#064E3B]"
+                                : "border-slate-300 bg-white focus:border-[#064E3B]"
                             }`}
                           />
                         </div>
@@ -465,7 +465,7 @@ export function AddManagerWizard() {
                             className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]/20 transition-all ${
                               errors.phone
                                 ? "border-rose-400 bg-rose-50/20"
-                                : "border-[#E5E7EB] bg-white focus:border-[#064E3B]"
+                                : "border-slate-300 bg-white focus:border-[#064E3B]"
                             }`}
                           />
                         </div>

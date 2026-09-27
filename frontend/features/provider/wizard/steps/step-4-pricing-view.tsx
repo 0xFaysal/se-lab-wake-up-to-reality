@@ -318,7 +318,7 @@ export function Step4PricingView() {
                       type="number"
                       value={hourlyRate}
                       onChange={(e) => setHourlyRate(Number(e.target.value))}
-                      className="w-full h-10 pl-7 pr-10 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] font-extrabold text-sm text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                      className="w-full h-10 pl-7 pr-10 rounded-lg border border-slate-300 bg-white font-extrabold text-sm text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]">
                       / hr
@@ -338,7 +338,7 @@ export function Step4PricingView() {
                       type="number"
                       value={dailyMax}
                       onChange={(e) => setDailyMax(Number(e.target.value))}
-                      className="w-full h-10 pl-7 pr-12 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] font-extrabold text-sm text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                      className="w-full h-10 pl-7 pr-12 rounded-lg border border-slate-300 bg-white font-extrabold text-sm text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]">
                       / day
@@ -357,7 +357,7 @@ export function Step4PricingView() {
                     type="text"
                     value={minDuration}
                     onChange={(e) => setMinDuration(e.target.value)}
-                    className="w-full h-8.5 px-2.5 rounded-lg border border-slate-200 bg-[#fcfcfd] text-slate-800 text-xs"
+                    className="w-full h-8.5 px-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 text-xs focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -369,7 +369,7 @@ export function Step4PricingView() {
                     type="text"
                     value={maxDuration}
                     onChange={(e) => setMaxDuration(e.target.value)}
-                    className="w-full h-8.5 px-2.5 rounded-lg border border-slate-200 bg-[#fcfcfd] text-slate-800 text-xs"
+                    className="w-full h-8.5 px-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 text-xs focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -381,7 +381,7 @@ export function Step4PricingView() {
                     type="text"
                     value={gracePeriod}
                     onChange={(e) => setGracePeriod(e.target.value)}
-                    className="w-full h-8.5 px-2.5 rounded-lg border border-slate-200 bg-[#fcfcfd] text-slate-800 text-xs"
+                    className="w-full h-8.5 px-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 text-xs focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
               </div>
