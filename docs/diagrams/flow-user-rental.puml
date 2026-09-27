@@ -1,0 +1,91 @@
+@startuml flow-user-rental
+!theme plain
+title ParkEase BD: Flow Diagram - How a User Rents a Parking Space
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam activity {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+  DiamondBackgroundColor #E3F2FD
+}
+skinparam swimlane {
+  BorderColor #9E9E9E
+}
+
+|User|
+start
+:Register as User, verify email;
+:Add a vehicle (type, registration number);
+:Search by destination, date, time
+and vehicle type (map + list);
+:Open a parking location, choose the
+date, arrival and departure time;
+
+|System|
+:Check live availability and return a
+**quote**: parking charge + platform fee
++ refundable deposit (valid 5 minutes);
+
+|User|
+:Hold this parking;
+|System|
+:Reserve the space for **5 minutes**
+(no other User can take it);
+|User|
+:Create booking;
+|System|
+:Booking **PAYMENT_PENDING**;
+
+|User|
+:Pay (see payment flow);
+|System|
+if (Payment validated in time?) then (yes)
+  :Booking **CONFIRMED**;
+  :Issue a QR access pass
+  (valid for this booking only);
+else (no)
+  :Hold expires, booking **EXPIRED**,
+  space released;
+  stop
+endif
+
+|User|
+if (Arrives at the gate?) then (yes)
+  :Show the QR pass to the Guard
+(up to 1 hour before start);
+  |Guard|
+  :Scan the QR (or paste its code),
+  check vehicle, plate and space;
+  :Confirm check-in;
+  |System|
+  :Booking **CHECKED_IN**;
+  |User|
+  :Park; when leaving, optionally tap
+  "Request checkout" to alert the Guard;
+  |Guard|
+  :Confirm the vehicle has
+  crossed the exit gate;
+  |System|
+  :Calculate overtime (after grace period);
+  if (Overtime more than deposit\nand Refund Balance?) then (yes)
+    :Booking **PAYMENT_DUE**;
+    |User|
+    :Pay the outstanding amount;
+    |System|
+  else (no)
+  endif
+  :Booking **COMPLETED**; settle money
+  (see money flow);
+  |User|
+  :Leave a review (optional);
+else (no)
+  |System|
+  :After the scheduled end time, mark
+  **NO_SHOW**; return deposit to the
+  User's Refund Balance;
+endif
+stop
+
+@enduml

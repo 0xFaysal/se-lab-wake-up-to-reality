@@ -1,0 +1,53 @@
+@startuml seq-provider-payout
+!theme plain
+title ParkEase BD: UML Sequence Diagram - How a Provider Gets Paid
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam sequence {
+  ParticipantBackgroundColor #FFF3E0
+  ParticipantBorderColor #E65100
+  ActorBackgroundColor #E8F5E9
+  ActorBorderColor #2E7D32
+  LifeLineBorderColor #9E9E9E
+}
+autonumber
+
+actor Provider
+participant "ParkEase API" as API
+database "PostgreSQL\n(wallets, ledger,\npayouts)" as DB
+actor Admin
+participant "Bank / bKash /\nNagad / Rocket" as Bank
+
+== Earning (for every paid booking) ==
+API -> DB : On payment: Provider share credited\nto wallet **pending** balance
+API -> DB : On settlement (checkout, or no-show):\nledger DEBIT Booking Held Funds,\nCREDIT Provider Payable (parking + paid overtime),\nCREDIT Platform Revenue (platform fee),\nCREDIT User Refund Balance (unused deposit)
+API -> DB : Move Provider share from\n**pending** to **available**
+
+== Payout request ==
+Provider -> API : Add payout method\n(Bank / bKash / Nagad / Rocket / other MFS)
+API -> DB : Store account number encrypted,\nreturn only a masked number
+Provider -> API : Request payout (amount <= available,\nchosen payout method)
+API -> DB : Reserve amount: available -> **held**,\nsnapshot destination, status REQUESTED
+
+== Admin processing ==
+Admin -> API : Open Payout operations queue
+opt Needs checking
+  Admin -> API : Put ON_HOLD with a note
+  Admin -> API : Release back to REQUESTED
+end
+alt Approve
+  Admin -> API : Approve payout
+  API -> DB : status APPROVED
+  Admin -> Bank : Transfer the money to the Provider's\naccount outside ParkEase (manual transfer)
+  Admin -> API : Mark PAID with the transfer reference
+  API -> DB : Ledger DEBIT Provider Payable,\nCREDIT External Payout Clearing;\nclear held balance; status PAID
+  API --> Provider : Notification: payout paid
+else Reject
+  Admin -> API : Reject with a reason
+  API -> DB : Return held amount to\n**available**; status REJECTED
+  API --> Provider : Notification: payout rejected
+end
+
+@enduml

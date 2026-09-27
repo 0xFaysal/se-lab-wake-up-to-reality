@@ -17,73 +17,74 @@ skinparam actor {
 
 left to right direction
 
-actor "Driver" as Driver
+actor "User" as User
 actor "Security Guard" as Guard
 actor "SSLCOMMERZ\n(Payment Gateway)" as SSL
 
 rectangle "ParkEase BD" {
 
-  usecase "Register / Login" as UC1
+  usecase "Register / Login /\nVerify Email" as UC1
 
-  package "Driver Use Cases" {
+  package "User Use Cases" {
     usecase "Manage Vehicles" as UC2
-    usecase "Search Parking" as UC3
-    usecase "View Parking Details" as UC4
+    usecase "Search & Browse Parking\n(map, filters)" as UC3
+    usecase "Manage Favorites, Saved\nPlaces, Recent Searches" as UC4
     usecase "Request Quote" as UC5
-    usecase "Create Booking Hold" as UC6
-    usecase "Make Payment" as UC7
-    usecase "View Booking &\nAccess QR/OTP" as UC8
-    usecase "Request Extension" as UC9
-    usecase "Request Checkout" as UC10
-    usecase "View Payment &\nRefund History" as UC11
-    usecase "Submit Review" as UC12
-    usecase "Submit Dispute" as UC13
+    usecase "Hold Parking (5 min)" as UC6
+    usecase "Create Booking" as UC7
+    usecase "Pay (Refund Balance\nfirst, then gateway)" as UC8
+    usecase "View Booking &\nQR Access Pass" as UC9
+    usecase "Cancel Booking" as UC10
+    usecase "Request Checkout" as UC11
+    usecase "Pay Outstanding\nOvertime" as UC12
+    usecase "Review Booking" as UC13
+    usecase "Open Dispute" as UC14
+    usecase "Report Listing" as UC15
+    usecase "Withdraw Refund Balance" as UC16
   }
 
   package "Security Guard Use Cases" {
-    usecase "Accept / Reject\nAssignment" as UC24
-    usecase "View Expected Arrivals" as UC25
-    usecase "Verify Entry (QR/OTP)" as UC26
-    usecase "Confirm Check-in" as UC27
-    usecase "View Active Vehicles" as UC28
-    usecase "Verify Exit (QR/OTP)" as UC29
-    usecase "Confirm Checkout" as UC30
-    usecase "Report Incident" as UC31
+    usecase "Accept / Reject\nProperty Invitation" as UC20
+    usecase "View Assigned Bookings" as UC21
+    usecase "Verify QR Credential" as UC22
+    usecase "Confirm Check-in" as UC23
+    usecase "View Active Sessions" as UC24
+    usecase "Confirm Check-out" as UC25
   }
 }
 
-' --- Driver (left) ---
-Driver -- UC1
-Driver -- UC2
-Driver -- UC3
-Driver -- UC4
-Driver -- UC5
-Driver -- UC6
-Driver -- UC7
-Driver -- UC8
-Driver -- UC9
-Driver -- UC10
-Driver -- UC11
-Driver -- UC12
-Driver -- UC13
+User -- UC1
+User -- UC2
+User -- UC3
+User -- UC4
+User -- UC5
+User -- UC6
+User -- UC7
+User -- UC8
+User -- UC9
+User -- UC10
+User -- UC11
+User -- UC12
+User -- UC13
+User -- UC14
+User -- UC15
+User -- UC16
 
 UC6 ..> UC5 : <<include>>
-UC9 ..> UC5 : <<include>>
-UC10 ..> UC8 : <<extend>>
-UC7 ..> SSL : <<include>>
+UC7 ..> UC6 : <<include>>
+UC8 ..> SSL : <<include>>\n(when balance\nis not enough)
+UC12 ..> SSL : <<include>>
+UC11 ..> UC9 : <<extend>>
 
-' --- Security Guard (left) ---
 Guard -- UC1
+Guard -- UC20
+Guard -- UC21
+Guard -- UC22
+Guard -- UC23
 Guard -- UC24
 Guard -- UC25
-Guard -- UC26
-Guard -- UC27
-Guard -- UC28
-Guard -- UC29
-Guard -- UC30
-Guard -- UC31
 
-UC26 ..> UC27 : <<precedes>>
-UC29 ..> UC30 : <<precedes>>
+UC22 ..> UC23 : <<precedes>>
+UC20 ..> UC21 : <<precedes>>
 
 @enduml
