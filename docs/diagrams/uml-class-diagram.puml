@@ -192,11 +192,11 @@ Booking "1" *-- "0..1" AccessCredential
 Booking "1" -- "0..1" Review
 Booking "1" -- "0..*" Dispute
 
-Booking "1" -- "1..*" Payment
+Booking "1" -- "0..*" Payment
 Payment "1" -- "0..*" Refund
 Booking "1" -- "0..1" BookingSettlement
 Quote ..> PlatformFeeRule : fee resolved from >
-Account "1" -- "1..*" WalletAccount
+Account "1" -- "0..*" WalletAccount
 LedgerTransaction "1" *-- "2..*" LedgerEntry
 LedgerEntry "*" -- "0..1" WalletAccount
 Payment ..> LedgerTransaction : posts >
