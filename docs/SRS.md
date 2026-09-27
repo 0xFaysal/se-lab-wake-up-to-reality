@@ -160,7 +160,7 @@ One account may hold several roles (for example `PROVIDER` and `MANAGER`). Each 
 |---|---|---|---|---|---|
 | Self-register | Yes | Yes | No | No | No |
 | Manage own vehicles, favorites, saved places | Yes | | | | |
-| Search parking (signed in, verified account) | Yes | Yes | Yes | Yes | Yes |
+| Search parking and view property details (also open to signed-out visitors) | Yes | Yes | Yes | Yes | Yes |
 | Quote, hold, book, pay, request checkout | Own | | | | |
 | Cancel a booking | Own | | | | Any |
 | Create a property or join an existing one | | Yes | | | |
@@ -216,7 +216,7 @@ One account may hold several roles (for example `PROVIDER` and `MANAGER`). Each 
 
 ### 3.1 Use Case Diagrams
 
-The use case model is split into three figures. Figure 3.1a covers booking and gate operations for the User and Security Guard, with SSLCOMMERZ as a secondary actor. Figure 3.1b covers the Provider and Manager; operations both can perform are linked to an abstract *Property Operator* actor that both specialize, and a Manager performs them only with the matching delegated permission. Figure 3.1c covers the Administrator.
+The use case model is split into three figures. Figure 3.1a covers booking and gate operations for the User and Security Guard, with SSLCOMMERZ as a secondary actor. Figure 3.1b covers the Provider and Manager; operations both can perform are linked to an abstract *Property Operator* actor that both specialize, and a Manager performs them only with the matching delegated permission. Common rules and temporary closure sit in their own package, open to the Provider only as sole Provider and to the Manager only as Building Manager. Figure 3.1c covers the Administrator.
 
 **Figure 3.1a: Use Case Diagram: Booking & Gate Operations**
 
@@ -280,7 +280,7 @@ Figure 3.3 shows the main classes behind the functional requirements, grouped in
 - One **Account** can hold several roles. A User is an account with the `DRIVER` role; a Provider is an account with the `PROVIDER` role.
 - A Provider's authority over a **Property** comes from a **PropertyProvider** membership. A property can have several Providers.
 - A **ParkingResource** can be listed only through a verified **ParkingRight**, and each **ParkingListing** carries the price, deposit, and duration limits Users see.
-- A **Quote** becomes a **ReservationHold**, which becomes a **Booking**. A Booking has at most one **AccessCredential**, one or more **Payments**, and at most one **BookingSettlement**.
+- A **Quote** becomes a **ReservationHold**, which becomes a **Booking**. A Booking has at most one **AccessCredential**, zero or more **Payments** (a Payment is created when the User starts paying), and at most one **BookingSettlement**.
 - Every money movement is a balanced **LedgerTransaction** of two or more **LedgerEntries**; wallet balances change only through them.
 
 ### 3.4 Booking State Machine
@@ -289,7 +289,7 @@ Figure 3.3 shows the main classes behind the functional requirements, grouped in
 
 ![Booking State Machine](./diagrams/uml-booking-state.png)
 
-A booking starts in `PAYMENT_PENDING` and becomes `CONFIRMED` once payment is validated, at which point the QR credential is issued. A Guard can check it in from one hour before the start until the end of the booking (`CHECKED_IN`). The User may request checkout (`CHECKOUT_REQUESTED`), which alerts the Guard; the Guard's exit confirmation completes the booking (`COMPLETED`), or leaves it `PAYMENT_DUE` when overtime is more than the deposit and Refund Balance can cover. An unpaid booking whose hold runs out becomes `EXPIRED`; a paid booking that is never checked in becomes `NO_SHOW` after its end time plus grace period. The User (or an Admin) can cancel before the start. Opening a dispute moves the booking to `DISPUTED`; the Admin's decision is recorded on the dispute.
+A booking starts in `PAYMENT_PENDING` and becomes `CONFIRMED` once payment is validated, at which point the QR credential is issued. A Guard can check it in from one hour before the start until the end of the booking (`CHECKED_IN`). The User may request checkout (`CHECKOUT_REQUESTED`), which alerts the Guard; the Guard's exit confirmation completes the booking (`COMPLETED`), or leaves it `PAYMENT_DUE` when overtime is more than the deposit and Refund Balance can cover. An unpaid booking whose hold runs out becomes `EXPIRED`; a paid booking that is never checked in becomes `NO_SHOW` once its scheduled end time has passed (the grace period applies only to overtime). The User (or an Admin) can cancel before the start. Opening a dispute moves the booking to `DISPUTED`; the Admin's decision is recorded on the dispute.
 
 ### 3.5 Core Business Flows
 
@@ -325,7 +325,7 @@ This section describes the five flows that make ParkEase BD a marketplace: how a
 6. **Arrive.** From one hour before the start, the Guard scans the QR pass, checks the vehicle, plate, and assigned space, and confirms check-in (FR-GATE-01 to FR-GATE-03).
 7. **Leave.** The User may tap "Request checkout". The Guard confirms that the vehicle has left; the system calculates overtime after the grace period, takes it from the deposit first, and asks the User to pay only what is left (FR-GATE-04, FR-GATE-05, FR-PAY-06).
 8. **Settle and review.** The booking is `COMPLETED` and settled (§3.5.4). The User may leave one review (FR-TRS-01).
-9. **No-show or cancellation.** If the User never arrives, the booking is settled as `NO_SHOW` and the deposit is returned. If the User cancels before the start, the refund follows the cancellation rules (FR-BKG-05, FR-FIN-06).
+9. **No-show or cancellation.** If the User never arrives, the booking is settled as `NO_SHOW` once its scheduled end time has passed, and the deposit is returned. If the User cancels before the start, the refund follows the cancellation rules (FR-BKG-05, FR-FIN-06).
 
 #### 3.5.3 How the User pays
 
@@ -409,7 +409,7 @@ Each requirement has a Priority of **High** (core to the marketplace), **Medium*
 | FR-VEH-01 | A User shall be able to add a vehicle with type (motorcycle, sedan, SUV, or microbus), brand, model, registration number, and colour. | High |
 | FR-VEH-02 | The system shall normalize registration numbers and reject one that is already registered. | High |
 | FR-VEH-03 | A User shall be able to edit and delete their vehicles and mark one as the default. | Medium |
-| FR-DSC-01 | A signed-in account holder with a ready account shall be able to search active listings by location, radius, time range, and vehicle type, on a map and in a list. | High |
+| FR-DSC-01 | Anyone, including signed-out visitors, shall be able to search active listings by location, radius, time range, and vehicle type, on a map and in a list, and open a property's public details. Getting a quote or booking requires a signed-in User with a ready account. | High |
 | FR-DSC-02 | Search results and property details shall show only verified, active properties with active listings, the approximate location and public address, facilities, and the price; they shall never show the exact address or access instructions. | High |
 | FR-DSC-03 | A User shall be able to save favorite properties, save named places, and keep and clear a list of recent searches. | Low |
 
