@@ -1,0 +1,643 @@
+[
+  {
+    "route": "/driver/dashboard",
+    "status": 200,
+    "finalUrl": "/driver/dashboard",
+    "h1": "QA, where are you parking today?",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Find parking",
+      "Upcoming 0",
+      "Vehicles 0",
+      "Favorites 0",
+      "Unread alerts 0",
+      "Search parking",
+      "View all",
+      "Manage",
+      "Email verified",
+      "Vehicle added",
+      "Default vehicle selected",
+      "Manage vehicles"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l5vykvar {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l5vykvar was not found\"},\"meta\":{\"requestId\":\"9193b81a-4207-4c49-a85f-c118e1f08733\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l5wu0w5t {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l5wu0w5t was not found\"},\"meta\":{\"requestId\":\"129560a2-aa9e-4893-9376-7bb6d7239b60\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l5yh5hx8 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l5yh5hx8 was not found\"},\"meta\":{\"requestId\":\"afeecddc-3f05-48e3-9da9-450046ff97e0\",\"times"
+    ]
+  },
+  {
+    "route": "/driver",
+    "status": 200,
+    "finalUrl": "/driver/dashboard",
+    "h1": "QA, where are you parking today?",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Find parking",
+      "Upcoming 0",
+      "Vehicles 0",
+      "Favorites 0",
+      "Unread alerts 0",
+      "Search parking",
+      "View all",
+      "Manage",
+      "Email verified",
+      "Vehicle added",
+      "Default vehicle selected",
+      "Manage vehicles"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6365yqs {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6365yqs was not found\"},\"meta\":{\"requestId\":\"904806a8-e8be-4523-bd6a-eea10edfb0c5\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6487moy {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6487moy was not found\"},\"meta\":{\"requestId\":\"6542ba7a-d563-4587-84d4-b2797f660be6\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l661yfff {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l661yfff was not found\"},\"meta\":{\"requestId\":\"76600738-42db-4b6b-b939-3c02ecf7aef3\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l68bg9hm {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l68bg9hm was not found\"},\"meta\":{\"requestId\":\"3011b1aa-5405-47c0-9704-32928a704056\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/parking",
+    "status": 200,
+    "finalUrl": "/driver/parking",
+    "h1": "",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Reset",
+      "Use my current location",
+      "SEDAN▼",
+      "Search parking",
+      "My location",
+      "+",
+      "−",
+      "Leaflet",
+      "OpenStreetMap",
+      "Parking results sheet is half",
+      "Add to favorites",
+      "View offers"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6alek77 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6alek77 was not found\"},\"meta\":{\"requestId\":\"9389e3ab-a6d6-4bb2-8964-531a275a6748\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6bhd2ec {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6bhd2ec was not found\"},\"meta\":{\"requestId\":\"afee907d-8e23-471b-8e7b-afc6641b89ad\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6cotxw9 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6cotxw9 was not found\"},\"meta\":{\"requestId\":\"a5547480-e5f2-4b20-a055-d2558f96200a\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/bookings",
+    "status": 200,
+    "finalUrl": "/driver/bookings",
+    "h1": "Bookings",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Find parking",
+      "Search parking"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6ih1tkg {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6ih1tkg was not found\"},\"meta\":{\"requestId\":\"556a1645-7b23-47c7-b4b7-a4556bcb918d\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6jclujx {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6jclujx was not found\"},\"meta\":{\"requestId\":\"edbd14f2-b3e6-4d45-8341-323f2931f11e\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6l8rw7o {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6l8rw7o was not found\"},\"meta\":{\"requestId\":\"bb1956f3-d051-4f79-b4f2-9eeb1019379a\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/active-session",
+    "status": 200,
+    "finalUrl": "/driver/active-session",
+    "h1": "Active session",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Search parking"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6pdjnym {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6pdjnym was not found\"},\"meta\":{\"requestId\":\"e838ab88-2406-4d01-8f60-324d49533215\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6qno07r {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6qno07r was not found\"},\"meta\":{\"requestId\":\"2dc8c5f9-c568-4601-82cf-7c27f8750a29\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6s6beps {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6s6beps was not found\"},\"meta\":{\"requestId\":\"d970ba17-6435-470f-a1e6-b8e9efb23d86\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/vehicles",
+    "status": 200,
+    "finalUrl": "/driver/vehicles",
+    "h1": "Vehicles",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "SEDAN",
+      "Add Vehicle",
+      "Change Default",
+      "View Privacy Policy"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6wlh4ti {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6wlh4ti was not found\"},\"meta\":{\"requestId\":\"b62c22cb-0256-4771-a4f1-d78d65b562be\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l6xpepfa {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l6xpepfa was not found\"},\"meta\":{\"requestId\":\"bbfea04e-ac1a-4cd0-8492-48e6ba693438\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/payments",
+    "status": 200,
+    "finalUrl": "/driver/payments",
+    "h1": "Refund Balance",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Manage payout methods",
+      "Select destination",
+      "Add destination",
+      "Request withdrawal"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l71u6bz1 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l71u6bz1 was not found\"},\"meta\":{\"requestId\":\"32506d92-0b79-4ad4-96ac-c2982fc3e988\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l72nm43n {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l72nm43n was not found\"},\"meta\":{\"requestId\":\"3142716c-87b5-4bc2-9b8d-715780d6584f\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l73wg84b {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l73wg84b was not found\"},\"meta\":{\"requestId\":\"1663601f-9ca7-49c5-9bad-cf275cee4c35\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/refunds",
+    "status": 200,
+    "finalUrl": "/driver/refunds",
+    "h1": "Refunds",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "View payments"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l78k90l4 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l78k90l4 was not found\"},\"meta\":{\"requestId\":\"88db1d5b-0d59-4088-a074-9a3b8194f294\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l79iueei {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l79iueei was not found\"},\"meta\":{\"requestId\":\"2829da57-d271-429f-b7ed-e7761be229d3\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7boiwyv {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7boiwyv was not found\"},\"meta\":{\"requestId\":\"50a05725-58b4-4179-b0c7-f5245b34be61\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/wallet",
+    "status": 200,
+    "finalUrl": "/driver/payments",
+    "h1": "Refund Balance",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Manage payout methods",
+      "Select destination",
+      "Add destination",
+      "Request withdrawal"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7eitftx {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7eitftx was not found\"},\"meta\":{\"requestId\":\"7818557f-91c5-472e-924d-9d1b2acd2551\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7fqcq7d {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7fqcq7d was not found\"},\"meta\":{\"requestId\":\"823fa333-2570-47db-9506-bc8894ca19e2\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7hvtl3b {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7hvtl3b was not found\"},\"meta\":{\"requestId\":\"01423f3d-43b9-4814-8782-7c0eba30ed9c\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/notifications",
+    "status": 200,
+    "finalUrl": "/driver/notifications",
+    "h1": "Notifications",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Mark all read",
+      "all",
+      "unread",
+      "read",
+      "bookings",
+      "payments",
+      "disputes",
+      "account"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7lorg1p {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7lorg1p was not found\"},\"meta\":{\"requestId\":\"ccdaa693-aa9f-463c-9fe8-65247d2a6fcd\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7mlbfjt {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7mlbfjt was not found\"},\"meta\":{\"requestId\":\"c84ce095-5fd9-4450-a298-177d2cac0036\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7oqi2xm {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7oqi2xm was not found\"},\"meta\":{\"requestId\":\"0aba9d73-5871-404e-a9bf-b8cefad0b267\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/disputes",
+    "status": 200,
+    "finalUrl": "/driver/disputes",
+    "h1": "Disputes",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7ry5z43 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7ry5z43 was not found\"},\"meta\":{\"requestId\":\"e7d0efdb-552d-429b-8a3b-95ecc56601a7\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7t5savq {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7t5savq was not found\"},\"meta\":{\"requestId\":\"297affc9-0f55-44b7-9869-2d87688476c1\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7uqp01f {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7uqp01f was not found\"},\"meta\":{\"requestId\":\"c21fa3d2-fb40-45c2-bab7-38a06adf2353\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/favorites",
+    "status": 200,
+    "finalUrl": "/driver/favorites",
+    "h1": "Favorite parking",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Search parking"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7yjkvqs {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7yjkvqs was not found\"},\"meta\":{\"requestId\":\"345ece0a-7b82-49f9-8a32-81627ee8a748\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l7zra1r2 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l7zra1r2 was not found\"},\"meta\":{\"requestId\":\"15b526cf-b551-4e40-b69c-bca2418d63a6\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l80yu6ou {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l80yu6ou was not found\"},\"meta\":{\"requestId\":\"93c80201-2068-4838-8556-75dac912483c\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/saved-locations",
+    "status": 200,
+    "finalUrl": "/driver/saved-locations",
+    "h1": "Saved places",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Use my current location",
+      "Save"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l859wfne {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l859wfne was not found\"},\"meta\":{\"requestId\":\"412ea441-d61b-4b57-b2fe-8be0cd5b7106\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l86fzo9d {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l86fzo9d was not found\"},\"meta\":{\"requestId\":\"541a1cbf-4829-4080-a8a0-3c0109ce84a7\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l87qaaxn {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l87qaaxn was not found\"},\"meta\":{\"requestId\":\"78670345-6d9f-40a6-95ce-fd3820653d01\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/recent-searches",
+    "status": 200,
+    "finalUrl": "/driver/recent-searches",
+    "h1": "Recent searches",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Search parking",
+      "Use current location"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8bkiudt {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8bkiudt was not found\"},\"meta\":{\"requestId\":\"bf75178d-e14a-40b4-b28c-0ea467018e48\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8cli019 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8cli019 was not found\"},\"meta\":{\"requestId\":\"cc19f979-fcb1-400b-9718-f91b66bf24dd\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8egztn8 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8egztn8 was not found\"},\"meta\":{\"requestId\":\"9f41602d-bf8e-462c-b86d-39d2b00ba32c\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/reviews",
+    "status": 200,
+    "finalUrl": "/driver/reviews",
+    "h1": "My reviews",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "View bookings"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8h08t9z {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8h08t9z was not found\"},\"meta\":{\"requestId\":\"a2aeb5b9-5b36-4a55-a205-e191fe840785\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8hw32ga {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8hw32ga was not found\"},\"meta\":{\"requestId\":\"f6800c58-9c7e-41db-b26b-ea643711193c\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8j5x3kb {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8j5x3kb was not found\"},\"meta\":{\"requestId\":\"ed392412-9399-4616-a7fa-acaf46df50dc\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/profile",
+    "status": 200,
+    "finalUrl": "/driver/profile",
+    "h1": "My Profile",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Change Password",
+      "Manage Devices",
+      "Toggle booking confirmations",
+      "Toggle arrival reminders",
+      "Toggle payment receipts",
+      "Mandatory safety alerts (disabled)",
+      "Sign Out",
+      "Sign out everywhere",
+      "Manage Vehicles",
+      "Payment Methods",
+      "My Bookings",
+      "Help & Support",
+      "View Privacy Policy →"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8my26x1 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8my26x1 was not found\"},\"meta\":{\"requestId\":\"78f40e80-23b1-4a3f-bcdd-3dbe3482478e\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8novppy {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8novppy was not found\"},\"meta\":{\"requestId\":\"c1f04608-fcbc-4d9e-bae4-11ecacd65ddd\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8q0i0g9 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8q0i0g9 was not found\"},\"meta\":{\"requestId\":\"b9f54eaf-aafa-40f0-8773-a329e7604ffc\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/payment-methods",
+    "status": 200,
+    "finalUrl": "/driver/payment-methods",
+    "h1": "Transfer destinations",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Refund Balance",
+      "Add destination"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8sdv41c {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8sdv41c was not found\"},\"meta\":{\"requestId\":\"4ee1a3fd-0e8d-4bed-b065-21e84f32275e\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8tenfuo {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8tenfuo was not found\"},\"meta\":{\"requestId\":\"b6e89ab7-2b71-4554-ba9b-fa5a9326f16f\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8uhbjr0 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8uhbjr0 was not found\"},\"meta\":{\"requestId\":\"4158a3c6-930f-467f-83f8-0759da6dbee4\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/support",
+    "status": 200,
+    "finalUrl": "/driver/support",
+    "h1": "Help & Support",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Booking Help Reservation changes, Cancel",
+      "Parking Access QR / OTP problems, Findin",
+      "Payments Payment failed, Refunds & Recei",
+      "Account Profile & Password, Vehicles & A",
+      "Safety Safety concerns, Emergency guidan",
+      "How do I cancel my booking?",
+      "What if my payment fails?",
+      "QR / OTP issues at entrance",
+      "support@parkease.bd",
+      "My Bookings",
+      "Booking Details",
+      "Manage Vehicles",
+      "Payment Methods",
+      "My Profile",
+      "Safety",
+      "View Safety Information"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8y6s6t5 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8y6s6t5 was not found\"},\"meta\":{\"requestId\":\"025131ca-5929-4634-8dfc-60bdfb625461\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l8zgj695 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l8zgj695 was not found\"},\"meta\":{\"requestId\":\"f905e413-94d8-4967-8c6c-85eb4493e145\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9103obz {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9103obz was not found\"},\"meta\":{\"requestId\":\"5832d745-ac94-47a7-a515-a3532d4ea493\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/account/security",
+    "status": 200,
+    "finalUrl": "/driver/account/security",
+    "h1": "Account security",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Change Password",
+      "Manage Devices",
+      "Sign Out",
+      "Sign out everywhere"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l93lcukh {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l93lcukh was not found\"},\"meta\":{\"requestId\":\"3a013c15-47da-4895-923b-5e3cb1d49d09\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l94s6ywj {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l94s6ywj was not found\"},\"meta\":{\"requestId\":\"f06cb665-aa90-45ce-8394-4952727ef33c\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/account/sessions",
+    "status": 200,
+    "finalUrl": "/driver/account/sessions",
+    "h1": "Active sessions",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Revoke"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l98qa9a5 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l98qa9a5 was not found\"},\"meta\":{\"requestId\":\"60f8b3af-f845-465d-9be6-92813fbc38cc\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l99rc9bq {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l99rc9bq was not found\"},\"meta\":{\"requestId\":\"cd2cb612-9d8b-4342-af9d-4811ba1ff4da\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9bai0bi {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9bai0bi was not found\"},\"meta\":{\"requestId\":\"98bcd22c-d7f3-4a22-955b-fd19fce30985\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/bookings/confirmation",
+    "status": 200,
+    "finalUrl": "/driver/bookings",
+    "h1": "Bookings",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Find parking",
+      "Search parking"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9f2f0x7 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9f2f0x7 was not found\"},\"meta\":{\"requestId\":\"e81070f4-e715-4b11-9b9f-62f9dbee4c1c\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9geooam {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9geooam was not found\"},\"meta\":{\"requestId\":\"86de42b2-9b00-44b7-94ec-441cf06c0d03\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9iftsz6 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9iftsz6 was not found\"},\"meta\":{\"requestId\":\"818c0ea0-a5b9-4152-925a-1fa25eb404c2\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/bookings/review",
+    "status": 200,
+    "finalUrl": "/driver/bookings",
+    "h1": "Bookings",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Find parking",
+      "Search parking"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9mdmu4l {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9mdmu4l was not found\"},\"meta\":{\"requestId\":\"792bc366-5a1a-4bf7-bb9c-86c75b7c56e5\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9n0hk5g {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9n0hk5g was not found\"},\"meta\":{\"requestId\":\"094c0fe2-dae1-4349-baf5-f7c5acb1c50a\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9phkbuo {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9phkbuo was not found\"},\"meta\":{\"requestId\":\"208978d0-889e-468a-b5fd-3101082faa24\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9rr4qd1 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9rr4qd1 was not found\"},\"meta\":{\"requestId\":\"7524fab5-0061-4ad4-b66a-6a03b1f324c3\",\"times"
+    ]
+  },
+  {
+    "route": "/driver/payments/return",
+    "status": 200,
+    "finalUrl": "/driver/payments/return",
+    "h1": "Verifying your payment",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "View bookings"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9ugf4qh {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9ugf4qh was not found\"},\"meta\":{\"requestId\":\"da482fdd-1c65-4c38-9808-c38d0ebd2ef4\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9vpnx2u {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9vpnx2u was not found\"},\"meta\":{\"requestId\":\"ec7d19ce-c548-4f6e-899e-506b4b526f8d\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=l9x9n9ws {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=l9x9n9ws was not found\"},\"meta\":{\"requestId\":\"9f0458d2-5cb9-48ee-b54f-66a031058dbe\",\"times"
+    ]
+  },
+  {
+    "route": "/support",
+    "status": 200,
+    "finalUrl": "/support",
+    "h1": "Help & Support",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Booking Help Reservation changes, Cancel",
+      "Parking Access QR / OTP problems, Findin",
+      "Payments Payment failed, Refunds & Recei",
+      "Account Profile & Password, Vehicles & A",
+      "Safety Safety concerns, Emergency guidan",
+      "How do I cancel my booking?",
+      "What if my payment fails?",
+      "QR / OTP issues at entrance",
+      "support@parkease.bd",
+      "My Bookings",
+      "Booking Details",
+      "Manage Vehicles",
+      "Payment Methods",
+      "My Profile",
+      "Safety",
+      "View Safety Information"
+    ],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "route": "/account/security",
+    "status": 200,
+    "finalUrl": "/driver/account/security",
+    "h1": "Account security",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Change Password",
+      "Manage Devices",
+      "Sign Out",
+      "Sign out everywhere"
+    ],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=la45rur3 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=la45rur3 was not found\"},\"meta\":{\"requestId\":\"06c68776-7550-4c25-b7f8-b23823242dd3\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=la52nizi {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=la52nizi was not found\"},\"meta\":{\"requestId\":\"5a536423-a757-435c-9b92-694fe07e8571\",\"times",
+      "GET 404 https://parkease-api.vercel.app/socket.io/?EIO=4&transport=polling&t=la7gbdlz {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route GET /socket.io/?EIO=4&transport=polling&t=la7gbdlz was not found\"},\"meta\":{\"requestId\":\"0430fe4d-c4e9-4350-98f3-7d6952f0c326\",\"times"
+    ]
+  },
+  {
+    "route": "/parking",
+    "status": 200,
+    "finalUrl": "/parking",
+    "h1": "",
+    "alerts": [],
+    "overflow": false,
+    "buttons": [
+      "Reset",
+      "Use my current location",
+      "SEDAN▼",
+      "Search parking",
+      "My location",
+      "+",
+      "−",
+      "Leaflet",
+      "OpenStreetMap",
+      "Parking results sheet is half",
+      "View offers"
+    ],
+    "errors": [],
+    "failed": []
+  }
+]

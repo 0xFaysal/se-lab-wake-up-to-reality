@@ -1,0 +1,25 @@
+// Usage: node book.mjs <dayLabel e.g. "Sun, Sep 27"> <arrival e.g. "5:00 AM"> <departure e.g. "6:00 AM">
+import fs from "node:fs";
+import { open } from "./sess.mjs";
+import { OUT } from "./lib.mjs";
+const [day, arr, dep] = process.argv.slice(2);
+const s = await open("driver");
+const p = s.page;
+const api = []; p.on("response", async (r) => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/, "")} => ${(await r.text().catch(() => "")).slice(0, 200)}`); });
+await s.go("/driver/parking/795fd2b7-c729-436d-9442-36581085ee2f?latitude=23.754089&longitude=90.371351&radiusKm=5&startAt=2026-09-27T02%3A00%3A00.000Z&endAt=2026-09-27T03%3A00%3A00.000Z&vehicleType=SEDAN");
+await p.getByText("Get server quote").waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: new RegExp(day) }).first().click(); await p.waitForTimeout(800);
+await p.getByRole("button", { name: new RegExp("^" + arr + "$") }).first().click(); await p.waitForTimeout(600);
+await p.getByRole("button", { name: new RegExp("^" + dep + "$") }).last().click(); await p.waitForTimeout(600);
+await p.getByRole("button", { name: /check live availability/i }).click(); await p.waitForTimeout(6000);
+await p.locator("select").last().selectOption({ index: 1 });
+await p.getByRole("button", { name: /get server quote/i }).click(); await p.waitForTimeout(7000);
+let t = await s.text(); console.log("QUOTE:", t.slice(t.indexOf("Reserve parking"), t.indexOf("Reserve parking") + 400).replace(/\n+/g, " | "));
+await p.getByRole("button", { name: /hold this parking/i }).click(); await p.waitForTimeout(7000);
+await p.getByRole("button", { name: /create booking/i }).click(); await p.waitForTimeout(10000);
+t = await s.text(); console.log("BOOKED:", t.slice(t.indexOf("Reserve parking"), t.indexOf("Reserve parking") + 500).replace(/\n+/g, " | "));
+const id = api.map((a) => a.match(/"booking":\{"id":"([0-9a-f-]{36})"/)?.[1] || a.match(/\/bookings\/([0-9a-f-]{36})/)?.[1]).find(Boolean);
+console.log("BOOKING ID:", id);
+console.log(api.join("\n"));
+if (id) fs.writeFileSync(OUT + `../booking_${arr.replace(/\W/g, "")}.txt`, id);
+await s.close();

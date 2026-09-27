@@ -1,0 +1,11 @@
+import { open } from "./sess.mjs";
+const s = await open("owner");
+const p = s.page;
+await s.go("/provider/properties/795fd2b7-c729-436d-9442-36581085ee2f");
+await p.getByRole("button", { name: /claim right/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /claim right/i }).click(); await p.waitForTimeout(2000);
+await p.getByRole("button", { name: /send for verification/i }).click(); await p.waitForTimeout(12000);
+const m = await p.locator("main").innerText();
+console.log(m.slice(m.indexOf("Parking Resources"), m.indexOf("Parking Resources") + 1200));
+console.log(s.failed().filter(f => !f.includes("/terms")));
+await s.close();

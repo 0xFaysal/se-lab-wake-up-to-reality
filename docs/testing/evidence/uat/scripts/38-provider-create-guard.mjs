@@ -1,0 +1,23 @@
+import fs from "node:fs";
+import { open } from "./sess.mjs";
+import { newInbox } from "./mail.mjs";
+import { OUT } from "./lib.mjs";
+const inbox = await newInbox("pe-guard-");
+const phone = "018" + String(Math.floor(10000000 + Math.random() * 89999999));
+fs.writeFileSync(OUT + "../acct_guard.json", JSON.stringify({ ...inbox, phone, password: process.env.GUARD_PASSWORD }));
+const s = await open("owner");
+const p = s.page;
+await s.go("/provider/guards");
+await p.getByRole("button", { name: /create account/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /create account/i }).click(); await p.waitForTimeout(2000);
+console.log((await s.fields()).filter(f => /input|submit/.test(f)).join("\n"));
+const inputs = p.locator("main form input:visible");
+const n = await inputs.count();
+for (let i = 0; i < n; i++) { const el = inputs.nth(i); const meta = (await el.getAttribute("name") || "") + (await el.getAttribute("placeholder") || "") + (await el.getAttribute("type") || "");
+  if (/name/i.test(meta) && !/email/i.test(meta)) await el.fill("QA Test Guard"); else if (/email/i.test(meta)) await el.fill(inbox.address); else if (/phone|tel|01X/i.test(meta)) await el.fill(phone); }
+await p.getByRole("button", { name: /create account & invite/i }).click(); await p.waitForTimeout(12000);
+console.log("toasts:", await p.locator("[data-sonner-toast]").allInnerTexts());
+const m = await p.locator("main").innerText(); console.log(m.slice(m.indexOf("PROPERTY DIRECTORY"), m.indexOf("PROPERTY DIRECTORY") + 400));
+console.log(s.failed().filter(f => !f.includes("/terms")));
+console.log("inbox", inbox.address);
+await s.close();

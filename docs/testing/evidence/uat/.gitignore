@@ -1,0 +1,5 @@
+state_*.json
+acct_*.json
+cred.txt
+scripts/shots/
+node_modules/

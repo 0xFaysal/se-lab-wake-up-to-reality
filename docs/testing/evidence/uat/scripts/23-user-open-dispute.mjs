@@ -1,0 +1,10 @@
+import { open } from "./sess.mjs";
+const s = await open("driver"); const p = s.page;
+const api = []; p.on("response", async (r) => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/, "")} => ${(await r.text().catch(() => "")).slice(0, 250)}`); });
+await s.go("/driver/bookings/7805d315-7493-405d-ae42-7c5dfe58105f/dispute");
+await p.getByLabel("Description").waitFor({ timeout: 60000 });
+await p.getByLabel("Description").fill("QA test dispute: I tried to cancel this booking but the app showed an unexpected error, so I could not get my refund.");
+await p.getByRole("button", { name: /submit dispute/i }).click(); await p.waitForTimeout(10000);
+console.log("AFTER:", p.url(), (await p.getByRole("main").first().innerText()).replace(/\n+/g, " | ").slice(0, 500));
+console.log(api.join("\n"));
+await s.close();
