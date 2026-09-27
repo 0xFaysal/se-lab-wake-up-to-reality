@@ -30,7 +30,10 @@ async function resetRateLimits() {
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   let deleted = 0;
-  for await (const keys of redis.scanIterator({ MATCH: "rate-limit:*", COUNT: 500 })) {
+  for await (const keys of redis.scanIterator({
+    MATCH: "rate-limit:*",
+    COUNT: 500,
+  })) {
     const batch = Array.isArray(keys) ? keys : [keys];
     if (batch.length > 0) deleted += await redis.del(batch);
   }
@@ -40,7 +43,9 @@ async function resetRateLimits() {
 
 async function attachTestImages(runId) {
   if (!runId || !/^[a-z0-9]{4,12}$/.test(runId)) {
-    throw new Error("Usage: attach-test-images <runId> (the runId shown in the collection's first request)");
+    throw new Error(
+      "Usage: attach-test-images <runId> (the runId shown in the collection's first request)",
+    );
   }
   assertLocal("DATABASE_URL", process.env.DATABASE_URL);
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -58,7 +63,9 @@ async function attachTestImages(runId) {
     [`%${runId}%`],
   );
   await client.end();
-  console.log(`Attached a placeholder image to ${rows.length} Property(ies) for run ${runId}.`);
+  console.log(
+    `Attached a placeholder image to ${rows.length} Property(ies) for run ${runId}.`,
+  );
 }
 
 const [command, argument] = process.argv.slice(2);
