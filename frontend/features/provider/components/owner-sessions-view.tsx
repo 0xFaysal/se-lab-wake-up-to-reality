@@ -590,7 +590,7 @@ export function OwnerSessionsView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by Plate, Driver, or Bay..."
-                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-[#E5E7EB] rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#064E3B] focus:border-[#064E3B] transition"
+                className="w-full pl-9 pr-8 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]/20 focus:border-[#064E3B] transition"
               />
               {searchQuery && (
                 <button
@@ -607,7 +607,7 @@ export function OwnerSessionsView() {
             <select
               value={propertyFilter}
               onChange={(e) => setPropertyFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#064E3B] cursor-pointer"
+              className="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#064E3B]/20 focus:border-[#064E3B] transition cursor-pointer"
             >
               <option value="ALL">All Properties</option>
               <option value="prop-gulshan-1">Residential Building, Gulshan</option>
@@ -619,7 +619,7 @@ export function OwnerSessionsView() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 bg-white border border-[#E5E7EB] rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#064E3B] cursor-pointer"
+              className="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#064E3B]/20 focus:border-[#064E3B] transition cursor-pointer"
             >
               <option value="ALL">All Active Sessions ({sessions.length})</option>
               <option value="OVERSTAY">Overstay Only ({overstayCount})</option>

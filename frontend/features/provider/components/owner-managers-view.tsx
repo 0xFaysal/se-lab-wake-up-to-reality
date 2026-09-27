@@ -216,7 +216,7 @@ export function OwnerManagersView() {
               placeholder="Search manager by name, phone, email, or property"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-[#E5E7EB] text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] transition"
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
             />
             {searchQuery && (
               <button
@@ -233,7 +233,7 @@ export function OwnerManagersView() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg border border-[#E5E7EB] text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:border-[#064E3B] transition min-w-[130px]"
+              className="h-10 px-3 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition min-w-[130px]"
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
@@ -245,7 +245,7 @@ export function OwnerManagersView() {
             <select
               value={propertyFilter}
               onChange={(e) => setPropertyFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg border border-[#E5E7EB] text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:border-[#064E3B] transition min-w-[150px]"
+              className="h-10 px-3 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition min-w-[150px]"
             >
               <option value="ALL">All Properties</option>
               {MOCK_OWNER_PROPERTIES.map((prop) => (
