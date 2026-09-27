@@ -57,8 +57,26 @@ function helper(...args) {
   return result.stdout.trim();
 }
 
+// The suite registers accounts, pays and changes Admin data, so it must only
+// ever reach local services. Refuse to start if any target is not localhost.
+const localHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+const environmentFile = JSON.parse(fs.readFileSync(baseEnvironment, "utf8"));
+for (const key of ["host", "api", "mailpit"]) {
+  const value = environmentFile.values.find((v) => v.key === key)?.value;
+  let hostname;
+  try {
+    hostname = new URL(value).hostname;
+  } catch {
+    throw new Error(`Postman environment "${key}" is not a valid URL: ${value}`);
+  }
+  if (!localHosts.has(hostname)) throw new Error(`Postman environment "${key}" must point to localhost, not ${hostname}`);
+}
+
 fs.mkdirSync(evidenceDir, { recursive: true });
-fs.copyFileSync(baseEnvironment, runtimeEnvironment);
+// The Admin password goes into the temporary environment file instead of the
+// command line, so the shell never sees it.
+for (const entry of environmentFile.values) if (entry.key === "adminPassword") entry.value = adminPassword;
+fs.writeFileSync(runtimeEnvironment, JSON.stringify(environmentFile, null, 2));
 const log = [`# ParkEase BD Postman system test run`, `# Started ${new Date().toISOString()} | Node ${process.version}`, ""];
 const results = [];
 
@@ -75,7 +93,6 @@ for (const [index, stage] of stages.entries()) {
   const newman = spawnSync([
     "npx", "--yes", "newman@6", "run", quote(collection),
     "--environment", quote(runtimeEnvironment), "--export-environment", quote(runtimeEnvironment),
-    "--env-var", quote(`adminPassword=${adminPassword}`),
     "--folder", quote(stage),
     "--reporters", "cli,json", "--reporter-json-export", quote(report),
     "--color", "off", "--disable-unicode",
@@ -114,3 +131,4 @@ fs.rmSync(workDir, { recursive: true, force: true });
 const failed = results.filter((r) => r.result === "failed").length;
 console.log(`\nRun ${runId}: ${results.length} assertions, ${failed} failed, ${results.filter((r) => r.result === "skipped").length} skipped.`);
 console.log(`Evidence written to ${path.relative(process.cwd(), evidenceDir)}`);
+if (failed > 0) process.exitCode = 1;
