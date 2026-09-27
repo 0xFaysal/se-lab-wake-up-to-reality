@@ -1,0 +1,22 @@
+import { open } from "./sess.mjs";
+const s = await open("driver");
+const p = s.page;
+const flat = async () => (await p.locator("main").innerText()).replace(/\n+/g, " | ");
+const api = []; p.on("response", async (r) => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/, "")} ${(r.request().postData() || "").slice(0, 150)} => ${(await r.text().catch(() => "")).slice(0, 200)}`); });
+await s.go("/driver/payment-methods"); await p.getByRole("button", { name: /add destination/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /add destination/i }).click(); await p.waitForTimeout(2000);
+await p.locator("input[name=accountHolderName]").fill("QA Test driver");
+await p.locator("input[name=accountIdentifier]").fill("01700000000");
+await p.getByRole("button", { name: /save destination/i }).click(); await p.waitForTimeout(8000);
+console.log("AFTER SAVE:", (await flat()).slice(0, 400));
+await s.go("/driver/payments"); await p.getByText("READY TO USE").waitFor({ timeout: 60000 }); await p.waitForTimeout(2000);
+await p.locator("main input[type=number]").fill("400");
+await p.getByRole("button", { name: /transfer destination/i }).click(); await p.waitForTimeout(1000);
+await p.getByRole("option").first().click(); await p.waitForTimeout(800);
+await p.getByRole("button", { name: /request withdrawal/i }).click(); await p.waitForTimeout(3000);
+const dlg = p.locator("[role=alertdialog],[role=dialog]");
+if (await dlg.count()) { console.log("DLG:", (await dlg.innerText()).replace(/\n+/g, " | ").slice(0, 300)); await dlg.getByRole("button", { name: /confirm|request|withdraw/i }).last().click(); }
+await p.waitForTimeout(8000);
+console.log("AFTER WITHDRAW:", (await flat()).slice(0, 1200));
+console.log(api.join("\n"));
+await s.close();

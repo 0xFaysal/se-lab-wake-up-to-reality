@@ -1,0 +1,616 @@
+[
+  {
+    "vp": "desktop",
+    "route": "/",
+    "status": 200,
+    "finalUrl": "/",
+    "title": "ParkEase BD — Smart Shared Parking in Dhaka | ParkEase BD",
+    "h1": "Find secure parking near your destination in Dhaka.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ],
+    "links": [
+      "/",
+      "/parking",
+      "/how-it-works",
+      "/safety",
+      "/about",
+      "/login",
+      "/register",
+      "/register?role=owner",
+      "/parking?location=Dhanmondi",
+      "/parking?location=Gulshan",
+      "/parking?location=Banani",
+      "/parking?location=Uttara",
+      "/parking?location=Mirpur",
+      "/parking?location=Motijheel",
+      "/privacy",
+      "/cancellation-policy"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/parking",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fparking",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/parking/browse?latitude=23.7465&longitude=90.376",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ],
+    "links": [
+      "/",
+      "/forgot-password",
+      "/register"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/about",
+    "status": 200,
+    "finalUrl": "/about",
+    "title": "About Us | ParkEase BD",
+    "h1": "Making parking in Dhaka easier to find, manage, and trust.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ],
+    "links": [
+      "/",
+      "/parking",
+      "/how-it-works",
+      "/safety",
+      "/about",
+      "/login",
+      "/register",
+      "/register?role=owner",
+      "/privacy",
+      "/cancellation-policy"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/how-it-works",
+    "status": 200,
+    "finalUrl": "/how-it-works",
+    "title": "How It Works | ParkEase BD",
+    "h1": "Parking in Dhaka, without the uncertainty.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ],
+    "links": [
+      "/",
+      "/parking",
+      "/how-it-works",
+      "/safety",
+      "/about",
+      "/login",
+      "/register",
+      "/register?role=owner",
+      "/privacy",
+      "/cancellation-policy"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/privacy",
+    "status": 200,
+    "finalUrl": "/privacy",
+    "title": "Terms of Service & Privacy Policy | ParkEase BD",
+    "h1": "Terms of Service & Privacy Policy",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ],
+    "links": [
+      "/",
+      "/parking",
+      "/how-it-works",
+      "/safety",
+      "/about",
+      "/login",
+      "/register",
+      "/register?role=owner",
+      "/privacy",
+      "/cancellation-policy"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/safety",
+    "status": 200,
+    "finalUrl": "/safety",
+    "title": "Trust & Safety | ParkEase BD",
+    "h1": "Parking you can trust, from booking to exit.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ],
+    "links": [
+      "/",
+      "/parking",
+      "/how-it-works",
+      "/safety",
+      "/about",
+      "/login",
+      "/register",
+      "/privacy",
+      "/register?role=owner",
+      "/cancellation-policy"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/cancellation-policy",
+    "status": 200,
+    "finalUrl": "/cancellation-policy",
+    "title": "Cancellation & Refund Policy | ParkEase BD",
+    "h1": "Cancellation & Refund Policy",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ],
+    "links": [
+      "/",
+      "/parking",
+      "/how-it-works",
+      "/safety",
+      "/about",
+      "/login",
+      "/register",
+      "/register?role=owner",
+      "/privacy",
+      "/cancellation-policy"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/support",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fsupport",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ],
+    "links": [
+      "/",
+      "/forgot-password",
+      "/register"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/login",
+    "status": 200,
+    "finalUrl": "/login",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": [],
+    "links": [
+      "/",
+      "/forgot-password",
+      "/register"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/register",
+    "status": 200,
+    "finalUrl": "/register",
+    "title": "Create Account",
+    "h1": "Create an account",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": [],
+    "links": [
+      "/",
+      "/privacy",
+      "/login"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/forgot-password",
+    "status": 200,
+    "finalUrl": "/forgot-password",
+    "title": "Reset Password",
+    "h1": "Reset your password",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": [],
+    "links": [
+      "/",
+      "/login"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/reset-password",
+    "status": 200,
+    "finalUrl": "/reset-password",
+    "title": "Choose New Password",
+    "h1": "Reset link is incomplete",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": [],
+    "links": [
+      "/",
+      "/forgot-password"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/verify-otp",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fverify-otp",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ],
+    "links": [
+      "/",
+      "/forgot-password",
+      "/register"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/driver/dashboard",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fdriver%2Fdashboard",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ],
+    "links": [
+      "/",
+      "/forgot-password",
+      "/register"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/admin",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fadmin",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ],
+    "links": [
+      "/",
+      "/forgot-password",
+      "/register"
+    ]
+  },
+  {
+    "vp": "desktop",
+    "route": "/nonexistent-page-xyz",
+    "status": 404,
+    "finalUrl": "/nonexistent-page-xyz",
+    "title": "ParkEase BD — Property Owner Portal",
+    "h1": "404",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "404 https://parkease-bd.vercel.app/nonexistent-page-xyz"
+    ],
+    "links": []
+  },
+  {
+    "vp": "mobile",
+    "route": "/",
+    "status": 200,
+    "finalUrl": "/",
+    "title": "ParkEase BD — Smart Shared Parking in Dhaka | ParkEase BD",
+    "h1": "Find secure parking near your destination in Dhaka.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/parking",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fparking",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/parking/browse?latitude=23.7465&longitude=90.376",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/about",
+    "status": 200,
+    "finalUrl": "/about",
+    "title": "About Us | ParkEase BD",
+    "h1": "Making parking in Dhaka easier to find, manage, and trust.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/how-it-works",
+    "status": 200,
+    "finalUrl": "/how-it-works",
+    "title": "How It Works | ParkEase BD",
+    "h1": "Parking in Dhaka, without the uncertainty.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/privacy",
+    "status": 200,
+    "finalUrl": "/privacy",
+    "title": "Terms of Service & Privacy Policy | ParkEase BD",
+    "h1": "Terms of Service & Privacy Policy",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/safety",
+    "status": 200,
+    "finalUrl": "/safety",
+    "title": "Trust & Safety | ParkEase BD",
+    "h1": "Parking you can trust, from booking to exit.",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/cancellation-policy",
+    "status": 200,
+    "finalUrl": "/cancellation-policy",
+    "title": "Cancellation & Refund Policy | ParkEase BD",
+    "h1": "Cancellation & Refund Policy",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/support",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fsupport",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/login",
+    "status": 200,
+    "finalUrl": "/login",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "vp": "mobile",
+    "route": "/register",
+    "status": 200,
+    "finalUrl": "/register",
+    "title": "Create Account",
+    "h1": "Create an account",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "vp": "mobile",
+    "route": "/forgot-password",
+    "status": 200,
+    "finalUrl": "/forgot-password",
+    "title": "Reset Password",
+    "h1": "Reset your password",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "vp": "mobile",
+    "route": "/reset-password",
+    "status": 200,
+    "finalUrl": "/reset-password",
+    "title": "Choose New Password",
+    "h1": "Reset link is incomplete",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "vp": "mobile",
+    "route": "/verify-otp",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fverify-otp",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/driver/dashboard",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fdriver%2Fdashboard",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/admin",
+    "status": 200,
+    "finalUrl": "/login?redirect=%2Fadmin",
+    "title": "Sign In",
+    "h1": "Welcome back",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "failed": [
+      "401 https://parkease-api.vercel.app/api/v1/auth/me",
+      "401 https://parkease-api.vercel.app/api/v1/auth/refresh"
+    ]
+  },
+  {
+    "vp": "mobile",
+    "route": "/nonexistent-page-xyz",
+    "status": 404,
+    "finalUrl": "/nonexistent-page-xyz",
+    "title": "ParkEase BD — Property Owner Portal",
+    "h1": "404",
+    "overflow": false,
+    "brokenImgs": [],
+    "errors": [
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "failed": [
+      "404 https://parkease-bd.vercel.app/nonexistent-page-xyz"
+    ]
+  }
+]

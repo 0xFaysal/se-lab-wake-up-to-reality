@@ -1,0 +1,4270 @@
+{
+  "runId": "eqggpj",
+  "finishedAt": "2026-09-20T03:29:30.009Z",
+  "results": [
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "S00 Set up a new test run (run ID, accounts, dates) and check the API is ready",
+      "status": 200,
+      "assertion": "S00 API and its PostgreSQL/Redis checks are ready → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A01–A07 Register Driver A (mixed-case email, local 017 phone)",
+      "status": 201,
+      "assertion": "A01 Driver registration → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A01–A07 Register Driver A (mixed-case email, local 017 phone)",
+      "status": 201,
+      "assertion": "A02 Email is stored lower-case",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A01–A07 Register Driver A (mixed-case email, local 017 phone)",
+      "status": 201,
+      "assertion": "A03 Local 017 phone is stored as +88017…",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A01–A07 Register Driver A (mixed-case email, local 017 phone)",
+      "status": 201,
+      "assertion": "A04 Access and refresh cookies are both set",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A01–A07 Register Driver A (mixed-case email, local 017 phone)",
+      "status": 201,
+      "assertion": "A05 Session cookies are HttpOnly",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A01–A07 Register Driver A (mixed-case email, local 017 phone)",
+      "status": 201,
+      "assertion": "A07 New account is not yet verified (nextAction VERIFY_EMAIL)",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A08 Driver A is signed in straight after sign-up",
+      "status": 200,
+      "assertion": "A08 GET /auth/me with the sign-up session → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A09–A11 Register Owner A (role PARKING_OWNER, +88018 phone)",
+      "status": 201,
+      "assertion": "A09 Owner registration with role PARKING_OWNER → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A09–A11 Register Owner A (role PARKING_OWNER, +88018 phone)",
+      "status": 201,
+      "assertion": "A10 PARKING_OWNER is stored as the PROVIDER role",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A09–A11 Register Owner A (role PARKING_OWNER, +88018 phone)",
+      "status": 201,
+      "assertion": "A11 +880 phone format is accepted and kept",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A12 Register Owner B (role PROVIDER)",
+      "status": 201,
+      "assertion": "A12 Second owner registers with role PROVIDER → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A13 Register Driver B (8801… phone without +)",
+      "status": 201,
+      "assertion": "A13 Driver B registration with 8801… phone → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A13 Register Driver B (8801… phone without +)",
+      "status": 201,
+      "assertion": "A13b 8801… phone is normalised to +8801…",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A14 Self-registration as MANAGER is refused",
+      "status": 400,
+      "assertion": "A14 Role MANAGER cannot self-register → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A15 Sixth registration attempt from the same IP within an hour is rate-limited",
+      "status": 429,
+      "assertion": "A15 6th registration in an hour is refused with 429 → 429",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A16 Unverified owner cannot create a Property",
+      "status": 403,
+      "assertion": "A16 Property creation before email verification → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A17–A18 Driver A requests an email verification code",
+      "status": 202,
+      "assertion": "A17 Verification code request → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A17–A18 Driver A requests an email verification code",
+      "status": 202,
+      "assertion": "A18 Code is 6 digits",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A19 The verification email reached the Mailpit inbox",
+      "status": 200,
+      "assertion": "A19 At least one email was delivered to Driver A",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A20 Wrong verification code is refused",
+      "status": 400,
+      "assertion": "A20 Wrong 6-digit code → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A21 Malformed verification code is refused",
+      "status": 400,
+      "assertion": "A21 Code 12ab56 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A22 Correct verification code verifies Driver A",
+      "status": 200,
+      "assertion": "A22 Correct code → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A23 Verify ownerA: request code",
+      "status": 202,
+      "assertion": "A23.1 ownerA verification code request → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A23 Verify ownerA: confirm code",
+      "status": 200,
+      "assertion": "A23.1 ownerA email verified → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A23 Verify ownerB: request code",
+      "status": 202,
+      "assertion": "A23.2 ownerB verification code request → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A23 Verify ownerB: confirm code",
+      "status": 200,
+      "assertion": "A23.2 ownerB email verified → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A23 Verify driverB: request code",
+      "status": 202,
+      "assertion": "A23.3 driverB verification code request → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A23 Verify driverB: confirm code",
+      "status": 200,
+      "assertion": "A23.3 driverB email verified → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A24 Driver A is now verified",
+      "status": 200,
+      "assertion": "A24 emailVerified is true and status ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A25 Log in with email",
+      "status": 200,
+      "assertion": "A25 Login by email → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A26 Log in with local phone 017…",
+      "status": 200,
+      "assertion": "A26 Login by 017… phone → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A27 Log in with +880 phone",
+      "status": 200,
+      "assertion": "A27 Login by +880… phone → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A28–A29 Log in with upper-case email and 'remember this device'",
+      "status": 200,
+      "assertion": "A28 Login by upper-case email → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A28–A29 Log in with upper-case email and 'remember this device'",
+      "status": 200,
+      "assertion": "A29 Remembered device gets a ~30-day refresh cookie",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A30 Wrong password",
+      "status": 401,
+      "assertion": "A30 Wrong password → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A31 Unknown account gets the same response as a wrong password",
+      "status": 401,
+      "assertion": "A31 Unknown account → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A31 Unknown account gets the same response as a wrong password",
+      "status": 401,
+      "assertion": "A31b Error body identical to wrong-password (no account enumeration)",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A32 Sixth failed login for one identifier in 15 minutes is rate-limited",
+      "status": 429,
+      "assertion": "A32 6th failed login in 15 minutes → 429",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A33 Cross-site request (foreign Origin) is rejected",
+      "status": 403,
+      "assertion": "A33 POST with Origin https://evil.example → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A34 Refresh rotates the tokens",
+      "status": 200,
+      "assertion": "A34 Refresh → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A34 Refresh rotates the tokens",
+      "status": 200,
+      "assertion": "A34b A new refresh token is issued",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A35 Re-using the old refresh token is refused",
+      "status": 401,
+      "assertion": "A35 Reuse of a rotated refresh token → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A35b Token reuse signs Driver A out of every session",
+      "status": 401,
+      "assertion": "A35b Driver A's sign-up session after refresh-token reuse → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "S-A35c (setup) Driver A signs in again, twice",
+      "status": 200,
+      "assertion": "S-A35c Login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A36 List sessions",
+      "status": 200,
+      "assertion": "A36 List own sessions → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A36 List sessions",
+      "status": 200,
+      "assertion": "A36b Several sessions are listed",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A37 Revoke one other session",
+      "status": 204,
+      "assertion": "A37 Revoke another session → 204",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A37b The revoked session no longer works",
+      "status": 401,
+      "assertion": "A37b Access token of the revoked session → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "S-A38 (setup) Driver B opens a second session",
+      "status": 200,
+      "assertion": "S-A38 Driver B second login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A39 Change password with the wrong current password",
+      "status": 401,
+      "assertion": "A39 Wrong current password → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A40 Change password to a weak password",
+      "status": 400,
+      "assertion": "A40 Weak new password → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A41 Change password",
+      "status": 200,
+      "assertion": "A41 Valid password change → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A42 Driver B's other session is signed out after the change",
+      "status": 401,
+      "assertion": "A42 Other session after password change → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A43 Driver B's current session still works",
+      "status": 200,
+      "assertion": "A43 Current session after password change → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A44 Request a password reset (Driver B)",
+      "status": 202,
+      "assertion": "A44 Reset request for a real account → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A45 Reset request for an unknown account looks the same",
+      "status": 202,
+      "assertion": "A45 Reset request for an unknown account → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A45 Reset request for an unknown account looks the same",
+      "status": 202,
+      "assertion": "A45b Same message, no token",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A46 Reset the password with the token",
+      "status": 200,
+      "assertion": "A46 Reset with a valid token → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A47 The reset token cannot be used twice",
+      "status": 400,
+      "assertion": "A47 Re-used reset token → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A48 Log in with the new password",
+      "status": 200,
+      "assertion": "A48 Login with the reset password → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A49 The old password no longer works",
+      "status": 401,
+      "assertion": "A49 Login with the old password → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A50 Log out this session",
+      "status": 204,
+      "assertion": "A50 Logout succeeds",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A51 The logged-out session is rejected",
+      "status": 401,
+      "assertion": "A51 Old access token after logout → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "S-A52 (setup) Driver B logs in again",
+      "status": 200,
+      "assertion": "S-A52 Login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A53 Log out everywhere",
+      "status": 204,
+      "assertion": "A53 Logout-all succeeds",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A54 Every Driver B session is now rejected",
+      "status": 401,
+      "assertion": "A54 Access token after logout-all → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "A55 A request without any cookie is rejected",
+      "status": 401,
+      "assertion": "A55 GET /auth/me without a cookie → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "S-A56 (setup) Driver B signs in for the later stages",
+      "status": 200,
+      "assertion": "S-A56 Login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "X01–X02 Admin forgot-password request issues a reset token",
+      "status": 202,
+      "assertion": "X01 Admin reset request → 202",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "X01–X02 Admin forgot-password request issues a reset token",
+      "status": 202,
+      "assertion": "X02 A single-use reset token is issued for the Admin",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "X03 Admin logs in with the password from the environment",
+      "status": 200,
+      "assertion": "X03 Admin login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "01 Accounts & authentication",
+      "request": "X03 Admin logs in with the password from the environment",
+      "status": 200,
+      "assertion": "X03b Admin account is ready (no forced password change pending)",
+      "result": "passed"
+    },
+    {
+      "stage": "01a Registration fields (1 of 6)",
+      "request": "F01 Full name 1 character",
+      "status": 400,
+      "assertion": "F01 Full name 1 character → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01a Registration fields (1 of 6)",
+      "request": "F02 Full name 121 characters",
+      "status": 400,
+      "assertion": "F02 Full name 121 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01a Registration fields (1 of 6)",
+      "request": "F03 Full name with a control character",
+      "status": 400,
+      "assertion": "F03 Full name with a control character → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01a Registration fields (1 of 6)",
+      "request": "F04 Full name missing",
+      "status": 400,
+      "assertion": "F04 Full name missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01a Registration fields (1 of 6)",
+      "request": "F05 Invalid email",
+      "status": 400,
+      "assertion": "F05 Invalid email → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01b Registration fields (2 of 6)",
+      "request": "F06 Email missing",
+      "status": 400,
+      "assertion": "F06 Email missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01b Registration fields (2 of 6)",
+      "request": "F07 Email 255 characters",
+      "status": 400,
+      "assertion": "F07 Email 255 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01b Registration fields (2 of 6)",
+      "request": "F08 Phone 12345",
+      "status": 400,
+      "assertion": "F08 Phone 12345 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01b Registration fields (2 of 6)",
+      "request": "F09 US phone number",
+      "status": 400,
+      "assertion": "F09 US phone number → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01b Registration fields (2 of 6)",
+      "request": "F10 Phone starting 012 (not a mobile prefix)",
+      "status": 400,
+      "assertion": "F10 Phone starting 012 (not a mobile prefix) → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01c Registration fields (3 of 6)",
+      "request": "F11 Phone missing",
+      "status": 400,
+      "assertion": "F11 Phone missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01c Registration fields (3 of 6)",
+      "request": "F12 Password 11 characters",
+      "status": 400,
+      "assertion": "F12 Password 11 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01c Registration fields (3 of 6)",
+      "request": "F13 Password 129 characters",
+      "status": 400,
+      "assertion": "F13 Password 129 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01c Registration fields (3 of 6)",
+      "request": "F14 Password without an upper-case letter",
+      "status": 400,
+      "assertion": "F14 Password without an upper-case letter → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01c Registration fields (3 of 6)",
+      "request": "F15 Password without a lower-case letter",
+      "status": 400,
+      "assertion": "F15 Password without a lower-case letter → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01d Registration fields (4 of 6)",
+      "request": "F16 Password without a digit",
+      "status": 400,
+      "assertion": "F16 Password without a digit → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01d Registration fields (4 of 6)",
+      "request": "F17 Password without a symbol",
+      "status": 400,
+      "assertion": "F17 Password without a symbol → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01d Registration fields (4 of 6)",
+      "request": "F18 Password containing a space",
+      "status": 400,
+      "assertion": "F18 Password containing a space → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01d Registration fields (4 of 6)",
+      "request": "F19 Terms not accepted",
+      "status": 400,
+      "assertion": "F19 Terms not accepted → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01d Registration fields (4 of 6)",
+      "request": "F20 Privacy policy not accepted",
+      "status": 400,
+      "assertion": "F20 Privacy policy not accepted → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01e Registration fields (5 of 6)",
+      "request": "F21 Role missing",
+      "status": 400,
+      "assertion": "F21 Role missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01e Registration fields (5 of 6)",
+      "request": "F22 Unknown role SUPERUSER",
+      "status": 400,
+      "assertion": "F22 Unknown role SUPERUSER → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01e Registration fields (5 of 6)",
+      "request": "F23 Role GUARD",
+      "status": 400,
+      "assertion": "F23 Role GUARD → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01e Registration fields (5 of 6)",
+      "request": "F24 Role ADMIN",
+      "status": 400,
+      "assertion": "F24 Role ADMIN → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "01e Registration fields (5 of 6)",
+      "request": "F25 Duplicate email in upper case",
+      "status": 409,
+      "assertion": "F25 Duplicate email in upper case → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "01f Registration fields (6 of 6)",
+      "request": "F26 Duplicate phone in another format",
+      "status": 409,
+      "assertion": "F26 Duplicate phone in another format → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "01f Registration fields (6 of 6)",
+      "request": "F27 Full name 2 characters (lower boundary)",
+      "status": 201,
+      "assertion": "F27 Full name 2 characters (lower boundary) → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01f Registration fields (6 of 6)",
+      "request": "F28 Full name 120 characters (upper boundary)",
+      "status": 201,
+      "assertion": "F28 Full name 120 characters (upper boundary) → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01f Registration fields (6 of 6)",
+      "request": "F29 Password 12 characters (lower boundary)",
+      "status": 201,
+      "assertion": "F29 Password 12 characters (lower boundary) → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "01f Registration fields (6 of 6)",
+      "request": "F30 Password 128 characters (upper boundary)",
+      "status": 201,
+      "assertion": "F30 Password 128 characters (upper boundary) → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P01–P03 Owner A creates Property 1 with every field",
+      "status": 201,
+      "assertion": "P01 Create Property 1 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P01–P03 Owner A creates Property 1 with every field",
+      "status": 201,
+      "assertion": "P02 New Property is PENDING and INACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P03 Owner A reads Property 1: every field saved, private fields decrypted",
+      "status": 200,
+      "assertion": "P03 Owner reads own Property → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P03 Owner A reads Property 1: every field saved, private fields decrypted",
+      "status": 200,
+      "assertion": "P03b Every submitted field is returned unchanged",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P04 Owner A creates Property 2",
+      "status": 201,
+      "assertion": "P04 Create a second Property → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P05 Owner A creates Property 3 (stays unverified)",
+      "status": 201,
+      "assertion": "P05 Create a third Property → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF01 Name 2 characters",
+      "status": 400,
+      "assertion": "PF01 Name 2 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF02 Name 121 characters",
+      "status": 400,
+      "assertion": "PF02 Name 121 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF03 Name missing",
+      "status": 400,
+      "assertion": "PF03 Name missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF04 Exact address 4 characters",
+      "status": 400,
+      "assertion": "PF04 Exact address 4 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF05 Approximate address missing",
+      "status": 400,
+      "assertion": "PF05 Approximate address missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF06 Latitude 91",
+      "status": 400,
+      "assertion": "PF06 Latitude 91 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF07 Longitude 181",
+      "status": 400,
+      "assertion": "PF07 Longitude 181 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF08 Latitude as text",
+      "status": 400,
+      "assertion": "PF08 Latitude as text → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF09 Entrance latitude without longitude",
+      "status": 400,
+      "assertion": "PF09 Entrance latitude without longitude → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF10 Entry cut-off 25:00",
+      "status": 400,
+      "assertion": "PF10 Entry cut-off 25:00 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF11 Height limit 0",
+      "status": 400,
+      "assertion": "PF11 Height limit 0 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF12 Parking rules 2001 characters",
+      "status": 400,
+      "assertion": "PF12 Parking rules 2001 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF13 Unknown field",
+      "status": 400,
+      "assertion": "PF13 Unknown field → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "PF14 Shared-building flag (FR-PROP-03)",
+      "status": 400,
+      "assertion": "PF14 Owner marks a Property as a shared building → 201",
+      "result": "failed",
+      "error": "HTTP 400 {\"success\":false,\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Request validation failed\",\"details\":{\"body\":[\"Unrecognized key: \\\"isSharedBuilding\\\"\"]}},\"meta\":{\"requestId\":\"c5ac3169-fabd-4ee9-8d56-61966ec8299c\",\"timestamp\":\"2026-09-20T03:22:43.521Z\"}}: expected 400 to deeply equal 201"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P06 Owner B creates a Property at Property 1's exact address (observation)",
+      "status": 201,
+      "assertion": "P06 Second owner, same exact address: created (no duplicate block) → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P07 Owner A lists own Properties",
+      "status": 200,
+      "assertion": "P07 List own Properties → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P07 Owner A lists own Properties",
+      "status": 200,
+      "assertion": "P07b Properties 1–3 are listed and Owner B's is not",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P07 Owner A lists own Properties",
+      "status": 200,
+      "assertion": "P08 List view does not expose exact address or access instructions",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P10 Owner B cannot read Property 1",
+      "status": 404,
+      "assertion": "P10 Other owner reads → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P11 Owner B cannot edit Property 1",
+      "status": 404,
+      "assertion": "P11 Other owner edits → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P12 Owner B cannot delete Property 1",
+      "status": 404,
+      "assertion": "P12 Other owner deletes → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P13 A Driver cannot use the owner Property API",
+      "status": 403,
+      "assertion": "P13 Driver reads owner Property API → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P16 Admin sees Property 1 in the pending queue",
+      "status": 200,
+      "assertion": "P16 Admin pending list → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P16 Admin sees Property 1 in the pending queue",
+      "status": 200,
+      "assertion": "P16b Property 1 is in the queue",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P17 Admin opens Property 1 and sees the exact address",
+      "status": 200,
+      "assertion": "P17 Admin Property detail → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P17 Admin opens Property 1 and sees the exact address",
+      "status": 200,
+      "assertion": "P17b Exact address is visible to the Admin",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P18 Admin cannot approve a Property without an image",
+      "status": 409,
+      "assertion": "P18 Approve without image → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P19 Rejection needs a reason",
+      "status": 400,
+      "assertion": "P19 Reject without reason → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P20 Rejection reason must be at least 10 characters",
+      "status": 400,
+      "assertion": "P20 Reject with a 9-character reason → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P21 Admin rejects Property 2 with a reason",
+      "status": 200,
+      "assertion": "P21 Reject with a valid reason → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P21 Admin rejects Property 2 with a reason",
+      "status": 200,
+      "assertion": "P21b Property 2 is REJECTED",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P22 Owner A edits the rejected Property 2 and it returns to review",
+      "status": 200,
+      "assertion": "P22 Owner edits rejected Property → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P22 Owner A edits the rejected Property 2 and it returns to review",
+      "status": 200,
+      "assertion": "P22b Property 2 is PENDING again",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P27 A Driver cannot open the Admin review queue",
+      "status": 403,
+      "assertion": "P27 Driver on Admin API → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "02 Properties & Admin review",
+      "request": "P28 An owner cannot open the Admin review queue",
+      "status": 403,
+      "assertion": "P28 Owner on Admin API → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P23 Admin approves Property 1",
+      "status": 200,
+      "assertion": "P23 Admin approves Property 1 → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P23 Admin approves Property 1",
+      "status": 200,
+      "assertion": "P23b Property is VERIFIED and ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P24 Approving an already verified Property is refused",
+      "status": 409,
+      "assertion": "P24 Approve again → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P25 Admin approves the edited Property 2",
+      "status": 200,
+      "assertion": "P25 Admin approves the edited Property 2 → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P25 Admin approves the edited Property 2",
+      "status": 200,
+      "assertion": "P25b Property is VERIFIED and ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P26 Owner A creates Property 4 (no image)",
+      "status": 201,
+      "assertion": "P26 Create a Property to delete → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P29 Delete an empty Property",
+      "status": 204,
+      "assertion": "P29 Delete Property without images → 204",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P30 A Property with an image cannot be deleted",
+      "status": 409,
+      "assertion": "P30 Delete Property with an image → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P33 Changing only the rules keeps Property 1 verified",
+      "status": 200,
+      "assertion": "P33 Edit rules only → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P33 Changing only the rules keeps Property 1 verified",
+      "status": 200,
+      "assertion": "P33b Still VERIFIED and ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P31 An edit with an old version number is refused",
+      "status": 409,
+      "assertion": "P31 Stale version → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P32 Changing the exact address sends Property 2 back to review",
+      "status": 200,
+      "assertion": "P32 Edit exact address → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P32 Changing the exact address sends Property 2 back to review",
+      "status": 200,
+      "assertion": "P32b Property 2 is PENDING and INACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P34 Possible-duplicate check finds Property 1",
+      "status": 200,
+      "assertion": "P34 Possible matches → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P34 Possible-duplicate check finds Property 1",
+      "status": 200,
+      "assertion": "P34b A Property at the same address is flagged as a possible duplicate",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P35 Admin re-approves Property 2",
+      "status": 200,
+      "assertion": "P35 Admin re-approves Property 2 → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P35 Admin re-approves Property 2",
+      "status": 200,
+      "assertion": "P35b Property is VERIFIED and ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P36 Renaming verified Property 2 (FR-PROP-07: name is not a re-verification trigger)",
+      "status": 200,
+      "assertion": "P36 Rename → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "P36 Renaming verified Property 2 (FR-PROP-07: name is not a re-verification trigger)",
+      "status": 200,
+      "assertion": "P36b Property stays VERIFIED and ACTIVE after a rename",
+      "result": "failed",
+      "error": "expected 'PENDING' to deeply equal 'VERIFIED'"
+    },
+    {
+      "stage": "02b Properties: approval & re-verification",
+      "request": "S-P37 (setup) Admin approves Property 2 again if the rename sent it back",
+      "status": 200,
+      "assertion": "S-P37 Property 2 is verified for the next stages",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R01–R02 Owner A creates fixed space F1 with every field",
+      "status": 201,
+      "assertion": "R01 Create fixed space F1 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R01–R02 Owner A creates fixed space F1 with every field",
+      "status": 201,
+      "assertion": "R02 Every submitted field is saved",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF01 Display name 1 character",
+      "status": 400,
+      "assertion": "RF01 Display name 1 character → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF02 Spot code 31 characters",
+      "status": 400,
+      "assertion": "RF02 Spot code 31 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF03 Fixed space with capacity 2",
+      "status": 400,
+      "assertion": "RF03 Fixed space with capacity 2 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF04 Fixed space without a spot code",
+      "status": 400,
+      "assertion": "RF04 Fixed space without a spot code → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF05 Shared pool with a spot code",
+      "status": 400,
+      "assertion": "RF05 Shared pool with a spot code → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF06 No vehicle types",
+      "status": 400,
+      "assertion": "RF06 No vehicle types → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF07 Vehicle type TRUCK",
+      "status": 400,
+      "assertion": "RF07 Vehicle type TRUCK → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF08 Height limit 99 cm",
+      "status": 400,
+      "assertion": "RF08 Height limit 99 cm → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF09 Shared pool capacity 0",
+      "status": 400,
+      "assertion": "RF09 Shared pool capacity 0 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF10 Shared pool capacity 1001",
+      "status": 400,
+      "assertion": "RF10 Shared pool capacity 1001 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RF11 Unknown resource type",
+      "status": 400,
+      "assertion": "RF11 Unknown resource type → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R03 Duplicate spot code in another format (f1)",
+      "status": 409,
+      "assertion": "R03 Spot code f1 duplicates F-1 → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R04a Create fixed space F2",
+      "status": 201,
+      "assertion": "R04a Create F2 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R04b Create fixed space F3",
+      "status": 201,
+      "assertion": "R04b Create F3 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R04c Bulk add a 3-bay 'Level 2' row (spaces + shared defaults)",
+      "status": 201,
+      "assertion": "R04c Bulk add Level 2 row → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R04c Bulk add a 3-bay 'Level 2' row (spaces + shared defaults)",
+      "status": 201,
+      "assertion": "R04d One grouped space with 3 units",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R05 Bulk add a 4-bay 'Row G' (resource + units)",
+      "status": 201,
+      "assertion": "R05 Bulk add Row G → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R05 Bulk add a 4-bay 'Row G' (resource + units)",
+      "status": 201,
+      "assertion": "R05b One grouped space with 4 units",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R06 Bulk add 101 bays",
+      "status": 400,
+      "assertion": "R06 101 bays in one request → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R07 Bulk add with a repeated code",
+      "status": 409,
+      "assertion": "R07 Same code twice in one request → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R08 Bulk add a code that already exists",
+      "status": 409,
+      "assertion": "R08 Existing code F-1 → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R09 Create a 2-car shared pool",
+      "status": 201,
+      "assertion": "R09 Create shared pool (capacity 2) → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R10 Create bay B1 in Property 2",
+      "status": 201,
+      "assertion": "R10 Create a space in the second Property → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R11–R13 List Property 1's spaces and units",
+      "status": 200,
+      "assertion": "R11 List spaces → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R11–R13 List Property 1's spaces and units",
+      "status": 200,
+      "assertion": "R12 Row G has 4 units and Level 2 has 3",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R11–R13 List Property 1's spaces and units",
+      "status": 200,
+      "assertion": "R13 A single bay has 1 unit and the pool has capacity 2",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R14 Set F3 status ACTIVE",
+      "status": 200,
+      "assertion": "R14 F3 → ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R14 Set F3 status ACTIVE",
+      "status": 200,
+      "assertion": "R14b Status is ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R15 Set F3 status MAINTENANCE",
+      "status": 200,
+      "assertion": "R15 F3 → MAINTENANCE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R15 Set F3 status MAINTENANCE",
+      "status": 200,
+      "assertion": "R15b Status is MAINTENANCE",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R16 Set F3 status BLOCKED",
+      "status": 200,
+      "assertion": "R16 F3 → BLOCKED → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R16 Set F3 status BLOCKED",
+      "status": 200,
+      "assertion": "R16b Status is BLOCKED",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R17 Set F3 status ACTIVE",
+      "status": 200,
+      "assertion": "R17 F3 → ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R17 Set F3 status ACTIVE",
+      "status": 200,
+      "assertion": "R17b Status is ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R18 Empty update is refused",
+      "status": 400,
+      "assertion": "R18 PATCH with no fields → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R19–R20 Weekly opening hours for the pool (06:00–23:00, 7 days)",
+      "status": 200,
+      "assertion": "R19 Save 7 weekly rules → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R19–R20 Weekly opening hours for the pool (06:00–23:00, 7 days)",
+      "status": 200,
+      "assertion": "R20 7 rules saved",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "AV01 End time before start time",
+      "status": 400,
+      "assertion": "AV01 End time before start time → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "AV02 Day of week 7",
+      "status": 400,
+      "assertion": "AV02 Day of week 7 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "AV03 End time 24:00",
+      "status": 400,
+      "assertion": "AV03 End time 24:00 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "AV04 Invalid date 2026-13-40",
+      "status": 400,
+      "assertion": "AV04 Invalid date 2026-13-40 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rF1 (setup) Set F1 ACTIVE",
+      "status": 200,
+      "assertion": "S-rF1a F1 status ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rF1 (setup) Weekly hours for F1",
+      "status": 200,
+      "assertion": "S-rF1b F1 weekly hours saved → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rF2 (setup) Set F2 ACTIVE",
+      "status": 200,
+      "assertion": "S-rF2a F2 status ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rF2 (setup) Weekly hours for F2",
+      "status": 200,
+      "assertion": "S-rF2b F2 weekly hours saved → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rF3 (setup) Weekly hours for F3",
+      "status": 200,
+      "assertion": "S-rF3b F3 weekly hours saved → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rL2 (setup) Set Level 2 ACTIVE",
+      "status": 200,
+      "assertion": "S-rL2a Level 2 status ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rL2 (setup) Weekly hours for Level 2",
+      "status": 200,
+      "assertion": "S-rL2b Level 2 weekly hours saved → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rG (setup) Set Row G ACTIVE",
+      "status": 200,
+      "assertion": "S-rGa Row G status ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rG (setup) Weekly hours for Row G",
+      "status": 200,
+      "assertion": "S-rGb Row G weekly hours saved → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rP (setup) Set pool ACTIVE",
+      "status": 200,
+      "assertion": "S-rPa pool status ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rB1 (setup) Set B1 ACTIVE",
+      "status": 200,
+      "assertion": "S-rB1a B1 status ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-rB1 (setup) Weekly hours for B1",
+      "status": 200,
+      "assertion": "S-rB1b B1 weekly hours saved → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R21–R22 Block F3 for one day with a reason",
+      "status": 201,
+      "assertion": "R21 Date block → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R21–R22 Block F3 for one day with a reason",
+      "status": 201,
+      "assertion": "R22 The block records who created it",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R23 Block with the end before the start",
+      "status": 400,
+      "assertion": "R23 End before start → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R24 Owner B cannot read F1",
+      "status": 403,
+      "assertion": "R24 Other owner reads F1 → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R25 A Driver cannot read F1",
+      "status": 403,
+      "assertion": "R25 Driver reads F1 → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R26 Owner B cannot add a space to Property 1",
+      "status": 403,
+      "assertion": "R26 Other owner adds a space → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R27 No spaces on an unverified Property",
+      "status": 403,
+      "assertion": "R27 Add a space to unverified Property 3 → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "S-R28 (setup) Create a temporary space",
+      "status": 201,
+      "assertion": "S-R28 Create temporary space → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R28 Delete a space",
+      "status": 200,
+      "assertion": "R28 Delete an unused space → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "R29 Bulk-created unit names are kept",
+      "status": 200,
+      "assertion": "R29 Level 2 units keep their names",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01 Claim the right for F1",
+      "status": 201,
+      "assertion": "RT01 Right claim for F1 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01 Claim the right for F1",
+      "status": 201,
+      "assertion": "RT01b Claim is PENDING_VERIFICATION",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT02 Batch claim for F2 and F3",
+      "status": 201,
+      "assertion": "RT02 Batch claim for two spaces → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01b Claim the right for Level 2 row",
+      "status": 201,
+      "assertion": "RT01b Right claim for Level 2 row → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01b Claim the right for Level 2 row",
+      "status": 201,
+      "assertion": "RT01bb Claim is PENDING_VERIFICATION",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01c Claim the right for Row G",
+      "status": 201,
+      "assertion": "RT01c Right claim for Row G → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01c Claim the right for Row G",
+      "status": 201,
+      "assertion": "RT01cb Claim is PENDING_VERIFICATION",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01d Claim the right for the pool",
+      "status": 201,
+      "assertion": "RT01d Right claim for the pool → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01d Claim the right for the pool",
+      "status": 201,
+      "assertion": "RT01db Claim is PENDING_VERIFICATION",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01e Claim the right for B1",
+      "status": 201,
+      "assertion": "RT01e Right claim for B1 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT01e Claim the right for B1",
+      "status": 201,
+      "assertion": "RT01eb Claim is PENDING_VERIFICATION",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT03 USE_ONLY right cannot carry listing permission",
+      "status": 400,
+      "assertion": "RT03 USE_ONLY with canList → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT04 Right that ends before it starts",
+      "status": 400,
+      "assertion": "RT04 validUntil before validFrom → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT05 No listing on an unverified right",
+      "status": 409,
+      "assertion": "RT05 Listing on a pending right → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT06a Admin sees the pending claims",
+      "status": 200,
+      "assertion": "RT06a Admin pending rights → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT06a Admin sees the pending claims",
+      "status": 200,
+      "assertion": "RT06b F1's claim is in the queue",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT06 Admin verifies the right for F1",
+      "status": 200,
+      "assertion": "RT06 Verify right for F1 → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT07 Verifying with a stale version is refused",
+      "status": 409,
+      "assertion": "RT07 Stale expectedVersion → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT08 Admin verifies the right for Level 2 row",
+      "status": 200,
+      "assertion": "RT08 Verify right for Level 2 row → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT08b Admin verifies the right for Row G",
+      "status": 200,
+      "assertion": "RT08b Verify right for Row G → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT08c Admin verifies the right for the pool",
+      "status": 200,
+      "assertion": "RT08c Verify right for the pool → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT08d Admin verifies the right for B1",
+      "status": 200,
+      "assertion": "RT08d Verify right for B1 → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT09 Admin approves the F2 + F3 batch in one decision",
+      "status": 200,
+      "assertion": "RT09 Batch decision → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT10 Owner A sees both batch rights VERIFIED",
+      "status": 200,
+      "assertion": "RT10 F2 and F3 rights are VERIFIED",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF01 Title 2 characters",
+      "status": 400,
+      "assertion": "LF01 Title 2 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF02 Price 0",
+      "status": 400,
+      "assertion": "LF02 Price 0 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF03 Price −5",
+      "status": 400,
+      "assertion": "LF03 Price −5 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF04 Minimum duration 10 minutes",
+      "status": 400,
+      "assertion": "LF04 Minimum duration 10 minutes → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF05 Maximum duration below the minimum",
+      "status": 400,
+      "assertion": "LF05 Maximum duration below the minimum → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF06 No vehicle types",
+      "status": 400,
+      "assertion": "LF06 No vehicle types → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "LF07 Deposit −1",
+      "status": 400,
+      "assertion": "LF07 Deposit −1 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Bay F1",
+      "status": 201,
+      "assertion": "RT11.rF1 Listing for Bay F1 created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Bay F1",
+      "status": 200,
+      "assertion": "RT11.rF1 Listing for Bay F1 activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Bay F2",
+      "status": 201,
+      "assertion": "RT11.rF2 Listing for Bay F2 created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Bay F2",
+      "status": 200,
+      "assertion": "RT11.rF2 Listing for Bay F2 activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Bay F3",
+      "status": 201,
+      "assertion": "RT11.rF3 Listing for Bay F3 created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Bay F3",
+      "status": 200,
+      "assertion": "RT11.rF3 Listing for Bay F3 activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Level 2 row",
+      "status": 201,
+      "assertion": "RT11.rL2 Listing for Level 2 row created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Level 2 row",
+      "status": 200,
+      "assertion": "RT11.rL2 Listing for Level 2 row activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Row G",
+      "status": 201,
+      "assertion": "RT11.rG Listing for Row G created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Row G",
+      "status": 200,
+      "assertion": "RT11.rG Listing for Row G activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Visitor pool",
+      "status": 201,
+      "assertion": "RT11.rP Listing for Visitor pool created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Visitor pool",
+      "status": 200,
+      "assertion": "RT11.rP Listing for Visitor pool activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Create the listing for Bay B1",
+      "status": 201,
+      "assertion": "RT11.rB1 Listing for Bay B1 created → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11 Activate the listing for Bay B1",
+      "status": 200,
+      "assertion": "RT11.rB1 Listing for Bay B1 activated → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT11b All seven listings are ACTIVE",
+      "status": 200,
+      "assertion": "RT11b 7 of 7 listings ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT12 A second listing on the same right (observation)",
+      "status": 201,
+      "assertion": "RT12 Second listing on the F1 right is created as a draft → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "03 Parking spaces, rights & listings",
+      "request": "RT13 The duplicate listing cannot be activated",
+      "status": 409,
+      "assertion": "RT13 Activate a second listing on a fixed space → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S01 Public search without a login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S02 Property 1 is in the results",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S03 All 6 of Property 1's spaces are offered",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S04 Units per space: F1 1, F2 1, F3 1, Level 2 3, Row G 4, pool 2",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S05 Property 1 shows 12 available units",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S06 Prices range from 50 to 65 BDT per hour",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S01–S07 Default public search (no login)",
+      "status": 200,
+      "assertion": "S07 Property 2 (0.7 km away) is also shown",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S08 Demo shared pool appears in search",
+      "status": 200,
+      "assertion": "S08 Seeded demo listing shared pool (Gulshan) is returned",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S09 Demo bay A-01 appears in search",
+      "status": 200,
+      "assertion": "S09 Seeded demo listing bay A-01 (Gulshan) is returned",
+      "result": "failed",
+      "error": "[\"ParkEase Gulshan Residence\"]: expected false to deeply equal true"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S10 Demo bay B-02 appears in search",
+      "status": 200,
+      "assertion": "S10 Seeded demo listing bay B-02 (Banani) is returned",
+      "result": "failed",
+      "error": "[\"QA Gulshan Tower mu7gms4n renamed\"]: expected false to deeply equal true"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S11 Demo bay C-03 appears in search",
+      "status": 200,
+      "assertion": "S11 Seeded demo listing bay C-03 (Dhanmondi) is returned",
+      "result": "failed",
+      "error": "[]: expected false to deeply equal true"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S12 Motorcycle",
+      "status": 200,
+      "assertion": "S12 Motorcycle → only rP",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S13 Microbus",
+      "status": 200,
+      "assertion": "S13 Microbus → only rG",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S14 SUV",
+      "status": 200,
+      "assertion": "S14 SUV → only rF1, rF3, rG",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S15 03:00–04:00 is outside the pool's opening hours",
+      "status": 200,
+      "assertion": "S15 Pool is hidden at night, F1 is still shown",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S16 F3's blocked day",
+      "status": 200,
+      "assertion": "S16 F3 is hidden during its date block, F1 is shown",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S17 10-minute booking (below the 60-minute minimum)",
+      "status": 200,
+      "assertion": "S17 10-minute booking (below the 60-minute minimum) → only ",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S18 13.5-hour booking (above the 12-hour maximum)",
+      "status": 200,
+      "assertion": "S18 13.5-hour booking (above the 12-hour maximum) → only ",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S19 Maximum price 60 BDT",
+      "status": 200,
+      "assertion": "S19 Maximum price 60 BDT → only rF1, rF2, rF3, rL2, rP",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S20 Minimum price 63 BDT",
+      "status": 200,
+      "assertion": "S20 Minimum price 63 BDT → only rG",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S21 Covered only",
+      "status": 200,
+      "assertion": "S21 Covered only → only rF1, rF3, rG",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S22 CCTV only",
+      "status": 200,
+      "assertion": "S22 CCTV only → only rF1, rF2",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S23 Guard only",
+      "status": 200,
+      "assertion": "S23 Guard only → only rF1, rL2",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S24 Shared pools only",
+      "status": 200,
+      "assertion": "S24 Shared pools only → only rP",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S25 At least 3 free units",
+      "status": 200,
+      "assertion": "S25 At least 3 free units → only rL2, rG",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S26 Radius 0.5 km",
+      "status": 200,
+      "assertion": "S26 Property 1 shown, Property 2 (0.7 km) excluded",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S27 Radius 2 km",
+      "status": 200,
+      "assertion": "S27 Property 2 included",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S28–S29 Public results hide private data",
+      "status": 200,
+      "assertion": "S28 No exact address, access instructions or owner contact in the response",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S28–S29 Public results hide private data",
+      "status": 200,
+      "assertion": "S29 Coordinates are approximate, not the exact Property coordinates (FR-SRCH-04)",
+      "result": "failed",
+      "error": "expected [ 23.76677, 90.39768 ] to not deeply equal [ 23.76677, 90.39768 ]"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S30 Sort by price (FR-SRCH-03)",
+      "status": 400,
+      "assertion": "S30 Search with sort=price → 200",
+      "result": "failed",
+      "error": "HTTP 400 {\"success\":false,\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Request validation failed\",\"details\":{\"query\":[\"Unrecognized key: \\\"sort\\\"\"]}},\"meta\":{\"requestId\":\"ea2ed067-3dbd-462a-8a9d-b43ced8f13e6\",\"timestamp\":\"2026-09-20T03:23:07.262Z\"}}: expected 400 to deeply equal 200"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S31 Paginate results (FR-SRCH-06)",
+      "status": 400,
+      "assertion": "S31 Search with page=1&limit=5 → 200",
+      "result": "failed",
+      "error": "HTTP 400 {\"success\":false,\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Request validation failed\",\"details\":{\"query\":[\"Unrecognized keys: \\\"page\\\", \\\"limit\\\"\"]}},\"meta\":{\"requestId\":\"9fc26ed2-39f2-4f79-bbca-5ccb03085e69\",\"timestamp\":\"2026-09-20T03:23:07.315Z\"}}: expected 400 to deeply equal 200"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "SV01 Start time in the past",
+      "status": 400,
+      "assertion": "SV01 Start time in the past → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "SV02 End before start",
+      "status": 400,
+      "assertion": "SV02 End before start → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "SV03 Vehicle type missing",
+      "status": 400,
+      "assertion": "SV03 Vehicle type missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "SV04 Latitude 95",
+      "status": 400,
+      "assertion": "SV04 Latitude 95 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "SV05 Radius 150 km",
+      "status": 400,
+      "assertion": "SV05 Radius 150 km → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S32 Owner pauses F2's listing",
+      "status": 200,
+      "assertion": "S32 Owner pauses F2's listing → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S33 Search: F2 is hidden",
+      "status": 200,
+      "assertion": "S33 F2 is hidden from search",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S34 Owner re-activates F2's listing",
+      "status": 200,
+      "assertion": "S34 Owner re-activates F2's listing → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S34b Search: F2 is shown",
+      "status": 200,
+      "assertion": "S34b F2 is back in search",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S35 Owner blocks space F2",
+      "status": 200,
+      "assertion": "S35 F2 → BLOCKED → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S35b Search: F2 is hidden",
+      "status": 200,
+      "assertion": "S35b F2 is hidden from search",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S36 Owner unblocks space F2",
+      "status": 200,
+      "assertion": "S36 F2 → ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S-S36 (setup) Re-activate F2's listing if blocking paused it",
+      "status": 200,
+      "assertion": "S-S36 F2 listing active again",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S36c Search: F2 is shown",
+      "status": 200,
+      "assertion": "S36c F2 is back in search",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S37 Admin suspends F2's listing",
+      "status": 200,
+      "assertion": "S37 Admin suspends F2's listing → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S37b Search: F2 is hidden",
+      "status": 200,
+      "assertion": "S37b F2 is hidden from search",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S37c Admin resumes F2's listing",
+      "status": 200,
+      "assertion": "S37c Admin resumes F2's listing → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S37d Search: F2 is shown",
+      "status": 200,
+      "assertion": "S37d F2 is back in search",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S38–S39 Public Property page",
+      "status": 200,
+      "assertion": "S38 Public Property page → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S38–S39 Public Property page",
+      "status": 200,
+      "assertion": "S39 Page shows offers but no exact address or access instructions",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S40 Map browse near Property 1",
+      "status": 200,
+      "assertion": "S40 Browse → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "04 Search & suggestions (public, no login)",
+      "request": "S40 Map browse near Property 1",
+      "status": 200,
+      "assertion": "S40b Properties 1 and 2 are both on the map",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V01–V02 Driver A adds a sedan",
+      "status": 201,
+      "assertion": "V01 Add a vehicle → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V01–V02 Driver A adds a sedan",
+      "status": 201,
+      "assertion": "V02 Fields saved and the first vehicle is the default",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF01 Registration number 3 characters",
+      "status": 400,
+      "assertion": "VF01 Registration number 3 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF02 Brand missing",
+      "status": 400,
+      "assertion": "VF02 Brand missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF03 Colour 41 characters",
+      "status": 400,
+      "assertion": "VF03 Colour 41 characters → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF04 Height 0",
+      "status": 400,
+      "assertion": "VF04 Height 0 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF05 Vehicle type TRUCK",
+      "status": 400,
+      "assertion": "VF05 Vehicle type TRUCK → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF06 Unknown extra field",
+      "status": 400,
+      "assertion": "VF06 Unknown extra field → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "VF07 Model missing",
+      "status": 400,
+      "assertion": "VF07 Model missing → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V03 Same registration number in another format",
+      "status": 409,
+      "assertion": "V03 Duplicate registration (lower case, no spaces) → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V04 Driver A adds a tall SUV (230 cm)",
+      "status": 201,
+      "assertion": "V04 Add a second vehicle → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V04 Driver A adds a tall SUV (230 cm)",
+      "status": 201,
+      "assertion": "V04b Second vehicle is not the default",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V05 List vehicles",
+      "status": 200,
+      "assertion": "V05 List own vehicles → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V05 List vehicles",
+      "status": 200,
+      "assertion": "V05b Both vehicles listed",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V06 Edit the SUV's colour",
+      "status": 200,
+      "assertion": "V06 Edit a vehicle → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V07 Make the SUV the default",
+      "status": 200,
+      "assertion": "V07 Set default vehicle → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V08 Exactly one default vehicle",
+      "status": 200,
+      "assertion": "V08 Only the SUV is default",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V09 Driver B cannot read Driver A's vehicle",
+      "status": 404,
+      "assertion": "V09 Other driver reads → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V10 An owner cannot use the vehicle API",
+      "status": 403,
+      "assertion": "V10 Owner lists vehicles → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-V11 (setup) Add a vehicle to delete",
+      "status": 201,
+      "assertion": "S-V11 Add → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "V11 Delete a vehicle",
+      "status": 204,
+      "assertion": "V11 Delete a vehicle → 204",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B (setup) Driver B adds a sedan",
+      "status": 201,
+      "assertion": "S-B1 Driver B vehicle → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B01–B03 Quote: Driver A, sedan, F1, tomorrow 10:00–11:00",
+      "status": 201,
+      "assertion": "B01 Quote → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B01–B03 Quote: Driver A, sedan, F1, tomorrow 10:00–11:00",
+      "status": 201,
+      "assertion": "B02 60 BDT + 6 BDT fee + 100 BDT deposit = 166 BDT",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B01–B03 Quote: Driver A, sedan, F1, tomorrow 10:00–11:00",
+      "status": 201,
+      "assertion": "B03 Quote expires in about 5 minutes",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B04 A 230 cm SUV on F1 (max height 220 cm) (FR-VEH-04)",
+      "status": 201,
+      "assertion": "B04 Quote for a vehicle taller than the space is refused",
+      "result": "failed",
+      "error": "HTTP 201 {\"success\":true,\"data\":{\"id\":\"f8decbfb-cc2d-4631-8287-c2aa25b64037\",\"driverUserId\":\"b5e53242-587e-4bd2-8f89-c549d432cae3\",\"listingId\":\"4180fced-5e51-4583-ac00-9dcb8cbaa04a\",\"vehicleId\":\"7defc87a-d749-4aa4-992c-e4d4e274b36c\",\"parkingSpotId\":\"04fd94e8-46d4-45e3-b842-6af778e5415e\",\"startAt\":\"2026-09-21T04:00:00.000Z\",\"endAt\":\"2026-09-21T05:00:00.000Z\",\"durationMinutes\":60,\"baseAmountPaisa\":\"6000\",\"pl: expected 201 to be one of [ 400, 409, 422 ]"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B05 SUV on sedan-only F2",
+      "status": 409,
+      "assertion": "B05 Vehicle type not allowed → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B06 Quote with another driver's vehicle",
+      "status": 404,
+      "assertion": "B06 Other driver's vehicle → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B07 Quote in the past",
+      "status": 400,
+      "assertion": "B07 Start in the past → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B08 Quote longer than the 12-hour maximum",
+      "status": 400,
+      "assertion": "B08 13.5 hours → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B09 An owner cannot request a quote",
+      "status": 403,
+      "assertion": "B09 Owner requests a quote → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B10 Hold the quoted space",
+      "status": 201,
+      "assertion": "B10 Hold → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B10 Hold the quoted space",
+      "status": 201,
+      "assertion": "B10b Hold is ACTIVE for about 5 minutes",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B11 Same hold request again (same idempotency key)",
+      "status": 201,
+      "assertion": "B11 Returns the same hold",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B12 Re-using the quote with a new key",
+      "status": 409,
+      "assertion": "B12 Second hold from one quote → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B14 Driver B cannot get the held slot",
+      "status": 409,
+      "assertion": "B14 Quote for a single bay another driver is holding → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B15 Book from the hold",
+      "status": 201,
+      "assertion": "B15 Create booking → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B15 Book from the hold",
+      "status": 201,
+      "assertion": "B15b Booking waits for payment",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B15 Book from the hold",
+      "status": 201,
+      "assertion": "B17 No access credential before payment",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B16 Same booking request again",
+      "status": 201,
+      "assertion": "B16 Returns the same booking",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B18–B19 Pay for the booking (simulated)",
+      "status": 201,
+      "assertion": "B18 Capture payment → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B18–B19 Pay for the booking (simulated)",
+      "status": 201,
+      "assertion": "B18b Booking CONFIRMED and a one-time access credential issued",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B18–B19 Pay for the booking (simulated)",
+      "status": 201,
+      "assertion": "B19 Payment CAPTURED for 166 BDT",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B20 Pay again with the same key",
+      "status": 201,
+      "assertion": "B20 Same payment returned, no second charge",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B21–B22 Driver A opens the confirmed booking",
+      "status": 200,
+      "assertion": "B21 Exactly one payment on the booking",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B21–B22 Driver A opens the confirmed booking",
+      "status": 200,
+      "assertion": "B22 Confirmed booking shows the exact address and access instructions (FR-PROP-02)",
+      "result": "failed",
+      "error": "expected '{\"success\":true,\"data\":{\"id\":\"086389e…' to include 'Plot 12, Road 3'"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B23 Driver B cannot open Driver A's booking",
+      "status": 404,
+      "assertion": "B23 Other driver → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B24–B25 Row G (4 units): four holds succeed, a fifth quote is refused",
+      "status": 409,
+      "assertion": "B24 4 of 4 holds on Row G succeeded",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B24–B25 Row G (4 units): four holds succeed, a fifth quote is refused",
+      "status": 409,
+      "assertion": "B25 5th booking attempt on a full 4-unit row → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B26 Search: a full Row G is hidden",
+      "status": 200,
+      "assertion": "B26 Row G has no free units and is not offered",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B27 Release one Row G hold",
+      "status": 200,
+      "assertion": "B27 Release a hold → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B28 Search: the released unit is free again",
+      "status": 200,
+      "assertion": "B28 Row G shows 1 free unit",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B29 Three simultaneous holds on the 2-car pool",
+      "status": 200,
+      "assertion": "B29 Exactly 2 of 3 concurrent holds succeed; the pool is then full",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B30a (setup) Quote bay B1 in Property 2",
+      "status": 201,
+      "assertion": "S-B30a (setup) Quote bay B1 in Property 2 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B30b (setup) Hold bay B1",
+      "status": 201,
+      "assertion": "S-B30b (setup) Hold bay B1 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B30c (setup) Book bay B1",
+      "status": 201,
+      "assertion": "S-B30c (setup) Book bay B1 → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B30 Pay for bay B1 (listing without a security deposit)",
+      "status": 500,
+      "assertion": "B30 Pay for bay B1 (listing without a security deposit) → 201",
+      "result": "failed",
+      "error": "HTTP 500 {\"success\":false,\"error\":{\"code\":\"INTERNAL_SERVER_ERROR\",\"message\":\"An unexpected error occurred\"},\"meta\":{\"requestId\":\"0f0755b4-ca53-427e-ba17-a216f9c86295\",\"timestamp\":\"2026-09-20T03:23:16.736Z\"}}: expected 500 to deeply equal 201"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B30 Pay for bay B1 (listing without a security deposit)",
+      "status": 500,
+      "assertion": "B30b Booking is CONFIRMED",
+      "result": "failed",
+      "error": "expected undefined to deeply equal 'CONFIRMED'"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B31a (setup) Quote one Level 2 unit",
+      "status": 201,
+      "assertion": "S-B31a (setup) Quote one Level 2 unit → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B31b (setup) Hold a Level 2 unit",
+      "status": 201,
+      "assertion": "S-B31b (setup) Hold a Level 2 unit → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "S-B31c (setup) Book a Level 2 unit",
+      "status": 201,
+      "assertion": "S-B31c (setup) Book a Level 2 unit → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B31 Pay for one Level 2 unit",
+      "status": 201,
+      "assertion": "B31 Pay for one Level 2 unit → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B31 Pay for one Level 2 unit",
+      "status": 201,
+      "assertion": "B31b Booking is CONFIRMED",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B32 Search: Level 2 now has 2 of 3 units free",
+      "status": 200,
+      "assertion": "B32 Level 2 shows 2 free units",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B33 Driver A cancels the paid F1 booking",
+      "status": 200,
+      "assertion": "B33 Cancel a confirmed booking → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B33 Driver A cancels the paid F1 booking",
+      "status": 200,
+      "assertion": "B33b Booking is CANCELLED",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B34–B35 The cancelled booking is refunded (FR-BKG-07, FR-PAY-04)",
+      "status": 200,
+      "assertion": "B35 List refunds → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B34–B35 The cancelled booking is refunded (FR-BKG-07, FR-PAY-04)",
+      "status": 200,
+      "assertion": "B34 A refund exists for the cancelled booking's payment",
+      "result": "failed",
+      "error": "expected [] to include '3c4d3c82-1dba-4635-909f-d257343c4b86'"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B36 Cancelling twice is refused",
+      "status": 409,
+      "assertion": "B36 Cancel again → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B37 Driver A's booking list",
+      "status": 200,
+      "assertion": "B37 Driver lists bookings → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B37 Driver A's booking list",
+      "status": 200,
+      "assertion": "B37b Only Driver A's bookings",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B38 Owner A's booking list",
+      "status": 200,
+      "assertion": "B38 Owner lists bookings → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B38 Owner A's booking list",
+      "status": 200,
+      "assertion": "B38b Includes the Level 2 booking",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B39 Owner B's booking list",
+      "status": 200,
+      "assertion": "B39 Other owner lists bookings → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B39 Owner B's booking list",
+      "status": 200,
+      "assertion": "B39b None of Owner A's bookings",
+      "result": "passed"
+    },
+    {
+      "stage": "05 Vehicles, booking & payment",
+      "request": "B40 A Driver cannot use the owner booking API",
+      "status": 403,
+      "assertion": "B40 Driver on owner bookings → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "MF01 Manager name 1 character",
+      "status": 400,
+      "assertion": "MF01 Manager name 1 character → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "MF02 Manager email invalid",
+      "status": 400,
+      "assertion": "MF02 Manager email invalid → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "MF03 Manager phone invalid",
+      "status": 400,
+      "assertion": "MF03 Manager phone invalid → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M01 Manager account with an email that is already registered",
+      "status": 409,
+      "assertion": "M01 Existing email → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M01 Manager account with an email that is already registered",
+      "status": 409,
+      "assertion": "M01b Generic message that does not reveal which field clashed",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M02–M03 Owner A creates a Manager account",
+      "status": 201,
+      "assertion": "M02 Create Manager account → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M02–M03 Owner A creates a Manager account",
+      "status": 201,
+      "assertion": "M03 Account is PENDING and has no password yet (setup link issued)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M04 The setup email reached the Manager",
+      "status": 200,
+      "assertion": "M04 Setup email delivered",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M05 A Driver cannot create Manager accounts",
+      "status": 403,
+      "assertion": "M05 Driver creates a Manager → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M06 The Manager cannot log in before setting a password",
+      "status": 401,
+      "assertion": "M06 Login before setup → 401",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M07 The Manager sets a password with the setup link",
+      "status": 200,
+      "assertion": "M07 Set password from the setup link → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M08 The setup link works only once",
+      "status": 400,
+      "assertion": "M08 Re-use the setup link → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M09 The Manager logs in",
+      "status": 200,
+      "assertion": "M09 Manager login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M09 The Manager logs in",
+      "status": 200,
+      "assertion": "M09b Manager account is ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M10 Invite an unknown person as Manager",
+      "status": 404,
+      "assertion": "M10 Unknown identifier → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M11 Invite a Driver as Manager",
+      "status": 404,
+      "assertion": "M11 Identifier of a non-Manager → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M11 Invite a Driver as Manager",
+      "status": 404,
+      "assertion": "M11b Same response as an unknown person",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M12 Owner B cannot invite a Manager to Owner A's Property",
+      "status": 403,
+      "assertion": "M12 Other owner invites → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M13 Owner A invites the Manager to Property 1",
+      "status": 201,
+      "assertion": "M13 Invitation → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M13 Owner A invites the Manager to Property 1",
+      "status": 201,
+      "assertion": "M13b Invitation is PENDING",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M14 Inviting the same Manager again",
+      "status": 409,
+      "assertion": "M14 Duplicate invitation → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M15 The Manager sees the invitation without private Property data",
+      "status": 200,
+      "assertion": "M15 Manager lists invitations → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M15 The Manager sees the invitation without private Property data",
+      "status": 200,
+      "assertion": "M15b Invitation listed; exact address and access instructions hidden",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M16 Manager reads Property 1's spaces before accepting",
+      "status": 403,
+      "assertion": "M16 Manager reads Property 1's spaces before accepting → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M17 The Manager sees no bookings before accepting",
+      "status": 200,
+      "assertion": "M17 No Property 1 bookings are visible before acceptance",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M18 The Manager accepts",
+      "status": 200,
+      "assertion": "M18 Accept invitation → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M18 The Manager accepts",
+      "status": 200,
+      "assertion": "M18b Link is ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M19 Owner A is told the Manager accepted (FR-MGR-15)",
+      "status": 200,
+      "assertion": "M19 Owner has a new notification after the acceptance",
+      "result": "failed",
+      "error": "[{\"id\":\"7f24dd70-1143-47d5-903d-4485c4af3a43\",\"userId\":\"8b8a06e9-05cd-4d34-aaa9-551fc6565cd1\",\"type\":\"BOOKING_CANCELLED\",\"title\":\"Booking cancelled\",\"message\":\"Booking PKMU994CAA125C2B was cancelled.\",\"entityType\":\"Booking\",\"entityId\":\"086389ef-7469-43d8-8f0b-42bb4ac1d281\",\"idempotencyKey\":\"booking-cancelled:086389ef-7469-43d8-8f0b-42bb4ac1d281\",\"readAt\":null,\"createdAt\":\"2026-09-20T03:23:17.353Z\"},{\"id\":\"34308c00-2ab1-4bd0-aff0-debffca48273\",\"userId\":\"8b8a06e9-05cd-4d34-aaa9-551fc6565cd1\",\"type\":\"BOOKING_CONFIRMED\",\"title\":\"New confirmed booking\",\"message\":\"Booking PKMU994DY586F044 is confirmed.\",\"entityType\":\"Booking\",\"entityId\":\"689df657-b1fc-42b9-aa97-4777147860d7\",\"idempotencyKey\":\"booking-confirmed:689df657-b1fc-42b9-aa97-4777147860d7:provider\",\"readAt\":null,\"createdAt\":\"2026-09-20T03:23:17.158Z\"},{\"id\":\"f3d4cf4e-81af-4f6b-a3a7-9a75483bfda1\",\"userId\":\"8b8a06e9-05cd-4d34-aaa9-551fc6565cd1\",\"type\":\"BOOKING_CONFIRMED\",\"title\":\"New confirmed booking\",\"message\":\"Booking PKMU994CAA125C2B is confirmed.\",\"entityType\":\"Booking\",\"entityId\":\"086389ef-7469-43d8-8f0b-42bb4ac1d281\",\"idempotencyKey\":\"booking-confirmed:086389ef-7469-43d8-8f0b-42bb4ac1d281:provider\",\"readAt\":null,\"createdAt\":\"2026-09-20T03:23:15.118Z\"}]: expected +0 to be above +0"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M20 The Manager reads Property 1's spaces",
+      "status": 200,
+      "assertion": "M20 Manager lists spaces on the linked Property → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M21 Manager reads Property 2's spaces",
+      "status": 403,
+      "assertion": "M21 Manager reads Property 2's spaces → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M22 The Manager's listings are limited to Property 1",
+      "status": 200,
+      "assertion": "M22 Manager lists listings → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M22 The Manager's listings are limited to Property 1",
+      "status": 200,
+      "assertion": "M22b Property 1 listings only (no B1)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M23 Pause a listing without LISTING_MANAGE",
+      "status": 403,
+      "assertion": "M23 Pause a listing without LISTING_MANAGE → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M24 Change a price without PRICE_MANAGE",
+      "status": 403,
+      "assertion": "M24 Change a price without PRICE_MANAGE → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M25 The Manager replaces F2's weekly hours (AVAILABILITY_MANAGE)",
+      "status": 200,
+      "assertion": "M25 Manager saves weekly hours → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M26 The Manager blocks F2 for a day",
+      "status": 201,
+      "assertion": "M26 Manager adds a date block → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M27 The Manager adds a space to Property 1 (FR-MGR-09)",
+      "status": 403,
+      "assertion": "M27 Linked Manager creates a space → 201",
+      "result": "failed",
+      "error": "HTTP 403 {\"success\":false,\"error\":{\"code\":\"MARKETPLACE_FORBIDDEN\",\"message\":\"You do not have authority for this operation\"},\"meta\":{\"requestId\":\"d0e66245-99c6-44dd-840c-9657140de97e\",\"timestamp\":\"2026-09-20T03:23:24.513Z\"}}: expected 403 to deeply equal 201"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M28–M30 The Manager's booking list",
+      "status": 200,
+      "assertion": "M28 Manager lists bookings → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M28–M30 The Manager's booking list",
+      "status": 200,
+      "assertion": "M28b Property 1 bookings only",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M28–M30 The Manager's booking list",
+      "status": 200,
+      "assertion": "M29 No payment amounts are shown to a Manager (FR-MGR-10)",
+      "result": "failed",
+      "error": "expected '{\"success\":true,\"data\":[{\"id\":\"086389…' not to match /AmountPaisa|depositPaisa|platformFeePaisa/"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M28–M30 The Manager's booking list",
+      "status": 200,
+      "assertion": "M30 Driver contact details are not exposed",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M31 Without EARNINGS_VIEW the Manager sees no earnings",
+      "status": 200,
+      "assertion": "M31 Refused, or returns no provider balances",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M32 Manager reads payouts",
+      "status": 403,
+      "assertion": "M32 Manager reads payouts → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M33 Manager creates a Manager account",
+      "status": 403,
+      "assertion": "M33 Manager creates a Manager account → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M34 Manager invites a Manager",
+      "status": 403,
+      "assertion": "M34 Manager invites a Manager → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M35 Manager deletes the Property",
+      "status": 403,
+      "assertion": "M35 Manager deletes the Property → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M36 Manager edits the Property",
+      "status": 403,
+      "assertion": "M36 Manager edits the Property → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M37 Manager reads payout accounts",
+      "status": 403,
+      "assertion": "M37 Manager reads payout accounts → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M38 The Manager creates a Guard account (FR-MGR-09, FR-GRD-01)",
+      "status": 403,
+      "assertion": "M38 Linked Manager creates a Guard → 201",
+      "result": "failed",
+      "error": "HTTP 403 {\"success\":false,\"error\":{\"code\":\"AUTH_FORBIDDEN\",\"message\":\"You do not have permission to perform this action\"},\"meta\":{\"requestId\":\"a7137ba8-39d9-4af5-b024-6d7a977513ec\",\"timestamp\":\"2026-09-20T03:23:25.218Z\"}}: expected 403 to deeply equal 201"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M39 Owner A widens the Manager's permissions",
+      "status": 200,
+      "assertion": "M39 Add LISTING_MANAGE, PRICE_MANAGE, EARNINGS_VIEW → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M40 The Manager can now pause a listing",
+      "status": 200,
+      "assertion": "M40 Pause with LISTING_MANAGE (takes effect immediately) → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "S-M40 (setup) The Manager re-activates it",
+      "status": 200,
+      "assertion": "S-M40 Re-activate → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M41 The Manager can now change the price",
+      "status": 200,
+      "assertion": "M41 Change price with PRICE_MANAGE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "S-M41 (setup) Restore F2's price",
+      "status": 200,
+      "assertion": "S-M41 Restore price → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M42 Manager reads Owner earnings even with EARNINGS_VIEW (FR-MGR-12)",
+      "status": 200,
+      "assertion": "M42 Manager reads Owner earnings even with EARNINGS_VIEW (FR-MGR-12) → refused (403/404)",
+      "result": "failed",
+      "error": "HTTP 200 {\"success\":true,\"data\":{\"currency\":\"BDT\",\"availableBalancePaisa\":\"0\",\"pendingBalancePaisa\":\"18000\",\"heldBalancePaisa\":\"0\",\"providerCount\":1},\"meta\":{\"requestId\":\"8c85f39b-493c-4bc6-bca1-1c87addf4dbd\",\"timestamp\":\"2026-09-20T03:23:25.612Z\"}}: expected 200 to be one of [ 403, 404 ]"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M43 Owner A limits the Manager to space F2",
+      "status": 200,
+      "assertion": "M43 Scope the link to one space → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M43b The Manager now sees only F2's listing",
+      "status": 200,
+      "assertion": "M43b Only F2 is visible",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M44 Owner A ends the Manager link",
+      "status": 200,
+      "assertion": "M44 End the link → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M44 Owner A ends the Manager link",
+      "status": 200,
+      "assertion": "M44b Link is ENDED",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M45 Manager reads Property 1 after the link ended",
+      "status": 403,
+      "assertion": "M45 Manager reads Property 1 after the link ended → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M46 The Manager was notified when the link was created and ended (FR-MGR-15)",
+      "status": 200,
+      "assertion": "M46 Manager has link notifications",
+      "result": "failed",
+      "error": "expected +0 to be above 1"
+    },
+    {
+      "stage": "06 Manager",
+      "request": "M47 Owner suspends a Manager link (FR-MGR-06)",
+      "status": 404,
+      "assertion": "M47 A suspend action exists for Manager links",
+      "result": "failed",
+      "error": "HTTP 404 {\"success\":false,\"error\":{\"code\":\"ROUTE_NOT_FOUND\",\"message\":\"Route POST /api/v1/provider/manager-delegations/4a890cb8-aaae-4f04-9720-68407a4e0835/suspend was not found\"},\"meta\":{\"requestId\":\"b59912ad-8131-47bc-966b-5dd7a576e1c3\",\"timestamp\":\"2026-09-20T03:23:26.038Z\"}}: expected 'ROUTE_NOT_FOUND' to not deeply equal 'ROUTE_NOT_FOUND'"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G01 Owner A creates a Guard account",
+      "status": 201,
+      "assertion": "G01 Create Guard account → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G01 Owner A creates a Guard account",
+      "status": 201,
+      "assertion": "G01b Guard is PENDING until the password is set",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G02 The Guard's setup email was delivered",
+      "status": 200,
+      "assertion": "G02 Setup email delivered",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G03 Creating the same Guard again",
+      "status": 409,
+      "assertion": "G03 Duplicate Guard → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G04a The Guard sets a password",
+      "status": 200,
+      "assertion": "G04a Set password from setup link → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G04 The Guard logs in",
+      "status": 200,
+      "assertion": "G04 Guard login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G05 Guard cannot be added to an unverified Property",
+      "status": 404,
+      "assertion": "G05 Unverified Property 3 → refused",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G06 Unknown Guard identifier",
+      "status": 404,
+      "assertion": "G06 Unknown Guard → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G07 Owner B cannot add a Guard to Property 1",
+      "status": 404,
+      "assertion": "G07 Other owner → refused (403/404)",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G08 Owner A adds the Guard to Property 1",
+      "status": 201,
+      "assertion": "G08 Add Guard to Property → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G08 Owner A adds the Guard to Property 1",
+      "status": 201,
+      "assertion": "G08b Membership waits for the Guard's consent",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G08 Owner A adds the Guard to Property 1",
+      "status": 201,
+      "assertion": "G08c Guard contact is masked for the owner",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G09 Adding the same Guard twice",
+      "status": 409,
+      "assertion": "G09 Duplicate membership → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G10 Before accepting, the Guard sees no bookings",
+      "status": 200,
+      "assertion": "G10 No bookings visible",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G11 The Guard accepts the membership",
+      "status": 200,
+      "assertion": "G11 Accept membership → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G11 The Guard accepts the membership",
+      "status": 200,
+      "assertion": "G11b Membership ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G12 Overnight shift 20:00–08:00 is refused",
+      "status": 400,
+      "assertion": "G12 Shift ending before it starts → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G13 Assign a 00:00–23:59 shift",
+      "status": 201,
+      "assertion": "G13 Create shift assignment → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "S-G (setup) Driver A books F1 starting in 3 minutes and pays",
+      "status": 200,
+      "assertion": "S-G1 Booking starting now is confirmed → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "S-G (setup) Driver A books F1 starting in 3 minutes and pays",
+      "status": 200,
+      "assertion": "S-G2 Status CONFIRMED",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G14 The Guard's booking list is limited to Property 1",
+      "status": 200,
+      "assertion": "G14 Guard lists bookings → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G14 The Guard's booking list is limited to Property 1",
+      "status": 200,
+      "assertion": "G14b Includes the Property 1 booking, not Property 2's",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G15 Verify a made-up credential",
+      "status": 404,
+      "assertion": "G15 Unknown credential → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G16–G17 Verify the Driver's real credential",
+      "status": 200,
+      "assertion": "G16 Valid credential → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G16–G17 Verify the Driver's real credential",
+      "status": 200,
+      "assertion": "G17 Driver contact and amounts are masked for the Guard",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "S-G18a (setup) Owner B creates a second Guard",
+      "status": 201,
+      "assertion": "S-G18a Second Guard → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "S-G18b (setup) Second Guard sets a password",
+      "status": 200,
+      "assertion": "S-G18b Password set → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "S-G18c (setup) Second Guard logs in",
+      "status": 200,
+      "assertion": "S-G18c Login → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G18 A Guard from another Property cannot check the booking in",
+      "status": 403,
+      "assertion": "G18 Guard without access to Property 1 → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G19 An owner cannot use the Guard check-in",
+      "status": 403,
+      "assertion": "G19 Owner calls check-in → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G20 Checking in tomorrow's booking today is too early",
+      "status": 409,
+      "assertion": "G20 Outside the check-in window → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G21 Using another booking's credential",
+      "status": 400,
+      "assertion": "G21 Credential does not belong to this booking → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G22 Check the Driver in",
+      "status": 200,
+      "assertion": "G22 Check in → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G22 Check the Driver in",
+      "status": 200,
+      "assertion": "G22b Booking is CHECKED_IN",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G23 The entry credential cannot be used again",
+      "status": 404,
+      "assertion": "G23 Used credential is no longer accepted",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G24–G27 The Driver requests checkout",
+      "status": 200,
+      "assertion": "G24 Checkout request → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G24–G27 The Driver requests checkout",
+      "status": 200,
+      "assertion": "G25 Booking is CHECKOUT_REQUESTED, not yet completed",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G24–G27 The Driver requests checkout",
+      "status": 200,
+      "assertion": "G27 An EXIT QR code / OTP is issued (FR-VER-04)",
+      "result": "failed",
+      "error": "expected '{\"success\":true,\"data\":{\"id\":\"f8f83b3…' to match /exit(Credential|Code|Otp|Qr)|EXIT/i"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G28 The Guard completes checkout",
+      "status": 200,
+      "assertion": "G28 Check out → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G28 The Guard completes checkout",
+      "status": 200,
+      "assertion": "G28b Booking COMPLETED",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G29 Checking out twice",
+      "status": 200,
+      "assertion": "G29 Second check-out is harmless (same COMPLETED booking or 409)",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G30 Owner earnings after checkout",
+      "status": 200,
+      "assertion": "G30 Checkout (done twice) does not pay the Owner twice: total balance unchanged",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G30 Owner earnings after checkout",
+      "status": 200,
+      "assertion": "G30b The 60 BDT earning stays PENDING during the dispute window (FR-FIN-02)",
+      "result": "failed",
+      "error": "{\"currency\":\"BDT\",\"availableBalancePaisa\":\"6000\",\"pendingBalancePaisa\":\"18000\",\"heldBalancePaisa\":\"0\",\"providerCount\":1}: expected 6000 to deeply equal +0"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G31 Owner suspends the Guard's assignment",
+      "status": 200,
+      "assertion": "G31 Suspend assignment → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G31 Owner suspends the Guard's assignment",
+      "status": 200,
+      "assertion": "G31b Assignment SUSPENDED",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G32 A suspended Guard sees no bookings",
+      "status": 200,
+      "assertion": "G32 No Property 1 bookings while suspended",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G33 Owner resumes the assignment",
+      "status": 200,
+      "assertion": "G33 Resume assignment → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G33 Owner resumes the assignment",
+      "status": 200,
+      "assertion": "G33b Assignment ACTIVE",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G34 Changing the shift needs the Guard to accept again (FR-GRD-05)",
+      "status": 200,
+      "assertion": "G34 Update shift → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G34 Changing the shift needs the Guard to accept again (FR-GRD-05)",
+      "status": 200,
+      "assertion": "G34b Assignment returns to PENDING_ACCEPTANCE",
+      "result": "failed",
+      "error": "expected 'ACTIVE' to deeply equal 'PENDING_ACCEPTANCE'"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G35 An owner cannot suspend a Guard's whole account",
+      "status": 403,
+      "assertion": "G35 Owner calls the Admin suspend API → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G36 Owner ends the assignment",
+      "status": 204,
+      "assertion": "G36 End assignment → 204",
+      "result": "passed"
+    },
+    {
+      "stage": "07 Guard",
+      "request": "G36b The ended assignment shows ENDED",
+      "status": 200,
+      "assertion": "G36b Assignment ENDED",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV02 Review with category ratings: security, location, cleanliness (FR-RVW-01)",
+      "status": 400,
+      "assertion": "RV02 Review with category ratings: security, location, cleanliness (FR-RVW-01) → 201",
+      "result": "failed",
+      "error": "HTTP 400 {\"success\":false,\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Request validation failed\",\"details\":{\"body\":[\"Unrecognized keys: \\\"securityRating\\\", \\\"locationAccuracyRating\\\", \\\"cleanlinessRating\\\"\"]}},\"meta\":{\"requestId\":\"f68dd7d3-6fcf-474b-800d-495ab08cc4a0\",\"timestamp\":\"2026-09-20T03:23:37.189Z\"}}: expected 400 to deeply equal 201"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV01 Driver A reviews the completed booking",
+      "status": 201,
+      "assertion": "RV01 Review a completed booking → 201 (or 409 if RV02 already created it)",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV03 Second review of the same booking",
+      "status": 409,
+      "assertion": "RV03 Second review of the same booking → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV04 Rating 0",
+      "status": 400,
+      "assertion": "RV04 Rating 0 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV05 Rating 6",
+      "status": 400,
+      "assertion": "RV05 Rating 6 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV06 Rating 4.5",
+      "status": 400,
+      "assertion": "RV06 Rating 4.5 → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV07 Review a booking that is not completed",
+      "status": 409,
+      "assertion": "RV07 Review a booking that is not completed → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV08 Review another driver's booking",
+      "status": 404,
+      "assertion": "RV08 Review another driver's booking → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV09 Owner A sees the review",
+      "status": 200,
+      "assertion": "RV09 Owner lists reviews → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV09 Owner A sees the review",
+      "status": 200,
+      "assertion": "RV09b The review of the completed booking is listed",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV10 Owner A replies",
+      "status": 200,
+      "assertion": "RV10 Owner reply → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "RV11 The review appears on the public Property page",
+      "status": 200,
+      "assertion": "RV11 Public page shows the review and the reply",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS01 Dispute description under 10 characters",
+      "status": 400,
+      "assertion": "DS01 Short description → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS02 Unknown dispute category",
+      "status": 400,
+      "assertion": "DS02 Bad category → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS03 Driver A opens a dispute with evidence",
+      "status": 201,
+      "assertion": "DS03 Open a dispute → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS04 The disputed earning is put on hold (FR-RVW-03)",
+      "status": 200,
+      "assertion": "DS04 Held balance grows by the 60 BDT earning",
+      "result": "failed",
+      "error": "{\"currency\":\"BDT\",\"availableBalancePaisa\":\"6000\",\"pendingBalancePaisa\":\"18000\",\"heldBalancePaisa\":\"0\",\"providerCount\":1}: expected +0 to deeply equal 6000"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS05 Owner A sees the dispute",
+      "status": 200,
+      "assertion": "DS05 Owner lists disputes → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS05 Owner A sees the dispute",
+      "status": 200,
+      "assertion": "DS05b Dispute listed",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS06 Driver B cannot open Driver A's dispute",
+      "status": 404,
+      "assertion": "DS06 Other driver → 404",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS07 Owner A opens a dispute on a booking at their Property",
+      "status": 201,
+      "assertion": "DS07 Owner opens a dispute → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS08 Admin sees the dispute queue",
+      "status": 200,
+      "assertion": "DS08 Admin dispute list → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS08 Admin sees the dispute queue",
+      "status": 200,
+      "assertion": "DS08b Driver A's dispute is queued",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS09 Admin resolves the dispute",
+      "status": 200,
+      "assertion": "DS09 Resolve dispute → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS10 / N01 Driver A is notified and can list notifications",
+      "status": 200,
+      "assertion": "N01 List notifications → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "DS10 / N01 Driver A is notified and can list notifications",
+      "status": 200,
+      "assertion": "DS10 A notification arrived after the dispute was resolved",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "N02 Mark one notification read",
+      "status": 200,
+      "assertion": "N02 Read one → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "N02 Mark one notification read",
+      "status": 200,
+      "assertion": "N02b Notification marked read",
+      "result": "passed"
+    },
+    {
+      "stage": "08 Reviews, disputes & notifications",
+      "request": "N03 Mark all notifications read",
+      "status": 200,
+      "assertion": "N03 Read all → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO01 bKash account with an invalid number",
+      "status": 400,
+      "assertion": "PO01 Invalid mobile wallet number → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO02 Bank account without a bank name",
+      "status": 400,
+      "assertion": "PO02 Bank without bankName → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO03–PO05 Owner A adds a bKash payout account",
+      "status": 201,
+      "assertion": "PO03 Add bKash account → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO03–PO05 Owner A adds a bKash payout account",
+      "status": 201,
+      "assertion": "PO04 The number is masked in the response",
+      "result": "passed"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO03–PO05 Owner A adds a bKash payout account",
+      "status": 201,
+      "assertion": "PO05 A new account waits for Admin verification before use (FR-FIN-05)",
+      "result": "failed",
+      "error": "{\"id\":\"94c9b914-377d-4791-acff-576407def1d5\",\"type\":\"BKASH\",\"accountHolderName\":\"Owner A QA\",\"maskedAccountIdentifier\":\"*******8773\",\"bankName\":null,\"branchName\":null,\"routingNumber\":null,\"isDefault\":true,\"status\":\"ACTIVE\",\"createdAt\":\"2026-09-20T03:23:42.295Z\",\"updatedAt\":\"2026-09-20T03:23:42.295Z\"}: expected 'ACTIVE' to not deeply equal 'ACTIVE'"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO06 Payout larger than the available balance",
+      "status": 409,
+      "assertion": "PO06 Available balance + 1 paisa → 409",
+      "result": "passed"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO07 Three payout requests at the same time (FR-FIN-06)",
+      "status": 200,
+      "assertion": "PO07 Two succeed and the third is refused with 409 (no HTTP 500)",
+      "result": "failed",
+      "error": "expected [ 201, 500, 500 ] to deeply equal [ 201, 201, 409 ]"
+    },
+    {
+      "stage": "08b Payout accounts & payout requests",
+      "request": "PO07 Three payout requests at the same time (FR-FIN-06)",
+      "status": 200,
+      "assertion": "PO07b The balance is never over-spent",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "S-PO (setup) Owner A requests a second small payout if only one is pending",
+      "status": 200,
+      "assertion": "S-PO Two payout requests are waiting for review",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO08 Admin approves a payout",
+      "status": 200,
+      "assertion": "PO08 Approve payout → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO09 Marking paid needs a transfer reference",
+      "status": 400,
+      "assertion": "PO09 PAID without externalReference → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO10 Admin marks the payout paid",
+      "status": 200,
+      "assertion": "PO10 Mark PAID → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO10 Admin marks the payout paid",
+      "status": 200,
+      "assertion": "PO10b Payout is PAID",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO11 Admin rejects the other payout",
+      "status": 200,
+      "assertion": "PO11 Reject payout → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO11b The rejected amount returns to the Owner's balance",
+      "status": 200,
+      "assertion": "PO11b Available balance goes back up",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO12 Ledger reconciliation",
+      "status": 200,
+      "assertion": "PO12 Reconciliation report → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO12 Ledger reconciliation",
+      "status": 200,
+      "assertion": "PO12b Debits equal credits and no issues are reported",
+      "result": "passed"
+    },
+    {
+      "stage": "08c Admin payout review & ledger",
+      "request": "PO13 Ledger transactions",
+      "status": 200,
+      "assertion": "PO13 Admin ledger list → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD01 Admin suspends Driver B",
+      "status": 200,
+      "assertion": "AD01 Suspend user → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD02 Suspended Driver B tries to log in",
+      "status": 403,
+      "assertion": "AD02 Suspended Driver B tries to log in → refused",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD03 Admin restores Driver B",
+      "status": 200,
+      "assertion": "AD03 Unsuspend user → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD04 Restored Driver B logs in",
+      "status": 200,
+      "assertion": "AD04 Restored Driver B logs in → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD05 Admin blocks the Guard (FR-GRD-07)",
+      "status": 200,
+      "assertion": "AD05 Block Guard → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD05b Blocked Guard tries to log in",
+      "status": 403,
+      "assertion": "AD05b Blocked Guard tries to log in → refused",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD06 Admin unblocks the Guard",
+      "status": 200,
+      "assertion": "AD06 Unblock Guard → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD06b Unblocked Guard logs in",
+      "status": 200,
+      "assertion": "AD06b Unblocked Guard logs in → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD07 Admin creates a Manager account",
+      "status": 201,
+      "assertion": "AD07 Create MANAGER → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD11 Admin audit log",
+      "status": 200,
+      "assertion": "AD11 Audit events → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD12 Admin dashboard",
+      "status": 200,
+      "assertion": "AD12 Dashboard summary → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08d Admin moderation",
+      "request": "AD13 Admin user list",
+      "status": 200,
+      "assertion": "AD13 Users → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "AD08 Admin cannot create another Admin",
+      "status": 400,
+      "assertion": "AD08 Create ADMIN → 400",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "AD09 Admin takes Property 2 offline",
+      "status": 200,
+      "assertion": "AD09 Property 2 → INACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "AD09b Property 2 disappears from search",
+      "status": 200,
+      "assertion": "AD09b Property 2 hidden",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "AD10 Admin brings Property 2 back online",
+      "status": 200,
+      "assertion": "AD10 Property 2 → ACTIVE → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "AD10b Property 2 is back in search",
+      "status": 200,
+      "assertion": "AD10b Property 2 shown again after re-activation (FR-ADM-02)",
+      "result": "failed",
+      "error": "expected false to deeply equal true"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB01 Driver on the Admin user list",
+      "status": 403,
+      "assertion": "RB01 Driver on the Admin user list → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB02 Driver on owner listings",
+      "status": 403,
+      "assertion": "RB02 Driver on owner listings → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB03 Owner on Guard bookings",
+      "status": 403,
+      "assertion": "RB03 Owner on Guard bookings → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB04 Owner on the Admin dashboard",
+      "status": 403,
+      "assertion": "RB04 Owner on the Admin dashboard → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB05 Manager on the Admin user list",
+      "status": 403,
+      "assertion": "RB05 Manager on the Admin user list → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB06 Manager places a hold",
+      "status": 403,
+      "assertion": "RB06 Manager places a hold → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB07 Guard on owner listings",
+      "status": 403,
+      "assertion": "RB07 Guard on owner listings → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB08 Guard on the vehicle API",
+      "status": 403,
+      "assertion": "RB08 Guard on the vehicle API → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB09 Guard on the Admin user list",
+      "status": 403,
+      "assertion": "RB09 Guard on the Admin user list → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "RB10 Driver on Guard bookings",
+      "status": 403,
+      "assertion": "RB10 Driver on Guard bookings → 403",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC01 Owner temporarily closes Property 1",
+      "status": 200,
+      "assertion": "PC01 Temporary closure → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC01b A closed Property is hidden from search",
+      "status": 200,
+      "assertion": "PC01b Property 1 hidden",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC02 Owner reopens Property 1",
+      "status": 200,
+      "assertion": "PC02 Reopen → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC02b A reopened Property is back in search",
+      "status": 200,
+      "assertion": "PC02b Property 1 shown",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC03–PC05 Owner blocks the Level 2 row, which has a confirmed booking",
+      "status": 200,
+      "assertion": "PC03 Block a space with a confirmed booking → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC03–PC05 Owner blocks the Level 2 row, which has a confirmed booking",
+      "status": 200,
+      "assertion": "PC05 The response warns and lists the affected booking (FR-BKG-09)",
+      "result": "failed",
+      "error": "expected '{\"success\":true,\"data\":{\"id\":\"00d3f41…' to include '689df657-b1fc-42b9-aa97-4777147860d7'"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "PC04 The existing booking is kept",
+      "status": 200,
+      "assertion": "PC04 Booking is not cancelled by the block",
+      "result": "passed"
+    },
+    {
+      "stage": "08e Admin Property control, role isolation & closures",
+      "request": "S-PC (setup) Unblock the Level 2 row",
+      "status": 200,
+      "assertion": "S-PC Unblock → 200",
+      "result": "passed"
+    },
+    {
+      "stage": "09 Hold expiry (slow, about 6 minutes)",
+      "request": "S-H01 (setup) Driver A holds one Row G unit for tomorrow 12:00–13:00",
+      "status": 201,
+      "assertion": "S-H01 Hold placed → 201",
+      "result": "passed"
+    },
+    {
+      "stage": "09 Hold expiry (slow, about 6 minutes)",
+      "request": "S-H01b (setup) Search shows one unit taken",
+      "status": 200,
+      "assertion": "S-H01b Row G shows 3 of 4 free",
+      "result": "passed"
+    },
+    {
+      "stage": "09 Hold expiry (slow, about 6 minutes)",
+      "request": "H01 After 5.5 minutes the expired hold frees the unit",
+      "status": 200,
+      "assertion": "H01 Row G is back to 4 of 4 free",
+      "result": "passed"
+    }
+  ]
+}

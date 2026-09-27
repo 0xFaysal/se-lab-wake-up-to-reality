@@ -1,0 +1,159 @@
+# Backend unit tests (npm test)
+# Run: 2026-09-20 08:01:26 +0600 | Node v24.11.1 | commit 8efe713
+
+$ npm test
+
+> parkease-api@0.1.0 test
+> tsx --test tests/unit/common/normalize-request-error.test.ts tests/unit/common/validation-error.test.ts tests/unit/common/encryption.test.ts tests/unit/common/logger-redaction.test.ts tests/unit/common/email-template.test.ts tests/unit/auth/phone.test.ts tests/unit/auth/auth-schema.test.ts tests/unit/auth/authorization.test.ts tests/unit/vehicles/registration-number.test.ts tests/unit/vehicles/vehicle-validation.test.ts tests/unit/properties/property-validation.test.ts tests/unit/properties/property-policy.test.ts tests/unit/properties/encryption.test.ts tests/unit/property-images/property-image-validation.test.ts tests/unit/property-images/property-image-policy.test.ts tests/unit/admin-properties/admin-property-validation.test.ts tests/unit/admin-properties/admin-control-validation.test.ts tests/unit/admin-properties/platform-fee.test.ts tests/unit/guard-assignments/guard-assignment-policy.test.ts tests/unit/guard-assignments/guard-assignment-validation.test.ts tests/unit/guard-assignments/guard-assignment-mapper.test.ts tests/unit/property-governance/property-governance.test.ts tests/unit/manager-delegations/manager-delegation-validation.test.ts tests/unit/marketplace/marketplace-validation.test.ts
+
+▶ Advanced Admin control validation
+  ✔ requires auditable reasons for resource and Property status changes (6.4656ms)
+  ✔ enforces valid parking-right filters and review reasons (3.4979ms)
+  ✔ stores percentage fees as basis points and rejects mixed fee values (2.2758ms)
+  ✔ validates role-targeted broadcast drafts without sending them (1.4263ms)
+  ✔ validates managed email templates and targeted campaign drafts (2.5445ms)
+  ✔ requires a reason when closing a listing report (0.9716ms)
+✔ Advanced Admin control validation (19.479ms)
+▶ Admin Property verification validation
+  ✔ accepts strict approve and valid reject decisions (5.0334ms)
+  ✔ rejects missing reasons and owner-field injection (1.8422ms)
+  ✔ coerces and limits pending queue pagination (2.5138ms)
+  ✔ validates canonical and compatibility merge requests (5.0085ms)
+✔ Admin Property verification validation (18.2121ms)
+✔ platform fee uses the 10 percent default and rounds up to a full paisa (1.9982ms)
+✔ platform fee calculates percentage rules in basis points (0.2798ms)
+✔ platform fee uses an exact fixed-paisa rule (0.1658ms)
+✔ platform fee rejects invalid basis points (0.6404ms)
+▶ registerSchema
+  ✔ normalizes email and phone (5.696ms)
+  ✔ allows DRIVER or PROVIDER and normalizes the legacy Provider alias (2.2938ms)
+  ✔ requires both legal acceptances (1.3871ms)
+  ✔ requires a strong 12-character password (1.6119ms)
+✔ registerSchema (14.73ms)
+▶ authorization middleware
+  ✔ allows an assigned role (1.1163ms)
+  ✔ rejects a role that is not assigned (0.4593ms)
+  ✔ blocks normal work until an initial password is changed (0.4099ms)
+  ✔ allows operational work only after all account checks pass (0.2308ms)
+  ✔ requires email verification before operational work (0.1947ms)
+  ✔ allows operational work without optional phone verification (0.1675ms)
+  ✔ does not treat a non-active account as operationally ready (0.3399ms)
+✔ authorization middleware (4.5416ms)
+▶ normalizeBangladeshPhone
+  ✔ normalizes all supported Bangladesh formats (1.4927ms)
+  ✔ rejects invalid or non-mobile numbers (1.4017ms)
+✔ normalizeBangladeshPhone (4.5534ms)
+▶ Managed email templates
+  ✔ extracts and validates only declared allow-listed placeholders (6.0371ms)
+  ✔ HTML-escapes recipient values without executing arbitrary expressions (2.1095ms)
+✔ Managed email templates (9.8091ms)
+▶ encryptSensitiveText
+  ✔ should encrypt and decrypt a string correctly (11.3014ms)
+✔ encryptSensitiveText (13.7321ms)
+▶ logger redaction
+  ✔ redacts request cookies and response Set-Cookie tokens (6.2782ms)
+✔ logger redaction (7.7934ms)
+▶ request error normalization
+  ✔ converts body-parser malformed JSON errors into a safe 400 response (1.592ms)
+  ✔ preserves operational application errors (0.3127ms)
+  ✔ keeps unexpected errors private and reports them as 500 (0.2967ms)
+✔ request error normalization (4.0048ms)
+▶ validation error formatting
+  ✔ identifies the exact nested request field that failed (6.6781ms)
+✔ validation error formatting (11.2459ms)
+▶ normalized Guard privacy mappers
+  ✔ masks contact data in shared memberships (0.7733ms)
+  ✔ shows provider scope without exposing raw Guard contact details (0.7292ms)
+✔ normalized Guard privacy mappers (2.656ms)
+▶ normalized Guard lifecycle policy
+  ✔ keeps Property membership consent separate (1.0791ms)
+  ✔ allows only non-terminal provider assignment transitions (0.3998ms)
+✔ normalized Guard lifecycle policy (3.0629ms)
+▶ normalized Guard request validation
+  ✔ separates Property invitation from provider assignment (15.403ms)
+  ✔ rejects invalid or overnight shifts (1.8201ms)
+  ✔ uses a strict assignment action union (1.9261ms)
+✔ normalized Guard request validation (21.6478ms)
+▶ Manager delegation validation
+  ✔ accepts a unique least-privilege permission set (3.1695ms)
+  ✔ accepts an exact-identifier invitation without a client-visible Manager id (1.6632ms)
+  ✔ rejects duplicate permissions and inverted validity windows (2.2842ms)
+  ✔ queries permission in the exact Provider and Property scope (1.8307ms)
+✔ Manager delegation validation (11.184ms)
+▶ Marketplace validation invariants
+  ✔ requires real codes only for fixed spaces (22.3842ms)
+  ✔ prevents USE_ONLY rights from carrying commercial permissions (2.613ms)
+  ✔ accepts integer-paisa listing prices and rejects invalid durations (1.9708ms)
+  ✔ requires an ordered UTC search interval (5.8631ms)
+  ✔ limits reviews to the 1-5 rating scale (1.3464ms)
+  ✔ accepts supported parking discovery filters and rejects unknown query fields (5.0458ms)
+  ✔ validates Driver saved places and bounded recent-search coordinates (2.3238ms)
+  ✔ requires unique resources and bounded batch claims (12.7161ms)
+  ✔ bounds bulk fixed-space creation and preserves per-row validation (5.7367ms)
+  ✔ accepts an optional fixed-unit scope on a listing (0.5655ms)
+  ✔ rejects duplicate claims in one Admin batch decision (2.4314ms)
+  ✔ coerces bounded pagination for Guard booking queries (2.096ms)
+  ✔ requires public Property detail search context (1.5092ms)
+  ✔ rejects empty or internally reversed availability exception updates (2.2373ms)
+✔ Marketplace validation invariants (71.6426ms)
+▶ sensitive data encryption
+  ✔ round-trips UTF-8 text without storing plaintext (2.4149ms)
+  ✔ uses a different IV and ciphertext for every encryption (0.5176ms)
+  ✔ rejects tampered ciphertext (0.9802ms)
+✔ sensitive data encryption (6.3362ms)
+▶ privacy-safe Property identity
+  ✔ normalizes names and fingerprints equivalent addresses deterministically (2.2468ms)
+✔ privacy-safe Property identity (2.4827ms)
+▶ property policy
+  ✔ resets a verified property only for critical identity or location changes (1.1151ms)
+  ✔ returns rejected and draft properties to review after an edit (0.3288ms)
+  ✔ blocks deletion when a business dependency exists (1.542ms)
+✔ property policy (4.6796ms)
+▶ property request validation
+  ✔ accepts valid coordinates and a complete entrance pair (10.5961ms)
+  ✔ rejects latitude and longitude outside global bounds (2.5713ms)
+  ✔ requires entrance coordinates together (1.244ms)
+  ✔ allows both entrance coordinates to be cleared (4.9522ms)
+  ✔ rejects an empty update (2.4564ms)
+  ✔ rejects protected and unknown fields (2.6326ms)
+✔ property request validation (27.512ms)
+▶ Property governance invariants
+  ✔ derives governance mode instead of storing it (1.4137ms)
+  ✔ requires optimistic versions for direct shared changes (4.7086ms)
+  ✔ accepts a strict multi-provider change proposal (1.9807ms)
+  ✔ requires the correct scoped identifier for each vote endpoint (2.0585ms)
+  ✔ grants direct common authority only through a Provider relationship, Building Manager assignment, or Admin role (2.5734ms)
+✔ Property governance invariants (15.3314ms)
+▶ Property image policy
+  ✔ enforces a maximum of 10 images without partial capacity (1.1843ms)
+  ✔ accepts only an exact, duplicate-free image order (0.4169ms)
+  ✔ uses the requested cover, preserves the current cover, or promotes first (0.3494ms)
+✔ Property image policy (3.603ms)
+▶ Property image validation
+  ✔ accepts a valid PNG whose declared MIME matches its signature (3.1697ms)
+  ✔ rejects spoofed and unsupported file content (1.7832ms)
+  ✔ rejects duplicate image IDs and a cover outside the order (2.7801ms)
+  ✔ requires valid Property and image UUID parameters (0.8958ms)
+✔ Property image validation (10.0172ms)
+▶ vehicle registration number normalization
+  ✔ normalizes equivalent case, spacing, and dash formats (4.2579ms)
+  ✔ keeps a readable display value without internal whitespace noise (0.4222ms)
+✔ vehicle registration number normalization (6.4483ms)
+▶ vehicle request validation
+  ✔ accepts a valid vehicle and defaults isDefault to false (3.7677ms)
+  ✔ uses only the vehicle types defined by the project schema (1.2531ms)
+  ✔ rejects registration numbers containing only separators (0.9377ms)
+  ✔ rejects invalid vehicle dimensions (1.5818ms)
+  ✔ rejects an empty update (2.2549ms)
+  ✔ allows dimensions to be cleared during an update (0.6285ms)
+  ✔ rejects attempts to update protected vehicle fields (1.7834ms)
+✔ vehicle request validation (14.0182ms)
+ℹ tests 94
+ℹ suites 24
+ℹ pass 94
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5332.7561
+[exit code: 0]

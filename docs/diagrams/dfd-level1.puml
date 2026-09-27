@@ -18,104 +18,93 @@ skinparam rectangle {
   BorderColor #2E7D32
 }
 
-actor "Driver" as Driver
-actor "Parking\nOwner" as Owner
-actor "Building\nManager" as Manager
+actor "User" as User
+actor "Provider" as Provider
+actor "Manager" as Manager
 actor "Security\nGuard" as Guard
 actor "Administrator" as Admin
 rectangle "SSLCOMMERZ\nGateway" as SSL
 
-usecase "1.0\nManage Accounts,\nAuthentication\n& Roles" as P1
-usecase "2.0\nManage Properties,\nSpots & Availability" as P2
-usecase "3.0\nManage Property Staff\n& Building Approval" as P3
-usecase "4.0\nSearch & Discover\nParking" as P4
-usecase "5.0\nGenerate Quote &\nBooking Hold" as P5
-usecase "6.0\nProcess Payments\n& Refunds" as P6
-usecase "7.0\nVerify Entry/Exit\n& Manage Sessions" as P7
-usecase "8.0\nManage Wallets,\nEarnings & Payouts" as P8
-usecase "9.0\nManage Reviews,\nDisputes & Incidents" as P9
-usecase "10.0\nAdmin Oversight,\nSettings & Audit" as P10
+usecase "1.0\nManage Accounts,\nAuthentication\n& Sessions" as P1
+usecase "2.0\nManage Properties,\nMemberships &\nGovernance" as P2
+usecase "3.0\nManage Resources,\nParking Rights,\nListings & Availability" as P3
+usecase "4.0\nManage Guards &\nManager Delegations" as P4
+usecase "5.0\nSearch & Discover\nParking" as P5
+usecase "6.0\nQuote, Hold\n& Booking" as P6
+usecase "7.0\nPayments, Refunds\n& Settlement" as P7
+usecase "8.0\nGate Verification\n& Sessions" as P8
+usecase "9.0\nWallets, Earnings\n& Payouts" as P9
+usecase "10.0\nReviews, Disputes,\nReports & Notifications" as P10
+usecase "11.0\nAdmin Oversight,\nContent & Audit" as P11
 
-database "D1  Users, Roles, Sessions,\nTokens, Legal Acceptances" as D1
-database "D2  Vehicles" as D2
-database "D3  Properties, Images,\nSpots, Availability" as D3
-database "D4  Manager Links,\nGuard Assignments,\nBuilding Approvals" as D4
-database "D5  Quotes, Bookings,\nStatus History" as D5
-database "D6  Payments, Refunds" as D6
-database "D7  Wallets, Ledger,\nEarnings, Payouts" as D7
-database "D8  Reviews, Disputes,\nIncidents, Notifications" as D8
-database "D9  Audit Logs,\nPlatform Settings" as D9
+database "D1  Accounts, Roles, Sessions,\nTokens, Legal Acceptances" as D1
+database "D2  Vehicles, Favorites,\nSaved Places, Searches" as D2
+database "D3  Properties, Images,\nProvider Memberships,\nGovernance, Proposals" as D3
+database "D4  Parking Resources, Units,\nRights, Evidence, Listings,\nAvailability" as D4
+database "D5  Guard Memberships &\nAssignments, Manager\nDelegations" as D5
+database "D6  Quotes, Holds, Allocations,\nBookings, Access Credentials" as D6
+database "D7  Payments, Refunds,\nSettlements, Ledger,\nWallets, Payouts, Fee Rules" as D7
+database "D8  Reviews, Disputes, Listing\nReports, Notifications" as D8
+database "D9  Audit Events, Risk Flags,\nContent, Email Campaigns" as D9
 
-' --- Process 1: Accounts & Auth ---
-Driver <--> P1 : credentials / session
-Owner <--> P1 : credentials / session
-Manager <--> P1 : setup link,\ncredentials / session
-Guard <--> P1 : setup link,\ncredentials / session
-Admin <--> P1 : credentials / session
+User <--> P1
+Provider <--> P1
+Manager <--> P1 : setup link
+Guard <--> P1 : setup link
+Admin <--> P1
 P1 <--> D1
 
-' --- Process 2: Properties, Spots & Availability ---
-Owner <--> P2 : property, image, spot,\navailability data
-Manager <--> P2 : spot, availability,\nclose/reopen (linked only)
+Provider <--> P2 : property, images,\njoin requests, votes
+Manager <--> P2 : common rules,\nclosure (Building Manager)
 P2 <--> D3
-P2 --> P3 : shared-building property\nneeds building approval
-P2 --> P10 : standalone property\nfor verification
-P10 --> P2 : verification decision
+P2 --> P11 : property / membership\nfor verification
+P11 --> P2 : decision, merge
 
-' --- Process 3: Property Staff & Building Approval ---
-Owner --> P3 : create/invite Manager,\ncreate/invite Guard,\nlink & assignment changes
-Manager <--> P3 : link acceptance, approval\ndecision, Guard assignments
-Guard <--> P3 : assignment acceptance
-P3 --> P1 : create controlled account
+Provider <--> P3 : resources, right claims,\nlistings, availability
+Manager <--> P3 : within delegated\npermissions
 P3 <--> D4
-P3 --> P10 : approved property\nfor verification
-P10 --> P3 : approval waiver,\naccount actions
+P3 --> P11 : right claims
+P11 --> P3 : verify / reject,\nsuspend listing
 
-' --- Process 4: Search ---
-Driver --> P4 : location, time,\nvehicle filters
-P4 --> Driver : ranked results
-P4 --> D3 : read verified spots\n& availability
+Provider --> P4 : add Guards, shifts,\ndelegations
+Guard <--> P4 : accept / reject
+Manager <--> P4 : accept / reject
+P4 --> P1 : create controlled account
+P4 <--> D5
 
-' --- Process 5: Quote & Hold ---
-Driver <--> P5 : quote / hold request
-P5 --> D2 : validate vehicle
-P5 <--> D3 : revalidate availability
-P5 <--> D5
-P5 --> P6 : payment-session request
+User --> P5 : location, time,\nvehicle type
+P5 --> User : verified offers
+P5 --> D4 : read active listings\n& availability
+P5 <--> D2
 
-' --- Process 6: Payments & Refunds ---
+User <--> P6 : quote, hold, booking,\ncancel, checkout request
 P6 <--> D6
-P6 <--> SSL : session + IPN validation
-P6 --> D5 : confirm booking
-P6 --> P8 : ledger postings
-P6 --> Driver : payment status
+P6 --> D4 : check availability
+P6 --> P7 : payment request
 
-' --- Process 7: Entry/Exit ---
-Driver --> P7 : checkout request
-Guard <--> P7 : resolve credential,\nconfirm check-in/out
-P7 --> D4 : check active assignment
-P7 <--> D5 : booking/session state
-P7 --> P6 : overtime / outstanding amount
-P7 --> Owner : session updates
-P7 --> Manager : session updates\n(no amounts)
+P7 <--> SSL : session, validation,\nrefund
+P7 <--> D7
+P7 --> D6 : confirm booking,\nissue credential
+P7 --> User : payment status
 
-' --- Process 8: Wallets, Earnings & Payouts (no Manager access) ---
-Owner <--> P8 : payout account,\npayout request
-P8 <--> D7
-P8 --> P10 : payout awaiting approval
-P10 --> P8 : approval / rejection
+Guard <--> P8 : QR credential,\ncheck-in / check-out
+P8 --> D5 : check active assignment
+P8 <--> D6
+P8 --> P7 : overtime settlement
 
-' --- Process 9: Reviews, Disputes & Incidents ---
-Driver --> P9 : review / dispute
-Owner <--> P9 : dispute, response
-Manager <--> P9 : dispute response,\nincident view
-Guard --> P9 : incident report
-P9 <--> D8
-P9 --> P10 : escalate dispute
-P10 --> P9 : resolution
+Provider <--> P9 : earnings, payout\nmethods, payout requests
+User <--> P9 : Refund Balance,\nwithdrawals
+P9 <--> D7
+P9 --> P11 : payout queue
+P11 --> P9 : hold / approve /\nreject / paid
 
-' --- Process 10: Admin Oversight ---
-Admin <--> P10
-P10 <--> D9
+User --> P10 : review, dispute,\nlisting report
+Provider <--> P10 : review reply,\ndispute
+P10 <--> D8
+P10 --> P11 : disputes, reports
+P11 --> P10 : resolution
+
+Admin <--> P11
+P11 <--> D9
 
 @enduml

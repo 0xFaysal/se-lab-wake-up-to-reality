@@ -716,7 +716,7 @@ export function OwnerSettingsView() {
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="BDT">BDT (৳) — Bangladeshi Taka</option>
                   <option value="USD">USD ($) — US Dollar</option>
@@ -730,7 +730,7 @@ export function OwnerSettingsView() {
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="en-UK">English (UK / US)</option>
                   <option value="bn">বাংলা (Bengali)</option>
@@ -744,7 +744,7 @@ export function OwnerSettingsView() {
                 <select
                   value={timeZone}
                   onChange={(e) => setTimeZone(e.target.value)}
-                  className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="Asia/Dhaka">Asia/Dhaka (GMT +6:00)</option>
                 </select>
@@ -757,7 +757,7 @@ export function OwnerSettingsView() {
                 <select
                   value={dateFormat}
                   onChange={(e) => setDateFormat(e.target.value)}
-                  className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="DD MMM YYYY">DD MMM YYYY (e.g. 28 Oct 2026)</option>
                   <option value="YYYY-MM-DD">YYYY-MM-DD</option>
@@ -772,7 +772,7 @@ export function OwnerSettingsView() {
                 <select
                   value={dashboardRange}
                   onChange={(e) => setDashboardRange(e.target.value)}
-                  className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="30D">Last 30 Days</option>
                   <option value="7D">Last 7 Days</option>
@@ -787,7 +787,7 @@ export function OwnerSettingsView() {
                 <select
                   value={themeDisplay}
                   onChange={(e) => setThemeDisplay(e.target.value)}
-                  className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="system">System Default (Auto)</option>
                   <option value="light">Light Mode</option>

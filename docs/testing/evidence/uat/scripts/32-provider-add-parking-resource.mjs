@@ -1,0 +1,17 @@
+import { open } from "./sess.mjs";
+const s = await open("owner");
+const p = s.page;
+await s.go("/provider/properties/795fd2b7-c729-436d-9442-36581085ee2f");
+await p.getByRole("button", { name: /^add parking$/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /^add parking$/i }).click(); await p.waitForTimeout(2000);
+const dlg = p.locator("[role=dialog]");
+await p.locator("input[name=displayName]").fill("QA Test Spot");
+await p.locator("input[name=spotCode]").fill("QA-01");
+await p.locator("input[name=floor]").fill("B1");
+await p.getByRole("button", { name: /add parking and continue/i }).click(); await p.waitForTimeout(12000);
+const main = await p.locator("main").innerText();
+console.log(main.slice(main.indexOf("Parking Resources"), main.indexOf("Parking Resources") + 2500));
+console.log((await s.fields()).filter(f => !/Move image|cover|Delete image/.test(f)).join("\n"));
+await s.shot("after_add_parking");
+console.log(s.failed().filter(f => !f.includes("/terms")));
+await s.close();

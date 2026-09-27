@@ -1,0 +1,17 @@
+import { open } from "./sess.mjs";
+const s = await open("owner");
+const p = s.page;
+await s.go("/provider/properties/795fd2b7-c729-436d-9442-36581085ee2f");
+await p.getByRole("button", { name: /new listing/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /new listing/i }).click(); await p.waitForTimeout(2500);
+await p.locator("input[name=title]").fill("QA Test Listing - please delete");
+await p.locator("input[name=hourlyRate]").fill("20");
+await p.locator("input[name=deposit]").fill("50");
+await p.locator("textarea[name=description]").fill("QA test listing");
+await p.getByRole("button", { name: /create draft/i }).click(); await p.waitForTimeout(12000);
+let m = await p.locator("main").innerText();
+console.log(m.slice(m.indexOf("LISTINGS"), m.indexOf("LISTINGS") + 900));
+console.log((await s.fields()).filter(f => /activ|publish|availab|listing|schedule/i.test(f)).join("\n"));
+await s.shot("listing_draft");
+console.log(s.failed().filter(f => !f.includes("/terms")));
+await s.close();

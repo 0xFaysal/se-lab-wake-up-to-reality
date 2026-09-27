@@ -1,0 +1,10 @@
+import { open } from "./sess.mjs";
+const s = await open("admin"); const p = s.page;
+const api = []; p.on("response", async (r) => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/, "")} ${(r.request().postData()||"").slice(0,200)} => ${(await r.text().catch(() => "")).slice(0, 200)}`); });
+const handleDlg = async () => { const dlg = p.locator("[role=alertdialog],[role=dialog]"); if (await dlg.count()) { console.log("DLG:", (await dlg.innerText()).replace(/\n+/g, " | ").slice(0, 400)); const f = dlg.locator("input:visible, textarea:visible"); for (let i = 0; i < await f.count(); i++) if (!(await f.nth(i).inputValue())) await f.nth(i).fill("QA test: cancellation failed with a server error; refund the User in full."); await dlg.getByRole("button").filter({ hasNotText: /cancel|close/i }).last().click(); await p.waitForTimeout(8000); } };
+await s.go("/admin/marketplace/disputes"); await p.getByText("PKMUIZP6JKA3BB23").first().waitFor({ timeout: 60000 }); await p.waitForTimeout(1500);
+await p.getByRole("button", { name: /begin review/i }).first().click(); await p.waitForTimeout(3000); await handleDlg(); await p.waitForTimeout(6000);
+console.log("AFTER REVIEW:", (await p.getByRole("main").first().innerText().catch(()=> "")).replace(/\n+/g, " | ").slice(0, 700));
+console.log((await s.fields()).filter(f => !/Sign Out|All cases/.test(f)).join("\n"));
+console.log(api.join("\n"));
+await s.close();

@@ -1,6 +1,6 @@
 @startuml use-case-property
 !theme plain
-title ParkEase BD: Use Case Diagram (b) Property Management & Oversight
+title ParkEase BD: Use Case Diagram (b) Provider & Manager
 
 skinparam backgroundColor white
 skinparam shadowing false
@@ -17,103 +17,79 @@ skinparam actor {
 
 left to right direction
 
-actor "Parking Owner" as Owner
-actor "Administrator" as Admin
-actor "Building Manager" as Manager
+actor "Provider" as Provider
+actor "Manager" as Manager
+actor "Property Operator" as Operator <<abstract>>
 
 rectangle "ParkEase BD" {
 
   usecase "Register / Login" as UC1
 
-  package "Parking Owner Use Cases" {
-    usecase "Manage Properties\n& Images" as UC14
-    usecase "Create / Invite\nManagers" as UC42
-    usecase "Manage Manager Links" as UC43
-    usecase "View Earnings" as UC20
-    usecase "Manage Payout Accounts" as UC21
-    usecase "Request Payout" as UC22
+  package "Provider-only Use Cases" {
+    usecase "Create Property or\nJoin Existing Property" as UC30
+    usecase "Claim Parking Right\n(with evidence)" as UC31
+    usecase "Delegate to Manager\n(permissions + scope)" as UC32
+    usecase "Manage Payout Methods\n& Request Payouts" as UC33
+    usecase "Reply to Reviews" as UC34
+    usecase "Open / View Disputes" as UC35
+    usecase "Vote on Building Manager\n& Change Proposals" as UC36
   }
 
-  package "Property Operations (Owner & Manager)" {
-    usecase "Manage Parking Spots" as UC15
-    usecase "Manage Availability\n& Exceptions" as UC16
-    usecase "Close / Reopen Property" as UC44
-    usecase "Create / Invite Guards" as UC17
-    usecase "Manage Guard\nAssignments" as UC18
-    usecase "View Bookings\n& Active Sessions" as UC19
-    usecase "View Incident Reports" as UC45
-    usecase "Respond to Disputes" as UC23
+  package "Property Operations (Provider, or Manager with permission)" {
+    usecase "Manage Parking Resources" as UC40
+    usecase "Manage Listings & Pricing" as UC41
+    usecase "Manage Availability\n& Exceptions" as UC42
+    usecase "Manage Property Images" as UC43
+    usecase "View Bookings\n& Live Sessions" as UC44
+    usecase "Add Guards to Property" as UC45
+    usecase "Assign Guard Shifts" as UC46
+    usecase "View Earnings\n& Reports" as UC47
   }
 
-  package "Building Manager Use Cases" {
-    usecase "Accept / Reject\nManager Link" as UC46
-    usecase "Approve / Reject\nBuilding Listing" as UC47
+  package "Shared Property Rules (sole Provider or Building Manager)" {
+    usecase "Set Common Rules /\nTemporary Closure" as UC51
   }
 
-  package "Administrator Use Cases" {
-    usecase "Verify / Reject /\nSuspend Property" as UC32
-    usecase "Waive Building\nApproval" as UC48
-    usecase "Manage Users" as UC33
-    usecase "Manage Guard & Manager\nAccounts and Links" as UC34
-    usecase "Override Booking" as UC35
-    usecase "Resolve Disputes" as UC36
-    usecase "Verify Payout Accounts" as UC37
-    usecase "Approve Payouts" as UC38
-    usecase "Reconcile Payments\n& Wallets" as UC39
-    usecase "View Audit Logs" as UC40
-    usecase "Manage Platform Settings" as UC41
+  package "Manager-only Use Cases" {
+    usecase "Accept / Reject\nDelegation" as UC50
   }
+
 }
 
-' --- Parking Owner (left) ---
-Owner -- UC1
-Owner -- UC14
-Owner -- UC42
-Owner -- UC43
-Owner -- UC20
-Owner -- UC21
-Owner -- UC22
-Owner -- UC15
-Owner -- UC16
-Owner -- UC44
-Owner -- UC17
-Owner -- UC18
-Owner -- UC19
-Owner -- UC45
-Owner -- UC23
+Provider -- UC1
+Provider -- UC30
+Provider -- UC31
+Provider -- UC32
+Provider -- UC33
+Provider -- UC34
+Provider -- UC35
+Provider -- UC36
 
-UC14 ..> UC32 : <<include>>\n(verification)
+UC41 ..> UC31 : <<requires>>\nverified right
 
-' --- Administrator (left) ---
-Admin -- UC1
-Admin -- UC32
-Admin -- UC48
-Admin -- UC33
-Admin -- UC34
-Admin -- UC35
-Admin -- UC36
-Admin -- UC37
-Admin -- UC38
-Admin -- UC39
-Admin -- UC40
-Admin -- UC41
+Operator -- UC40
+Operator -- UC41
+Operator -- UC42
+Operator -- UC43
+Operator -- UC44
+Operator -- UC45
+Operator -- UC46
+Operator -- UC47
+Provider -up-|> Operator
+Manager -up-|> Operator
 
-UC48 ..> UC14 : <<extend>>\n(no Manager available)
+note bottom of Operator
+  A Manager performs an operation only
+  with the matching delegated permission
+  and inside the delegated scope.
+end note
 
-' --- Building Manager (right; no financial use cases) ---
 UC1 -- Manager
-UC46 -- Manager
-UC47 -- Manager
-UC15 -- Manager
-UC16 -- Manager
-UC44 -- Manager
-UC17 -- Manager
-UC18 -- Manager
-UC19 -- Manager
-UC45 -- Manager
-UC23 -- Manager
+UC50 -- Manager
+UC51 -- Manager : as Building\nManager
+Provider -- UC51 : as sole\nProvider
 
-UC47 ..> UC14 : <<extend>>\n(shared building)
-UC46 ..> UC47 : <<precedes>>
+UC50 ..> UC40 : <<precedes>>
+UC32 ..> UC50 : <<precedes>>
 
 @enduml

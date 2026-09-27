@@ -1,0 +1,51 @@
+@startuml flow-money
+!theme plain
+title ParkEase BD: Money Flow - Who Pays, Who Gets Paid, and How the Platform Earns
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam rectangle {
+  BackgroundColor #FFF8E1
+  BorderColor #E65100
+}
+skinparam actor {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+top to bottom direction
+
+actor "User" as User
+actor "Provider" as Provider
+actor "ParkEase platform\n(system admins)" as Platform
+
+rectangle "SSLCOMMERZ\nmerchant account of\nParkEase BD" as SSL #E3F2FD
+rectangle "Booking Held Funds\n(escrow in ledger)" as Held
+rectangle "Provider wallet\npending -> available" as PW
+rectangle "Platform Revenue\n(ledger account)" as Rev
+rectangle "User Refund Balance\n(User wallet)" as RB
+rectangle "Provider's bank /\nbKash / Nagad / Rocket" as PBank #E3F2FD
+rectangle "User's bank /\nmobile wallet" as UBank #E3F2FD
+
+User --> SSL : 1. Pays total =\nparking charge\n+ platform fee\n+ refundable deposit
+RB --> Held : 1b. or pays part/all\nfrom Refund Balance
+SSL --> Held : 2. Validated payment\nheld until the session\nis settled
+
+Held --> PW : 3a. Parking charge\n+ paid overtime\n(or cancellation\nfee kept)
+Held --> Rev : 3b. Platform fee\n(default 10% of the\nparking charge)
+Held --> RB : 3c. Unused deposit and\ncancellation refunds
+
+PW --> PBank : 4. Payout request ->\nAdmin approves ->\nmanual transfer ->\nmarked PAID
+Rev --> Platform : 5. Platform keeps its fee;\nSSLCOMMERZ settles gateway\nreceipts to ParkEase's bank
+PBank --> Provider : 4b. Provider receives\nthe money
+RB --> UBank : 6. Optional withdrawal\n(Admin-processed)
+RB --> User : or reused automatically\non the next booking
+
+note bottom of Rev
+  Example from testing: 1 hour at Tk 12/hour
+  User paid Tk 413.20 = Tk 12 parking + Tk 1.20 fee + Tk 400 deposit.
+  No-show settlement: Provider Tk 12, Platform Tk 1.20,
+  Tk 400 back to the User's Refund Balance.
+end note
+
+@enduml

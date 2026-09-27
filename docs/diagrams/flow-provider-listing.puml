@@ -1,0 +1,90 @@
+@startuml flow-provider-listing
+!theme plain
+title ParkEase BD: Flow Diagram - How a Provider Adds a Parking Space for Rent
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam activity {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+  DiamondBackgroundColor #E3F2FD
+}
+skinparam swimlane {
+  BorderColor #9E9E9E
+}
+
+|Provider|
+start
+:Register as Provider and verify email;
+:Add Property (name, public area,
+approximate and exact address);
+:Pick the location on the map and
+add access and parking rules;
+:Upload property photos and
+submit for verification;
+
+|System|
+:Encrypt exact address, check for
+duplicate properties, set status
+**PENDING / INACTIVE**;
+
+|Admin|
+:Review property: identity, map
+location, photos, Provider;
+if (Property acceptable?) then (yes)
+  :Approve property;
+  |System|
+  :Set **VERIFIED / ACTIVE**;
+else (no)
+  |Admin|
+  :Reject with a reason;
+  |Provider|
+  :Edit the property and resubmit;
+  stop
+endif
+
+|Provider|
+:Add parking resource(s): a single fixed space,
+bulk spaces (A-01..A-20), or a shared pool,
+with vehicle types, size limits and facilities;
+:Claim a Parking Right for the resource
+(ownership, lease or authorization) and
+attach supporting documents;
+
+|Admin|
+if (Right proven?) then (yes)
+  :Verify the Parking Right;
+else (no)
+  :Reject, or mark as disputed;
+  |Provider|
+  :Edit the pending claim and resubmit;
+  stop
+endif
+
+|Provider|
+:Set the parking resource status to **ACTIVE**;
+:Create a listing: title, hourly price,
+deposit, minimum and maximum duration,
+overtime rule, grace period;
+:Set weekly availability (tick each open day,
+set time ranges) and any date exceptions;
+:Activate the listing;
+
+|System|
+if (Property VERIFIED and ACTIVE, resource ACTIVE,\nright VERIFIED and valid, availability set?) then (yes)
+  :Listing **ACTIVE**: shown in
+  search results and bookable;
+else (no)
+  :Refuse activation and
+  tell the Provider why;
+  stop
+endif
+
+|Provider|
+:Optionally add Guards (create or invite,
+Guard accepts, Provider assigns a shift)
+and invite a Manager with scoped permissions;
+stop
+
+@enduml

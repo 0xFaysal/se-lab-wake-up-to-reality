@@ -1,0 +1,208 @@
+@startuml uml-class-diagram
+!theme plain
+title ParkEase BD: UML Class Diagram (Core Domain)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFF8E1
+  BorderColor #E65100
+}
+skinparam package {
+  BorderColor #9E9E9E
+}
+hide empty methods
+skinparam linetype ortho
+skinparam nodesep 30
+skinparam ranksep 60
+
+package "Accounts and vehicles" {
+  class Account {
+    id : UUID
+    fullName : String
+    email : String
+    phone : String
+    status : UserStatus
+    roles : UserRoleType[*]
+  }
+  enum UserRoleType {
+    DRIVER (User)
+    PROVIDER
+    MANAGER
+    GUARD
+    ADMIN
+  }
+  class Vehicle {
+    vehicleType : VehicleType
+    registrationNumber : String
+    isDefault : Boolean
+  }
+}
+
+package "Supply (Provider side)" {
+  class Property {
+    name : String
+    publicArea : String
+    exactAddress : Encrypted
+    latitude, longitude : Decimal
+    verificationStatus : VerificationStatus
+    status : PropertyStatus
+  }
+  class PropertyProvider <<membership>> {
+    status : PropertyProviderStatus
+    verificationStatus : VerificationStatus
+  }
+  class ParkingResource {
+    resourceType : FIXED_SPACE | SHARED_POOL
+    spotCode : String
+    capacity : Int
+    status : ParkingSpotStatus
+  }
+  class ParkingRight {
+    rightType : OWNERSHIP | USE_ONLY |\n COMMERCIAL_LEASE | AUTHORIZED_OPERATION
+    status : ParkingRightStatus
+    canList, canSetPrice : Boolean
+    validFrom, validUntil : DateTime
+  }
+  class ParkingListing {
+    title : String
+    hourlyRatePaisa : BigInt
+    depositPaisa : BigInt
+    minMinutes, maxMinutes : Int
+    status : ParkingListingStatus
+  }
+  class AvailabilityRule {
+    dayOfWeek : 0..6
+    startLocalTime, endLocalTime : Time
+  }
+  class AvailabilityException {
+    exceptionType : BLOCKED | SPECIAL_AVAILABLE
+    startsAt, endsAt : DateTime
+  }
+  class GuardAssignment {
+    shiftStart, shiftEnd : Time
+    status : GuardAssignmentStatus
+  }
+  class ManagerDelegation {
+    permissions : ManagerDelegationPermission[*]
+    status : ManagerDelegationStatus
+  }
+}
+
+package "Booking lifecycle" {
+  class Quote {
+    baseAmountPaisa : BigInt
+    platformFeePaisa : BigInt
+    depositPaisa : BigInt
+    expiresAt : DateTime
+  }
+  class ReservationHold {
+    expiresAt : DateTime (5 min)
+    status : ReservationHoldStatus
+  }
+  class Booking {
+    bookingCode : String
+    startAt, scheduledEndAt : DateTime
+    totalAmountPaisa : BigInt
+    status : BookingStatus
+    financialStatus : BookingFinancialStatus
+  }
+  class AccessCredential {
+    token : QR string (hashed)
+    status : ACTIVE | USED |
+ REVOKED | EXPIRED
+    expiresAt : DateTime
+  }
+  class Review
+  class Dispute {
+    category : DisputeCategory
+    status : DisputeStatus
+  }
+}
+
+package "Payments and money" {
+  class Payment {
+    purpose : BOOKING | SETTLEMENT
+    gatewayAmountPaisa : BigInt
+    status : PaymentStatus
+    tranId, valId : String
+  }
+  class Refund {
+    amountPaisa : BigInt
+    status : RefundStatus
+  }
+  class BookingSettlement {
+    baseChargePaisa : BigInt
+    overtimeChargePaisa : BigInt
+    providerNetPaisa : BigInt
+    platformRevenuePaisa : BigInt
+    driverRefundCreditPaisa : BigInt
+  }
+  class PlatformFeeRule {
+    scopeType : GLOBAL | PROVIDER |\n PROPERTY | LISTING
+    feeType : PERCENTAGE | FIXED
+    percentageBps : Int
+  }
+  class WalletAccount {
+    availableBalancePaisa : BigInt
+    pendingBalancePaisa : BigInt
+    heldBalancePaisa : BigInt
+  }
+  class LedgerTransaction {
+    type : String
+  }
+  class LedgerEntry {
+    accountCode : String
+    entrySide : DEBIT | CREDIT
+    amountPaisa : BigInt
+  }
+  class PayoutMethod {
+    type : BANK | BKASH | NAGAD |\n ROCKET | OTHER_MFS
+    accountNumber : Encrypted
+  }
+  class PayoutRequest {
+    amountPaisa : BigInt
+    status : PayoutStatus
+    externalReference : String
+  }
+}
+
+Account "1" -- "0..*" Vehicle : owns >
+Account "1" -- "0..*" PropertyProvider : Provider >
+Property "1" -- "1..*" PropertyProvider
+Property "1" *-- "0..*" ParkingResource
+ParkingResource "1" -- "0..*" ParkingRight : authorized by >
+PropertyProvider "1" -- "0..*" ParkingRight : holds >
+ParkingRight "1" -- "0..*" ParkingListing : allows >
+ParkingResource "1" *-- "0..*" AvailabilityRule
+ParkingResource "1" *-- "0..*" AvailabilityException
+Property "1" -- "0..*" GuardAssignment
+Account "1" -- "0..*" GuardAssignment : Guard >
+PropertyProvider "1" -- "0..*" ManagerDelegation : grants >
+Account "1" -- "0..*" ManagerDelegation : Manager >
+
+Account "1" -- "0..*" Quote : User requests >
+ParkingListing "1" -- "0..*" Quote
+Quote "1" -- "0..1" ReservationHold
+ReservationHold "1" -- "0..1" Booking
+Booking "*" -- "1" Vehicle
+Booking "1" *-- "0..1" AccessCredential
+Booking "1" -- "0..1" Review
+Booking "1" -- "0..*" Dispute
+
+Booking "1" -- "0..*" Payment
+Payment "1" -- "0..*" Refund
+Booking "1" -- "0..1" BookingSettlement
+Quote ..> PlatformFeeRule : fee resolved from >
+Account "1" -- "0..*" WalletAccount
+LedgerTransaction "1" *-- "2..*" LedgerEntry
+LedgerEntry "*" -- "0..1" WalletAccount
+Payment ..> LedgerTransaction : posts >
+BookingSettlement ..> LedgerTransaction : posts >
+Account "1" -- "0..*" PayoutMethod
+PayoutRequest "*" -- "1" PayoutMethod : destination snapshot >
+WalletAccount "1" -- "0..*" PayoutRequest : reserves funds for >
+
+@enduml

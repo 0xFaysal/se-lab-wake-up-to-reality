@@ -1,0 +1,17 @@
+import { open } from "./sess.mjs";
+const id = process.argv[2];
+const s = await open("driver");
+const p = s.page;
+const api = []; p.on("response", async (r) => { if (r.url().includes("api/v1") && r.request().method() !== "GET") api.push(`${r.request().method()} ${r.status()} ${r.url().replace(/.*api\/v1/, "")} => ${(await r.text().catch(() => "")).slice(0, 400)}`); });
+await s.go(`/driver/bookings/${id}`);
+await p.getByRole("button", { name: /cancel booking/i }).waitFor({ timeout: 60000 });
+await p.getByRole("button", { name: /cancel booking/i }).click(); await p.waitForTimeout(8000);
+const dlg = p.locator("[role=alertdialog],[role=dialog]");
+console.log("PREVIEW:", (await dlg.innerText()).replace(/\n+/g, " | ").slice(0, 900));
+const reason = dlg.locator("input, textarea").first();
+if (await reason.isVisible().catch(() => false)) await reason.fill("QA test cancellation");
+await dlg.getByRole("button", { name: /confirm cancellation/i }).click(); await p.waitForTimeout(10000);
+console.log("DLG AFTER:", (await dlg.count()) ? (await dlg.innerText()).replace(/\n+/g, " | ").slice(0, 600) : "closed");
+console.log("TOASTS:", await p.locator("[data-sonner-toast]").allInnerTexts());
+console.log(api.join("\n"));
+await s.close();

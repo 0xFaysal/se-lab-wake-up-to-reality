@@ -86,7 +86,7 @@ export function Step2LocationView() {
                     type="text"
                     value={division}
                     onChange={(e) => setDivision(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -98,7 +98,7 @@ export function Step2LocationView() {
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -110,7 +110,7 @@ export function Step2LocationView() {
                     type="text"
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
               </div>
@@ -124,7 +124,7 @@ export function Step2LocationView() {
                     type="text"
                     value={streetAddress}
                     onChange={(e) => setStreetAddress(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -136,7 +136,7 @@ export function Step2LocationView() {
                     type="text"
                     value={buildingName}
                     onChange={(e) => setBuildingName(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
               </div>
@@ -150,7 +150,7 @@ export function Step2LocationView() {
                     type="text"
                     value={postalCode}
                     onChange={(e) => setPostalCode(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
 
@@ -162,7 +162,7 @@ export function Step2LocationView() {
                     type="text"
                     value={landmark}
                     onChange={(e) => setLandmark(e.target.value)}
-                    className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] bg-[#fcfcfd] text-slate-900 focus:outline-none focus:border-[#064E3B]"
+                    className="w-full h-9.5 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                   />
                 </div>
               </div>

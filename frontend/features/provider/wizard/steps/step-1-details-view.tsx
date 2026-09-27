@@ -100,7 +100,7 @@ export function Step1DetailsView() {
                 value={propertyTitle}
                 onChange={(e) => setPropertyTitle(e.target.value)}
                 placeholder="e.g. Residential Building, Gulshan or Concord Tower Parking"
-                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B]"
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
               />
               <p className="text-[11px] text-slate-400 mt-1 font-medium">
                 Use a recognizable name that drivers can spot easily upon arrival.
@@ -116,7 +116,7 @@ export function Step1DetailsView() {
                 <select
                   value={propertyCategory}
                   onChange={(e) => setPropertyCategory(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="Residential Building">Residential Building</option>
                   <option value="Commercial Complex">Commercial Complex</option>
@@ -133,7 +133,7 @@ export function Step1DetailsView() {
                 <select
                   value={facilityStructure}
                   onChange={(e) => setFacilityStructure(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="Basement Garage">Basement Garage (Underground)</option>
                   <option value="Covered Ground Level">Covered Ground Level</option>
@@ -154,7 +154,7 @@ export function Step1DetailsView() {
                 value={parkingLevels}
                 onChange={(e) => setParkingLevels(e.target.value)}
                 placeholder="e.g. Basement B (Level -1) or Ground Floor Bays 1-10"
-                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
               />
             </div>
           </div>
@@ -176,7 +176,7 @@ export function Step1DetailsView() {
                 <select
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="Dhaka">Dhaka</option>
                   <option value="Chittagong">Chittagong</option>
@@ -191,7 +191,7 @@ export function Step1DetailsView() {
                 <select
                   value={areaZone}
                   onChange={(e) => setAreaZone(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="Gulshan-2">Gulshan-2</option>
                   <option value="Gulshan-1">Gulshan-1</option>
@@ -212,7 +212,7 @@ export function Step1DetailsView() {
                 value={landmark}
                 onChange={(e) => setLandmark(e.target.value)}
                 placeholder="e.g. Near Gulshan Circle 2 or Opposite Westin Hotel"
-                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
               />
             </div>
           </div>
@@ -236,7 +236,7 @@ export function Step1DetailsView() {
               value={description}
               maxLength={400}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3 rounded-xl border border-[#E5E7EB] text-xs leading-relaxed text-slate-800 bg-white focus:outline-none focus:border-[#064E3B] resize-none"
+              className="w-full p-3 rounded-xl border border-slate-300 text-xs leading-relaxed text-slate-800 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 resize-none transition"
               placeholder="Highlight garage entrance accessibility, ramp slope, security standards, and surroundings..."
             />
 
@@ -248,7 +248,7 @@ export function Step1DetailsView() {
                 <select
                   value={ownershipType}
                   onChange={(e) => setOwnershipType(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B]"
+                  className="w-full h-10 px-3 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 bg-white focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 >
                   <option value="Individual Provider">Individual Property Provider</option>
                   <option value="Building Management Committee">Building Management Committee</option>

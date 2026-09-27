@@ -180,7 +180,7 @@ export function OwnerPropertiesView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search listings by name or location"
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#E5E7EB] bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700 transition shadow-2xs"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 transition shadow-2xs"
             />
           </div>
 
@@ -192,7 +192,7 @@ export function OwnerPropertiesView() {
                 aria-label="Filter by property status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-11 pl-3.5 pr-8 rounded-xl border border-[#E5E7EB] bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700 transition appearance-none cursor-pointer shadow-2xs"
+                className="h-11 pl-3.5 pr-8 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 transition appearance-none cursor-pointer shadow-2xs"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="ACTIVE">Active Only</option>
@@ -208,7 +208,7 @@ export function OwnerPropertiesView() {
                 aria-label="Sort listings"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="h-11 pl-3.5 pr-8 rounded-xl border border-[#E5E7EB] bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700 transition appearance-none cursor-pointer shadow-2xs"
+                className="h-11 pl-3.5 pr-8 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 transition appearance-none cursor-pointer shadow-2xs"
               >
                 <option value="RECENT">Recently Updated</option>
                 <option value="RATE_HIGH">Highest Rate (৳/hr)</option>
