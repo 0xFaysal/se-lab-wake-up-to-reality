@@ -46,9 +46,12 @@ rectangle "ParkEase BD" {
     usecase "View Earnings\n& Reports" as UC47
   }
 
+  package "Shared Property Rules (sole Provider or Building Manager)" {
+    usecase "Set Common Rules /\nTemporary Closure" as UC51
+  }
+
   package "Manager-only Use Cases" {
     usecase "Accept / Reject\nDelegation" as UC50
-    usecase "Set Common Rules /\nTemporary Closure\n(as Building Manager)" as UC51
   }
 
 }
@@ -83,7 +86,8 @@ end note
 
 UC1 -- Manager
 UC50 -- Manager
-UC51 -- Manager
+UC51 -- Manager : as Building\nManager
+Provider -- UC51 : as sole\nProvider
 
 UC50 ..> UC40 : <<precedes>>
 UC32 ..> UC50 : <<precedes>>
