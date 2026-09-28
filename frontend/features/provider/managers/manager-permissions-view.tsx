@@ -544,7 +544,7 @@ export function ManagerPermissionsView({ managerId }: ManagerPermissionsViewProp
                       className={`group relative text-left p-3 rounded-xl border transition-all shrink-0 cursor-pointer min-w-[220px] ${
                         isSelected
                           ? "bg-emerald-50/60 border-[#064E3B] shadow-xs"
-                          : "bg-white border-[#E5E7EB] hover:border-slate-300 hover:bg-slate-50/50"
+                          : "bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50/50 shadow-2xs"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -581,7 +581,7 @@ export function ManagerPermissionsView({ managerId }: ManagerPermissionsViewProp
             {/* ---------------------------------------------------------- */}
             {/* 2. PRESET SELECTION BAR                                    */}
             {/* ---------------------------------------------------------- */}
-            <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-2xs space-y-3">
+            <div className="bg-white rounded-2xl border border-slate-300 p-5 shadow-2xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h2 className="font-heading font-bold text-sm text-slate-900 flex items-center gap-1.5">
@@ -608,7 +608,7 @@ export function ManagerPermissionsView({ managerId }: ManagerPermissionsViewProp
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     activePreset === "VIEW_ONLY"
                       ? "bg-emerald-50 border-[#064E3B] shadow-xs"
-                      : "bg-[#f9f9ff] border-[#E5E7EB] hover:bg-white hover:border-slate-300"
+                      : "bg-white border-slate-300 hover:border-slate-400 shadow-2xs"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -631,7 +631,7 @@ export function ManagerPermissionsView({ managerId }: ManagerPermissionsViewProp
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     activePreset === "OPERATIONS"
                       ? "bg-emerald-50 border-[#064E3B] shadow-xs"
-                      : "bg-[#f9f9ff] border-[#E5E7EB] hover:bg-white hover:border-slate-300"
+                      : "bg-white border-slate-300 hover:border-slate-400 shadow-2xs"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -654,7 +654,7 @@ export function ManagerPermissionsView({ managerId }: ManagerPermissionsViewProp
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     activePreset === "FULL_OPERATIONS"
                       ? "bg-emerald-50 border-[#064E3B] shadow-xs"
-                      : "bg-[#f9f9ff] border-[#E5E7EB] hover:bg-white hover:border-slate-300"
+                      : "bg-white border-slate-300 hover:border-slate-400 shadow-2xs"
                   }`}
                 >
                   <div className="flex items-center justify-between">

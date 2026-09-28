@@ -651,8 +651,8 @@ export function ManagerAssignmentsView({ managerId }: ManagerAssignmentsViewProp
                       key={perm.key}
                       className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
                         isChecked
-                          ? "border-emerald-200 bg-emerald-50/25"
-                          : "border-[#E5E7EB] bg-white hover:bg-slate-50/70"
+                          ? "border-emerald-300 bg-emerald-50/40 shadow-xs"
+                          : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50/70 shadow-2xs"
                       }`}
                     >
                       <input

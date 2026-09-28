@@ -66,7 +66,7 @@ function PermissionForm({ delegation }: { delegation: ManagerDelegationDto }) {
       <form className="space-y-7" onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }}>
         <section>
           <h2 className="font-bold">Resource scope</h2>
-          <label className="mt-4 flex items-start gap-3 border bg-slate-50 p-4 text-sm">
+          <label className="mt-4 flex items-start gap-3 rounded-lg border border-slate-300 bg-white hover:border-slate-400 shadow-2xs p-4 text-sm transition">
             <Checkbox
               checked={wholeProperty}
               onCheckedChange={(checked) => {
@@ -80,7 +80,7 @@ function PermissionForm({ delegation }: { delegation: ManagerDelegationDto }) {
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {resources.isPending && <p className="text-sm text-slate-600">Loading resources...</p>}
               {resources.data?.map((resource) => (
-                <label key={resource.id} className="flex items-start gap-3 border p-4 text-sm">
+                <label key={resource.id} className="flex items-start gap-3 rounded-lg border border-slate-300 bg-white hover:border-slate-400 shadow-2xs p-4 text-sm transition">
                   <Checkbox
                     checked={resourceIds.includes(resource.id)}
                     onCheckedChange={(checked) => setResourceIds((current) =>
@@ -97,7 +97,7 @@ function PermissionForm({ delegation }: { delegation: ManagerDelegationDto }) {
           <h2 className="font-bold">Permissions</h2>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {ALL.map((permission) => (
-              <label key={permission} className="flex items-center gap-3 border p-4 text-sm">
+              <label key={permission} className="flex items-center gap-3 rounded-lg border border-slate-300 bg-white hover:border-slate-400 shadow-2xs p-4 text-sm transition">
                 <Checkbox
                   checked={permissions.includes(permission)}
                   onCheckedChange={(checked) => setPermissions((current) =>
