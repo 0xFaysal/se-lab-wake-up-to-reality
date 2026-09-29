@@ -15,10 +15,14 @@ import {
 } from "@/components/ui/select";
 import { VEHICLE_TYPE_LABELS, type VehicleType } from "@/lib/data/mock-parking";
 
+function getDhakaToday(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+}
+
 export function HeroSearchForm() {
   const router = useRouter();
   const [location, setLocation] = useState("Dhaka");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getDhakaToday);
   const [time, setTime] = useState("09:00");
   const [vehicleType, setVehicleType] = useState<VehicleType>("SEDAN");
 
@@ -74,7 +78,7 @@ export function HeroSearchForm() {
             id="hero-date"
             type="date"
             value={date}
-            min={new Date().toISOString().split("T")[0]}
+            min={getDhakaToday()}
             onChange={(e) => setDate(e.target.value)}
             className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />

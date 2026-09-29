@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { motion, type PanInfo } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, GripHorizontal, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { ParkingCard } from "@/components/parking/parking-card";
@@ -121,6 +121,20 @@ function toRequest(filters: FilterState): ParkingSearchParams {
   };
 }
 
+function subscribeMediaQuery(callback: () => void) {
+  const media = window.matchMedia("(min-width: 1024px)");
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+
+function getDesktopSnapshot(): boolean {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function getDesktopServerSnapshot(): boolean | null {
+  return null;
+}
+
 export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean }) {
   const searchParams = useSearchParams();
   const searchParamsKey = searchParams.toString();
@@ -133,8 +147,16 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   const [request, setRequest] = useState<ParkingSearchParams>(() => toRequest(initial));
   const [hasSearched, setHasSearched] = useState(searchParams.has("date") || searchParams.has("startTime"));
   const [selectedSpotId, setSelectedSpotId] = useState<string>();
+  const [selectionTrigger, setSelectionTrigger] = useState(0);
+
+  const handleSelectSpot = useCallback((id: string) => {
+    setSelectedSpotId(id);
+    setSelectionTrigger((prev) => prev + 1);
+  }, []);
   const [filterError, setFilterError] = useState<string>();
   const [mobileSheet, setMobileSheet] = useState<"collapsed" | "half" | "expanded">("half");
+  const isDesktop = useSyncExternalStore(subscribeMediaQuery, getDesktopSnapshot, getDesktopServerSnapshot);
+
   const minimumDate = defaultSearchWindow().date;
   const valid = Number.isFinite(request.latitude) && Number.isFinite(request.longitude) && new Date(request.endAt) > new Date(request.startAt) && new Date(request.startAt) > new Date();
 
@@ -184,6 +206,14 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (defaultVehicle) setFilters((current) => ({ ...current, vehicleType: defaultVehicle.vehicleType }));
   }, [driverMode, searchParamsKey, vehicles.query.data]);
+
+  useEffect(() => {
+    if (!selectedSpotId) return;
+    const cardElement = document.getElementById(`parking-card-${selectedSpotId}`);
+    if (cardElement) {
+      cardElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedSpotId]);
 
   function rememberSearch(nextFilters: FilterState, nextRequest: ParkingSearchParams) {
     if (!driverMode || !Number.isFinite(nextRequest.latitude) || !Number.isFinite(nextRequest.longitude) || new Date(nextRequest.endAt) <= new Date(nextRequest.startAt)) return;
@@ -235,21 +265,53 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
     {filterError && <div role="alert" className="m-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">{filterError}</div>}
     {query.isError && <div className="m-6 border bg-white p-10 text-center"><AlertCircle className="mx-auto size-7 text-red-600" /><p className="mt-3 text-sm">{getApiErrorMessage(query.error)}</p><Button className="mt-4" variant="outline" onClick={() => query.refetch()}><RefreshCw className="size-4" />Retry</Button></div>}
     {!query.isError && <div className="relative h-[calc(100dvh-5.25rem)] min-h-[560px] overflow-hidden lg:hidden">
-      <div className="absolute inset-0"><ParkingMap spots={results} search={detailsRequest} driverMode={driverMode} selectedSpotId={selectedSpotId} onSpotSelect={setSelectedSpotId} onSearchArea={searchMapArea} /></div>
+      <div className="absolute inset-0">
+        {isDesktop === false ? (
+          <ParkingMap
+            spots={results}
+            search={detailsRequest}
+            driverMode={driverMode}
+            selectedSpotId={selectedSpotId}
+            selectionTrigger={selectionTrigger}
+            onSpotSelect={handleSelectSpot}
+            onSearchArea={searchMapArea}
+          />
+        ) : isDesktop === null ? (
+          <div className="flex h-full min-h-[420px] items-center justify-center border bg-muted/40">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : null}
+      </div>
       <motion.section drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.08} onDragEnd={settleMobileSheet} animate={{ height: mobileSheetHeight }} transition={{ type: "spring", stiffness: 360, damping: 34 }} className="absolute inset-x-0 bottom-0 z-10 overflow-hidden rounded-t-2xl border-t bg-white shadow-[0_-12px_30px_rgba(15,23,42,0.16)]">
         <button type="button" onClick={() => setMobileSheet((current) => current === "collapsed" ? "half" : current === "half" ? "expanded" : "half")} className="flex h-12 w-full items-center justify-center" aria-label={`Parking results sheet is ${mobileSheet}`}><GripHorizontal className="size-7 text-slate-400" /></button>
         <div className="flex items-center justify-between border-b px-4 pb-3"><div><h2 className="text-sm font-extrabold">{hasSearched ? `Parking near ${filters.locationName.split(",")[0]}` : "All available parking"}</h2><p className="mt-0.5 text-xs text-slate-500">{results.length} verified properties</p></div></div>
         <div className="h-[calc(100%-5.5rem)] space-y-3 overflow-y-auto overscroll-contain p-4 pb-8">
-          {query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-52 animate-pulse rounded-md border bg-slate-100" />) : results.length === 0 ? <div className="bg-white py-8 text-center"><SearchX className="mx-auto size-7 text-slate-400" /><p className="mt-3 text-sm font-semibold">{hasSearched ? "No parking matches this search" : "No published parking is available"}</p><p className="mt-1 text-xs text-muted-foreground">{hasSearched ? "Try a larger radius or fewer filters." : "Active listings from verified properties will appear here."}</p>{hasSearched && <Button type="button" variant="outline" className="mt-4" onClick={reset}>Show all parking</Button>}</div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={detailsRequest} driverMode={driverMode} favorite={favoriteIds.has(spot.id)} onFavorite={() => favorite.mutate({ propertyId: spot.id, remove: favoriteIds.has(spot.id) })} isSelected={spot.id === selectedSpotId} onSelect={() => setSelectedSpotId(spot.id)} />)}
+          {query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-52 animate-pulse rounded-md border bg-slate-100" />) : results.length === 0 ? <div className="bg-white py-8 text-center"><SearchX className="mx-auto size-7 text-slate-400" /><p className="mt-3 text-sm font-semibold">{hasSearched ? "No parking matches this search" : "No published parking is available"}</p><p className="mt-1 text-xs text-muted-foreground">{hasSearched ? "Try a larger radius or fewer filters." : "Active listings from verified properties will appear here."}</p>{hasSearched && <Button type="button" variant="outline" className="mt-4" onClick={reset}>Show all parking</Button>}</div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={detailsRequest} driverMode={driverMode} favorite={favoriteIds.has(spot.id)} onFavorite={() => favorite.mutate({ propertyId: spot.id, remove: favoriteIds.has(spot.id) })} isSelected={spot.id === selectedSpotId} onSelect={() => { handleSelectSpot(spot.id); setMobileSheet("half"); }} />)}
         </div>
       </motion.section>
     </div>}
     {!query.isError && <div className="hidden items-start lg:grid lg:grid-cols-12">
       <div className="space-y-4 p-4 lg:col-span-5 lg:h-[calc(100vh-13rem)] lg:overflow-y-auto lg:p-5">
         <div className="hidden items-center justify-between lg:flex"><h2 className="text-sm font-bold">{hasSearched ? `Parking near ${filters.locationName.split(",")[0]}` : "All available parking"}</h2><span className="text-xs text-muted-foreground">{results.length} verified properties</span></div>
-        {query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-52 animate-pulse border bg-slate-100" />) : results.length === 0 ? <div className="border bg-white p-10 text-center"><SearchX className="mx-auto size-7 text-slate-400" /><p className="mt-3 text-sm font-semibold">{hasSearched ? "No parking matches this search" : "No published parking is available"}</p><p className="mt-1 text-xs text-muted-foreground">{hasSearched ? "Try a larger radius, a different time, or fewer filters." : "Active listings from verified properties will appear here."}</p>{hasSearched && <Button type="button" variant="outline" className="mt-4" onClick={reset}>Show all parking</Button>}</div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={detailsRequest} driverMode={driverMode} favorite={favoriteIds.has(spot.id)} onFavorite={() => favorite.mutate({ propertyId: spot.id, remove: favoriteIds.has(spot.id) })} isSelected={spot.id === selectedSpotId} onSelect={() => setSelectedSpotId(spot.id)} />)}
+        {query.isPending ? Array.from({ length: 3 }, (_, index) => <div key={index} className="h-52 animate-pulse border bg-slate-100" />) : results.length === 0 ? <div className="border bg-white p-10 text-center"><SearchX className="mx-auto size-7 text-slate-400" /><p className="mt-3 text-sm font-semibold">{hasSearched ? "No parking matches this search" : "No published parking is available"}</p><p className="mt-1 text-xs text-muted-foreground">{hasSearched ? "Try a larger radius, a different time, or fewer filters." : "Active listings from verified properties will appear here."}</p>{hasSearched && <Button type="button" variant="outline" className="mt-4" onClick={reset}>Show all parking</Button>}</div> : results.map((spot) => <ParkingCard key={spot.id} spot={spot} search={detailsRequest} driverMode={driverMode} favorite={favoriteIds.has(spot.id)} onFavorite={() => favorite.mutate({ propertyId: spot.id, remove: favoriteIds.has(spot.id) })} isSelected={spot.id === selectedSpotId} onSelect={() => handleSelectSpot(spot.id)} />)}
       </div>
-      <div className="h-[calc(100vh-13rem)] min-h-[480px] lg:sticky lg:top-16 lg:col-span-7"><ParkingMap spots={results} search={detailsRequest} driverMode={driverMode} selectedSpotId={selectedSpotId} onSpotSelect={setSelectedSpotId} onSearchArea={searchMapArea} /></div>
+      <div className="h-[calc(100vh-13rem)] min-h-[480px] lg:sticky lg:top-16 lg:col-span-7">
+        {isDesktop === true ? (
+          <ParkingMap
+            spots={results}
+            search={detailsRequest}
+            driverMode={driverMode}
+            selectedSpotId={selectedSpotId}
+            selectionTrigger={selectionTrigger}
+            onSpotSelect={handleSelectSpot}
+            onSearchArea={searchMapArea}
+          />
+        ) : isDesktop === null ? (
+          <div className="flex h-full min-h-[420px] items-center justify-center border bg-muted/40">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : null}
+      </div>
     </div>}
   </div>;
 }

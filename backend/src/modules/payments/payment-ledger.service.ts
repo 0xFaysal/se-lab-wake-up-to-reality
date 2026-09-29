@@ -178,7 +178,9 @@ export async function postSuccessfulBookingPayment(
       referenceId: input.paymentId,
       description: `Held payment for booking ${input.bookingCode}`,
       actorUserId: input.actorUserId,
-      entries: { create: entries },
+      entries: {
+        create: entries.filter((e) => BigInt(e.amountPaisa) > 0n),
+      },
     },
   });
   for (const hold of holds) {
@@ -275,7 +277,9 @@ export async function postSuccessfulSettlementFunding(
       referenceId: input.paymentId,
       description: `Outstanding settlement funding for booking ${input.bookingCode}`,
       actorUserId: input.actorUserId,
-      entries: { create: entries },
+      entries: {
+        create: entries.filter((e) => BigInt(e.amountPaisa) > 0n),
+      },
     },
   });
   for (const hold of holds) {

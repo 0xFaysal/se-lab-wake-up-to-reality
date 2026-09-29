@@ -111,24 +111,34 @@ paymentRouter.all(
   }),
 );
 
-paymentRouter.use(authenticate, requireAccountReady);
+const requireDriverAuth = [
+  authenticate,
+  requireAccountReady,
+  requireRole(UserRoleType.DRIVER),
+];
 
 paymentRouter.post(
   "/bookings/:bookingId/payments/sslcommerz/session",
-  requireRole(UserRoleType.DRIVER),
+  ...requireDriverAuth,
   sensitiveAccountRateLimit,
   action(async (req) => {
     const bookingId = uuid.parse(req.params.bookingId);
     const key = idempotencyKey.parse(
       req.header("idempotency-key") ?? req.body?.idempotencyKey,
     );
-    return service.initiateSslCommerzSession(req.auth!.userId, bookingId, key);
+    const useWallet = req.body?.useWallet !== false;
+    return service.initiateSslCommerzSession(
+      req.auth!.userId,
+      bookingId,
+      key,
+      useWallet,
+    );
   }, 201),
 );
 
 paymentRouter.post(
   "/bookings/:bookingId/settlement/payments/sslcommerz/session",
-  requireRole(UserRoleType.DRIVER),
+  ...requireDriverAuth,
   sensitiveAccountRateLimit,
   action(async (req) => {
     const bookingId = uuid.parse(req.params.bookingId);
@@ -141,7 +151,7 @@ paymentRouter.post(
 
 paymentRouter.get(
   "/payments/:paymentId",
-  requireRole(UserRoleType.DRIVER),
+  ...requireDriverAuth,
   action(async (req) =>
     service.getDriverPayment(
       req.auth!.userId,
@@ -152,7 +162,7 @@ paymentRouter.get(
 
 paymentRouter.get(
   "/refunds/:refundId",
-  requireRole(UserRoleType.DRIVER),
+  ...requireDriverAuth,
   action(async (req) =>
     service.getAndReconcileDriverRefund(
       req.auth!.userId,

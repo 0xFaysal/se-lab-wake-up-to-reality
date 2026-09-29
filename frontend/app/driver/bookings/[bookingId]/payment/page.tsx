@@ -16,10 +16,17 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
   const router = useRouter();
   const idempotencyKey = useRef(crypto.randomUUID());
   const booking = useQuery({ queryKey: queryKeys.bookings.detail(bookingId), queryFn: () => bookingsApi.driverDetail(bookingId) });
-  const pay = useMutation({ mutationFn: () => bookingsApi.createPaymentSession(bookingId, idempotencyKey.current), onSuccess: (session) => {
-    if (session.checkoutUrl) window.location.assign(session.checkoutUrl);
-    else router.push(`/driver/payments/return?paymentId=${encodeURIComponent(session.paymentId)}`);
-  }, onError: () => { idempotencyKey.current = crypto.randomUUID(); } });
+  const pay = useMutation({
+    mutationFn: (variables?: { useWallet?: boolean }) =>
+      bookingsApi.createPaymentSession(bookingId, idempotencyKey.current, variables),
+    onSuccess: (session) => {
+      if (session.checkoutUrl) window.location.assign(session.checkoutUrl);
+      else router.push(`/driver/payments/return?paymentId=${encodeURIComponent(session.paymentId)}`);
+    },
+    onError: () => {
+      idempotencyKey.current = crypto.randomUUID();
+    },
+  });
   if (booking.isPending) return <div className="py-24 text-center"><Loader2 className="mx-auto size-6 animate-spin" /></div>;
   if (booking.isError) return <div className="py-24 text-center">{getApiErrorMessage(booking.error)}</div>;
   const item = booking.data;
@@ -30,7 +37,43 @@ export default function PaymentPage({ params }: { params: Promise<{ bookingId: s
       <div className="space-y-5 p-6">
         <div className="space-y-3 border-y py-4 text-sm"><MoneyRow label="Parking" value={item.baseAmountPaisa} /><MoneyRow label="Platform fee" value={item.platformFeePaisa} /><MoneyRow label="Refundable deposit" value={item.depositPaisa} /><MoneyRow label="Refund Balance applied" value={item.driverWalletAppliedPaisa} negative /><div className="flex items-end justify-between border-t pt-3"><span className="font-semibold">Remaining to pay</span><strong className="text-2xl">{formatBDTFromPaisa(item.gatewayAmountPaisa)}</strong></div></div>
         <div className="flex gap-3 bg-emerald-50 p-4 text-sm text-emerald-950"><LockKeyhole className="mt-0.5 size-5 shrink-0" /><p>Refund Balance is reserved only when you continue. Any gateway failure or cancellation releases it automatically.</p></div>
-        {item.canPay ? <Button className="w-full" size="lg" disabled={pay.isPending} onClick={() => pay.mutate()}>{pay.isPending ? <Loader2 className="size-4 animate-spin" /> : item.gatewayAmountPaisa === "0" ? <LockKeyhole className="size-4" /> : <ExternalLink className="size-4" />}{item.gatewayAmountPaisa === "0" ? "Confirm with Refund Balance" : `Pay ${formatBDTFromPaisa(item.gatewayAmountPaisa)} with SSLCOMMERZ`}</Button> : <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">The payment window has closed or this booking is no longer awaiting payment.</p>}
+        {item.canPay ? (
+          <div className="space-y-3">
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={pay.isPending}
+              onClick={() => pay.mutate({ useWallet: true })}
+            >
+              {pay.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : item.gatewayAmountPaisa === "0" ? (
+                <LockKeyhole className="size-4" />
+              ) : (
+                <ExternalLink className="size-4" />
+              )}
+              {item.gatewayAmountPaisa === "0"
+                ? "Confirm with Refund Balance"
+                : `Pay ${formatBDTFromPaisa(item.gatewayAmountPaisa)} with SSLCOMMERZ`}
+            </Button>
+            {item.gatewayAmountPaisa === "0" && (
+              <Button
+                variant="outline"
+                className="w-full"
+                size="sm"
+                type="button"
+                disabled={pay.isPending}
+                onClick={() => pay.mutate({ useWallet: false })}
+              >
+                Pay full amount with Card instead ({formatBDTFromPaisa(item.totalAmountPaisa)})
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+            The payment window has closed or this booking is no longer awaiting payment.
+          </p>
+        )}
         {pay.isError && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">{getApiErrorMessage(pay.error)}</p>}
         <p className="text-center text-xs text-slate-500">Payment confirmation happens only after server-side gateway validation.</p>
       </div>

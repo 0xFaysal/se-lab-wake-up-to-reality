@@ -699,7 +699,14 @@ export function ManagerListingsSection({
               ) : (
                 <Select value={selectedRightId} onValueChange={(v) => v && setSelectedRightId(v)}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Choose a verified parking space…" />
+                    <SelectValue placeholder="Choose a verified parking space…">
+                      {(v: string) => {
+                        const right = eligibleRights.find((r) => r.id === v);
+                        return right
+                          ? `${right.parkingSpot?.displayName || right.parkingSpot?.spotCode || "Spot"} (${right.rightType})`
+                          : "Choose a verified parking space…";
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {eligibleRights.map((right) => (
