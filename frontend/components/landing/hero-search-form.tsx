@@ -57,7 +57,7 @@ export function HeroSearchForm() {
             placeholder="Dhaka (e.g. Dhanmondi, Gulshan)"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />
         </div>
 
@@ -76,7 +76,7 @@ export function HeroSearchForm() {
             value={date}
             min={new Date().toISOString().split("T")[0]}
             onChange={(e) => setDate(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />
         </div>
 
@@ -94,7 +94,7 @@ export function HeroSearchForm() {
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />
         </div>
 
@@ -110,7 +110,7 @@ export function HeroSearchForm() {
               if (val) setVehicleType(val as VehicleType);
             }}
           >
-            <SelectTrigger className="h-12 w-full px-4 text-sm font-medium rounded-xl urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary">
+            <SelectTrigger className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-foreground">
               <SelectValue placeholder="Select vehicle" />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-border bg-card">

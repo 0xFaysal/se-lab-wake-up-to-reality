@@ -169,7 +169,7 @@ export default function InviteManagerPage() {
                     setWholeProperty(false);
                   }}
                   required
-                  className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-2xs hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 outline-none"
                 >
                   <option value="">Select Property</option>
                   {verifiedProperties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
@@ -179,7 +179,7 @@ export default function InviteManagerPage() {
 
             {propertyId && (
               <div className="mt-5">
-                <label className="flex items-start gap-3 border bg-slate-50 p-4 text-sm">
+                <label className="flex items-start gap-3 rounded-lg border border-slate-300 bg-white hover:border-slate-400 shadow-2xs p-4 text-sm transition">
                   <Checkbox
                     checked={wholeProperty}
                     onCheckedChange={(checked) => {
@@ -193,7 +193,7 @@ export default function InviteManagerPage() {
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {resources.isPending && <p className="text-sm text-slate-600">Loading parking resources...</p>}
                     {resources.data?.map((resource) => (
-                      <label key={resource.id} className="flex items-start gap-3 border p-4 text-sm">
+                      <label key={resource.id} className="flex items-start gap-3 rounded-lg border border-slate-300 bg-white hover:border-slate-400 shadow-2xs p-4 text-sm transition">
                         <Checkbox
                           checked={resourceIds.includes(resource.id)}
                           onCheckedChange={(checked) => setResourceIds((current) =>
@@ -219,7 +219,7 @@ export default function InviteManagerPage() {
             <p className="mt-1 text-sm text-slate-600">Permissions are enforced by the backend in addition to the selected resource scope.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {PERMISSIONS.map((permission) => (
-                <label key={permission.value} className="flex items-start gap-3 border p-4">
+                <label key={permission.value} className="flex items-start gap-3 rounded-lg border border-slate-300 bg-white hover:border-slate-400 shadow-2xs p-4 transition">
                   <Checkbox
                     checked={permissions.includes(permission.value)}
                     onCheckedChange={(checked) => setPermissions((current) =>

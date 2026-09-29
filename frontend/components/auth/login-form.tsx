@@ -82,7 +82,7 @@ export function LoginForm() {
             placeholder="name@example.com or +880 1XXXXXXXXX"
             autoComplete="username"
             aria-invalid={!!errors.identifier}
-            className="h-11 text-sm rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-11 text-sm rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
             {...register("identifier")}
           />
           {errors.identifier && (
@@ -104,7 +104,7 @@ export function LoginForm() {
               placeholder="••••••••"
               autoComplete="current-password"
               aria-invalid={!!errors.password}
-              className="h-11 text-sm pr-10 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+              className="h-11 text-sm pr-10 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
               {...register("password")}
             />
             <button

@@ -147,7 +147,7 @@ export function AddPaymentForm({ onAddMethod }: AddPaymentFormProps) {
                 value={cardName}
                 onChange={(e) => setCardName(e.target.value)}
                 required
-                className="h-11 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white text-sm"
+                className="h-11 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-sm"
               />
             </div>
 
@@ -169,7 +169,7 @@ export function AddPaymentForm({ onAddMethod }: AddPaymentFormProps) {
                   onChange={(e) => setCardNumber(e.target.value)}
                   required
                   maxLength={19}
-                  className="h-11 pl-10 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white text-sm font-mono"
+                  className="h-11 pl-10 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-sm font-mono"
                 />
               </div>
             </div>
@@ -191,7 +191,7 @@ export function AddPaymentForm({ onAddMethod }: AddPaymentFormProps) {
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
                   required
-                  className="h-11 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white text-sm font-mono text-center"
+                  className="h-11 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-sm font-mono text-center"
                 />
               </div>
 
@@ -210,7 +210,7 @@ export function AddPaymentForm({ onAddMethod }: AddPaymentFormProps) {
                   value={cvv}
                   onChange={(e) => setCvv(e.target.value)}
                   required
-                  className="h-11 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white text-sm font-mono text-center"
+                  className="h-11 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-sm font-mono text-center"
                 />
               </div>
             </div>
@@ -232,7 +232,7 @@ export function AddPaymentForm({ onAddMethod }: AddPaymentFormProps) {
                 value={walletName}
                 onChange={(e) => setWalletName(e.target.value)}
                 required
-                className="h-11 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white text-sm"
+                className="h-11 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-sm"
               />
             </div>
 
@@ -257,7 +257,7 @@ export function AddPaymentForm({ onAddMethod }: AddPaymentFormProps) {
                   value={walletPhone}
                   onChange={(e) => setWalletPhone(e.target.value)}
                   required
-                  className="h-11 pl-10 rounded-lg urban-input bg-[#F3F4F6] focus:bg-white text-sm font-mono"
+                  className="h-11 pl-10 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-sm font-mono"
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">

@@ -251,14 +251,38 @@
 
 /* Urban Harmony Input styling: visible slate border at rest, white bg + 2px emerald border on focus */
 .urban-input {
-  background-color: #ffffff;
-  border: 1.5px solid #CBD5E1;
+  background-color: #ffffff !important;
+  border: 1.5px solid #CBD5E1 !important;
   transition: all 0.2s ease;
 }
+.urban-input:hover {
+  border-color: #94A3B8 !important;
+}
 .urban-input:focus, .urban-input:focus-within {
-  background-color: #ffffff;
-  border-color: #064E3B;
-  box-shadow: 0 0 0 2px rgba(6, 78, 59, 0.15);
+  background-color: #ffffff !important;
+  border-color: #064E3B !important;
+  box-shadow: 0 0 0 2px rgba(6, 78, 59, 0.15) !important;
+}
+
+/* Global Checkbox & Radio Controls */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #064E3B;
+  cursor: pointer;
+  border: 1.5px solid #94A3B8;
+  border-radius: 4px;
+}
+input[type="radio"] {
+  border-radius: 50%;
+}
+input[type="checkbox"]:hover,
+input[type="radio"]:hover {
+  border-color: #64748B;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid #064E3B;
+  outline-offset: 2px;
 }
 
 /* Urban Harmony Diffused Ambient Card Shadow */
