@@ -29,18 +29,19 @@ export function AuthVisualPanel() {
   const isRegister = pathname?.includes("register");
 
   return (
-    <div className="relative hidden h-full w-full flex-col justify-between overflow-hidden p-8 sm:p-12 lg:flex">
+    <div className="relative isolate hidden h-full w-full flex-col justify-between overflow-hidden p-8 sm:p-12 lg:flex">
       {/* Background Image of Premium Residential Gate */}
       <Image
         src={authGateImg}
         alt="ParkEase BD Residential Gate Security"
         priority
+        fill
         sizes="(min-width: 1024px) 50vw, 100vw"
-        className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-center"
+        className="pointer-events-none object-cover object-center"
       />
 
       {/* Dark overlay gradient for crisp typography contrast */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30" />
 
       {/* Top Logo */}
       <div className="relative z-10">

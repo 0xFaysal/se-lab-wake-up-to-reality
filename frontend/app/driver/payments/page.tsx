@@ -1,92 +1,193 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Clock3, Landmark, Loader2, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, ArrowUpRight, CheckCircle2, Clock3, CreditCard, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { bookingsApi } from "@/lib/api/bookings-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
-import { financeApi } from "@/lib/api/finance-api";
 import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters";
-import { payoutStatus } from "@/lib/marketplace-status";
+import { bookingStatus } from "@/lib/marketplace-status";
 import { queryKeys } from "@/lib/query-keys";
 
-export default function PaymentsPage() {
-  const client = useQueryClient();
-  const payoutKey = useRef(crypto.randomUUID());
-  const [amount, setAmount] = useState("");
-  const [selectedMethod, setSelectedMethod] = useState("");
-  const wallet = useQuery({ queryKey: queryKeys.wallet.current, queryFn: financeApi.wallet });
-  const entries = useQuery({ queryKey: queryKeys.wallet.transactions(), queryFn: financeApi.walletTransactions });
-  const methods = useQuery({ queryKey: ["driver", "payout-methods"], queryFn: financeApi.driverPayoutMethods });
-  const payouts = useQuery({ queryKey: queryKeys.payouts.driver(), queryFn: () => financeApi.driverPayouts() });
-  const activeMethods = (methods.data ?? []).filter((method) => method.status === "ACTIVE");
-  const payoutMethodId = selectedMethod || activeMethods.find((method) => method.isDefault)?.id || activeMethods[0]?.id || "";
-  const availablePaisa = BigInt(wallet.data?.availableBalancePaisa ?? "0");
-  const requestedPaisa = useMemo(() => {
-    const value = Number(amount);
-    return Number.isFinite(value) ? BigInt(Math.max(0, Math.round(value * 100))) : BigInt(0);
-  }, [amount]);
-  const exceedsBalance = requestedPaisa > availablePaisa;
-  const payout = useMutation({
-    mutationFn: () => financeApi.requestDriverPayout(requestedPaisa.toString(), payoutMethodId, payoutKey.current),
-    onSuccess: async () => {
-      toast.success("Withdrawal request submitted for review");
-      setAmount("");
-      payoutKey.current = crypto.randomUUID();
-      await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.wallet.current }),
-        client.invalidateQueries({ queryKey: queryKeys.wallet.transactions() }),
-        client.invalidateQueries({ queryKey: queryKeys.payouts.root }),
-      ]);
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+export default function DriverPaymentsPage() {
+  const query = useQuery({
+    queryKey: queryKeys.bookings.driver(),
+    queryFn: bookingsApi.driverList,
   });
 
-  const firstError = wallet.error ?? entries.error ?? methods.error ?? payouts.error;
-  if (wallet.isPending || entries.isPending || methods.isPending || payouts.isPending) return <PageState loading message="Loading your Refund Balance" />;
-  if (firstError) return <PageState message={getApiErrorMessage(firstError)} retry={() => void Promise.all([wallet.refetch(), entries.refetch(), methods.refetch(), payouts.refetch()])} />;
-  if (!wallet.data || !entries.data || !methods.data || !payouts.data) return <PageState message="Refund Balance data is unavailable" retry={() => void Promise.all([wallet.refetch(), entries.refetch(), methods.refetch(), payouts.refetch()])} />;
+  const bookings = query.data ?? [];
+  const paidBookings = bookings.filter((b) =>
+    ["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED", "COMPLETED", "NO_SHOW"].includes(b.status)
+  );
+
+  const totalSpentPaisa = paidBookings.reduce(
+    (acc, b) => acc + BigInt(b.totalAmountPaisa || "0"),
+    BigInt(0)
+  );
+
+  const totalGatewayPaisa = paidBookings.reduce(
+    (acc, b) => acc + BigInt(b.gatewayAmountPaisa || "0"),
+    BigInt(0)
+  );
+
+  const totalWalletPaisa = paidBookings.reduce(
+    (acc, b) => acc + BigInt(b.driverWalletAppliedPaisa || "0"),
+    BigInt(0)
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 sm:px-6">
       <header className="flex flex-col justify-between gap-4 border-b pb-6 sm:flex-row sm:items-end">
-        <div><p className="text-xs font-bold uppercase text-emerald-700">Money</p><h1 className="mt-2 text-3xl font-extrabold">Refund Balance</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Unused deposits and cancellation refunds return here. ParkEase applies this balance automatically before SSLCOMMERZ on your next booking.</p></div>
-        <Button variant="outline" nativeButton={false} render={<Link href="/driver/payment-methods" />}>Manage payout methods<ArrowRight className="size-4" /></Button>
+        <div>
+          <p className="text-xs font-bold uppercase text-emerald-700">Money</p>
+          <h1 className="mt-2 text-3xl font-extrabold">Payment History</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Review all completed transactions, gateway payments, and balance deductions for your parking reservations.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link href="/driver/wallet" />}>
+            <WalletCards className="size-4" />Refund Balance &amp; Wallet
+          </Button>
+          <Button variant="outline" nativeButton={false} render={<Link href="/driver/payment-methods" />}>
+            Payout methods<ArrowRight className="size-4" />
+          </Button>
+        </div>
       </header>
 
+      {/* Summary Metrics */}
       <section className="grid gap-4 sm:grid-cols-3">
-        <Metric icon={WalletCards} label="Ready to use" value={wallet.data.availableBalancePaisa} detail="Available for booking or withdrawal" />
-        <Metric icon={Clock3} label="Processing" value={wallet.data.pendingBalancePaisa} detail="Refund credits still being processed" />
-        <Metric icon={LockKeyhole} label="Reserved" value={wallet.data.heldBalancePaisa} detail="Applied to a booking or withdrawal" />
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="border bg-white p-6">
-          <div className="flex items-start gap-3"><Landmark className="mt-0.5 size-5 text-emerald-700" /><div><h2 className="font-bold">Withdraw balance</h2><p className="mt-1 text-sm text-slate-600">Request a transfer to your saved bank or mobile financial service account.</p></div></div>
-          <form noValidate className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); payout.mutate(); }}>
-            <label className="space-y-2 text-sm font-semibold"><span>Amount in BDT</span><Input inputMode="decimal" type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" disabled={availablePaisa === BigInt(0)} /></label>
-            <label className="space-y-2 text-sm font-semibold"><span>Transfer destination</span><Select value={payoutMethodId} onValueChange={(value) => value && setSelectedMethod(value)} disabled={activeMethods.length === 0}><SelectTrigger className="w-full"><SelectValue placeholder="Select destination" /></SelectTrigger><SelectContent>{activeMethods.map((method) => <SelectItem key={method.id} value={method.id}>{method.type.replaceAll("_", " ")} · {method.maskedAccountIdentifier}</SelectItem>)}</SelectContent></Select></label>
-            {exceedsBalance && <p role="alert" className="text-sm text-red-700 sm:col-span-2">Enter an amount within your available balance.</p>}
-            {activeMethods.length === 0 && <p className="text-sm text-amber-800 sm:col-span-2">Add a bank or mobile wallet destination before requesting a withdrawal. <Link href="/driver/payment-methods" className="font-bold underline">Add destination</Link></p>}
-            <div className="sm:col-span-2"><Button type="submit" disabled={requestedPaisa <= BigInt(0) || exceedsBalance || !payoutMethodId || payout.isPending || availablePaisa === BigInt(0)}>{payout.isPending && <Loader2 className="size-4 animate-spin" />}Request withdrawal</Button></div>
-          </form>
+        <div className="border bg-white p-5">
+          <CreditCard className="size-5 text-emerald-700" />
+          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Total Spent</p>
+          <p className="mt-2 text-2xl font-extrabold">{formatBDTFromPaisa(totalSpentPaisa.toString())}</p>
+          <p className="mt-2 text-xs text-slate-500">Across {paidBookings.length} completed bookings</p>
         </div>
-        <aside className="border-l-4 border-emerald-600 bg-emerald-50 p-5 text-sm text-emerald-950">
-          <ShieldCheck className="size-5" /><h2 className="mt-3 font-bold">How transfer works</h2><p className="mt-2 leading-6">The requested amount is reserved immediately. An admin verifies the destination, completes the transfer, and records its reference. Rejected requests return to your available balance.</p>
-        </aside>
+        <div className="border bg-white p-5">
+          <CheckCircle2 className="size-5 text-emerald-700" />
+          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Paid via SSLCOMMERZ</p>
+          <p className="mt-2 text-2xl font-extrabold">{formatBDTFromPaisa(totalGatewayPaisa.toString())}</p>
+          <p className="mt-2 text-xs text-slate-500">Charged directly via card / MFS gateway</p>
+        </div>
+        <div className="border bg-white p-5">
+          <WalletCards className="size-5 text-emerald-700" />
+          <p className="mt-3 text-xs font-bold uppercase text-slate-500">From Refund Balance</p>
+          <p className="mt-2 text-2xl font-extrabold text-emerald-800">
+            {formatBDTFromPaisa(totalWalletPaisa.toString())}
+          </p>
+          <p className="mt-2 text-xs text-slate-500">Auto-applied discount from refunds</p>
+        </div>
       </section>
 
-      <section><h2 className="mb-3 text-lg font-bold">Withdrawal requests</h2>{payouts.data.payouts.length === 0 ? <Empty text="No withdrawal requests yet." /> : <div className="divide-y border bg-white">{payouts.data.payouts.map((item) => { const status = payoutStatus[item.status]; return <article key={item.id} className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center"><div><strong>{formatBDTFromPaisa(item.amountPaisa)}</strong><p className="mt-1 text-xs text-slate-500">{item.destinationSnapshot?.type.replaceAll("_", " ")} · {item.destinationSnapshot?.maskedAccountIdentifier ?? "Saved destination"} · {formatDateTime(item.createdAt)}</p></div><span className={`w-fit rounded-full px-2.5 py-1 text-xs font-bold ${status.className}`}>{status.label}</span></article>; })}</div>}</section>
+      {/* Payment Transactions List */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">Booking Payments</h2>
+          <span className="text-xs text-slate-500">{paidBookings.length} records</span>
+        </div>
 
-      <section><h2 className="mb-3 text-lg font-bold">Balance activity</h2>{entries.data.length === 0 ? <Empty text="Refunds, booking use, and withdrawals will appear here." /> : <div className="divide-y border bg-white">{entries.data.map((entry) => <article key={entry.id} className="flex items-start justify-between gap-4 p-4"><div><strong className="text-sm">{entry.ledgerTransaction.description}</strong><p className="mt-1 text-xs text-slate-500">{formatDateTime(entry.createdAt)}</p></div><span className={`shrink-0 font-semibold ${entry.entrySide === "CREDIT" ? "text-emerald-800" : "text-slate-900"}`}>{entry.entrySide === "CREDIT" ? "+" : "-"}{formatBDTFromPaisa(entry.amountPaisa)}</span></article>)}</div>}</section>
+        {query.isPending ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="h-20 animate-pulse border bg-slate-100 rounded-md" />
+            ))}
+          </div>
+        ) : query.isError ? (
+          <div className="rounded-md border border-rose-200 bg-white p-6 text-center">
+            <p className="text-sm font-semibold text-rose-700">{getApiErrorMessage(query.error)}</p>
+            <Button type="button" variant="outline" className="mt-4" onClick={() => query.refetch()}>
+              <RefreshCw className="size-4" />Try again
+            </Button>
+          </div>
+        ) : paidBookings.length === 0 ? (
+          <div className="border bg-white p-12 text-center rounded-lg">
+            <CreditCard className="mx-auto size-8 text-slate-400" />
+            <h3 className="mt-3 text-base font-bold">No payment records yet</h3>
+            <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">
+              Once you reserve and pay for parking, your receipts and transaction breakdowns will appear here.
+            </p>
+            <Link
+              href="/driver/parking"
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#064E3B] px-4 py-2 text-sm font-bold text-white hover:bg-[#003527]"
+            >
+              Search parking spaces
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y border bg-white rounded-lg overflow-hidden shadow-2xs">
+            {paidBookings.map((booking) => {
+              const status = bookingStatus[booking.status];
+              const hasWalletApplied = BigInt(booking.driverWalletAppliedPaisa || "0") > BigInt(0);
+              const hasGatewayPaid = BigInt(booking.gatewayAmountPaisa || "0") > BigInt(0);
+
+              return (
+                <article
+                  key={booking.id}
+                  className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center hover:bg-slate-50/80 transition-colors"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <strong className="font-mono text-sm text-slate-900">{booking.bookingCode}</strong>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${status.className}`}>
+                        {status.label}
+                      </span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-xs text-slate-500">{formatDateTime(booking.createdAt)}</span>
+                    </div>
+
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {booking.property?.name ?? booking.listing?.title ?? "Parking reservation"}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-0.5">
+                      {hasGatewayPaid && (
+                        <span className="inline-flex items-center gap-1 font-medium text-slate-700">
+                          <CreditCard className="size-3 text-slate-400" />
+                          SSLCOMMERZ: {formatBDTFromPaisa(booking.gatewayAmountPaisa)}
+                        </span>
+                      )}
+                      {hasWalletApplied && (
+                        <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+                          <WalletCards className="size-3 text-emerald-600" />
+                          Refund Balance: −{formatBDTFromPaisa(booking.driverWalletAppliedPaisa)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 border-t pt-3 sm:border-0 sm:pt-0">
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 block sm:hidden">Total paid</span>
+                      <strong className="text-base font-extrabold font-mono text-slate-900">
+                        {formatBDTFromPaisa(booking.totalAmountPaisa)}
+                      </strong>
+                    </div>
+
+                    <Link
+                      href={`/driver/bookings/${booking.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#064E3B] hover:underline"
+                    >
+                      View details <ArrowUpRight className="size-3" />
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Security Notice */}
+      <aside className="border-l-4 border-emerald-600 bg-emerald-50 p-5 text-sm text-emerald-950 flex items-start gap-3">
+        <ShieldCheck className="size-5 shrink-0 text-emerald-700 mt-0.5" />
+        <div>
+          <h3 className="font-bold">Payment Protection &amp; Guarantees</h3>
+          <p className="mt-1 text-xs leading-5 text-emerald-900/90">
+            All gateway payments are processed over TLS encryption via SSLCOMMERZ. Unused refundable deposits and cancellation credits return directly to your Refund Balance upon checkout.
+          </p>
+        </div>
+      </aside>
     </div>
   );
 }
-
-function Metric({ icon: Icon, label, value, detail }: { icon: typeof WalletCards; label: string; value: string; detail: string }) { return <div className="border bg-white p-5"><Icon className="size-5 text-emerald-700" /><p className="mt-3 text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 text-2xl font-extrabold">{formatBDTFromPaisa(value)}</p><p className="mt-2 text-xs text-slate-500">{detail}</p></div>; }
-function Empty({ text }: { text: string }) { return <div className="border bg-white p-8 text-center text-sm text-slate-500">{text}</div>; }
-function PageState({ message, loading, retry }: { message: string; loading?: boolean; retry?: () => void }) { return <div className="py-24 text-center">{loading && <Loader2 className="mx-auto mb-3 size-6 animate-spin" />}<p>{message}</p>{retry && <Button variant="outline" className="mt-4" onClick={retry}>Try again</Button>}</div>; }

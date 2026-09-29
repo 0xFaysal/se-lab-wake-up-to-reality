@@ -67,6 +67,8 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
   const status = bookingStatus[booking.status];
   const payment = booking.payments?.[0];
 
+  const isSettlementEligible = ["COMPLETED", "PAYMENT_DUE", "NO_SHOW"].includes(booking.status);
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6">
       <Link href="/driver/bookings" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-800"><ArrowLeft className="size-4" />My bookings</Link>
@@ -100,7 +102,15 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
             </dl>
           </section>
           {booking.accessCredential && <DigitalAccessPass accessCredential={booking.accessCredential} propertyTitle={booking.property?.name} />}
-          {(settlement.isPending || settlement.data) && <SettlementSummary settlement={settlement.data} loading={settlement.isPending} paying={paySettlement.isPending} noShow={booking.status === "NO_SHOW"} onPay={() => paySettlement.mutate()} />}
+          {isSettlementEligible && (settlement.isLoading || settlement.data) && (
+            <SettlementSummary
+              settlement={settlement.data}
+              loading={settlement.isLoading}
+              paying={paySettlement.isPending}
+              noShow={booking.status === "NO_SHOW"}
+              onPay={() => paySettlement.mutate()}
+            />
+          )}
         </div>
 
         <aside className="h-fit border bg-white p-6 lg:sticky lg:top-24">
