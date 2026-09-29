@@ -33,6 +33,7 @@ import { logger } from "../../config/logger.js";
 import { env } from "../../config/env.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { encryptSensitiveText } from "../../common/security/encryption.js";
+import { decryptPropertySensitiveData } from "../properties/property-sensitive-data.js";
 import { getRightDocumentStorage } from "../../common/uploads/right-document-storage.js";
 import { createDomainAuditEvent } from "../property-governance/domain-audit.js";
 import {
@@ -4870,6 +4871,8 @@ export async function createQuote(
       "QUOTE_START_IN_PAST",
       "Booking start time must be in the future",
     );
+  await reconcileExpiredPendingBookings({ limit: 50 });
+  await prisma.$transaction((tx) => releaseExpiredHolds(tx));
   const [listing, vehicle] = await Promise.all([
     loadBookableListing(input.listingId),
     prisma.vehicle.findFirst({
@@ -5001,6 +5004,8 @@ export async function createHold(
     },
   });
   if (existing) return serialize(existing);
+
+  await reconcileExpiredPendingBookings({ limit: 50 });
 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
@@ -5519,7 +5524,7 @@ async function expirePendingBooking(bookingId: string, now: Date) {
       await lockEntity(tx, "booking", bookingId);
       const booking = await tx.booking.findUnique({
         where: { id: bookingId },
-        include: { payments: true },
+        include: { payments: true, hold: true },
       });
       if (!booking || booking.status !== BookingStatus.PAYMENT_PENDING)
         return null;
@@ -5537,10 +5542,16 @@ async function expirePendingBooking(bookingId: string, now: Date) {
               ).getTime() + PAYMENT_CALLBACK_GRACE_MS,
             ),
         );
-      const deadline = paymentDeadlines.reduce(
-        (latest, value) => (value > latest ? value : latest),
-        new Date(booking.createdAt.getTime() + PAYMENT_SESSION_TTL_MS),
-      );
+      const fallbackDeadline =
+        booking.hold?.expiresAt ??
+        new Date(booking.createdAt.getTime() + HOLD_TTL_MS);
+      const deadline =
+        paymentDeadlines.length > 0
+          ? paymentDeadlines.reduce(
+              (latest, value) => (value > latest ? value : latest),
+              new Date(0),
+            )
+          : fallbackDeadline;
       if (deadline > now) return null;
 
       for (const payment of booking.payments) {
@@ -5891,10 +5902,16 @@ export async function reconcileExpiredPendingBookings(
   const now = new Date();
   const candidates = await prisma.booking.findMany({
     where: {
-      ...(input.bookingId ? { id: input.bookingId } : {}),
+      ...(input.bookingId
+        ? { id: input.bookingId }
+        : {
+            OR: [
+              { hold: { expiresAt: { lte: now } } },
+              { createdAt: { lte: new Date(now.getTime() - HOLD_TTL_MS) } },
+            ],
+          }),
       ...(input.driverUserId ? { driverUserId: input.driverUserId } : {}),
       status: BookingStatus.PAYMENT_PENDING,
-      createdAt: { lte: new Date(now.getTime() - PAYMENT_SESSION_TTL_MS) },
     },
     select: { id: true },
     orderBy: { createdAt: "asc" },
@@ -5977,7 +5994,58 @@ export async function getDriverBooking(
     credential?.status === "ACTIVE" && credential.expiresAt > new Date()
       ? accessCredentialPayload(credential.id)
       : null;
-  return serialize({ ...presentBooking(details), accessCredential });
+
+  const isPaidOrActive =
+    (
+      [
+        BookingStatus.CONFIRMED,
+        BookingStatus.CHECKED_IN,
+        BookingStatus.CHECKOUT_REQUESTED,
+        BookingStatus.COMPLETED,
+        BookingStatus.NO_SHOW,
+        BookingStatus.PAYMENT_DUE,
+        BookingStatus.DISPUTED,
+      ] as BookingStatus[]
+    ).includes(booking.status) || booking.confirmedAt !== null;
+
+  let exactAddress: string | null = null;
+  let accessInstructions: string | null = null;
+
+  if (isPaidOrActive && booking.propertyId) {
+    try {
+      const propertySensitive = await prisma.property.findUnique({
+        where: { id: booking.propertyId },
+        select: {
+          exactAddressCiphertext: true,
+          exactAddressIv: true,
+          exactAddressTag: true,
+          accessInstructionsCiphertext: true,
+          accessInstructionsIv: true,
+          accessInstructionsTag: true,
+        },
+      });
+      if (propertySensitive) {
+        const decrypted = decryptPropertySensitiveData(
+          propertySensitive as any,
+        );
+        exactAddress = decrypted.exactAddress;
+        accessInstructions = decrypted.accessInstructions;
+      }
+    } catch (err) {
+      logger.warn(
+        { err, bookingId, propertyId: booking.propertyId },
+        "Failed to decrypt property address for driver booking",
+      );
+    }
+  }
+
+  const presented = presentBooking(details);
+  if (presented.property && (exactAddress || accessInstructions)) {
+    (presented.property as any).exactAddress = exactAddress;
+    (presented.property as any).accessInstructions = accessInstructions;
+  }
+
+  return serialize({ ...presented, accessCredential });
 }
 
 export async function listProviderBookings(

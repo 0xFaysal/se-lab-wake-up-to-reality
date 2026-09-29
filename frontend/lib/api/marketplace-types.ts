@@ -178,7 +178,7 @@ export interface BookingDto {
   financialStatus: "UNPAID" | "HELD" | "SETTLEMENT_PENDING" | "SETTLED" | "CANCELLED";
   checkoutRequestedAt: string | null; checkedOutAt: string | null; cancelledAt: string | null; createdAt: string; updatedAt: string;
   vehicle?: { id: string; vehicleType: VehicleType; registrationNumber: string };
-  property?: { id: string; name: string; publicArea: string; approximateAddress: string };
+  property?: { id: string; name: string; publicArea: string; approximateAddress: string; exactAddress?: string | null; accessInstructions?: string | null };
   parkingSpot?: { id: string; displayName: string | null; spotCode: string | null; resourceType: ParkingResourceType; floor: string | null; zone: string | null };
   parkingResourceUnit?: { id: string; spotCode: string; displayName: string | null; status: ParkingResourceStatus } | null;
   listing?: { id: string; title: string; providerMembershipId?: string }; payments?: PaymentDto[];

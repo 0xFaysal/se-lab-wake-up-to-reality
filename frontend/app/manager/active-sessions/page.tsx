@@ -160,8 +160,8 @@ export default function ManagerActiveSessionsPage() {
         badge={`LIVE ${activeSessions.length} ON-SITE`}
         rightExtra={
           <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs">
-            <RefreshCw className="size-3.5 text-emerald-700 animate-spin" />
-            <span>Live Sync (30s)</span>
+            <RefreshCw className="size-3.5 text-emerald-700" />
+            <span>Auto-refresh: 30s</span>
           </div>
         }
       />

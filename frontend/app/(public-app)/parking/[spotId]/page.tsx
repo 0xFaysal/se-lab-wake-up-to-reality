@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BadgeCheck, CarFront, ChevronLeft, ChevronRight, Clock, ExternalLink, Images, Loader2, MapPin, RefreshCw, Ruler, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CarFront, ChevronLeft, ChevronRight, Clock, ExternalLink, Flag, Images, Loader2, MapPin, RefreshCw, Ruler, ShieldCheck, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { VehicleType } from "@/lib/api/api-types";
@@ -188,7 +188,120 @@ function ReviewsSection({ property }: { property: PublicPropertyDetailDto }) {
 
 function Stars({ rating }: { rating: number }) { return <div className="flex" aria-label={`${rating} out of 5 stars`}>{Array.from({ length: 5 }, (_, index) => <Star key={index} className={`size-4 ${index < rating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />)}</div>; }
 
-function Offer({ offer }: { offer: PublicPropertyOfferDto }) { return <article className="rounded-lg border bg-white p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-bold">{offer.title}</h3><p className={`mt-1 text-xs ${offer.availableUnits > 0 ? "text-emerald-700" : "text-amber-700"}`}>{offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits > 0 ? `${offer.availableUnits} available` : "Unavailable for selected time"}</p>{offer.description && <p className="mt-2 text-sm text-slate-600">{offer.description}</p>}</div><strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong></div><div className="mt-3 flex flex-wrap gap-2">{offer.allowedVehicleTypes.map((type) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>)}{offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}{offer.hasCctv && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">CCTV</span>}{offer.hasGuard && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">Guard</span>}{offer.facilities.map((facility) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={facility.code}>{facility.displayName}</span>)}</div></article>; }
+function Offer({ offer }: { offer: PublicPropertyOfferDto }) {
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("Inaccurate information");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSuccess, setReportSuccess] = useState(false);
+
+  const reportMutation = useMutation({
+    mutationFn: () => parkingSearchApi.reportListing(offer.listingId, { reason: reportReason, details: reportDetails || undefined }),
+    onSuccess: () => {
+      setReportSuccess(true);
+      setReportOpen(false);
+      setReportDetails("");
+    },
+  });
+
+  return (
+    <article className="rounded-lg border bg-white p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-bold">{offer.title}</h3>
+          <p className={`mt-1 text-xs ${offer.availableUnits > 0 ? "text-emerald-700" : "text-amber-700"}`}>
+            {offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits > 0 ? `${offer.availableUnits} available` : "Unavailable for selected time"}
+          </p>
+          {offer.description && <p className="mt-2 text-sm text-slate-600">{offer.description}</p>}
+        </div>
+        <div className="text-right">
+          <strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {offer.allowedVehicleTypes.map((type) => (
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>
+          ))}
+          {offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}
+          {offer.hasCctv && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">CCTV</span>}
+          {offer.hasGuard && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">Guard</span>}
+          {offer.facilities.map((facility) => (
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={facility.code}>{facility.displayName}</span>
+          ))}
+        </div>
+        <div className="mt-2 sm:mt-0">
+          {reportSuccess ? (
+            <span className="text-xs font-semibold text-emerald-700">Report submitted</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-red-700"
+            >
+              <Flag className="size-3.5" />
+              Report listing
+            </button>
+          )}
+        </div>
+      </div>
+
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby={`report-title-${offer.listingId}`}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 id={`report-title-${offer.listingId}`} className="text-lg font-bold text-slate-900">Report this parking offer</h3>
+              <button type="button" onClick={() => setReportOpen(false)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="size-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">Reports are reviewed directly by our Trust & Safety operations team.</p>
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-slate-700">
+                Reason
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-slate-300 p-2 text-sm"
+                >
+                  <option value="Inaccurate information">Inaccurate information</option>
+                  <option value="Safety or security concern">Safety or security concern</option>
+                  <option value="Unauthorized / Fake listing">Unauthorized / Fake listing</option>
+                  <option value="Price gouging or extortion">Price gouging or extortion</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-slate-700">
+                Additional details (optional)
+                <textarea
+                  rows={3}
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Describe the issue with this listing..."
+                  className="mt-1 block w-full rounded-md border border-slate-300 p-2 text-sm"
+                />
+              </label>
+              {reportMutation.error && (
+                <p className="text-xs text-red-600">{getApiErrorMessage(reportMutation.error)}</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setReportOpen(false)}>Cancel</Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={reportMutation.isPending}
+                onClick={() => reportMutation.mutate()}
+              >
+                {reportMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+                Submit report
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
 
 function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOfferDto[]; startAt: string; endAt: string }) {
   const client = useQueryClient(); const keys = useRef({ hold: crypto.randomUUID(), booking: crypto.randomUUID(), payment: crypto.randomUUID() });

@@ -200,7 +200,7 @@ export function RegisterForm() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="12+ chars, uppercase, lowercase, number & symbol"
+              placeholder="12–128 chars (uppercase, lowercase, number & symbol)"
               autoComplete="new-password"
               aria-invalid={!!errors.password}
               className="h-10 text-sm pr-10 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
@@ -219,6 +219,9 @@ export function RegisterForm() {
               )}
             </button>
           </div>
+          <p className="text-[11px] text-muted-foreground">
+            Must be 12–128 characters with uppercase, lowercase, number, and symbol.
+          </p>
           {errors.password && (
             <p className="text-xs text-destructive font-medium">{errors.password.message}</p>
           )}

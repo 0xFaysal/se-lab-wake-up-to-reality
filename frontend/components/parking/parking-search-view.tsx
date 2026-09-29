@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { motion, type PanInfo } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, GripHorizontal, Loader2, RefreshCw, SearchX } from "lucide-react";
 import { ParkingCard } from "@/components/parking/parking-card";
@@ -121,6 +121,20 @@ function toRequest(filters: FilterState): ParkingSearchParams {
   };
 }
 
+function subscribeMediaQuery(callback: () => void) {
+  const media = window.matchMedia("(min-width: 1024px)");
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+
+function getDesktopSnapshot(): boolean {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function getDesktopServerSnapshot(): boolean | null {
+  return null;
+}
+
 export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean }) {
   const searchParams = useSearchParams();
   const searchParamsKey = searchParams.toString();
@@ -141,15 +155,7 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   }, []);
   const [filterError, setFilterError] = useState<string>();
   const [mobileSheet, setMobileSheet] = useState<"collapsed" | "half" | "expanded">("half");
-  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    setIsDesktop(media.matches);
-    const listener = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
-  }, []);
+  const isDesktop = useSyncExternalStore(subscribeMediaQuery, getDesktopSnapshot, getDesktopServerSnapshot);
 
   const minimumDate = defaultSearchWindow().date;
   const valid = Number.isFinite(request.latitude) && Number.isFinite(request.longitude) && new Date(request.endAt) > new Date(request.startAt) && new Date(request.startAt) > new Date();

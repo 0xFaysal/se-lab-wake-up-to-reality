@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ArrowUpRight, CheckCircle2, Clock3, CreditCard, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CheckCircle2, CreditCard, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";

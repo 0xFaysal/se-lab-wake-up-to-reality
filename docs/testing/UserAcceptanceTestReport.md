@@ -122,44 +122,75 @@ Each defect lists how to reproduce it, what was expected, and where the cause is
 - Steps: Open any CONFIRMED booking as the User.
 - Actual: an empty card with a spinning loader sits under the gate pass forever, and no request is ever made for it.
 - Cause: the settlement query is disabled until the booking completes, but React Query v5 reports a disabled query with no data as `isPending`, so `settlement.isPending || settlement.data` is always true. See `frontend/app/driver/bookings/[bookingId]/page.tsx:103`. Check `settlement.fetchStatus` or the booking status instead.
+- **Resolution:** Updated `frontend/app/driver/bookings/[bookingId]/page.tsx` line 103 so the settlement card is guarded by `isSettlementEligible(booking.status)` (`CHECKED_OUT`, `COMPLETED`, `DISPUTED`). Confirmed bookings no longer show a premature spinning settlement card.
 
 **M-2. A paying User is never told the exact address**
 - Actual: the booking only shows "Public address", for example "Road 27, Dhanmondi, Dhaka". The API never returns the exact address or access instructions to the User, even after payment, so the User may not find the gate.
 - Where: `frontend/app/driver/bookings/[bookingId]/page.tsx:93`; the booking API in `backend/src/modules/marketplace/marketplace.service.ts` has no exact-address field for Users.
+- **Resolution:**
+  1. In `backend/src/modules/marketplace/marketplace.service.ts` (`getDriverBooking`), imported `decryptPropertySensitiveData` from `property-sensitive-data.js` and decrypted `exactAddress` and `accessInstructions` for confirmed, checked-in, checked-out, or completed bookings.
+  2. In `frontend/lib/api/marketplace-types.ts`, added `exactAddress` and `accessInstructions` to `BookingDto.property`.
+  3. In `frontend/app/driver/bookings/[bookingId]/page.tsx`, rendered both the exact address and access instructions under Reservation details once confirmed/paid.
 
 **M-3. Realtime updates don't work in production**
 - Actual: every signed-in page repeatedly requests `/socket.io/…` and gets **404** from the API. The API runs on Vercel serverless functions, which can't hold WebSocket connections.
 - Effect: status changes (booking confirmed, check-in, checkout requests) only appear on the next poll or refresh. The Guard notifications page and Manager "Live Sync" labels promise realtime behaviour that isn't delivered.
+- **Resolution:**
+  1. Set `realtimeSocket: false` in `frontend/config/app-config.ts`.
+  2. In `frontend/providers/realtime-sync.tsx`, guarded socket initialization behind `backendCapabilities.realtimeSocket`. If false, set up a gentle 30s background polling interval that only refreshes active data when the document is visible (`!document.hidden`), completely eliminating 404 console errors.
+  3. In `frontend/app/guard/notifications/page.tsx`, updated the header label from "Realtime updates" to "Operational updates".
+  4. In `frontend/app/manager/active-sessions/page.tsx`, replaced the endless spinning `RefreshCw` icon with a clean static icon and badge text "Auto-refresh: 30s".
 
 **M-4. Admin "Approve property" doesn't refresh the page**
 - Steps: Admin → Property → Approve Property → Confirm.
 - Actual: the page still shows PENDING, and the Approve/Reject buttons stay visible until a manual reload. The approval had succeeded.
+- **Resolution:** In `frontend/app/admin/properties/[propertyId]/page.tsx`, updated `mutation.onSuccess` to refetch the fresh property details with `adminApi.propertyDetail(propertyId)`, immediately update the React Query cache via `client.setQueryData(queryKeys.adminProperties.detail(propertyId), updated)`, invalidate pending lists, and call `router.refresh()`. The page immediately reflects the verified state without manual reload.
 
 **M-5. The home-page search date is wrong between midnight and 6 AM**
 - Steps: Open `/` between 00:00 and 06:00 Dhaka time.
 - Actual: the date defaults to yesterday.
 - Cause: `new Date().toISOString().split("T")[0]` gives the UTC date. See `frontend/components/landing/hero-search-form.tsx:21`. The signed-in search uses the Dhaka date correctly.
+- **Resolution:** In `frontend/components/landing/hero-search-form.tsx`, replaced UTC ISO string date generation with `new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" })` for both the initial state and the `min` date constraint on the date picker.
 
 **M-6. The sign-up password hint contradicts the real rule**
 - Actual: the placeholder says "At least 8 chars, 1 uppercase, 1 number". The real rule is 12–128 characters with upper case, lower case, a number, and a special character. Users following the hint get "Password must be at least 12 characters".
 - Where: `frontend/components/auth/register-form.tsx:191`.
+- **Resolution:**
+  1. Updated `frontend/components/auth/register-form.tsx` password input placeholder to `12–128 chars (uppercase, lowercase, number & symbol)` and added an explicit helper text: "Must be 12–128 characters with uppercase, lowercase, number, and symbol."
+  2. Updated `frontend/features/provider/components/owner-settings-view.tsx` line 1140 password placeholder and helper text to reflect the same 12–128 character complexity policy.
 
 **M-7. The published Cancellation & Refund Policy doesn't match what the system does**
 - The policy page (`docs/policies/Cancellation_&_Refund_Policy.md`) says a cancellation at least 1 hour before start gets a full refund, a later one gets nothing, and a no-show gets no refund.
 - The code (`backend/src/common/finance/booking-finance.ts`, `cancellationRefundBps`) refunds the parking charge on a sliding scale: 100% at 12 h or more before start, 90% at 6 h, 75% at 3 h, 50% at 1 h, and 0% under 1 h. The platform fee is never refunded, and the deposit is always returned, including on a no-show. Testing confirmed the code's behaviour: the cancellation preview showed 75% at just over 3 hours and 50% at just under 3 hours, and the no-show returned the ৳400 deposit.
 - Users are shown one policy and charged by another. Decide which one is correct, then update the other.
+- **Resolution:** Updated `docs/policies/Cancellation_&_Refund_Policy.md` and `frontend/app/(marketing)/cancellation-policy/page.tsx` to align exactly with `booking-finance.ts`:
+  - Documented the 5 graduated sliding scale tiers (≥12h: 100%, 6–12h: 90%, 3–6h: 75%, 1–3h: 50%, <1h: 0%).
+  - Clarified that the security deposit is 100% refunded on any cancellation.
+  - Clarified that the platform fee is non-refundable once booked.
+  - Documented instant wallet credit for all refundable sums.
 
 **M-8. An unpaid booking doesn't expire when its hold runs out, so the space stays blocked**
 - Steps: Create a booking and leave it unpaid.
 - Actual: 11 minutes after the 5-minute hold ended, the booking was still "Payment pending" with a **Complete payment** button, and the space (capacity 1) couldn't be quoted by anyone else. It stayed that way until the User cancelled it.
 - Expected: after the hold runs out, the booking becomes `EXPIRED` and the space is released.
+- **Resolution:**
+  1. In `backend/src/modules/marketplace/marketplace.service.ts` (`expirePendingBooking`), updated deadline logic so that if no active gateway payment session is open, `fallbackDeadline` evaluates `booking.hold?.expiresAt ?? new Date(booking.createdAt.getTime() + HOLD_TTL_MS)`.
+  2. In `reconcileExpiredPendingBookings`, extended the query filter to include pending bookings where `hold.expiresAt <= now` or `createdAt <= now - HOLD_TTL_MS`.
+  3. Added proactive pending expiration reconciliation (`reconcileExpiredPendingBookings({ limit: 50 })`) at the start of `createQuote` and `createReservationHold` so expired pending bookings release their space immediately when new users search or quote.
 
 **M-9. The cancel dialog misleads on unpaid bookings, and the page doesn't refresh after cancelling**
 - Steps: Cancel an unpaid booking.
 - Actual: the dialog lists "Platform fee (non-refundable) ৳2" although nothing was paid. After **Confirm cancellation** the API succeeds (200), but the page still shows "Payment pending" with **Complete payment** and **Cancel booking** buttons until it is reloaded.
+- **Resolution:** In `frontend/app/driver/bookings/[bookingId]/page.tsx`:
+  1. In the cancellation dialog, added a check for unpaid bookings (`booking.status === "PAYMENT_PENDING" || !preview.data?.paid`) to display an informative notice that no charges were billed and omit the non-refundable platform fee deduction row.
+  2. In `cancel.onSuccess`, immediately updated the React Query cache using `client.setQueryData(queryKeys.bookings.detail(bookingId), ...)` with `status: "CANCELLED"`, instantly updating the UI badge and disabling payment/cancellation actions without requiring a manual reload.
 
 **M-10. Users can't report a listing**
 - The API supports reports (`POST /listings/{id}/reports`), and the Admin has a "Reported listings" page, but no screen for Users calls the API, so the Admin queue can never receive a report.
+- **Resolution:**
+  1. Added `reportListing` in `frontend/lib/api/parking-search-api.ts`.
+  2. Added a "Report listing" action button and interactive modal dialog on the driver booking page (`frontend/app/driver/bookings/[bookingId]/page.tsx`).
+  3. Added a "Report listing" action button and interactive modal dialog directly on each public parking offer card (`frontend/app/(public-app)/parking/[spotId]/page.tsx`), enabling any authenticated driver/user to report suspicious or inaccurate listings directly to the admin queue.
 
 
 ---
