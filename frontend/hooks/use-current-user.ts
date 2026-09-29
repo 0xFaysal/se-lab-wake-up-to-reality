@@ -5,5 +5,9 @@ import { authApi } from "@/lib/api/auth-api";
 import { queryKeys } from "@/lib/query-keys";
 
 export function useCurrentUser() {
-  return useQuery({ queryKey: queryKeys.auth.me, queryFn: async () => (await authApi.me()).user, retry: false });
+  return useQuery({
+    queryKey: queryKeys.auth.me,
+    queryFn: async () => (await authApi.me({ skipAuthRefresh: true })).user,
+    retry: false,
+  });
 }

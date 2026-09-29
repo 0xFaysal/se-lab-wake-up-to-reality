@@ -17,6 +17,12 @@ export function RoleGuard({ roles, children }: { roles: UserRole[]; children: Re
   useEffect(() => {
     if (isPending) return;
     if (isError || !user) {
+      if (pathname === "/driver/parking" || pathname.startsWith("/driver/parking/")) {
+        const publicPath = pathname.replace(/^\/driver/, "") || "/parking";
+        const search = typeof window !== "undefined" ? window.location.search : "";
+        router.replace(`${publicPath}${search}`);
+        return;
+      }
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }

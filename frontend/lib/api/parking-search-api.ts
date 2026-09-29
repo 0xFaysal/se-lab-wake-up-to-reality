@@ -17,4 +17,6 @@ export const parkingSearchApi = {
   createHold: (quoteId: string, idempotencyKey: string) => apiClient.post<ReservationHoldDto>("/parking/holds", { quoteId, idempotencyKey }),
   hold: (holdId: string) => apiClient.get<ReservationHoldDto>(`/parking/holds/${holdId}`),
   releaseHold: (holdId: string) => apiClient.delete<ReservationHoldDto>(`/parking/holds/${holdId}`),
+  reportListing: (listingId: string, input: { reason: string; details?: string }) =>
+    apiClient.post<{ report: Record<string, unknown> }>(`/listings/${listingId}/reports`, input),
 };

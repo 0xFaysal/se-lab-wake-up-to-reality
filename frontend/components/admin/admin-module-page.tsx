@@ -251,7 +251,7 @@ function AdminBookingDetailModule({ bookingId }: { bookingId: string }) {
   const driver = record(booking.driver); const provider = record(booking.provider); const property = record(booking.property); const vehicle = record(booking.vehicle);
   const payments = Array.isArray(booking.payments) ? booking.payments.map(record) : [];
   const timeline = Array.isArray(booking.timeline) ? booking.timeline.map(record) : [];
-  const refundable = payments.some((payment) => payment.status === "CAPTURED" || payment.status === "PARTIALLY_REFUNDED");
+  const refundable = payments.some((payment) => ["SUCCEEDED", "CAPTURED", "PARTIALLY_REFUNDED"].includes(text(payment.status)));
   const cancellable = ["PAYMENT_PENDING", "CONFIRMED"].includes(text(booking.status)) && new Date(String(booking.startAt)) > new Date();
   function openRefund() { setIdempotencyKey(globalThis.crypto.randomUUID()); setAction("refund"); }
   return <div className="space-y-6">

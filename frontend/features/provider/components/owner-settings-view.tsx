@@ -1137,9 +1137,12 @@ export function OwnerSettingsView() {
                 <input
                   type="password"
                   required
-                  placeholder="Minimum 8 characters"
+                  placeholder="12–128 chars (uppercase, lowercase, number, symbol)"
                   className="w-full h-9.5 px-3 rounded-lg border border-[#E5E7EB] text-slate-900 focus:outline-none focus:border-[#064E3B]"
                 />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Must be 12–128 characters and include uppercase, lowercase, a number, and a special character.
+                </p>
               </div>
 
               <div>

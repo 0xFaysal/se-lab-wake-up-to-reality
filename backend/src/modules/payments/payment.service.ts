@@ -73,6 +73,7 @@ export async function initiateSslCommerzSession(
   driverUserId: string,
   bookingId: string,
   idempotencyKey: string,
+  useWallet = true,
 ) {
   const walletHoldExpiresAt = new Date(Date.now() + PAYMENT_SESSION_TTL_MS);
   const prepared = await prisma.$transaction(
@@ -152,9 +153,11 @@ export async function initiateSslCommerzSession(
       const abandonedAttempt =
         payment?.status === PaymentStatus.SESSION_CREATED ||
         (payment?.status === PaymentStatus.CREATED &&
-          payment.initiatedAt &&
-          payment.initiatedAt.getTime() + PAYMENT_SESSION_TTL_MS <=
-            now.getTime());
+          (!byKey ||
+            !useWallet ||
+            (payment.initiatedAt &&
+              payment.initiatedAt.getTime() + PAYMENT_SESSION_TTL_MS <=
+                now.getTime())));
       let resetForRetry = false;
       if (
         payment &&
@@ -223,14 +226,21 @@ export async function initiateSslCommerzSession(
           initiatedAt: now,
         },
       });
-      const funding = await reserveDriverWallet(tx, {
-        bookingId,
-        paymentId: payment.id,
-        userId: driverUserId,
-        grossAmountPaisa: booking.totalAmountPaisa,
-        idempotencyKey,
-        expiresAt: walletHoldExpiresAt,
-      });
+      const funding = useWallet
+        ? await reserveDriverWallet(tx, {
+            bookingId,
+            paymentId: payment.id,
+            userId: driverUserId,
+            grossAmountPaisa: booking.totalAmountPaisa,
+            idempotencyKey,
+            expiresAt: walletHoldExpiresAt,
+          })
+        : (await releasePaymentWalletHolds(tx, payment.id, driverUserId),
+          {
+            walletAppliedPaisa: 0n,
+            gatewayAmountPaisa: booking.totalAmountPaisa,
+            walletHoldId: null,
+          });
       payment = await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -307,21 +317,45 @@ export async function initiateSslCommerzSession(
   }
 
   if (prepared.walletOnly) {
-    const payment = await captureWalletOnlyPayment(prepared.payment.id);
-    notifyUser(driverUserId, "booking:confirmed", { bookingId });
-    notifyUser(prepared.booking.providerUserId, "booking:confirmed", {
-      bookingId,
-    });
-    notifyUser(driverUserId, "wallet:balance_changed", { bookingId });
-    return serialize({
-      paymentId: payment.id,
-      status: payment.status,
-      gateway: "INTERNAL_WALLET",
-      walletAppliedPaisa: payment.walletAppliedPaisa,
-      gatewayAmountPaisa: 0n,
-      checkoutUrl: null,
-      expiresAt: null,
-    });
+    try {
+      const payment = await captureWalletOnlyPayment(prepared.payment.id);
+      notifyUser(driverUserId, "booking:confirmed", { bookingId });
+      notifyUser(prepared.booking.providerUserId, "booking:confirmed", {
+        bookingId,
+      });
+      notifyUser(driverUserId, "wallet:balance_changed", { bookingId });
+      return serialize({
+        paymentId: payment.id,
+        status: payment.status,
+        gateway: "INTERNAL_WALLET",
+        walletAppliedPaisa: payment.walletAppliedPaisa,
+        gatewayAmountPaisa: 0n,
+        checkoutUrl: null,
+        expiresAt: null,
+      });
+    } catch (error) {
+      await prisma
+        .$transaction(async (tx) => {
+          await releasePaymentWalletHolds(
+            tx,
+            prepared.payment.id,
+            driverUserId,
+          );
+          await tx.payment.update({
+            where: { id: prepared.payment.id },
+            data: { status: PaymentStatus.FAILED, failedAt: new Date() },
+          });
+          await tx.booking.update({
+            where: { id: bookingId },
+            data: {
+              driverWalletAppliedPaisa: 0n,
+              gatewayAmountPaisa: prepared.booking.totalAmountPaisa,
+            },
+          });
+        })
+        .catch(() => undefined);
+      throw error;
+    }
   }
 
   try {
@@ -859,17 +893,25 @@ async function finalizeSettlementPayment(
           entrySide: "DEBIT" as const,
           amountPaisa: heldTotalPaisa,
         },
-        {
-          accountCode: "PROVIDER_PAYABLE",
-          walletAccountId: current.booking.settlementWalletAccountId,
-          entrySide: "CREDIT" as const,
-          amountPaisa: providerNetPaisa,
-        },
-        {
-          accountCode: "PLATFORM_REVENUE",
-          entrySide: "CREDIT" as const,
-          amountPaisa: settlement.platformFeePaisa,
-        },
+        ...(providerNetPaisa > 0n
+          ? [
+              {
+                accountCode: "PROVIDER_PAYABLE",
+                walletAccountId: current.booking.settlementWalletAccountId,
+                entrySide: "CREDIT" as const,
+                amountPaisa: providerNetPaisa,
+              },
+            ]
+          : []),
+        ...(settlement.platformFeePaisa > 0n
+          ? [
+              {
+                accountCode: "PLATFORM_REVENUE",
+                entrySide: "CREDIT" as const,
+                amountPaisa: settlement.platformFeePaisa,
+              },
+            ]
+          : []),
         ...(settlement.depositReturnedPaisa > 0n
           ? [
               {
@@ -899,7 +941,9 @@ async function finalizeSettlementPayment(
           referenceId: settlement.id,
           description: `Final settlement for booking ${current.booking.bookingCode}`,
           actorUserId: current.payerUserId,
-          entries: { create: settlementEntries },
+          entries: {
+            create: settlementEntries.filter((e) => e.amountPaisa > 0n),
+          },
         },
       });
       await tx.walletAccount.update({

@@ -77,7 +77,7 @@ export function AddVehicleForm({ onAddVehicle, pending = false }: AddVehicleForm
           >
             <SelectTrigger
               id="vehicle-type"
-              className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+              className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs text-foreground"
             >
               <SelectValue placeholder="Select vehicle type" />
             </SelectTrigger>
@@ -104,7 +104,7 @@ export function AddVehicleForm({ onAddVehicle, pending = false }: AddVehicleForm
             placeholder="e.g. Toyota"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />
         </div>
 
@@ -122,7 +122,7 @@ export function AddVehicleForm({ onAddVehicle, pending = false }: AddVehicleForm
             placeholder="e.g. Corolla"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />
         </div>
 
@@ -140,7 +140,7 @@ export function AddVehicleForm({ onAddVehicle, pending = false }: AddVehicleForm
             placeholder="e.g. Dhaka Metro GA 12-3456"
             value={registrationNumber}
             onChange={(e) => setRegistrationNumber(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary font-mono"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs font-mono"
           />
         </div>
 
@@ -158,7 +158,7 @@ export function AddVehicleForm({ onAddVehicle, pending = false }: AddVehicleForm
             placeholder="e.g. White"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-[#F3F4F6] focus:bg-white border-transparent focus:border-primary focus:ring-1 focus:ring-primary"
+            className="h-12 w-full px-4 text-sm font-medium rounded-xl bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
           />
         </div>
 

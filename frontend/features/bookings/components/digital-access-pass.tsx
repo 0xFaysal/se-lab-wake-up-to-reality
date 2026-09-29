@@ -23,10 +23,24 @@ export function DigitalAccessPass({
             <div className="flex size-32 items-center justify-center rounded-xl bg-white sm:size-36" aria-label="Booking access QR code">
               <QRCode value={accessCredential} size={136} />
             </div>
-            <div className="w-full text-center py-0.5 border-t border-gray-100">
+            <div className="w-full text-center py-1 border-t border-gray-100 flex flex-col items-center">
               <span className="text-[10px] font-bold text-gray-800 tracking-wider font-mono uppercase">
                 Scan at the assigned gate
               </span>
+              <div className="mt-0.5 flex items-center justify-center gap-1.5 w-full">
+                <span className="text-[9px] font-mono text-gray-500 truncate max-w-[130px]" title={accessCredential}>
+                  {accessCredential}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(accessCredential);
+                  }}
+                  className="text-[9px] font-semibold text-emerald-800 underline hover:text-emerald-950 cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -41,8 +55,7 @@ export function DigitalAccessPass({
               Digital Access Pass
             </h2>
             <p className="text-xs sm:text-sm text-emerald-50/90 leading-relaxed mt-1">
-              Present this QR code or Access OTP to the assigned parking guard
-              upon arrival at {propertyTitle}.
+              Present this QR code to the assigned parking guard upon arrival at {propertyTitle}.
             </p>
           </div>
 

@@ -33,6 +33,7 @@ import { logger } from "../../config/logger.js";
 import { env } from "../../config/env.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { encryptSensitiveText } from "../../common/security/encryption.js";
+import { decryptPropertySensitiveData } from "../properties/property-sensitive-data.js";
 import { getRightDocumentStorage } from "../../common/uploads/right-document-storage.js";
 import { createDomainAuditEvent } from "../property-governance/domain-audit.js";
 import {
@@ -405,7 +406,7 @@ export async function createResource(
             input.type === ParkingResourceType.FIXED_SPACE ? 1 : input.capacity,
           supportedVehicleType: input.supportedVehicleTypes[0]!,
           supportedVehicleTypes: input.supportedVehicleTypes,
-          status: ParkingSpotStatus.INACTIVE,
+          status: ParkingSpotStatus.ACTIVE,
           isCovered: input.isCovered,
           hasCctv: input.hasCctv,
           hasGuard: input.hasGuard,
@@ -421,7 +422,7 @@ export async function createResource(
                     spotCode: input.spotCode,
                     normalizedSpotCode,
                     displayName: input.displayName,
-                    status: ParkingSpotStatus.INACTIVE,
+                    status: ParkingSpotStatus.ACTIVE,
                   },
                 },
               }
@@ -588,7 +589,7 @@ export async function createBulkFixedResources(
           capacity: rows.length,
           supportedVehicleType: canonical.resource.supportedVehicleTypes[0]!,
           supportedVehicleTypes: canonical.resource.supportedVehicleTypes,
-          status: ParkingSpotStatus.INACTIVE,
+          status: ParkingSpotStatus.ACTIVE,
           isCovered: canonical.resource.isCovered,
           hasCctv: canonical.resource.hasCctv,
           hasGuard: canonical.resource.hasGuard,
@@ -600,7 +601,7 @@ export async function createBulkFixedResources(
               spotCode: row.spotCode,
               normalizedSpotCode: row.normalizedSpotCode,
               displayName: row.displayName ?? row.spotCode,
-              status: ParkingSpotStatus.INACTIVE,
+              status: ParkingSpotStatus.ACTIVE,
             })),
           },
         },
@@ -3059,10 +3060,6 @@ async function changeListingStatus(
           (!listing.parkingRight.validUntil ||
             listing.parkingRight.validUntil > now);
         if (
-          !rightValid ||
-          listing.parkingSpot.status !== ParkingSpotStatus.ACTIVE ||
-          (listing.parkingResourceUnit &&
-            listing.parkingResourceUnit.status !== ParkingSpotStatus.ACTIVE) ||
           listing.parkingSpot.property.status !== PropertyStatus.ACTIVE ||
           listing.parkingSpot.property.verificationStatus !==
             VerificationStatus.VERIFIED
@@ -3070,7 +3067,25 @@ async function changeListingStatus(
           fail(
             409,
             "PARKING_LISTING_NOT_ELIGIBLE",
-            "Property, resource, or parking right is not eligible",
+            "Property must be active and verified before activating this listing",
+          );
+        }
+        if (!rightValid) {
+          fail(
+            409,
+            "PARKING_LISTING_NOT_ELIGIBLE",
+            "A verified, active commercial parking right is required before activating this listing",
+          );
+        }
+        if (
+          listing.parkingSpot.status !== ParkingSpotStatus.ACTIVE ||
+          (listing.parkingResourceUnit &&
+            listing.parkingResourceUnit.status !== ParkingSpotStatus.ACTIVE)
+        ) {
+          fail(
+            409,
+            "PARKING_LISTING_NOT_ELIGIBLE",
+            "The parking space or unit must be ACTIVE before activating this listing",
           );
         }
         const hasCurrentAvailability =
@@ -4856,6 +4871,8 @@ export async function createQuote(
       "QUOTE_START_IN_PAST",
       "Booking start time must be in the future",
     );
+  await reconcileExpiredPendingBookings({ limit: 50 });
+  await prisma.$transaction((tx) => releaseExpiredHolds(tx));
   const [listing, vehicle] = await Promise.all([
     loadBookableListing(input.listingId),
     prisma.vehicle.findFirst({
@@ -4987,6 +5004,8 @@ export async function createHold(
     },
   });
   if (existing) return serialize(existing);
+
+  await reconcileExpiredPendingBookings({ limit: 50 });
 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     try {
@@ -5417,13 +5436,12 @@ function credentialLookup(
   credential: string,
   tokenHash: string,
 ): Prisma.AccessCredentialWhereUniqueInput {
-  const id = credential.startsWith(ACCESS_CREDENTIAL_PREFIX)
-    ? credential.slice(ACCESS_CREDENTIAL_PREFIX.length)
-    : null;
+  const trimmed = credential.trim();
+  const id = trimmed.startsWith(ACCESS_CREDENTIAL_PREFIX)
+    ? trimmed.slice(ACCESS_CREDENTIAL_PREFIX.length).trim()
+    : trimmed;
   return id &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      id,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     ? { id }
     : { tokenHash };
 }
@@ -5504,7 +5522,7 @@ async function expirePendingBooking(bookingId: string, now: Date) {
       await lockEntity(tx, "booking", bookingId);
       const booking = await tx.booking.findUnique({
         where: { id: bookingId },
-        include: { payments: true },
+        include: { payments: true, hold: true },
       });
       if (!booking || booking.status !== BookingStatus.PAYMENT_PENDING)
         return null;
@@ -5522,10 +5540,16 @@ async function expirePendingBooking(bookingId: string, now: Date) {
               ).getTime() + PAYMENT_CALLBACK_GRACE_MS,
             ),
         );
-      const deadline = paymentDeadlines.reduce(
-        (latest, value) => (value > latest ? value : latest),
-        new Date(booking.createdAt.getTime() + PAYMENT_SESSION_TTL_MS),
-      );
+      const fallbackDeadline =
+        booking.hold?.expiresAt ??
+        new Date(booking.createdAt.getTime() + HOLD_TTL_MS);
+      const deadline =
+        paymentDeadlines.length > 0
+          ? paymentDeadlines.reduce(
+              (latest, value) => (value > latest ? value : latest),
+              new Date(0),
+            )
+          : fallbackDeadline;
       if (deadline > now) return null;
 
       for (const payment of booking.payments) {
@@ -5655,17 +5679,25 @@ async function settleNoShowBooking(bookingId: string, now: Date) {
           entrySide: "DEBIT" as const,
           amountPaisa: booking.totalAmountPaisa,
         },
-        {
-          accountCode: "PROVIDER_PAYABLE",
-          walletAccountId: booking.settlementWalletAccountId,
-          entrySide: "CREDIT" as const,
-          amountPaisa: settlementValue.providerNetPaisa,
-        },
-        {
-          accountCode: "PLATFORM_REVENUE",
-          entrySide: "CREDIT" as const,
-          amountPaisa: settlementValue.platformRevenuePaisa,
-        },
+        ...(settlementValue.providerNetPaisa > 0n
+          ? [
+              {
+                accountCode: "PROVIDER_PAYABLE",
+                walletAccountId: booking.settlementWalletAccountId,
+                entrySide: "CREDIT" as const,
+                amountPaisa: settlementValue.providerNetPaisa,
+              },
+            ]
+          : []),
+        ...(settlementValue.platformRevenuePaisa > 0n
+          ? [
+              {
+                accountCode: "PLATFORM_REVENUE",
+                entrySide: "CREDIT" as const,
+                amountPaisa: settlementValue.platformRevenuePaisa,
+              },
+            ]
+          : []),
         ...(settlementValue.driverRefundCreditPaisa > 0n
           ? [
               {
@@ -5695,7 +5727,7 @@ async function settleNoShowBooking(bookingId: string, now: Date) {
           referenceId: settlement.id,
           description: `Automatic no-show settlement for booking ${booking.bookingCode}`,
           actorUserId: booking.driverUserId,
-          entries: { create: entries },
+          entries: { create: entries.filter((e) => e.amountPaisa > 0n) },
         },
       });
       if (settlementValue.providerNetPaisa > 0n)
@@ -5868,10 +5900,16 @@ export async function reconcileExpiredPendingBookings(
   const now = new Date();
   const candidates = await prisma.booking.findMany({
     where: {
-      ...(input.bookingId ? { id: input.bookingId } : {}),
+      ...(input.bookingId
+        ? { id: input.bookingId }
+        : {
+            OR: [
+              { hold: { expiresAt: { lte: now } } },
+              { createdAt: { lte: new Date(now.getTime() - HOLD_TTL_MS) } },
+            ],
+          }),
       ...(input.driverUserId ? { driverUserId: input.driverUserId } : {}),
       status: BookingStatus.PAYMENT_PENDING,
-      createdAt: { lte: new Date(now.getTime() - PAYMENT_SESSION_TTL_MS) },
     },
     select: { id: true },
     orderBy: { createdAt: "asc" },
@@ -5954,7 +5992,58 @@ export async function getDriverBooking(
     credential?.status === "ACTIVE" && credential.expiresAt > new Date()
       ? accessCredentialPayload(credential.id)
       : null;
-  return serialize({ ...presentBooking(details), accessCredential });
+
+  const isPaidOrActive =
+    (
+      [
+        BookingStatus.CONFIRMED,
+        BookingStatus.CHECKED_IN,
+        BookingStatus.CHECKOUT_REQUESTED,
+        BookingStatus.COMPLETED,
+        BookingStatus.NO_SHOW,
+        BookingStatus.PAYMENT_DUE,
+        BookingStatus.DISPUTED,
+      ] as BookingStatus[]
+    ).includes(booking.status) || booking.confirmedAt !== null;
+
+  let exactAddress: string | null = null;
+  let accessInstructions: string | null = null;
+
+  if (isPaidOrActive && booking.propertyId) {
+    try {
+      const propertySensitive = await prisma.property.findUnique({
+        where: { id: booking.propertyId },
+        select: {
+          exactAddressCiphertext: true,
+          exactAddressIv: true,
+          exactAddressTag: true,
+          accessInstructionsCiphertext: true,
+          accessInstructionsIv: true,
+          accessInstructionsTag: true,
+        },
+      });
+      if (propertySensitive) {
+        const decrypted = decryptPropertySensitiveData(
+          propertySensitive as any,
+        );
+        exactAddress = decrypted.exactAddress;
+        accessInstructions = decrypted.accessInstructions;
+      }
+    } catch (err) {
+      logger.warn(
+        { err, bookingId, propertyId: booking.propertyId },
+        "Failed to decrypt property address for driver booking",
+      );
+    }
+  }
+
+  const presented = presentBooking(details);
+  if (presented.property && (exactAddress || accessInstructions)) {
+    (presented.property as any).exactAddress = exactAddress;
+    (presented.property as any).accessInstructions = accessInstructions;
+  }
+
+  return serialize({ ...presented, accessCredential });
 }
 
 export async function listProviderBookings(
@@ -6346,11 +6435,15 @@ export async function cancelBooking(
             },
           ]
         : []),
-      {
-        accountCode: "PLATFORM_REVENUE",
-        entrySide: "CREDIT" as const,
-        amountPaisa: booking.platformFeePaisa,
-      },
+      ...(booking.platformFeePaisa > 0n
+        ? [
+            {
+              accountCode: "PLATFORM_REVENUE",
+              entrySide: "CREDIT" as const,
+              amountPaisa: booking.platformFeePaisa,
+            },
+          ]
+        : []),
     ];
     const debit = entries
       .filter((entry) => entry.entrySide === "DEBIT")
@@ -6382,7 +6475,7 @@ export async function cancelBooking(
         referenceId: cancellation.id,
         description: `Cancellation settlement for booking ${booking.bookingCode}`,
         actorUserId: driverUserId,
-        entries: { create: entries },
+        entries: { create: entries.filter((e) => e.amountPaisa > 0n) },
       },
     });
     if (policy.driverWalletCreditPaisa > 0n)
@@ -6739,7 +6832,7 @@ export async function checkOutBooking(guardUserId: string, bookingId: string) {
     await lockEntity(tx, "booking", bookingId);
     const booking = await tx.booking.findUnique({
       where: { id: bookingId },
-      include: { settlement: true },
+      include: { settlement: true, allocation: true },
     });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
     if (!(await isGuardAuthorizedForBooking(guardUserId, bookingId, tx)))
@@ -6838,17 +6931,25 @@ export async function checkOutBooking(guardUserId: string, bookingId: string) {
               },
             ]
           : []),
-        {
-          accountCode: "PROVIDER_PAYABLE",
-          walletAccountId: booking.settlementWalletAccountId,
-          entrySide: "CREDIT" as const,
-          amountPaisa: settlementValue.providerNetPaisa,
-        },
-        {
-          accountCode: "PLATFORM_REVENUE",
-          entrySide: "CREDIT" as const,
-          amountPaisa: settlementValue.platformRevenuePaisa,
-        },
+        ...(settlementValue.providerNetPaisa > 0n
+          ? [
+              {
+                accountCode: "PROVIDER_PAYABLE",
+                walletAccountId: booking.settlementWalletAccountId,
+                entrySide: "CREDIT" as const,
+                amountPaisa: settlementValue.providerNetPaisa,
+              },
+            ]
+          : []),
+        ...(settlementValue.platformRevenuePaisa > 0n
+          ? [
+              {
+                accountCode: "PLATFORM_REVENUE",
+                entrySide: "CREDIT" as const,
+                amountPaisa: settlementValue.platformRevenuePaisa,
+              },
+            ]
+          : []),
         ...(settlementValue.driverRefundCreditPaisa > 0n
           ? [
               {
@@ -6878,7 +6979,7 @@ export async function checkOutBooking(guardUserId: string, bookingId: string) {
           referenceId: settlement.id,
           description: `Final settlement for booking ${booking.bookingCode}`,
           actorUserId: guardUserId,
-          entries: { create: entries },
+          entries: { create: entries.filter((e) => e.amountPaisa > 0n) },
         },
       });
       await tx.walletAccount.update({
@@ -6959,9 +7060,14 @@ export async function checkOutBooking(guardUserId: string, bookingId: string) {
         },
       });
     }
+    const allocationStartAt = booking.allocation?.startAt ?? booking.startAt;
+    const allocationEndAt =
+      effectiveEndAt > allocationStartAt
+        ? effectiveEndAt
+        : new Date(allocationStartAt.getTime() + 1000);
     await tx.parkingAllocation.update({
       where: { id: booking.allocationId },
-      data: { status: "RELEASED", endAt: effectiveEndAt },
+      data: { status: "RELEASED", endAt: allocationEndAt },
     });
     if (overtime.overtimeChargePaisa > 0n)
       await audit(

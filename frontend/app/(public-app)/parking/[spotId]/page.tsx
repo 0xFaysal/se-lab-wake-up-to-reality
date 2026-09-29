@@ -1,11 +1,11 @@
 "use client";
 
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BadgeCheck, CarFront, ChevronLeft, ChevronRight, Clock, ExternalLink, Images, Loader2, MapPin, RefreshCw, Ruler, ShieldCheck, Star, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CarFront, ChevronLeft, ChevronRight, Clock, ExternalLink, Flag, Images, Loader2, MapPin, RefreshCw, Ruler, ShieldCheck, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { VehicleType } from "@/lib/api/api-types";
@@ -17,12 +17,46 @@ import { formatBDTFromPaisa, formatDateTime, toUtcFromBangladeshLocal, vehicleLa
 import { queryKeys } from "@/lib/query-keys";
 
 export default function ParkingDetailsPage({ params }: { params: Promise<{ spotId: string }> }) {
-  const { spotId } = use(params); const search = useSearchParams();
-  const pathname = usePathname(); const searchRoot = pathname.startsWith("/driver/") ? "/driver/parking" : "/parking";
-  const request = useMemo(() => ({ startAt: search.get("startAt") ?? "", endAt: search.get("endAt") ?? "", vehicleType: (search.get("vehicleType") ?? "SEDAN") as VehicleType }), [search]);
+  const { spotId } = use(params);
+  const search = useSearchParams();
+  const pathname = usePathname();
+  const searchRoot = pathname.startsWith("/driver/") ? "/driver/parking" : "/parking";
+
+  const [request, setRequest] = useState<{ startAt: string; endAt: string; vehicleType: VehicleType }>(() => ({
+    startAt: search.get("startAt") ?? "",
+    endAt: search.get("endAt") ?? "",
+    vehicleType: (search.get("vehicleType") ?? "SEDAN") as VehicleType,
+  }));
+
   const valid = !!request.startAt && !!request.endAt;
-  const results = useQuery({ queryKey: queryKeys.parkingSearch.property(spotId, request), queryFn: () => parkingSearchApi.propertyDetail(spotId, request), enabled: valid });
+
+  const results = useQuery({
+    queryKey: queryKeys.parkingSearch.property(spotId, request),
+    queryFn: () => parkingSearchApi.propertyDetail(spotId, request),
+    enabled: valid,
+    placeholderData: (previousData) => previousData,
+  });
+
   const property = results.data;
+
+  const handleRequestChange = useCallback((next: { startAt?: string; endAt?: string; vehicleType?: VehicleType }) => {
+    setRequest((current) => {
+      const updated = {
+        startAt: next.startAt ?? current.startAt,
+        endAt: next.endAt ?? current.endAt,
+        vehicleType: next.vehicleType ?? current.vehicleType,
+      };
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (updated.startAt) params.set("startAt", updated.startAt);
+        if (updated.endAt) params.set("endAt", updated.endAt);
+        if (updated.vehicleType) params.set("vehicleType", updated.vehicleType);
+        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+      }
+      return updated;
+    });
+  }, []);
+
   if (!valid) return <PageState title="Search context is missing" action={<Link href={searchRoot}><Button>Return to search</Button></Link>} />;
   if (results.isPending) return <PageState title="Loading live parking offers" loading />;
   if (results.isError) return <PageState title={getApiErrorMessage(results.error)} action={<Button variant="outline" onClick={() => results.refetch()}><RefreshCw className="size-4" />Retry</Button>} />;
@@ -42,7 +76,7 @@ export default function ParkingDetailsPage({ params }: { params: Promise<{ spotI
       <a href="#reviews" className="flex items-center gap-2 text-sm font-bold"><Star className="size-4 fill-amber-400 text-amber-400" />{property.rating ? property.rating.toFixed(1) : "New"}<span className="font-normal text-slate-500">({property.reviewCount} reviews)</span></a>
     </header>
     <PropertyGallery property={property} />
-    <AvailabilityPicker key={`${request.startAt}-${request.endAt}-${request.vehicleType}`} request={request} property={property} />
+    <AvailabilityPicker request={request} property={property} isFetching={results.isFetching} onRequestChange={handleRequestChange} />
     <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="space-y-8">
         <section className="border-b pb-8"><h2 className="text-xl font-extrabold">About this parking</h2><p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-slate-600">{property.description || "A verified ParkEase BD parking location with published parking offers."}</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><DetailFact icon={CarFront} label="Availability" value={`${availableUnits} space${availableUnits === 1 ? "" : "s"} for selected time`} /><DetailFact icon={BadgeCheck} label="Identification" value={property.visitorIdentificationRequired ? "Visitor ID required" : "No visitor ID required"} /><DetailFact icon={Ruler} label="Height limit" value={property.vehicleHeightLimitCm ? `${property.vehicleHeightLimitCm} cm` : "No limit listed"} /><DetailFact icon={Clock} label="Entry cutoff" value={property.entryCutoffLocalTime ? property.entryCutoffLocalTime.slice(11, 16) : "No cutoff listed"} /></div></section>
@@ -119,31 +153,54 @@ function formatTime(time: string) {
   return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
 }
 
-function AvailabilityPicker({ request, property }: { request: { startAt: string; endAt: string; vehicleType: VehicleType }; property: PublicPropertyDetailDto }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const search = useSearchParams();
+function AvailabilityPicker({
+  request,
+  property,
+  isFetching,
+  onRequestChange,
+}: {
+  request: { startAt: string; endAt: string; vehicleType: VehicleType };
+  property: PublicPropertyDetailDto;
+  isFetching: boolean;
+  onRequestChange: (next: { startAt?: string; endAt?: string; vehicleType?: VehicleType }) => void;
+}) {
   const initialStart = dhakaFields(request.startAt);
   const initialEnd = dhakaFields(request.endAt);
   const today = dhakaFields(new Date().toISOString());
-  const [date, setDate] = useState(initialStart.date);
-  const [startTime, setStartTime] = useState(initialStart.time);
-  const [endTime, setEndTime] = useState(initialEnd.time);
-  const [vehicleType, setVehicleType] = useState(request.vehicleType);
+
   const dateOptions = useMemo(() => {
     const values = Array.from({ length: 14 }, (_, index) => addDays(today.date, index));
     if (initialStart.date >= today.date && !values.includes(initialStart.date)) values.push(initialStart.date);
     return values.sort();
   }, [initialStart.date, today.date]);
+
+  const dateHasSchedule = useCallback((value: string) => {
+    const dayOfWeek = new Date(`${value}T00:00:00.000Z`).getUTCDay();
+    return property.availabilitySchedule.some((rule) => rule.dayOfWeek === dayOfWeek && rule.validFrom <= value && (!rule.validUntil || rule.validUntil >= value));
+  }, [property.availabilitySchedule]);
+
+  const initialScheduledDate = useMemo(() => {
+    const baseDate = initialStart.date >= today.date ? initialStart.date : today.date;
+    if (dateHasSchedule(baseDate)) return baseDate;
+    return dateOptions.find((d) => dateHasSchedule(d)) ?? baseDate;
+  }, [initialStart.date, today.date, dateHasSchedule, dateOptions]);
+
+  const [date, setDate] = useState(initialScheduledDate);
+  const [startTime, setStartTime] = useState(initialStart.time);
+  const [endTime, setEndTime] = useState(initialEnd.time);
+  const vehicleType = request.vehicleType;
+
   const rulesForDate = useMemo(() => {
     const dayOfWeek = new Date(`${date}T00:00:00.000Z`).getUTCDay();
     return property.availabilitySchedule.filter((rule) => rule.dayOfWeek === dayOfWeek && rule.validFrom <= date && (!rule.validUntil || rule.validUntil >= date));
   }, [date, property.availabilitySchedule]);
+
   const offerMinimums = property.offers.map((offer) => offer.minDurationMinutes);
   const offerMaximums = property.offers.map((offer) => offer.maxDurationMinutes);
   const minimumDuration = Math.max(30, offerMinimums.length > 0 ? Math.min(...offerMinimums) : 60);
   const maximumDuration = Math.max(minimumDuration, ...(offerMaximums.length > 0 ? offerMaximums : [minimumDuration]));
   const currentMinute = date === today.date ? timeToMinutes(today.time) : -1;
+
   const startSlots = useMemo(() => {
     const slots = new Set<string>();
     for (const rule of rulesForDate) {
@@ -153,10 +210,12 @@ function AvailabilityPicker({ request, property }: { request: { startAt: string;
     }
     return [...slots].sort();
   }, [currentMinute, minimumDuration, rulesForDate]);
+
   const effectiveStartTime = startSlots.includes(startTime) ? startTime : (startSlots[0] ?? "");
   const selectedWindowEnd = rulesForDate
     .filter((rule) => rule.startTime <= effectiveStartTime && rule.endTime >= effectiveStartTime)
     .reduce((latest, rule) => Math.max(latest, timeToMinutes(rule.endTime)), 0);
+
   const endSlots = useMemo(() => {
     if (!effectiveStartTime || selectedWindowEnd === 0) return [];
     const first = timeToMinutes(effectiveStartTime) + minimumDuration;
@@ -165,19 +224,235 @@ function AvailabilityPicker({ request, property }: { request: { startAt: string;
     for (let minute = first; minute <= last; minute += 30) slots.push(minutesToTime(minute));
     return slots;
   }, [effectiveStartTime, maximumDuration, minimumDuration, selectedWindowEnd]);
+
   const effectiveEndTime = endSlots.includes(endTime) ? endTime : (endSlots[0] ?? "");
 
-  const valid = Boolean(date && effectiveStartTime && effectiveEndTime && new Date(toUtcFromBangladeshLocal(date, effectiveStartTime)) > new Date() && new Date(toUtcFromBangladeshLocal(date, effectiveEndTime)) > new Date(toUtcFromBangladeshLocal(date, effectiveStartTime)));
-  const dateHasSchedule = (value: string) => {
-    const dayOfWeek = new Date(`${value}T00:00:00.000Z`).getUTCDay();
-    return property.availabilitySchedule.some((rule) => rule.dayOfWeek === dayOfWeek && rule.validFrom <= value && (!rule.validUntil || rule.validUntil >= value));
+  const valid = Boolean(
+    date &&
+    effectiveStartTime &&
+    effectiveEndTime &&
+    new Date(toUtcFromBangladeshLocal(date, effectiveStartTime)) > new Date() &&
+    new Date(toUtcFromBangladeshLocal(date, effectiveEndTime)) > new Date(toUtcFromBangladeshLocal(date, effectiveStartTime))
+  );
+
+  const handleVehicleChange = (nextVehicle: VehicleType) => {
+    if (date && effectiveStartTime && effectiveEndTime) {
+      const startIso = toUtcFromBangladeshLocal(date, effectiveStartTime);
+      const endIso = toUtcFromBangladeshLocal(date, effectiveEndTime);
+      if (new Date(startIso) > new Date() && new Date(endIso) > new Date(startIso)) {
+        onRequestChange({ vehicleType: nextVehicle, startAt: startIso, endAt: endIso });
+        return;
+      }
+    }
+    onRequestChange({ vehicleType: nextVehicle });
   };
-  return <form noValidate className="space-y-5 border-y bg-white py-5" onSubmit={(event) => { event.preventDefault(); if (!valid) return; const params = new URLSearchParams(search.toString()); params.set("startAt", toUtcFromBangladeshLocal(date, effectiveStartTime)); params.set("endAt", toUtcFromBangladeshLocal(date, effectiveEndTime)); params.set("vehicleType", vehicleType); router.replace(`${pathname}?${params.toString()}`, { scroll: false }); }}>
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-base font-extrabold">Choose an available time</h2><p className="mt-1 text-xs text-slate-500">Green dates and times are inside this parking location&apos;s published availability.</p></div><label className="w-full text-xs font-semibold text-slate-600 sm:w-52">Vehicle<select value={vehicleType} onChange={(event) => setVehicleType(event.target.value as VehicleType)} className="mt-1 block h-10 w-full rounded-md border bg-white px-3 text-sm">{Object.entries(vehicleLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">{dateOptions.map((value) => { const available = dateHasSchedule(value); const label = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`)); return <button key={value} type="button" disabled={!available} onClick={() => setDate(value)} className={`h-14 rounded-md border px-2 text-left text-xs transition ${value === date ? "border-emerald-800 bg-emerald-800 text-white" : available ? "border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-600" : "cursor-not-allowed bg-slate-50 text-slate-400"}`}><span className="block font-bold">{label}</span><span className="mt-1 block text-[10px]">{available ? "Available hours" : "Not scheduled"}</span></button>; })}</div>
-    {rulesForDate.length > 0 ? <div className="grid gap-5 lg:grid-cols-2"><fieldset><legend className="text-xs font-bold text-slate-700">Arrival</legend><div className="mt-2 flex max-h-36 flex-wrap gap-2 overflow-y-auto">{startSlots.map((time) => <button key={time} type="button" onClick={() => setStartTime(time)} className={`h-9 rounded-md border px-3 text-xs font-semibold ${effectiveStartTime === time ? "border-emerald-800 bg-emerald-800 text-white" : "border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-600"}`}>{formatTime(time)}</button>)}</div></fieldset><fieldset><legend className="text-xs font-bold text-slate-700">Departure <span className="font-normal text-slate-500">(minimum {minimumDuration} minutes)</span></legend><div className="mt-2 flex max-h-36 flex-wrap gap-2 overflow-y-auto">{endSlots.map((time) => <button key={time} type="button" onClick={() => setEndTime(time)} className={`h-9 rounded-md border px-3 text-xs font-semibold ${effectiveEndTime === time ? "border-emerald-800 bg-emerald-800 text-white" : "border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-600"}`}>{formatTime(time)}</button>)}</div></fieldset></div> : <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">This parking location has no published hours for the selected day.</div>}
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4"><p className="text-xs text-slate-600">{valid ? `${formatTime(effectiveStartTime)} to ${formatTime(effectiveEndTime)} · server availability will be checked next` : "Choose a future available time to continue."}</p><Button type="submit" disabled={!valid}>Check live availability</Button></div>
-  </form>;
+
+  const handleDateClick = (value: string) => {
+    setDate(value);
+    const dayOfWeek = new Date(`${value}T00:00:00.000Z`).getUTCDay();
+    const rules = property.availabilitySchedule.filter(
+      (rule) => rule.dayOfWeek === dayOfWeek && rule.validFrom <= value && (!rule.validUntil || rule.validUntil >= value)
+    );
+    const currMin = value === today.date ? timeToMinutes(today.time) : -1;
+    const slots = new Set<string>();
+    for (const rule of rules) {
+      const first = Math.ceil(Math.max(timeToMinutes(rule.startTime), currMin + 1) / 30) * 30;
+      const last = timeToMinutes(rule.endTime) - minimumDuration;
+      for (let minute = first; minute <= last; minute += 30) slots.add(minutesToTime(minute));
+    }
+    const newStartSlots = [...slots].sort();
+    const newStart = newStartSlots.includes(startTime) ? startTime : (newStartSlots[0] ?? "");
+    const windowEnd = rules
+      .filter((rule) => rule.startTime <= newStart && rule.endTime >= newStart)
+      .reduce((latest, rule) => Math.max(latest, timeToMinutes(rule.endTime)), 0);
+    let newEnd = "";
+    if (newStart && windowEnd > 0) {
+      const first = timeToMinutes(newStart) + minimumDuration;
+      const last = Math.min(windowEnd, timeToMinutes(newStart) + maximumDuration);
+      const endList: string[] = [];
+      for (let minute = first; minute <= last; minute += 30) endList.push(minutesToTime(minute));
+      newEnd = endList.includes(endTime) ? endTime : (endList[0] ?? "");
+    }
+    if (newStart && newEnd) {
+      setStartTime(newStart);
+      setEndTime(newEnd);
+      const startIso = toUtcFromBangladeshLocal(value, newStart);
+      const endIso = toUtcFromBangladeshLocal(value, newEnd);
+      if (new Date(startIso) > new Date() && new Date(endIso) > new Date(startIso)) {
+        onRequestChange({ startAt: startIso, endAt: endIso });
+      }
+    }
+  };
+
+  const handleStartTimeClick = (time: string) => {
+    setStartTime(time);
+    const windowEnd = rulesForDate
+      .filter((rule) => rule.startTime <= time && rule.endTime >= time)
+      .reduce((latest, rule) => Math.max(latest, timeToMinutes(rule.endTime)), 0);
+    let newEnd = endTime;
+    if (windowEnd > 0) {
+      const first = timeToMinutes(time) + minimumDuration;
+      const last = Math.min(windowEnd, timeToMinutes(time) + maximumDuration);
+      const endList: string[] = [];
+      for (let minute = first; minute <= last; minute += 30) endList.push(minutesToTime(minute));
+      if (!endList.includes(newEnd)) {
+        newEnd = endList[0] ?? "";
+      }
+    }
+    setEndTime(newEnd);
+    if (newEnd) {
+      const startIso = toUtcFromBangladeshLocal(date, time);
+      const endIso = toUtcFromBangladeshLocal(date, newEnd);
+      if (new Date(startIso) > new Date() && new Date(endIso) > new Date(startIso)) {
+        onRequestChange({ startAt: startIso, endAt: endIso });
+      }
+    }
+  };
+
+  const handleEndTimeClick = (time: string) => {
+    setEndTime(time);
+    const startIso = toUtcFromBangladeshLocal(date, effectiveStartTime);
+    const endIso = toUtcFromBangladeshLocal(date, time);
+    if (new Date(startIso) > new Date() && new Date(endIso) > new Date(startIso)) {
+      onRequestChange({ startAt: startIso, endAt: endIso });
+    }
+  };
+
+  return (
+    <section className="space-y-5 border-y bg-white py-5" aria-label="Parking availability and time selection">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-base font-extrabold">Choose an available time</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Green dates and times are inside this parking location&apos;s published availability.
+          </p>
+        </div>
+        <label className="w-full text-xs font-semibold text-slate-600 sm:w-52">
+          Vehicle
+          <select
+            value={vehicleType}
+            onChange={(event) => handleVehicleChange(event.target.value as VehicleType)}
+            className="mt-1 block h-10 w-full rounded-md border bg-white px-3 text-sm focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+          >
+            {Object.entries(vehicleLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        {dateOptions.map((value) => {
+          const available = dateHasSchedule(value);
+          const label = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(
+            new Date(`${value}T00:00:00.000Z`)
+          );
+          return (
+            <button
+              key={value}
+              type="button"
+              disabled={!available}
+              onClick={() => handleDateClick(value)}
+              className={`h-14 rounded-md border px-2 text-left text-xs transition ${
+                value === date
+                  ? "border-emerald-800 bg-emerald-800 text-white shadow-xs"
+                  : available
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-600"
+                    : "cursor-not-allowed bg-slate-50 text-slate-400"
+              }`}
+            >
+              <span className="block font-bold">{label}</span>
+              <span className="mt-1 block text-[10px]">{available ? "Available hours" : "Not scheduled"}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {rulesForDate.length > 0 ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <fieldset>
+            <legend className="text-xs font-bold text-slate-700">Arrival</legend>
+            <div className="mt-2 flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+              {startSlots.map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => handleStartTimeClick(time)}
+                  className={`h-9 rounded-md border px-3 text-xs font-semibold transition ${
+                    effectiveStartTime === time
+                      ? "border-emerald-800 bg-emerald-800 text-white shadow-xs"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-600"
+                  }`}
+                >
+                  {formatTime(time)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend className="text-xs font-bold text-slate-700">
+              Departure <span className="font-normal text-slate-500">(minimum {minimumDuration} minutes)</span>
+            </legend>
+            <div className="mt-2 flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+              {endSlots.map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => handleEndTimeClick(time)}
+                  className={`h-9 rounded-md border px-3 text-xs font-semibold transition ${
+                    effectiveEndTime === time
+                      ? "border-emerald-800 bg-emerald-800 text-white shadow-xs"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-600"
+                  }`}
+                >
+                  {formatTime(time)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </div>
+      ) : (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          {property.availabilitySchedule.length === 0
+            ? `This parking location has no published availability for ${vehicleLabels[vehicleType] ?? vehicleType}. Select another vehicle type above to check available spaces.`
+            : "This parking location has no published hours for the selected day."}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <div className="flex items-center gap-2">
+          {isFetching ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin text-emerald-700" />
+              <p className="text-xs font-medium text-emerald-900">
+                Updating availability…
+              </p>
+            </>
+          ) : valid ? (
+            <>
+              <span className="inline-flex size-2 rounded-full bg-emerald-600 animate-pulse" />
+              <p className="text-xs font-medium text-emerald-950">
+                Live availability checked for <span className="font-bold">{formatTime(effectiveStartTime)} to {formatTime(effectiveEndTime)}</span>
+              </p>
+            </>
+          ) : property.availabilitySchedule.length === 0 ? (
+            <p className="text-xs text-amber-800">
+              No schedule found for {vehicleLabels[vehicleType] ?? vehicleType}. Select another vehicle type above.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500">
+              Select an available arrival and departure time above.
+            </p>
+          )}
+        </div>
+        <span className="text-[11px] font-medium text-slate-400">
+          Real-time availability
+        </span>
+      </div>
+    </section>
+  );
 }
 
 function DetailFact({ icon: Icon, label, value }: { icon: typeof CarFront; label: string; value: string }) { return <div className="border-l-2 border-emerald-700 pl-3"><Icon className="size-4 text-emerald-700" /><p className="mt-2 text-xs font-semibold text-slate-500">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>; }
@@ -188,7 +463,120 @@ function ReviewsSection({ property }: { property: PublicPropertyDetailDto }) {
 
 function Stars({ rating }: { rating: number }) { return <div className="flex" aria-label={`${rating} out of 5 stars`}>{Array.from({ length: 5 }, (_, index) => <Star key={index} className={`size-4 ${index < rating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />)}</div>; }
 
-function Offer({ offer }: { offer: PublicPropertyOfferDto }) { return <article className="rounded-lg border bg-white p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-bold">{offer.title}</h3><p className={`mt-1 text-xs ${offer.availableUnits > 0 ? "text-emerald-700" : "text-amber-700"}`}>{offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits > 0 ? `${offer.availableUnits} available` : "Unavailable for selected time"}</p>{offer.description && <p className="mt-2 text-sm text-slate-600">{offer.description}</p>}</div><strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong></div><div className="mt-3 flex flex-wrap gap-2">{offer.allowedVehicleTypes.map((type) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>)}{offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}{offer.hasCctv && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">CCTV</span>}{offer.hasGuard && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">Guard</span>}{offer.facilities.map((facility) => <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={facility.code}>{facility.displayName}</span>)}</div></article>; }
+function Offer({ offer }: { offer: PublicPropertyOfferDto }) {
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("Inaccurate information");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSuccess, setReportSuccess] = useState(false);
+
+  const reportMutation = useMutation({
+    mutationFn: () => parkingSearchApi.reportListing(offer.listingId, { reason: reportReason, details: reportDetails || undefined }),
+    onSuccess: () => {
+      setReportSuccess(true);
+      setReportOpen(false);
+      setReportDetails("");
+    },
+  });
+
+  return (
+    <article className="rounded-lg border bg-white p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="font-bold">{offer.title}</h3>
+          <p className={`mt-1 text-xs ${offer.availableUnits > 0 ? "text-emerald-700" : "text-amber-700"}`}>
+            {offer.resourceType === "SHARED_POOL" ? "Shared Parking Area" : "Fixed parking space"} · {offer.availableUnits > 0 ? `${offer.availableUnits} available` : "Unavailable for selected time"}
+          </p>
+          {offer.description && <p className="mt-2 text-sm text-slate-600">{offer.description}</p>}
+        </div>
+        <div className="text-right">
+          <strong>{formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</strong>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {offer.allowedVehicleTypes.map((type) => (
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={type}>{vehicleLabels[type]}</span>
+          ))}
+          {offer.isCovered && <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">Covered</span>}
+          {offer.hasCctv && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">CCTV</span>}
+          {offer.hasGuard && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">Guard</span>}
+          {offer.facilities.map((facility) => (
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs" key={facility.code}>{facility.displayName}</span>
+          ))}
+        </div>
+        <div className="mt-2 sm:mt-0">
+          {reportSuccess ? (
+            <span className="text-xs font-semibold text-emerald-700">Report submitted</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-red-700"
+            >
+              <Flag className="size-3.5" />
+              Report listing
+            </button>
+          )}
+        </div>
+      </div>
+
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby={`report-title-${offer.listingId}`}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 id={`report-title-${offer.listingId}`} className="text-lg font-bold text-slate-900">Report this parking offer</h3>
+              <button type="button" onClick={() => setReportOpen(false)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="size-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">Reports are reviewed directly by our Trust & Safety operations team.</p>
+            <div className="space-y-3">
+              <label className="block text-xs font-semibold text-slate-700">
+                Reason
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-slate-300 p-2 text-sm"
+                >
+                  <option value="Inaccurate information">Inaccurate information</option>
+                  <option value="Safety or security concern">Safety or security concern</option>
+                  <option value="Unauthorized / Fake listing">Unauthorized / Fake listing</option>
+                  <option value="Price gouging or extortion">Price gouging or extortion</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-slate-700">
+                Additional details (optional)
+                <textarea
+                  rows={3}
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Describe the issue with this listing..."
+                  className="mt-1 block w-full rounded-md border border-slate-300 p-2 text-sm"
+                />
+              </label>
+              {reportMutation.error && (
+                <p className="text-xs text-red-600">{getApiErrorMessage(reportMutation.error)}</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setReportOpen(false)}>Cancel</Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={reportMutation.isPending}
+                onClick={() => reportMutation.mutate()}
+              >
+                {reportMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+                Submit report
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
 
 function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOfferDto[]; startAt: string; endAt: string }) {
   const client = useQueryClient(); const keys = useRef({ hold: crypto.randomUUID(), booking: crypto.randomUUID(), payment: crypto.randomUUID() });
@@ -203,7 +591,7 @@ function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOff
   const paymentMutation = useMutation({ mutationFn: () => bookingsApi.createPaymentSession(booking!.id, keys.current.payment), onSuccess: (session) => session.checkoutUrl ? window.location.assign(session.checkoutUrl) : window.location.assign(`/driver/bookings/${booking!.id}`) });
   const now = useCurrentTime(!!quote || !!hold); const quoteExpired = !!quote && now > 0 && new Date(quote.expiresAt).getTime() <= now; const holdExpired = !!hold && now > 0 && new Date(hold.expiresAt).getTime() <= now; const error = quoteMutation.error ?? holdMutation.error ?? releaseMutation.error ?? bookingMutation.error ?? paymentMutation.error;
   const returnTo = typeof window === "undefined" ? "/parking" : window.location.pathname + window.location.search;
-  if (vehicles.isError) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in as a Driver to choose a registered vehicle and reserve this offer.</p><Button className="mt-4 w-full" nativeButton={false} render={<Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`} />}>Sign in</Button></aside>;
+  if (vehicles.isError) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in as a Driver to choose a registered vehicle and reserve this offer.</p><Button className="mt-4 w-full" nativeButton={false} render={<Link href={`/login?redirect=${encodeURIComponent(returnTo)}`} />}>Sign in</Button></aside>;
   return <aside className="h-fit space-y-4 rounded-lg border bg-white p-5 shadow-sm lg:sticky lg:top-24"><div><h2 className="font-bold">Reserve parking</h2><p className="mt-1 text-xs text-slate-500">{formatDateTime(startAt)} to {formatDateTime(endAt)}</p></div>
     {!booking && <><label className="block space-y-1 text-xs font-semibold">Offer<select className="h-10 w-full rounded-md border px-3 text-sm" value={listingId} disabled={!!quote} onChange={(event) => { setListingId(event.target.value); setVehicleId(""); }} >{offers.map((offer) => <option key={offer.listingId} value={offer.listingId}>{offer.title} · {formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</option>)}</select></label><label className="block space-y-1 text-xs font-semibold">Vehicle<select className="h-10 w-full rounded-md border px-3 text-sm" value={vehicleId} disabled={!!quote} onChange={(event) => setVehicleId(event.target.value)}><option value="">Select compatible vehicle</option>{compatible.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} · {vehicleLabels[vehicle.vehicleType]}</option>)}</select></label></>}
     {!quote && <Button className="w-full" disabled={!vehicleId || quoteMutation.isPending} onClick={() => quoteMutation.mutate()}>{quoteMutation.isPending && <Loader2 className="size-4 animate-spin" />}Get server quote</Button>}

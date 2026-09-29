@@ -25,7 +25,7 @@ export default function DriverPaymentMethodsPage() {
 
   if (methods.isError) return <PageState message={getApiErrorMessage(methods.error)} retry={() => void methods.refetch()} />;
   return <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6">
-    <Link href="/driver/payments" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-800"><ArrowLeft className="size-4" />Refund Balance</Link>
+    <Link href="/driver/wallet" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-800"><ArrowLeft className="size-4" />Refund Balance &amp; Wallet</Link>
     <header className="flex flex-col justify-between gap-4 border-b pb-6 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase text-emerald-700">Secure settings</p><h1 className="mt-2 text-3xl font-extrabold">Transfer destinations</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Add the bank or mobile wallet account where ParkEase should send approved withdrawals.</p></div><Button onClick={() => setAdding((value) => !value)}><Plus className="size-4" />Add destination</Button></header>
     <div className="flex gap-3 border-l-4 border-emerald-600 bg-emerald-50 p-4 text-sm text-emerald-950"><LockKeyhole className="mt-0.5 size-5 shrink-0" /><p>Your full account identifier is encrypted before storage. After saving, only its masked ending is visible.</p></div>
     {adding && <DestinationForm pending={create.isPending} submit={(input) => create.mutate(input)} cancel={() => setAdding(false)} />}

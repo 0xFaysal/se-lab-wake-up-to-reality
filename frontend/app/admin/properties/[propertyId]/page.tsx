@@ -62,8 +62,17 @@ export default function AdminPropertyDetailPage({ params }: { params: Promise<{ 
         client.invalidateQueries({ queryKey: queryKeys.adminProperties.pendingRoot }),
         client.invalidateQueries({ queryKey: ["admin", "properties"] }),
       ]);
-      if (canonicalId) router.push(`/admin/properties/${canonicalId}`);
-      else await query.refetch();
+      if (canonicalId) {
+        router.push(`/admin/properties/${canonicalId}`);
+      } else {
+        try {
+          const updated = await adminApi.propertyDetail(propertyId);
+          client.setQueryData(queryKeys.adminProperties.detail(propertyId), updated);
+        } catch {
+          await query.refetch();
+        }
+        router.refresh();
+      }
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });

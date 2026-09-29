@@ -38,22 +38,52 @@ export default function CancellationPolicyPage() {
           </p>
 
           {/* Section 1: Driver Cancellations */}
-          <section className="space-y-3">
+          <section className="space-y-4">
             <h2 className="text-xl font-bold flex items-center gap-2 font-heading">
               <RotateCcw className="size-5 text-primary" />
               1. Driver Cancellations
             </h2>
-            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground pl-2">
-              <li>
-                <strong>Advance Cancellation:</strong> If a Driver cancels a booking at
-                least <strong>1 hour</strong> before the scheduled start time, they are
-                eligible for a <strong>100% full refund</strong>.
-              </li>
-              <li>
-                <strong>Late Cancellation:</strong> Cancellations made less than 1 hour
-                before the scheduled start time are non-refundable.
-              </li>
-            </ul>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              ParkEase BD uses a fair, graduated sliding scale based on how far in advance of the scheduled reservation start time you cancel. The refund percentage applies to the base parking charge:
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-border bg-muted/30 p-3.5">
+                <span className="text-xs font-bold text-primary">≥ 12 hours before start</span>
+                <p className="mt-1 text-lg font-extrabold text-foreground">100% Refund</p>
+                <p className="text-xs text-muted-foreground">Full refund of base parking charge</p>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3.5">
+                <span className="text-xs font-bold text-primary">6 to &lt; 12 hours</span>
+                <p className="mt-1 text-lg font-extrabold text-foreground">90% Refund</p>
+                <p className="text-xs text-muted-foreground">90% of base charge refunded</p>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3.5">
+                <span className="text-xs font-bold text-primary">3 to &lt; 6 hours</span>
+                <p className="mt-1 text-lg font-extrabold text-foreground">75% Refund</p>
+                <p className="text-xs text-muted-foreground">75% of base charge refunded</p>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3.5">
+                <span className="text-xs font-bold text-primary">1 to &lt; 3 hours</span>
+                <p className="mt-1 text-lg font-extrabold text-foreground">50% Refund</p>
+                <p className="text-xs text-muted-foreground">50% of base charge refunded</p>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3.5">
+                <span className="text-xs font-bold text-muted-foreground">&lt; 1 hour</span>
+                <p className="mt-1 text-lg font-extrabold text-foreground">0% Refund</p>
+                <p className="text-xs text-muted-foreground">Non-refundable within 60 minutes</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-sm text-muted-foreground">
+              <p>
+                <strong className="text-foreground">Security Deposit:</strong> The security deposit is <strong>100% refunded</strong> upon cancellation regardless of when you cancel.
+              </p>
+              <p>
+                <strong className="text-foreground">Platform Fee:</strong> Non-refundable once a booking is confirmed, covering reservation processing and digital access pass infrastructure.
+              </p>
+              <p>
+                <strong className="text-foreground">Instant Wallet Credit:</strong> All refundable amounts (base refund + full security deposit) are credited instantly to your registered ParkEase BD Driver wallet.
+              </p>
+            </div>
           </section>
 
           {/* Section 2: No-Show Policy */}

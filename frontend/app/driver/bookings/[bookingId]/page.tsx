@@ -2,14 +2,18 @@
 
 import { use, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Flag, Loader2, ShieldCheck, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { DigitalAccessPass } from "@/features/bookings/components/digital-access-pass";
 import { bookingsApi } from "@/lib/api/bookings-api";
+import { parkingSearchApi } from "@/lib/api/parking-search-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { BookingDto, BookingSettlementDto } from "@/lib/api/marketplace-types";
 import { formatBDTFromPaisa, formatDateTime, vehicleLabels } from "@/lib/formatters";
@@ -18,11 +22,15 @@ import { queryKeys } from "@/lib/query-keys";
 
 export default function BookingDetailsPage({ params }: { params: Promise<{ bookingId: string }> }) {
   const { bookingId } = use(params);
+  const router = useRouter();
   const client = useQueryClient();
   const cancellationKey = useRef(crypto.randomUUID());
   const settlementPaymentKey = useRef(crypto.randomUUID());
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
   const query = useQuery({ queryKey: queryKeys.bookings.detail(bookingId), queryFn: () => bookingsApi.driverDetail(bookingId), refetchInterval: 30_000 });
   const preview = useQuery({ queryKey: ["booking-cancellation-preview", bookingId], queryFn: () => bookingsApi.cancellationPreview(bookingId), enabled: confirmCancel });
   const settlement = useQuery({ queryKey: ["booking-settlement", bookingId], queryFn: () => bookingsApi.settlement(bookingId), enabled: query.data?.status === "COMPLETED" || query.data?.status === "PAYMENT_DUE" || query.data?.status === "NO_SHOW" });
@@ -37,12 +45,22 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
   };
   const cancel = useMutation({
     mutationFn: () => bookingsApi.cancel(bookingId, { reason: cancelReason.trim() || undefined, idempotencyKey: cancellationKey.current }),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       toast.success("Booking cancelled and balance updated");
       cancellationKey.current = crypto.randomUUID();
       setCancelReason("");
       setConfirmCancel(false);
+      if (data?.booking) {
+        client.setQueryData(queryKeys.bookings.detail(bookingId), (old: BookingDto | undefined) => ({
+          ...(old ?? {}),
+          ...data.booking,
+          status: "CANCELLED",
+          canCancel: false,
+          canPay: false,
+        }));
+      }
       await refresh();
+      router.refresh();
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });
@@ -59,6 +77,16 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
     },
     onError: (error) => { settlementPaymentKey.current = crypto.randomUUID(); toast.error(getApiErrorMessage(error)); },
   });
+  const report = useMutation({
+    mutationFn: () => parkingSearchApi.reportListing(booking.listingId, { reason: reportReason.trim(), details: reportDetails.trim() || undefined }),
+    onSuccess: () => {
+      toast.success("Report submitted to moderation team. Thank you.");
+      setReportOpen(false);
+      setReportReason("");
+      setReportDetails("");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
 
   if (query.isPending) return <State text="Loading booking" loading />;
   if (query.isError) return <State text={getApiErrorMessage(query.error)} />;
@@ -66,6 +94,8 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
   const booking = query.data;
   const status = bookingStatus[booking.status];
   const payment = booking.payments?.[0];
+
+  const isSettlementEligible = ["COMPLETED", "PAYMENT_DUE", "NO_SHOW"].includes(booking.status);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6">
@@ -81,6 +111,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
           {booking.canCancel && <Button variant="destructive" onClick={() => setConfirmCancel(true)}>Cancel booking</Button>}
           {booking.status === "CHECKED_IN" && <Button disabled={checkout.isPending} onClick={() => checkout.mutate()}>{checkout.isPending && <Loader2 className="size-4 animate-spin" />}Request checkout</Button>}
           {booking.status === "COMPLETED" && <><Button variant="outline" nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}/review`} />}>Write review</Button><Button variant="outline" nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}/dispute`} />}>Open dispute</Button></>}
+          {booking.listingId && <Button variant="outline" size="sm" onClick={() => setReportOpen(true)}><Flag className="size-4" />Report listing</Button>}
         </div>
       </header>
 
@@ -91,6 +122,12 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
             <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
               <Info label="Property" value={booking.property?.name ?? "Property"} />
               <Info label="Public address" value={booking.property?.approximateAddress ?? "Not available"} />
+              {booking.property?.exactAddress && (
+                <Info label="Exact address" value={booking.property.exactAddress} />
+              )}
+              {booking.property?.accessInstructions && (
+                <Info label="Access instructions" value={booking.property.accessInstructions} />
+              )}
               <Info label="Parking" value={parkingLabel(booking)} />
               <Info label="Vehicle" value={`${booking.vehicle?.registrationNumber ?? ""} · ${booking.vehicle ? vehicleLabels[booking.vehicle.vehicleType] : ""}`} />
               <Info label="Starts" value={formatDateTime(booking.startAt)} />
@@ -100,7 +137,15 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
             </dl>
           </section>
           {booking.accessCredential && <DigitalAccessPass accessCredential={booking.accessCredential} propertyTitle={booking.property?.name} />}
-          {(settlement.isPending || settlement.data) && <SettlementSummary settlement={settlement.data} loading={settlement.isPending} paying={paySettlement.isPending} noShow={booking.status === "NO_SHOW"} onPay={() => paySettlement.mutate()} />}
+          {isSettlementEligible && (settlement.isLoading || settlement.data) && (
+            <SettlementSummary
+              settlement={settlement.data}
+              loading={settlement.isLoading}
+              paying={paySettlement.isPending}
+              noShow={booking.status === "NO_SHOW"}
+              onPay={() => paySettlement.mutate()}
+            />
+          )}
         </div>
 
         <aside className="h-fit border bg-white p-6 lg:sticky lg:top-24">
@@ -117,13 +162,71 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Cancel {booking.bookingCode}?</AlertDialogTitle><AlertDialogDescription>The parking space will be released immediately. The cancellation policy is calculated from the booking start time.</AlertDialogDescription></AlertDialogHeader>
           {preview.isPending ? <div className="flex min-h-36 items-center justify-center"><Loader2 className="size-6 animate-spin text-emerald-700" /></div> : preview.isError ? <div role="alert" className="bg-red-50 p-4 text-sm text-red-800">{getApiErrorMessage(preview.error)}</div> : preview.data ? <div className="space-y-4">
-            <div className="space-y-3 border bg-slate-50 p-4"><Price label="Parking refund" value={preview.data.bookingRefundPaisa} /><Price label="Deposit returned" value={preview.data.depositReturnPaisa} /><Price label="Platform fee (non-refundable)" value={preview.data.platformFeePaisa} /><Price label="Added to Refund Balance" value={preview.data.driverWalletCreditPaisa} strong /></div>
+            {booking.status === "PAYMENT_PENDING" || !preview.data.paid ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="font-semibold">Unpaid reservation</p>
+                <p className="mt-1 text-xs text-amber-900/80">
+                  No payment was collected for this reservation. Cancelling will immediately release the held parking space without any fees or charges.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 border bg-slate-50 p-4">
+                  <Price label="Parking refund" value={preview.data.bookingRefundPaisa} />
+                  <Price label="Deposit returned" value={preview.data.depositReturnPaisa} />
+                  <Price label="Platform fee (non-refundable)" value={preview.data.platformFeePaisa} />
+                  <Price label="Added to Refund Balance" value={preview.data.driverWalletCreditPaisa} strong />
+                </div>
+                <p className="flex gap-2 text-xs leading-5 text-slate-600"><Wallet className="mt-0.5 size-4 shrink-0 text-emerald-700" />The refundable amount is credited to your ParkEase Refund Balance and can be used for another booking or withdrawn.</p>
+              </>
+            )}
             <label className="block space-y-2 text-sm font-semibold"><span>Reason <span className="font-normal text-slate-500">(optional)</span></span><Input value={cancelReason} maxLength={500} onChange={(event) => setCancelReason(event.target.value)} placeholder="Tell us why you are cancelling" /></label>
-            <p className="flex gap-2 text-xs leading-5 text-slate-600"><Wallet className="mt-0.5 size-4 shrink-0 text-emerald-700" />The refundable amount is credited to your ParkEase Refund Balance and can be used for another booking or withdrawn.</p>
           </div> : null}
           <AlertDialogFooter><AlertDialogCancel disabled={cancel.isPending}>Keep booking</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={cancel.isPending || preview.isPending || preview.isError} onClick={() => cancel.mutate()}>{cancel.isPending && <Loader2 className="size-4 animate-spin" />}Confirm cancellation</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={reportOpen} onOpenChange={(open) => !report.isPending && setReportOpen(open)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Report listing</DialogTitle>
+            <DialogDescription>
+              Help keep ParkEase BD safe and reliable. Submit any inaccuracies, safety hazards, or policy violations to the administration team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <label className="block space-y-1.5 text-sm font-semibold">
+              <span>Reason * <span className="text-xs font-normal text-slate-500">(10–500 characters)</span></span>
+              <Input
+                value={reportReason}
+                maxLength={500}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="e.g. Inaccurate location, gate access blocked, or misleading photos"
+              />
+            </label>
+            <label className="block space-y-1.5 text-sm font-semibold">
+              <span>Additional details <span className="text-xs font-normal text-slate-500">(optional)</span></span>
+              <Textarea
+                value={reportDetails}
+                maxLength={2000}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Provide any additional context or timestamps to help our investigation..."
+                className="min-h-24"
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={report.isPending} onClick={() => setReportOpen(false)}>Cancel</Button>
+            <Button
+              disabled={report.isPending || reportReason.trim().length < 10}
+              onClick={() => report.mutate()}
+            >
+              {report.isPending && <Loader2 className="size-4 animate-spin" />}
+              Submit report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -442,34 +442,41 @@ function AvailabilityEditor({ resource, close }: { resource: ParkingResourceDto;
 
 function AvailabilityEditorForm({ resource, close, rules, exceptions }: { resource: ParkingResourceDto; close: () => void; rules: import("@/lib/api/marketplace-types").AvailabilityRuleDto[]; exceptions: import("@/lib/api/marketplace-types").AvailabilityExceptionDto[] }) {
   const client = useQueryClient();
-  const initial = useMemo(() => DAYS.map((_, dayOfWeek) => {
-    const dayRules = rules.filter((item) => item.dayOfWeek === dayOfWeek);
-    return {
-      enabled: dayRules.length > 0,
-      ranges: dayRules.length > 0
-        ? dayRules.map((rule) => ({
-            start: rule.startLocalTime.slice(11, 16),
-            end: rule.endLocalTime.slice(11, 16),
-          }))
-        : [{ start: "08:00", end: "22:00" }],
-    };
-  }), [rules]);
+  const initial = useMemo(() => {
+    const hasExistingRules = rules.length > 0;
+    return DAYS.map((_, dayOfWeek) => {
+      const dayRules = rules.filter((item) => item.dayOfWeek === dayOfWeek);
+      return {
+        enabled: hasExistingRules ? dayRules.length > 0 : (dayOfWeek >= 1 && dayOfWeek <= 6),
+        ranges: dayRules.length > 0
+          ? dayRules.map((rule) => ({
+              start: rule.startLocalTime.slice(11, 16),
+              end: rule.endLocalTime.slice(11, 16),
+            }))
+          : [{ start: "08:00", end: "22:00" }],
+      };
+    });
+  }, [rules]);
   const [draft, setDraft] = useState(initial);
   const save = useMutation({
     mutationFn: () => {
       const validFrom = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+      const activeRules = draft.flatMap((day, dayOfWeek) =>
+        day.enabled
+          ? day.ranges.map((range) => ({
+              dayOfWeek,
+              startLocalTime: range.start,
+              endLocalTime: range.end,
+              validFrom,
+            }))
+          : [],
+      );
+      if (activeRules.length === 0) {
+        throw new Error("Select at least one day to save availability.");
+      }
       return parkingResourcesApi.replaceAvailability(
         resource.id,
-        draft.flatMap((day, dayOfWeek) =>
-          day.enabled
-            ? day.ranges.map((range) => ({
-                dayOfWeek,
-                startLocalTime: range.start,
-                endLocalTime: range.end,
-                validFrom,
-              }))
-            : [],
-        ),
+        activeRules,
       );
     },
     onSuccess: async () => {

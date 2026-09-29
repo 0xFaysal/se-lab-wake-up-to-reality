@@ -3,8 +3,18 @@
 Our cancellation and refund policies are designed to protect both the Drivers' time and the Host's earning potential.
 
 ## 1. Driver Cancellations
-* **Advance Cancellation:** If a Driver cancels a booking at least 1 hour before the scheduled start time, they are eligible for a full refund.
-* **Late Cancellation:** Cancellations made less than 1 hour before the scheduled start time are non-refundable.
+Our cancellation policy uses a fair, graduated sliding scale based on how far in advance of the scheduled start time the cancellation occurs. The refund percentage applies to the base parking charge:
+
+* **≥ 12 hours before start:** **100% refund** of the base parking charge.
+* **6 to < 12 hours before start:** **90% refund** of the base parking charge.
+* **3 to < 6 hours before start:** **75% refund** of the base parking charge.
+* **1 to < 3 hours before start:** **50% refund** of the base parking charge.
+* **< 1 hour before start:** **0% refund** of the base parking charge (non-refundable).
+
+### Security Deposit & Platform Fee
+* **Security Deposit:** **100% refunded** upon any cancellation, regardless of when the cancellation occurs.
+* **Platform Fee:** Non-refundable once a booking is confirmed, covering reservation processing and digital access pass generation.
+* **Wallet Credit:** All refundable amounts (base refund + full security deposit) are credited instantly to the Driver's ParkEase BD wallet.
 
 ## 2. No-Show Policy
 * **Policy:** ParkEase BD is not responsible for missed bookings. If a Driver is a No-Show, no refunds will be issued. 

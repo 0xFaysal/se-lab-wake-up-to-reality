@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -11,7 +12,7 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { BrandIcon } from "@/components/common/app-logo";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 type NavItem = { label: string; href: string; icon: typeof Home };
 type NavGroup = { label: string; items: NavItem[] };
@@ -117,6 +118,7 @@ function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate?: (
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
   const { data: user } = useCurrentUser();
   const current = groups.flatMap((group) => group.items).find((item) => isActive(pathname, item.href));
 
@@ -153,14 +155,39 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Mobile admin navigation">
         {mobilePrimary.map((item) => { const Icon = item.icon; const active = isActive(pathname, item.href); return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[10px] font-semibold ${active ? "text-emerald-800" : "text-slate-500"}`}><Icon className="size-5" />{item.label}</Link>; })}
-        <Sheet>
-          <SheetTrigger render={<button type="button" className="flex min-h-16 flex-col items-center justify-center gap-1 text-[10px] font-semibold text-slate-500" aria-label="Open all Admin modules" />}><Menu className="size-5" />More</SheetTrigger>
-          <SheetContent side="bottom" className="h-[88dvh] overflow-y-auto rounded-t-lg">
-            <SheetHeader><SheetTitle>Admin modules</SheetTitle><SheetDescription>Platform operations, finance, trust and account tools.</SheetDescription></SheetHeader>
-            <div className="px-3 pb-8"><Navigation pathname={pathname} /></div>
-          </SheetContent>
-        </Sheet>
+        <button
+          type="button"
+          onClick={() => setMoreOpen(true)}
+          className="flex min-h-16 flex-col items-center justify-center gap-1 text-[10px] font-semibold text-slate-500"
+          aria-expanded={moreOpen}
+          aria-label="Open all Admin modules"
+        >
+          <Menu className="size-5" />
+          More
+        </button>
       </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent
+          side="bottom"
+          style={{ height: "88dvh", maxHeight: "88dvh" }}
+          className="!h-[88dvh] !max-h-[88dvh] flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0 lg:hidden"
+        >
+          <SheetHeader className="shrink-0 border-b bg-white px-5 pb-4 pt-5">
+            <SheetTitle className="text-lg font-extrabold text-slate-900">Admin modules</SheetTitle>
+            <SheetDescription className="text-xs text-slate-500">Platform operations, finance, trust and account tools.</SheetDescription>
+          </SheetHeader>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(3rem+env(safe-area-inset-bottom))]"
+            style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+          >
+            <Navigation pathname={pathname} onNavigate={() => setMoreOpen(false)} />
+            <div className="mt-4 border-t border-slate-200 pt-4 pb-6">
+              <LogoutButton className="h-10 w-full justify-center border-rose-200 text-rose-700" label="Sign out" />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

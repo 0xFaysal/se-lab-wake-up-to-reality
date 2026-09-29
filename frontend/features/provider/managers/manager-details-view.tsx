@@ -1025,7 +1025,7 @@ export function ManagerDetailsView({ managerId }: ManagerDetailsViewProps) {
                   type="text"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B]"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:border-slate-400 text-xs text-slate-900 shadow-2xs focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition"
                 />
               </div>
 
@@ -1038,7 +1038,7 @@ export function ManagerDetailsView({ managerId }: ManagerDetailsViewProps) {
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Notes on responsibilities, gates assigned, or shift contacts..."
-                  className="w-full p-3 rounded-xl border border-[#E5E7EB] text-xs text-slate-900 focus:outline-none focus:border-[#064E3B] focus:ring-1 focus:ring-[#064E3B] resize-none"
+                  className="w-full p-3 rounded-xl border border-slate-300 bg-white hover:border-slate-400 text-xs text-slate-900 shadow-2xs focus:outline-none focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 transition resize-none"
                 />
               </div>
 

@@ -144,9 +144,16 @@ export function DriverShell({ children }: { children: React.ReactNode }) {
     </nav>
 
     <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-      <SheetContent side="bottom" className="h-[min(88dvh,720px)] gap-0 overflow-hidden rounded-t-2xl p-0 lg:hidden">
-        <SheetHeader className="border-b px-5 pb-4 pt-5"><SheetTitle className="text-lg font-extrabold">More</SheetTitle><SheetDescription>Saved parking, payments, help, and account settings.</SheetDescription></SheetHeader>
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <SheetContent
+        side="bottom"
+        style={{ height: "88dvh", maxHeight: "88dvh" }}
+        className="!h-[88dvh] !max-h-[88dvh] flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0 lg:hidden"
+      >
+        <SheetHeader className="shrink-0 border-b px-5 pb-4 pt-5"><SheetTitle className="text-lg font-extrabold">More</SheetTitle><SheetDescription>Saved parking, payments, help, and account settings.</SheetDescription></SheetHeader>
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        >
           {moreGroups.map((group) => <section key={group.label} className="mb-5"><h2 className="mb-2 px-2 text-[11px] font-bold uppercase text-slate-400">{group.label}</h2><div className="grid grid-cols-2 gap-2">{group.items.map((item) => { const Icon = item.icon; const selected = active(pathname, item.href); return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className={cn("flex min-h-12 items-center gap-3 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700", selected && "border-emerald-200 bg-emerald-50 text-emerald-900")}><Icon className="size-4 shrink-0" />{item.label}</Link>; })}</div></section>)}
           <div className="border-t pt-4"><LogoutButton className="h-12 w-full justify-center border-rose-200 text-rose-700" label="Sign out" /></div>
         </div>
