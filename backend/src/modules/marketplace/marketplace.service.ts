@@ -5441,9 +5441,7 @@ function credentialLookup(
     ? trimmed.slice(ACCESS_CREDENTIAL_PREFIX.length).trim()
     : trimmed;
   return id &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      id,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     ? { id }
     : { tokenHash };
 }

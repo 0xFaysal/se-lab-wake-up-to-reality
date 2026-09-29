@@ -111,7 +111,11 @@ paymentRouter.all(
   }),
 );
 
-const requireDriverAuth = [authenticate, requireAccountReady, requireRole(UserRoleType.DRIVER)];
+const requireDriverAuth = [
+  authenticate,
+  requireAccountReady,
+  requireRole(UserRoleType.DRIVER),
+];
 
 paymentRouter.post(
   "/bookings/:bookingId/payments/sslcommerz/session",

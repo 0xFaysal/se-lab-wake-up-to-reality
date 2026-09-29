@@ -336,7 +336,11 @@ export async function initiateSslCommerzSession(
     } catch (error) {
       await prisma
         .$transaction(async (tx) => {
-          await releasePaymentWalletHolds(tx, prepared.payment.id, driverUserId);
+          await releasePaymentWalletHolds(
+            tx,
+            prepared.payment.id,
+            driverUserId,
+          );
           await tx.payment.update({
             where: { id: prepared.payment.id },
             data: { status: PaymentStatus.FAILED, failedAt: new Date() },
