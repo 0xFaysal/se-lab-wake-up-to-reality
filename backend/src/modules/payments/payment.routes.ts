@@ -122,7 +122,13 @@ paymentRouter.post(
     const key = idempotencyKey.parse(
       req.header("idempotency-key") ?? req.body?.idempotencyKey,
     );
-    return service.initiateSslCommerzSession(req.auth!.userId, bookingId, key);
+    const useWallet = req.body?.useWallet !== false;
+    return service.initiateSslCommerzSession(
+      req.auth!.userId,
+      bookingId,
+      key,
+      useWallet,
+    );
   }, 201),
 );
 

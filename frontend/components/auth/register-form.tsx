@@ -41,7 +41,7 @@ export function RegisterForm() {
       password: "",
       confirmPassword: "",
       role: "DRIVER",
-      agreeToPrivacy: true,
+      agreeToPrivacy: false,
     },
   });
 
@@ -56,9 +56,21 @@ export function RegisterForm() {
   }, [searchParams, setValue]);
 
   async function onSubmit(data: RegisterFormValues) {
+    if (!data.agreeToPrivacy) {
+      setSubmitError("You must agree to the Privacy Policy to continue");
+      return;
+    }
     setSubmitError("");
     try {
-      const result = await authApi.register({ fullName: data.fullName, email: data.email, phone: data.phone, password: data.password, role: data.role === "PARKING_OWNER" ? "PROVIDER" : "DRIVER", acceptTerms: true, acceptPrivacyPolicy: true });
+      const result = await authApi.register({
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+        role: data.role === "PARKING_OWNER" ? "PROVIDER" : "DRIVER",
+        acceptTerms: true,
+        acceptPrivacyPolicy: true,
+      });
       const requested = searchParams.get("redirect");
       queryClient.setQueryData(queryKeys.auth.me, result.user);
       router.push(resolvePostLoginRedirect(result.user, requested));
@@ -188,7 +200,7 @@ export function RegisterForm() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="At least 8 chars, 1 uppercase, 1 number"
+              placeholder="12+ chars, uppercase, lowercase, number & symbol"
               autoComplete="new-password"
               aria-invalid={!!errors.password}
               className="h-10 text-sm pr-10 rounded-lg bg-white border border-slate-300 hover:border-slate-400 focus:border-[#064E3B] focus:ring-2 focus:ring-[#064E3B]/20 shadow-2xs"
