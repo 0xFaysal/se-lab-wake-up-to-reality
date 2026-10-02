@@ -151,7 +151,19 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
         <aside className="h-fit border bg-white p-6 lg:sticky lg:top-24">
           <div className="mb-5 flex items-center gap-3"><CircleDollarSign className="size-5 text-emerald-700" /><h2 className="font-bold">Payment summary</h2></div>
           <div className="space-y-3"><Price label="Parking" value={booking.baseAmountPaisa} /><Price label="Platform fee" value={booking.platformFeePaisa} /><Price label="Refundable deposit" value={booking.depositPaisa} /><Price label="Total" value={booking.totalAmountPaisa} strong /></div>
-          <div className="mt-5 space-y-3 border-t pt-5"><Price label="Refund Balance auto-applied" value={booking.driverWalletAppliedPaisa} negative /><Price label="Amount due via SSLCOMMERZ" value={booking.gatewayAmountPaisa} strong /></div>
+          <div className="mt-5 space-y-3 border-t pt-5">
+            {payment?.status === "SUCCEEDED" || payment?.status === "CAPTURED" || ["CONFIRMED", "CHECKED_IN", "CHECKOUT_REQUESTED", "COMPLETED", "NO_SHOW"].includes(booking.status) ? (
+              <>
+                <Price label="Paid via Wallet Balance" value={booking.driverWalletAppliedPaisa} />
+                <Price label="Paid via SSLCOMMERZ" value={booking.gatewayAmountPaisa} strong />
+              </>
+            ) : (
+              <>
+                <Price label="Wallet Balance auto-applied" value={booking.driverWalletAppliedPaisa} negative />
+                <Price label="Amount due via SSLCOMMERZ" value={booking.gatewayAmountPaisa} strong />
+              </>
+            )}
+          </div>
           {payment && <span className={`mt-5 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${paymentStatus[payment.status].className}`}>{paymentStatus[payment.status].label}</span>}
           {payment && ["FAILED", "CANCELLED", "EXPIRED"].includes(payment.status) && <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">The previous gateway attempt did not complete. Your Refund Balance was released and will be applied automatically again when you retry. Only the remaining amount will be sent to SSLCOMMERZ.</p>}
           <div className="mt-5 flex gap-3 bg-emerald-50 p-4 text-sm text-emerald-950"><ShieldCheck className="mt-0.5 size-5 shrink-0" /><p>Your payment remains protected by ParkEase until the parking session is settled.</p></div>

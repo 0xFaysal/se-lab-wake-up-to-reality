@@ -60,23 +60,25 @@ export default function DriverPaymentsPage() {
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="border bg-white p-5">
           <CreditCard className="size-5 text-emerald-700" />
-          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Total Spent</p>
-          <p className="mt-2 text-2xl font-extrabold">{formatBDTFromPaisa(totalSpentPaisa.toString())}</p>
-          <p className="mt-2 text-xs text-slate-500">Across {paidBookings.length} completed bookings</p>
+          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Total Paid</p>
+          <p className="mt-2 text-2xl font-extrabold text-slate-900">{formatBDTFromPaisa(totalSpentPaisa.toString())}</p>
+          <p className="mt-2 text-xs text-slate-500">
+            Combined total across {paidBookings.length} paid {paidBookings.length === 1 ? "booking" : "bookings"}
+          </p>
         </div>
         <div className="border bg-white p-5">
           <CheckCircle2 className="size-5 text-emerald-700" />
-          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Paid via SSLCOMMERZ</p>
-          <p className="mt-2 text-2xl font-extrabold">{formatBDTFromPaisa(totalGatewayPaisa.toString())}</p>
-          <p className="mt-2 text-xs text-slate-500">Charged directly via card / MFS gateway</p>
+          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Total Paid via SSLCOMMERZ</p>
+          <p className="mt-2 text-2xl font-extrabold text-slate-900">{formatBDTFromPaisa(totalGatewayPaisa.toString())}</p>
+          <p className="mt-2 text-xs text-slate-500">Portion paid via card / MFS gateway</p>
         </div>
         <div className="border bg-white p-5">
           <WalletCards className="size-5 text-emerald-700" />
-          <p className="mt-3 text-xs font-bold uppercase text-slate-500">From Refund Balance</p>
-          <p className="mt-2 text-2xl font-extrabold text-emerald-800">
+          <p className="mt-3 text-xs font-bold uppercase text-slate-500">Total Paid via Wallet Balance</p>
+          <p className="mt-2 text-2xl font-extrabold text-slate-900">
             {formatBDTFromPaisa(totalWalletPaisa.toString())}
           </p>
-          <p className="mt-2 text-xs text-slate-500">Auto-applied discount from refunds</p>
+          <p className="mt-2 text-xs text-slate-500">Portion paid using your Refund / Wallet credit</p>
         </div>
       </section>
 
@@ -140,25 +142,29 @@ export default function DriverPaymentsPage() {
                       {booking.property?.name ?? booking.listing?.title ?? "Parking reservation"}
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 pt-1">
+                      <span className="text-slate-400 font-medium">Paid via:</span>
                       {hasGatewayPaid && (
-                        <span className="inline-flex items-center gap-1 font-medium text-slate-700">
-                          <CreditCard className="size-3 text-slate-400" />
-                          SSLCOMMERZ: {formatBDTFromPaisa(booking.gatewayAmountPaisa)}
+                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                          <CreditCard className="size-3 text-slate-500" />
+                          SSLCOMMERZ {formatBDTFromPaisa(booking.gatewayAmountPaisa)}
                         </span>
                       )}
+                      {hasGatewayPaid && hasWalletApplied && (
+                        <span className="text-slate-400 font-bold">+</span>
+                      )}
                       {hasWalletApplied && (
-                        <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
-                          <WalletCards className="size-3 text-emerald-600" />
-                          Refund Balance: −{formatBDTFromPaisa(booking.driverWalletAppliedPaisa)}
+                        <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                          <WalletCards className="size-3 text-slate-500" />
+                          Wallet Balance {formatBDTFromPaisa(booking.driverWalletAppliedPaisa)}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2 border-t pt-3 sm:border-0 sm:pt-0">
-                    <div className="text-right">
-                      <span className="text-xs text-slate-400 block sm:hidden">Total paid</span>
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1.5 border-t pt-3 sm:border-0 sm:pt-0">
+                    <div className=" sm:text-right">
+                      <span className="text-[11px] font-medium text-slate-400 block">Total paid</span>
                       <strong className="text-base font-extrabold font-mono text-slate-900">
                         {formatBDTFromPaisa(booking.totalAmountPaisa)}
                       </strong>

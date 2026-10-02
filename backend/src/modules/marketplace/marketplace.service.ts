@@ -7641,6 +7641,125 @@ const driverRefundInclude = {
   },
 } satisfies Prisma.RefundInclude;
 
+const driverBookingRefundSelect = {
+  id: true,
+  bookingCode: true,
+  status: true,
+  totalAmountPaisa: true,
+  confirmedAt: true,
+  driverUserId: true,
+  property: { select: { id: true, name: true, publicArea: true } },
+  payments: {
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+    select: {
+      id: true,
+      amountPaisa: true,
+      currency: true,
+      status: true,
+      capturedAt: true,
+    },
+  },
+} satisfies Prisma.BookingSelect;
+
+function mapCancellationToRefundRecord(cancellation: {
+  id: string;
+  bookingId: string;
+  driverUserId: string;
+  bookingRefundBps: number;
+  bookingRefundPaisa: bigint;
+  depositReturnPaisa: bigint;
+  driverWalletCreditPaisa: bigint;
+  reason: string | null;
+  createdAt: Date;
+  booking: Prisma.BookingGetPayload<{
+    select: typeof driverBookingRefundSelect;
+  }>;
+}) {
+  const latestPayment = cancellation.booking.payments[0];
+  const pct = Math.round(cancellation.bookingRefundBps / 100);
+  return {
+    id: cancellation.id,
+    paymentId: latestPayment?.id ?? cancellation.bookingId,
+    requestedByUserId: cancellation.driverUserId,
+    amountPaisa: cancellation.driverWalletCreditPaisa,
+    reason: cancellation.reason
+      ? `Booking cancellation (${pct}% parking refund + deposit return) — ${cancellation.reason}`
+      : `Booking cancellation (${pct}% parking refund + security deposit returned to Wallet Balance)`,
+    status: RefundStatus.SUCCEEDED,
+    processedAt: cancellation.createdAt,
+    createdAt: cancellation.createdAt,
+    refundType: "CANCELLATION_REFUND" as const,
+    bookingRefundPaisa: cancellation.bookingRefundPaisa,
+    depositReturnPaisa: cancellation.depositReturnPaisa,
+    payment: {
+      id: latestPayment?.id ?? cancellation.bookingId,
+      amountPaisa:
+        latestPayment?.amountPaisa ?? cancellation.booking.totalAmountPaisa,
+      currency: latestPayment?.currency ?? "BDT",
+      status: latestPayment?.status ?? PaymentStatus.REFUNDED,
+      capturedAt: latestPayment?.capturedAt ?? cancellation.booking.confirmedAt,
+      booking: {
+        id: cancellation.booking.id,
+        bookingCode: cancellation.booking.bookingCode,
+        status: cancellation.booking.status,
+        property: cancellation.booking.property,
+      },
+    },
+  };
+}
+
+function mapSettlementToRefundRecord(settlement: {
+  id: string;
+  bookingId: string;
+  depositReturnedPaisa: bigint;
+  driverRefundCreditPaisa: bigint;
+  overtimeMinutes: number;
+  overtimeChargePaisa: bigint;
+  depositUsedPaisa: bigint;
+  createdAt: Date;
+  completedAt: Date | null;
+  booking: Prisma.BookingGetPayload<{
+    select: typeof driverBookingRefundSelect;
+  }>;
+}) {
+  const latestPayment = settlement.booking.payments[0];
+  const timestamp = settlement.completedAt ?? settlement.createdAt;
+  const isNoShow = settlement.booking.status === BookingStatus.NO_SHOW;
+  const reason = isNoShow
+    ? "Refundable security deposit returned automatically (no-show settlement)"
+    : settlement.depositUsedPaisa > 0n
+      ? "Remaining security deposit returned after overtime deduction at checkout"
+      : "Full refundable security deposit returned at checkout";
+  return {
+    id: settlement.id,
+    paymentId: latestPayment?.id ?? settlement.bookingId,
+    requestedByUserId: settlement.booking.driverUserId,
+    amountPaisa: settlement.driverRefundCreditPaisa,
+    reason,
+    status: RefundStatus.SUCCEEDED,
+    processedAt: timestamp,
+    createdAt: timestamp,
+    refundType: "DEPOSIT_RETURN" as const,
+    bookingRefundPaisa: 0n,
+    depositReturnPaisa: settlement.depositReturnedPaisa,
+    payment: {
+      id: latestPayment?.id ?? settlement.bookingId,
+      amountPaisa:
+        latestPayment?.amountPaisa ?? settlement.booking.totalAmountPaisa,
+      currency: latestPayment?.currency ?? "BDT",
+      status: latestPayment?.status ?? PaymentStatus.CAPTURED,
+      capturedAt: latestPayment?.capturedAt ?? settlement.booking.confirmedAt,
+      booking: {
+        id: settlement.booking.id,
+        bookingCode: settlement.booking.bookingCode,
+        status: settlement.booking.status,
+        property: settlement.booking.property,
+      },
+    },
+  };
+}
+
 export async function listDriverRefunds(
   driverUserId: string,
   input: {
@@ -7649,20 +7768,57 @@ export async function listDriverRefunds(
     status?: RefundStatus;
   },
 ) {
+  const includeWalletCredits =
+    !input.status || input.status === RefundStatus.SUCCEEDED;
   const where: Prisma.RefundWhereInput = {
     payment: { payerUserId: driverUserId },
     ...(input.status ? { status: input.status } : {}),
   };
-  const [refunds, total] = await Promise.all([
+
+  const [directRefunds, cancellations, settlements] = await Promise.all([
     prisma.refund.findMany({
       where,
       include: driverRefundInclude,
       orderBy: { createdAt: "desc" },
-      skip: (input.page - 1) * input.limit,
-      take: input.limit,
     }),
-    prisma.refund.count({ where }),
+    includeWalletCredits
+      ? prisma.bookingCancellation.findMany({
+          where: {
+            driverUserId,
+            driverWalletCreditPaisa: { gt: 0n },
+          },
+          include: { booking: { select: driverBookingRefundSelect } },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    includeWalletCredits
+      ? prisma.bookingSettlement.findMany({
+          where: {
+            booking: { driverUserId },
+            status: "COMPLETED",
+            driverRefundCreditPaisa: { gt: 0n },
+          },
+          include: { booking: { select: driverBookingRefundSelect } },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
+
+  const combined = [
+    ...directRefunds.map((r) => ({
+      ...r,
+      refundType: "PAYMENT_REFUND" as const,
+      bookingRefundPaisa: r.amountPaisa,
+      depositReturnPaisa: 0n,
+    })),
+    ...cancellations.map(mapCancellationToRefundRecord),
+    ...settlements.map(mapSettlementToRefundRecord),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const total = combined.length;
+  const start = (input.page - 1) * input.limit;
+  const refunds = combined.slice(start, start + input.limit);
+
   return serialize({
     refunds,
     pagination: pagination(input.page, input.limit, total),
@@ -7674,8 +7830,41 @@ export async function getDriverRefund(driverUserId: string, refundId: string) {
     where: { id: refundId, payment: { payerUserId: driverUserId } },
     include: driverRefundInclude,
   });
-  if (!refund) fail(404, "REFUND_NOT_FOUND", "Refund was not found");
-  return serialize(refund);
+  if (refund) {
+    return serialize({
+      ...refund,
+      refundType: "PAYMENT_REFUND" as const,
+      bookingRefundPaisa: refund.amountPaisa,
+      depositReturnPaisa: 0n,
+    });
+  }
+
+  const cancellation = await prisma.bookingCancellation.findFirst({
+    where: {
+      id: refundId,
+      driverUserId,
+      driverWalletCreditPaisa: { gt: 0n },
+    },
+    include: { booking: { select: driverBookingRefundSelect } },
+  });
+  if (cancellation) {
+    return serialize(mapCancellationToRefundRecord(cancellation));
+  }
+
+  const settlement = await prisma.bookingSettlement.findFirst({
+    where: {
+      id: refundId,
+      booking: { driverUserId },
+      status: "COMPLETED",
+      driverRefundCreditPaisa: { gt: 0n },
+    },
+    include: { booking: { select: driverBookingRefundSelect } },
+  });
+  if (settlement) {
+    return serialize(mapSettlementToRefundRecord(settlement));
+  }
+
+  fail(404, "REFUND_NOT_FOUND", "Refund was not found");
 }
 
 const payoutMethodPublicSelect = {
