@@ -4,7 +4,6 @@ import {
 } from "../../../generated/prisma/client.js";
 
 export const criticalLocationFields = new Set([
-  "name",
   "publicArea",
   "approximateAddress",
   "exactAddress",
@@ -12,6 +11,7 @@ export const criticalLocationFields = new Set([
   "longitude",
   "entranceLatitude",
   "entranceLongitude",
+  "isSharedBuilding",
 ]);
 
 export const commonOperationFields = new Set([

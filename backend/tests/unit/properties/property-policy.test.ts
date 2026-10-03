@@ -20,7 +20,7 @@ describe("property policy", () => {
         VerificationStatus.VERIFIED,
         new Set(["name", "accessInstructions"]),
       ),
-      true,
+      false,
     );
     assert.equal(
       shouldResetVerification(
@@ -28,6 +28,13 @@ describe("property policy", () => {
         new Set(["accessInstructions", "generalParkingRules"]),
       ),
       false,
+    );
+    assert.equal(
+      shouldResetVerification(
+        VerificationStatus.VERIFIED,
+        new Set(["isSharedBuilding"]),
+      ),
+      true,
     );
   });
 

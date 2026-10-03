@@ -949,7 +949,7 @@ async function finalizeSettlementPayment(
       await tx.walletAccount.update({
         where: { id: current.booking.settlementWalletAccountId },
         data: {
-          availableBalancePaisa: { increment: providerNetPaisa },
+          pendingBalancePaisa: { increment: providerNetPaisa },
           balanceVersion: { increment: 1 },
         },
       });

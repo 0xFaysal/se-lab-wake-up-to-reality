@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import {
   AccountOrigin,
+  ManagerDelegationPermission,
+  ManagerDelegationStatus,
+  PropertyProviderStatus,
+  VerificationStatus,
   Prisma,
   UserRoleType,
   UserStatus,
@@ -36,6 +40,41 @@ async function createWorkforceAccount(input: {
   email: string;
   phone: string;
 }) {
+  if (
+    input.targetRole === UserRoleType.GUARD &&
+    input.actorRoles.includes(UserRoleType.MANAGER) &&
+    !input.actorRoles.some(
+      (role) => role === UserRoleType.PROVIDER || role === UserRoleType.ADMIN,
+    )
+  ) {
+    const authorized = await prisma.providerManagerDelegation.findFirst({
+      where: {
+        managerUserId: input.actorUserId,
+        status: ManagerDelegationStatus.ACTIVE,
+        AND: [
+          { OR: [{ validFrom: null }, { validFrom: { lte: new Date() } }] },
+          { OR: [{ validUntil: null }, { validUntil: { gt: new Date() } }] },
+        ],
+        grantorProviderMembership: {
+          status: PropertyProviderStatus.ACTIVE,
+          verificationStatus: VerificationStatus.VERIFIED,
+        },
+        property: { deletedAt: null, canonicalPropertyId: null },
+        permissions: {
+          some: {
+            permission: ManagerDelegationPermission.GUARD_ADD_TO_PROPERTY,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    if (!authorized)
+      throw new AppError({
+        statusCode: 403,
+        code: "MANAGER_GUARD_CREATE_FORBIDDEN",
+        message: "An active Guard-management delegation is required",
+      });
+  }
   const createdByAdmin = input.actorRoles.includes(UserRoleType.ADMIN);
   const accountOrigin =
     createdByAdmin &&

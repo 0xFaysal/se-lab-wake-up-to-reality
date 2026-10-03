@@ -78,7 +78,7 @@ usersRouter.use(authenticate);
 usersRouter.post(
   "/guards",
   requireAccountReady,
-  requireRole(UserRoleType.PROVIDER, UserRoleType.ADMIN),
+  requireRole(UserRoleType.PROVIDER, UserRoleType.MANAGER, UserRoleType.ADMIN),
   sensitiveAccountRateLimit,
   validate(createGuardSchema),
   createGuardController,

@@ -67,6 +67,7 @@ export const createPropertySchema = z.object({
         2000,
       ).optional(),
       commonSafetyRules: textField("Common safety rules", 1, 2000).optional(),
+      isSharedBuilding: z.boolean().optional(),
     })
     .strict()
     .superRefine(validateEntrancePair),
@@ -102,6 +103,7 @@ export const updatePropertySchema = z.object({
       commonSafetyRules: textField("Common safety rules", 1, 2000)
         .nullable()
         .optional(),
+      isSharedBuilding: z.boolean().optional(),
       version: z.number().int().positive(),
     })
     .strict()

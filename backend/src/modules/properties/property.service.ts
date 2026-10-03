@@ -222,6 +222,7 @@ export async function createProperty(
             : {}),
           visitorIdentificationRequired:
             input.visitorIdentificationRequired ?? false,
+          isSharedBuilding: input.isSharedBuilding ?? false,
           ...(input.vehicleHeightLimitCm !== undefined
             ? { vehicleHeightLimitCm: input.vehicleHeightLimitCm }
             : {}),
@@ -416,6 +417,9 @@ export async function updateProperty(
           : {}),
         ...(input.commonSafetyRules !== undefined
           ? { commonSafetyRules: input.commonSafetyRules }
+          : {}),
+        ...(input.isSharedBuilding !== undefined
+          ? { isSharedBuilding: input.isSharedBuilding }
           : {}),
       };
 

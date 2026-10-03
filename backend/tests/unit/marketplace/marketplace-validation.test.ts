@@ -110,6 +110,18 @@ describe("Marketplace validation invariants", () => {
       }).success,
       false,
     );
+    assert.equal(
+      createReviewSchema.safeParse({
+        params: { bookingId: resourceId },
+        body: {
+          rating: 5,
+          securityRating: 4,
+          locationAccuracyRating: 5,
+          cleanlinessRating: 3,
+        },
+      }).success,
+      true,
+    );
   });
 
   it("accepts supported parking discovery filters and rejects unknown query fields", () => {
@@ -128,6 +140,9 @@ describe("Marketplace validation invariants", () => {
       resourceType: "FIXED_SPACE",
       facilityCodes: "EV_CHARGING,WHEELCHAIR_ACCESS",
       minAvailableUnits: "2",
+      sort: "price",
+      page: "2",
+      limit: "5",
     };
     const parsed = searchParkingSchema.safeParse({ query });
     assert.equal(parsed.success, true);
@@ -136,6 +151,11 @@ describe("Marketplace validation invariants", () => {
         "EV_CHARGING",
         "WHEELCHAIR_ACCESS",
       ]);
+    if (parsed.success) {
+      assert.equal(parsed.data.query.sort, "price");
+      assert.equal(parsed.data.query.page, 2);
+      assert.equal(parsed.data.query.limit, 5);
+    }
     assert.equal(
       searchParkingSchema.safeParse({
         query: { ...query, unsupportedFilter: "true" },

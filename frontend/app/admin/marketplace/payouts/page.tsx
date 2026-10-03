@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminEmptyState, AdminPageHeader } from "@/components/admin/admin-page";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -29,6 +29,7 @@ export default function PayoutQueuePage() {
   const [confirmation, setConfirmation] = useState<{ id: string; action: PayoutAction } | null>(null);
   const filters = { page, limit: 20, status: statusFilter };
   const query = useQuery({ queryKey: queryKeys.adminMarketplace.payouts(filters), queryFn: () => adminMarketplaceApi.payouts(filters) });
+  const payoutMethods = useQuery({ queryKey: ["admin", "payout-methods", "pending"], queryFn: adminMarketplaceApi.pendingPayoutMethods });
   const mutation = useMutation({
     mutationFn: ({ id, action }: { id: string; action: PayoutAction }) => {
       const note = notes[id] ?? "";
@@ -37,6 +38,14 @@ export default function PayoutQueuePage() {
       return adminMarketplaceApi.reviewPayout(id, { decision: action, note, ...(action === "PAID" ? { externalReference: references[id]?.trim() } : {}) });
     },
     onSuccess: async () => { toast.success("Payout updated"); setConfirmation(null); await client.invalidateQueries({ queryKey: ["admin", "marketplace", "payouts"] }); },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+  const methodMutation = useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: "APPROVED" | "REJECTED" }) => adminMarketplaceApi.reviewPayoutMethod(id, { decision, note: notes[id] ?? "" }),
+    onSuccess: async () => {
+      toast.success("Payout destination review saved");
+      await client.invalidateQueries({ queryKey: ["admin", "payout-methods", "pending"] });
+    },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });
 
@@ -48,6 +57,10 @@ export default function PayoutQueuePage() {
 
   return <div className="space-y-6">
     <AdminPageHeader eyebrow="Finance" title="Payout operations" description="Review Driver and Provider withdrawals, place risk holds, and record manual bank or MFS transfers." />
+    <section className="space-y-3">
+      <div><h2 className="flex items-center gap-2 text-lg font-extrabold"><CreditCard className="size-5 text-emerald-700" />Payout destination verification</h2><p className="mt-1 text-sm text-slate-600">Approve only after matching the account holder and masked destination with the submitted records.</p></div>
+      {payoutMethods.isPending ? <div className="h-28 animate-pulse bg-slate-200" /> : payoutMethods.isError ? <div className="border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{getApiErrorMessage(payoutMethods.error)}</p><Button className="mt-3" variant="outline" onClick={() => payoutMethods.refetch()}>Retry</Button></div> : payoutMethods.data.length === 0 ? <AdminEmptyState title="No payout destinations need verification" description="New bank and mobile-wallet destinations will appear here before they can receive withdrawals." /> : <div className="divide-y border bg-white">{payoutMethods.data.map((method) => <article key={method.id} className="grid gap-4 p-5 lg:grid-cols-[1fr_1fr_auto] lg:items-end"><div><strong>{method.provider.fullName}</strong><p className="mt-1 text-xs text-slate-500">{method.provider.email} · {method.provider.phone}</p><p className="mt-2 text-sm font-semibold">{method.type.replaceAll("_", " ")} · {method.maskedAccountIdentifier}</p><p className="text-xs text-slate-500">{method.accountHolderName}{method.bankName ? ` · ${method.bankName}` : ""}</p></div><Input aria-label={`Review note for ${method.accountHolderName}`} placeholder="Verification or rejection note" value={notes[method.id] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [method.id]: event.target.value }))} /><div className="flex gap-2"><Button size="sm" disabled={methodMutation.isPending || (notes[method.id]?.trim().length ?? 0) < 3} onClick={() => methodMutation.mutate({ id: method.id, decision: "APPROVED" })}>Approve</Button><Button size="sm" variant="destructive" disabled={methodMutation.isPending || (notes[method.id]?.trim().length ?? 0) < 3} onClick={() => methodMutation.mutate({ id: method.id, decision: "REJECTED" })}>Reject</Button></div></article>)}</div>}
+    </section>
     <label className="block w-fit space-y-1 text-xs font-bold text-slate-600"><span>Status</span><select className="h-10 border bg-white px-3 text-sm font-normal" value={statusFilter ?? ""} onChange={(event) => update({ status: event.target.value, page: "1" })}><option value="">All states</option>{statuses.map((status) => <option key={status}>{status.replaceAll("_", " ")}</option>)}</select></label>
     {query.isPending ? <div className="h-64 animate-pulse bg-slate-200" /> : query.isError ? <div className="border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{getApiErrorMessage(query.error)}</p><Button className="mt-3" variant="outline" onClick={() => query.refetch()}>Retry</Button></div> : query.data.payouts.length === 0 ? <AdminEmptyState title="No payout requests need review" description="New Driver and Provider withdrawal requests will appear here." /> : <div className="divide-y border bg-white">{query.data.payouts.map((item) => {
       const status = payoutStatus[item.status];

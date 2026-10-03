@@ -75,6 +75,7 @@ export interface PropertyDetailDto extends PropertySummaryDto {
   entryCutoffLocalTime: string | null;
   generalParkingRules: string | null;
   commonSafetyRules: string | null;
+  isSharedBuilding: boolean;
   temporaryClosureReason: string | null;
   temporaryClosedAt: string | null;
   temporaryClosedUntil: string | null;
@@ -96,6 +97,7 @@ export interface PropertyInput {
   entryCutoffLocalTime?: string;
   generalParkingRules?: string;
   commonSafetyRules?: string;
+  isSharedBuilding?: boolean;
 }
 
 export interface PropertyImageDto {

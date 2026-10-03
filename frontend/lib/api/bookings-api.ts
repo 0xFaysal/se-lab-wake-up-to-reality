@@ -23,7 +23,7 @@ export const bookingsApi = {
   payment: (paymentId: string) => apiClient.get<PaymentDto>(`/payments/${paymentId}`),
   refundPreview: (paymentId: string) => apiClient.get<RefundPreview>(`/payments/${paymentId}/refunds/preview`),
   refund: (paymentId: string, input: { reason: string; idempotencyKey: string }) => apiClient.post<RefundDto>(`/payments/${paymentId}/refunds`, input),
-  review: (bookingId: string, input: { rating: number; comment?: string }) => apiClient.post<ReviewDto>(`/bookings/${bookingId}/reviews`, input),
+  review: (bookingId: string, input: { rating: number; securityRating?: number; locationAccuracyRating?: number; cleanlinessRating?: number; comment?: string }) => apiClient.post<ReviewDto>(`/bookings/${bookingId}/reviews`, input),
   driverReviews: () => apiClient.get<ReviewDto[]>("/reviews"),
   dispute: (bookingId: string, input: { category: string; description: string; evidence?: Array<{ url: string; type: string }> }) => apiClient.post<DisputeDto>(`/bookings/${bookingId}/disputes`, input),
   driverDisputes: (status?: DisputeStatus) => apiClient.get<{ disputes: DisputeDto[]; pagination: PaginationDto }>(`/disputes${status ? `?status=${status}` : ""}`),
