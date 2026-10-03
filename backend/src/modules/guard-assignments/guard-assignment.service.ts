@@ -624,6 +624,7 @@ export async function updateProviderGuardAssignment(
       }
       expected = current.status;
       data = {
+        status: GuardAssignmentStatus.PENDING_ACCEPTANCE,
         shiftStart: shiftTimeToDate(input.shiftStart),
         shiftEnd: shiftTimeToDate(input.shiftEnd),
       };

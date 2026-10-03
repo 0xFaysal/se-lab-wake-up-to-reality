@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, CarFront, CheckCircle2, Clock3, Loader2, LogOut, MapPin, RefreshCw, ShieldCheck } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button as CanonicalButton } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { guardMarketplaceApi } from "@/lib/api/guard-marketplace-api";
 import { formatDateTime, vehicleLabels } from "@/lib/formatters";
@@ -16,6 +17,7 @@ export function GuardActiveSessionView({ bookingId }: { bookingId: string }) {
   const router = useRouter();
   const client = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [exitCredential, setExitCredential] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const booking = useQuery({
     queryKey: queryKeys.bookings.guardDetail(bookingId),
@@ -23,7 +25,7 @@ export function GuardActiveSessionView({ bookingId }: { bookingId: string }) {
     refetchInterval: 60_000,
   });
   const checkout = useMutation({
-    mutationFn: () => guardMarketplaceApi.checkOut(bookingId),
+    mutationFn: () => guardMarketplaceApi.checkOut(bookingId, exitCredential.trim() || undefined),
     onSuccess: async () => {
       setConfirmOpen(false);
       await client.invalidateQueries({ queryKey: queryKeys.bookings.root });
@@ -81,6 +83,7 @@ export function GuardActiveSessionView({ bookingId }: { bookingId: string }) {
           <AlertDialogHeader><AlertDialogMedia className="bg-amber-100 text-amber-900"><LogOut className="size-6" /></AlertDialogMedia><AlertDialogTitle>Confirm physical vehicle exit</AlertDialogTitle><AlertDialogDescription>This records the actual checkout time and releases {slot}. This action cannot be undone by the Guard.</AlertDialogDescription></AlertDialogHeader>
           <div className="rounded-xl bg-slate-50 p-4"><p className="font-bold tracking-[0.08em] text-slate-950">{item.vehicle.registrationNumber}</p><p className="mt-1 text-sm text-slate-600">{item.driver.fullName} · {slot}</p></div>
           {checkout.isError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{getApiErrorMessage(checkout.error)}</p>}
+          {checkoutRequested && <label className="grid gap-2 text-sm font-semibold">Driver exit pass<Input value={exitCredential} onChange={(event) => setExitCredential(event.target.value)} autoComplete="off" placeholder="EXIT-…" /></label>}
           <AlertDialogFooter><AlertDialogCancel disabled={checkout.isPending}>Vehicle still inside</AlertDialogCancel><AlertDialogAction disabled={checkout.isPending} onClick={() => checkout.mutate()} className="min-h-10 bg-emerald-900 text-white hover:bg-emerald-800">{checkout.isPending ? <><Loader2 className="size-4 animate-spin" />Finalizing session…</> : <><ShieldCheck className="size-4" />Vehicle has exited</>}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

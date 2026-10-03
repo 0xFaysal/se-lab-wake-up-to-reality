@@ -25,6 +25,14 @@ describe("property request validation", () => {
     );
   });
 
+  it("accepts the shared-building governance flag", () => {
+    const result = createPropertySchema.safeParse({
+      body: { ...validProperty, isSharedBuilding: true },
+    });
+    assert.equal(result.success, true);
+    if (result.success) assert.equal(result.data.body.isSharedBuilding, true);
+  });
+
   it("rejects latitude and longitude outside global bounds", () => {
     for (const body of [
       { ...validProperty, latitude: 90.01 },

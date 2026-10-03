@@ -7,7 +7,29 @@ import {
   listUserSessions,
   revokeUserSession,
 } from "../auth/auth.service.js";
-import { createGuardAccount, createManagerAccount } from "./users.service.js";
+import {
+  createGuardAccount,
+  createManagerAccount,
+  updateOwnProfile,
+} from "./users.service.js";
+
+export const updateOwnProfileController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    if (!req.auth) throw authErrors.authenticationRequired();
+    const user = await updateOwnProfile(req.auth.userId, req.body.fullName);
+    res.status(200).json({
+      success: true,
+      data: { user },
+      meta: { requestId: req.requestId, timestamp: new Date().toISOString() },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 function getClientIp(req: Parameters<RequestHandler>[0]): string {
   return req.ip || req.socket.remoteAddress || "unknown";

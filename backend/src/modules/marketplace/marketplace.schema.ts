@@ -700,6 +700,9 @@ export const searchParkingSchema = z.object({
         )
         .optional(),
       minAvailableUnits: z.coerce.number().int().min(1).max(100).optional(),
+      sort: z.enum(["distance", "price"]).default("distance"),
+      page: z.coerce.number().int().min(1).default(1),
+      limit: z.coerce.number().int().min(1).max(100).default(20),
     })
     .strict()
     .refine((value) => new Date(value.startAt) > new Date(), {
@@ -858,6 +861,11 @@ export const capturePaymentSchema = z.object({
 export const verifyCredentialSchema = z.object({
   body: z.object({ credential: z.string().min(32).max(256) }).strict(),
 });
+export const checkoutCredentialSchema = z.object({
+  body: z
+    .object({ credential: z.string().min(32).max(256).optional() })
+    .strict(),
+});
 
 export const refundSchema = z.object({
   params: z.object({ paymentId: uuid }),
@@ -917,6 +925,16 @@ export const payoutMethodSchema = z.object({
 
 export const payoutMethodParamsSchema = z.object({
   params: z.object({ payoutMethodId: uuid }),
+});
+
+export const adminPayoutMethodReviewSchema = z.object({
+  params: z.object({ payoutMethodId: uuid }),
+  body: z
+    .object({
+      decision: z.enum(["APPROVED", "REJECTED"]),
+      note: z.string().trim().min(3).max(500),
+    })
+    .strict(),
 });
 
 export const payoutParamsSchema = z.object({
@@ -1056,6 +1074,9 @@ export const createReviewSchema = z.object({
     .object({
       rating: z.number().int().min(1).max(5),
       comment: z.string().trim().max(2000).optional(),
+      securityRating: z.number().int().min(1).max(5).optional(),
+      locationAccuracyRating: z.number().int().min(1).max(5).optional(),
+      cleanlinessRating: z.number().int().min(1).max(5).optional(),
     })
     .strict(),
 });

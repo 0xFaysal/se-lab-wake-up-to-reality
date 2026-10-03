@@ -776,7 +776,24 @@ export async function overridePropertyStatus(
             parkingSpot: { propertyId },
             status: ParkingListingStatus.ACTIVE,
           },
-          data: { status: ParkingListingStatus.SUSPENDED, deactivatedAt: now },
+          data: {
+            status: ParkingListingStatus.SUSPENDED,
+            deactivatedAt: now,
+            suspendedByProperty: true,
+          },
+        });
+      } else {
+        await tx.parkingListing.updateMany({
+          where: {
+            parkingSpot: { propertyId },
+            status: ParkingListingStatus.SUSPENDED,
+            suspendedByProperty: true,
+          },
+          data: {
+            status: ParkingListingStatus.ACTIVE,
+            deactivatedAt: null,
+            suspendedByProperty: false,
+          },
         });
       }
       const updated = await tx.property.update({

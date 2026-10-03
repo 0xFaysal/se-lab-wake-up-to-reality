@@ -4,7 +4,6 @@ import {
 } from "../../../generated/prisma/client.js";
 
 export const criticalLocationFields = new Set([
-  "name",
   "publicArea",
   "approximateAddress",
   "exactAddress",
@@ -12,6 +11,7 @@ export const criticalLocationFields = new Set([
   "longitude",
   "entranceLatitude",
   "entranceLongitude",
+  "isSharedBuilding",
 ]);
 
 export const commonOperationFields = new Set([
@@ -22,6 +22,22 @@ export const commonOperationFields = new Set([
   "generalParkingRules",
   "commonSafetyRules",
 ]);
+
+export function actualPropertyChanges(
+  previous: Record<string, unknown>,
+  input: Record<string, unknown>,
+) {
+  return new Set(
+    Object.entries(input)
+      .filter(
+        ([key, value]) =>
+          key !== "version" &&
+          value !== undefined &&
+          (value ?? null) !== (previous[key] ?? null),
+      )
+      .map(([key]) => key),
+  );
+}
 
 export function canOwnerEditProperty(
   property: Pick<Property, "verificationStatus">,

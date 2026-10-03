@@ -26,7 +26,7 @@ export default function PayoutMethodsPage() {
   const create = useMutation({
     mutationFn: financeApi.createPayoutMethod,
     onSuccess: async () => {
-      toast.success("Payout method added securely");
+      toast.success("Payout method submitted for Admin verification");
       setAdding(false);
       await refresh();
     },

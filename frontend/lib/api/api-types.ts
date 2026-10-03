@@ -75,6 +75,7 @@ export interface PropertyDetailDto extends PropertySummaryDto {
   entryCutoffLocalTime: string | null;
   generalParkingRules: string | null;
   commonSafetyRules: string | null;
+  isSharedBuilding: boolean;
   temporaryClosureReason: string | null;
   temporaryClosedAt: string | null;
   temporaryClosedUntil: string | null;
@@ -96,7 +97,13 @@ export interface PropertyInput {
   entryCutoffLocalTime?: string;
   generalParkingRules?: string;
   commonSafetyRules?: string;
+  isSharedBuilding?: boolean;
 }
+
+export type PropertyClearableField = "entranceLatitude" | "entranceLongitude" | "accessInstructions" | "vehicleHeightLimitCm" | "entryCutoffLocalTime" | "generalParkingRules" | "commonSafetyRules";
+export type PropertyUpdateInput = Partial<Omit<PropertyInput, PropertyClearableField>> & {
+  [K in PropertyClearableField]?: PropertyInput[K] | null;
+} & { version: number };
 
 export interface PropertyImageDto {
   id: string;

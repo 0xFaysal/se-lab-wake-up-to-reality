@@ -59,6 +59,34 @@ async function lockDelegation(
   `;
 }
 
+async function notifyDelegation(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  delegationId: string,
+  title: string,
+  message: string,
+  suffix: string,
+) {
+  await tx.notification.upsert({
+    where: {
+      userId_idempotencyKey: {
+        userId,
+        idempotencyKey: `manager-delegation:${delegationId}:${suffix}`,
+      },
+    },
+    create: {
+      userId,
+      type: "MANAGER_DELEGATION",
+      title,
+      message,
+      entityType: "ProviderManagerDelegation",
+      entityId: delegationId,
+      idempotencyKey: `manager-delegation:${delegationId}:${suffix}`,
+    },
+    update: {},
+  });
+}
+
 async function requireProviderMembership(
   tx: Prisma.TransactionClient,
   providerUserId: string,
@@ -148,6 +176,14 @@ export async function createManagerDelegation(
           permissionCount: input.permissions.length,
         },
       });
+      await notifyDelegation(
+        tx,
+        manager.id,
+        delegation.id,
+        "Manager invitation received",
+        `You were invited to manage ${delegation.property.name}.`,
+        "created",
+      );
       return toManagerDelegationDto(delegation);
     });
   } catch (error) {
@@ -363,6 +399,26 @@ async function finishDelegation(
       entityType: "ProviderManagerDelegation",
       entityId: delegationId,
     });
+    await notifyDelegation(
+      tx,
+      current.grantorProviderMembership.providerUserId,
+      delegationId,
+      accept ? "Manager invitation accepted" : "Manager access ended",
+      accept
+        ? "The Manager accepted your delegation invitation."
+        : "The Manager delegation is no longer active.",
+      accept ? "accepted-provider" : "ended-provider",
+    );
+    await notifyDelegation(
+      tx,
+      current.managerUserId,
+      delegationId,
+      accept ? "Manager access activated" : "Manager access ended",
+      accept
+        ? "Your delegated Manager access is now active."
+        : "Your delegated Manager access has ended.",
+      accept ? "accepted-manager" : "ended-manager",
+    );
     return toManagerDelegationDto(updated);
   });
 }
@@ -379,3 +435,51 @@ export const endManagerDelegation = (
   providerUserId: string,
   delegationId: string,
 ) => finishDelegation(providerUserId, delegationId, "PROVIDER", false);
+
+export async function setManagerDelegationSuspended(
+  providerUserId: string,
+  delegationId: string,
+  suspended: boolean,
+) {
+  return prisma.$transaction(async (tx) => {
+    await lockDelegation(tx, delegationId);
+    const current = await tx.providerManagerDelegation.findUnique({
+      where: { id: delegationId },
+      include: { grantorProviderMembership: true },
+    });
+    if (
+      !current ||
+      current.grantorProviderMembership.providerUserId !== providerUserId
+    )
+      throw managerDelegationErrors.notFound();
+    const expected = suspended
+      ? ManagerDelegationStatus.ACTIVE
+      : ManagerDelegationStatus.SUSPENDED;
+    if (current.status !== expected)
+      throw managerDelegationErrors.invalidTransition();
+    const status = suspended
+      ? ManagerDelegationStatus.SUSPENDED
+      : ManagerDelegationStatus.ACTIVE;
+    const changed = await tx.providerManagerDelegation.updateMany({
+      where: { id: delegationId, status: expected },
+      data: { status },
+    });
+    if (changed.count !== 1) throw managerDelegationErrors.conflict();
+    await notifyDelegation(
+      tx,
+      current.managerUserId,
+      delegationId,
+      suspended ? "Manager access suspended" : "Manager access restored",
+      suspended
+        ? "The Provider has temporarily suspended your delegated access."
+        : "The Provider has restored your delegated access.",
+      status.toLowerCase(),
+    );
+    return toManagerDelegationDto(
+      await tx.providerManagerDelegation.findUniqueOrThrow({
+        where: { id: delegationId },
+        include: delegationInclude,
+      }),
+    );
+  });
+}

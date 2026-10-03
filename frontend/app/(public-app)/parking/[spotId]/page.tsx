@@ -10,16 +10,19 @@ import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { VehicleType } from "@/lib/api/api-types";
 import { bookingsApi } from "@/lib/api/bookings-api";
+import { authApi } from "@/lib/api/auth-api";
 import type { BookingDto, BookingQuoteDto, PublicPropertyDetailDto, PublicPropertyOfferDto, ReservationHoldDto } from "@/lib/api/marketplace-types";
 import { parkingSearchApi } from "@/lib/api/parking-search-api";
 import { vehicleApi } from "@/lib/api/vehicle-api";
 import { formatBDTFromPaisa, formatDateTime, toUtcFromBangladeshLocal, vehicleLabels } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
+import { isCheckoutLocked, isValidParkingPeriod } from "@/lib/parking-period";
 
 export default function ParkingDetailsPage({ params }: { params: Promise<{ spotId: string }> }) {
   const { spotId } = use(params);
   const search = useSearchParams();
   const pathname = usePathname();
+  const [checkoutLocked, setCheckoutLocked] = useState(false);
   const searchRoot = pathname.startsWith("/driver/") ? "/driver/parking" : "/parking";
 
   const [request, setRequest] = useState<{ startAt: string; endAt: string; vehicleType: VehicleType }>(() => ({
@@ -28,7 +31,7 @@ export default function ParkingDetailsPage({ params }: { params: Promise<{ spotI
     vehicleType: (search.get("vehicleType") ?? "SEDAN") as VehicleType,
   }));
 
-  const valid = !!request.startAt && !!request.endAt;
+  const valid = isValidParkingPeriod(request.startAt, request.endAt);
 
   const results = useQuery({
     queryKey: queryKeys.parkingSearch.property(spotId, request),
@@ -76,7 +79,10 @@ export default function ParkingDetailsPage({ params }: { params: Promise<{ spotI
       <a href="#reviews" className="flex items-center gap-2 text-sm font-bold"><Star className="size-4 fill-amber-400 text-amber-400" />{property.rating ? property.rating.toFixed(1) : "New"}<span className="font-normal text-slate-500">({property.reviewCount} reviews)</span></a>
     </header>
     <PropertyGallery property={property} />
-    <AvailabilityPicker request={request} property={property} isFetching={results.isFetching} onRequestChange={handleRequestChange} />
+    <fieldset disabled={checkoutLocked || results.isFetching} className="min-w-0">
+      <AvailabilityPicker request={request} property={property} isFetching={results.isFetching} onRequestChange={handleRequestChange} />
+    </fieldset>
+    {checkoutLocked && <p className="text-sm text-slate-600">Your selected time is reserved for this checkout. Release the hold or discard the quote to choose another time.</p>}
     <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="space-y-8">
         <section className="border-b pb-8"><h2 className="text-xl font-extrabold">About this parking</h2><p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-slate-600">{property.description || "A verified ParkEase BD parking location with published parking offers."}</p><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><DetailFact icon={CarFront} label="Availability" value={`${availableUnits} space${availableUnits === 1 ? "" : "s"} for selected time`} /><DetailFact icon={BadgeCheck} label="Identification" value={property.visitorIdentificationRequired ? "Visitor ID required" : "No visitor ID required"} /><DetailFact icon={Ruler} label="Height limit" value={property.vehicleHeightLimitCm ? `${property.vehicleHeightLimitCm} cm` : "No limit listed"} /><DetailFact icon={Clock} label="Entry cutoff" value={property.entryCutoffLocalTime ? property.entryCutoffLocalTime.slice(11, 16) : "No cutoff listed"} /></div></section>
@@ -85,7 +91,7 @@ export default function ParkingDetailsPage({ params }: { params: Promise<{ spotI
         {(property.generalParkingRules || property.commonSafetyRules) && <section className="grid gap-6 border-b pb-8 md:grid-cols-2">{property.generalParkingRules && <div><h2 className="font-extrabold">Parking rules</h2><p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{property.generalParkingRules}</p></div>}{property.commonSafetyRules && <div><h2 className="font-extrabold">Safety information</h2><p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{property.commonSafetyRules}</p></div>}</section>}
         <ReviewsSection property={property} />
       </div>
-      {availableOffers.length > 0 ? <BookingCheckout offers={availableOffers} startAt={request.startAt} endAt={request.endAt} /> : property.offers.length > 0 ? <aside className="h-fit border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 lg:sticky lg:top-24"><strong>Unavailable for this period</strong><p className="mt-2 leading-5">The offers are published, but none cover the selected date and time. Return to search and choose another period.</p></aside> : null}
+      {availableOffers.length > 0 ? <BookingCheckout offers={availableOffers} startAt={request.startAt} endAt={request.endAt} availabilityPending={results.isFetching} onLockChange={setCheckoutLocked} /> : property.offers.length > 0 ? <aside className="h-fit border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 lg:sticky lg:top-24"><strong>Unavailable for this period</strong><p className="mt-2 leading-5">The offers are published, but none cover the selected date and time. Return to search and choose another period.</p></aside> : null}
     </div>
   </main>;
 }
@@ -578,11 +584,13 @@ function Offer({ offer }: { offer: PublicPropertyOfferDto }) {
   );
 }
 
-function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOfferDto[]; startAt: string; endAt: string }) {
+function BookingCheckout({ offers, startAt, endAt, availabilityPending, onLockChange }: { offers: PublicPropertyOfferDto[]; startAt: string; endAt: string; availabilityPending: boolean; onLockChange: (locked: boolean) => void }) {
   const client = useQueryClient(); const keys = useRef({ hold: crypto.randomUUID(), booking: crypto.randomUUID(), payment: crypto.randomUUID() });
   const [listingId, setListingId] = useState(offers[0]?.listingId ?? ""); const [vehicleId, setVehicleId] = useState("");
   const [quote, setQuote] = useState<BookingQuoteDto | null>(null); const [hold, setHold] = useState<ReservationHoldDto | null>(null); const [booking, setBooking] = useState<BookingDto | null>(null);
-  const vehicles = useQuery({ queryKey: queryKeys.vehicles.all, queryFn: vehicleApi.list, retry: false });
+  const auth = useQuery({ queryKey: queryKeys.auth.me, queryFn: async () => (await authApi.me({ skipAuthRefresh: true })).user, retry: false });
+  const isDriver = auth.data?.roles.includes("DRIVER") === true;
+  const vehicles = useQuery({ queryKey: queryKeys.vehicles.all, queryFn: vehicleApi.list, enabled: isDriver, retry: false });
   const selectedOffer = offers.find((offer) => offer.listingId === listingId); const compatible = vehicles.data?.filter((vehicle) => selectedOffer?.allowedVehicleTypes.includes(vehicle.vehicleType)) ?? [];
   const quoteMutation = useMutation({ mutationFn: () => parkingSearchApi.createQuote({ listingId, vehicleId, startAt, endAt }), onSuccess: (data) => { setQuote(data); setHold(null); setBooking(null); } });
   const holdMutation = useMutation({ mutationFn: () => parkingSearchApi.createHold(quote!.id, keys.current.hold), onSuccess: setHold });
@@ -590,11 +598,16 @@ function BookingCheckout({ offers, startAt, endAt }: { offers: PublicPropertyOff
   const bookingMutation = useMutation({ mutationFn: () => bookingsApi.create(hold!.id, keys.current.booking), onSuccess: setBooking });
   const paymentMutation = useMutation({ mutationFn: () => bookingsApi.createPaymentSession(booking!.id, keys.current.payment), onSuccess: (session) => session.checkoutUrl ? window.location.assign(session.checkoutUrl) : window.location.assign(`/driver/bookings/${booking!.id}`) });
   const now = useCurrentTime(!!quote || !!hold); const quoteExpired = !!quote && now > 0 && new Date(quote.expiresAt).getTime() <= now; const holdExpired = !!hold && now > 0 && new Date(hold.expiresAt).getTime() <= now; const error = quoteMutation.error ?? holdMutation.error ?? releaseMutation.error ?? bookingMutation.error ?? paymentMutation.error;
+  const locked = isCheckoutLocked({ hasQuote: !!quote, hasHold: !!hold, hasBooking: !!booking, quotePending: quoteMutation.isPending });
+  useEffect(() => { onLockChange(locked); return () => onLockChange(false); }, [locked, onLockChange]);
   const returnTo = typeof window === "undefined" ? "/parking" : window.location.pathname + window.location.search;
+  if (auth.isPending) return <aside className="h-fit rounded-lg border bg-white p-5"><Loader2 className="size-5 animate-spin" aria-label="Checking account" /></aside>;
+  if (!isDriver) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in with a Driver account to reserve this offer.</p><Button className="mt-4 w-full" nativeButton={false} render={<Link href={`/login?redirect=${encodeURIComponent(returnTo)}`} />}>Sign in</Button></aside>;
   if (vehicles.isError) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in as a Driver to choose a registered vehicle and reserve this offer.</p><Button className="mt-4 w-full" nativeButton={false} render={<Link href={`/login?redirect=${encodeURIComponent(returnTo)}`} />}>Sign in</Button></aside>;
   return <aside className="h-fit space-y-4 rounded-lg border bg-white p-5 shadow-sm lg:sticky lg:top-24"><div><h2 className="font-bold">Reserve parking</h2><p className="mt-1 text-xs text-slate-500">{formatDateTime(startAt)} to {formatDateTime(endAt)}</p></div>
     {!booking && <><label className="block space-y-1 text-xs font-semibold">Offer<select className="h-10 w-full rounded-md border px-3 text-sm" value={listingId} disabled={!!quote} onChange={(event) => { setListingId(event.target.value); setVehicleId(""); }} >{offers.map((offer) => <option key={offer.listingId} value={offer.listingId}>{offer.title} · {formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</option>)}</select></label><label className="block space-y-1 text-xs font-semibold">Vehicle<select className="h-10 w-full rounded-md border px-3 text-sm" value={vehicleId} disabled={!!quote} onChange={(event) => setVehicleId(event.target.value)}><option value="">Select compatible vehicle</option>{compatible.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} · {vehicleLabels[vehicle.vehicleType]}</option>)}</select></label></>}
-    {!quote && <Button className="w-full" disabled={!vehicleId || quoteMutation.isPending} onClick={() => quoteMutation.mutate()}>{quoteMutation.isPending && <Loader2 className="size-4 animate-spin" />}Get server quote</Button>}
+    {!quote && <Button className="w-full" disabled={!vehicleId || !selectedOffer || availabilityPending || quoteMutation.isPending} onClick={() => quoteMutation.mutate()}>{quoteMutation.isPending && <Loader2 className="size-4 animate-spin" />}Get server quote</Button>}
+    {quote && !hold && !booking && <Button className="w-full" variant="ghost" disabled={holdMutation.isPending} onClick={() => { setQuote(null); keys.current.hold = crypto.randomUUID(); }}>Discard quote</Button>}
     {quote && !hold && <div className="space-y-3 border-t pt-4"><Price label="Parking" value={quote.baseAmountPaisa} /><Price label="Platform fee" value={quote.platformFeePaisa} /><Price label="Security deposit" value={quote.depositPaisa} /><Price label="Total" value={quote.totalAmountPaisa} strong /><p className="flex items-center gap-1 text-xs text-slate-500"><Clock className="size-3" />Quote expires in <Countdown expiresAt={quote.expiresAt} now={now} /></p>{quoteExpired ? <Button className="w-full" variant="outline" onClick={() => { setQuote(null); keys.current.hold = crypto.randomUUID(); }}>Price quote expired. Refresh quote.</Button> : <Button className="w-full" disabled={holdMutation.isPending} onClick={() => holdMutation.mutate()}>{holdMutation.isPending && <Loader2 className="size-4 animate-spin" />}Hold this parking</Button>}</div>}
     {hold && !booking && <div className="space-y-3 border-t pt-4"><p className="rounded-md bg-blue-50 p-3 text-xs text-blue-800">Parking held for <Countdown expiresAt={hold.expiresAt} now={now} /></p><Button className="w-full" disabled={holdExpired || bookingMutation.isPending || releaseMutation.isPending} onClick={() => bookingMutation.mutate()}>{bookingMutation.isPending && <Loader2 className="size-4 animate-spin" />}Create booking</Button>{holdExpired ? <><p className="text-xs text-red-700">The hold expired. Refresh the quote to try again.</p><Button className="w-full" variant="outline" onClick={() => { setHold(null); setQuote(null); keys.current.hold = crypto.randomUUID(); keys.current.booking = crypto.randomUUID(); }}>Start again</Button></> : <Button className="w-full" variant="ghost" disabled={releaseMutation.isPending} onClick={() => releaseMutation.mutate()}>{releaseMutation.isPending && <Loader2 className="size-4 animate-spin" />}Release hold</Button>}</div>}
     {booking && <div className="space-y-3 border-t pt-4"><p className="font-mono text-sm font-bold">{booking.bookingCode}</p><Price label="Payment amount" value={booking.totalAmountPaisa} strong /><div className="flex gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><ShieldCheck className="size-4 shrink-0" /><p>You will continue to the secure SSLCOMMERZ hosted checkout. Payment is confirmed only after server validation.</p></div><Button className="w-full" disabled={paymentMutation.isPending} onClick={() => paymentMutation.mutate()}>{paymentMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}Pay securely with SSLCOMMERZ</Button><Button className="w-full" variant="outline" nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}`} />}>View booking</Button></div>}

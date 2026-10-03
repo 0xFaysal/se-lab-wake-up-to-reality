@@ -13,5 +13,5 @@ export const guardMarketplaceApi = {
   booking: (bookingId: string) => apiClient.get<GuardBookingDto>(`/guard/bookings/${bookingId}`),
   verify: (credential: string) => apiClient.post<GuardCredentialResult>("/guard/access/verify", { credential }),
   checkIn: (bookingId: string, credential: string) => apiClient.post<BookingDto>(`/guard/bookings/${bookingId}/check-in`, { credential }),
-  checkOut: (bookingId: string) => apiClient.post<BookingDto & { settlement: BookingSettlementDto }>(`/guard/bookings/${bookingId}/check-out`, {}),
+  checkOut: (bookingId: string, credential?: string) => apiClient.post<BookingDto & { settlement: BookingSettlementDto }>(`/guard/bookings/${bookingId}/check-out`, credential ? { credential } : {}),
 };

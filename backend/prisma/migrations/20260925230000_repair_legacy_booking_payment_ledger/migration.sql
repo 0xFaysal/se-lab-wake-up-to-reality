@@ -1,6 +1,6 @@
 -- Preserve immutable legacy entries and neutralize premature revenue recognition
 -- with a balanced, auditable correction transaction.
-CREATE TEMP TABLE legacy_booking_payment_repair ON COMMIT DROP AS
+CREATE TEMP TABLE IF NOT EXISTS legacy_booking_payment_repair AS
 SELECT
   lt.id AS legacy_transaction_id,
   lt.reference_id AS payment_id,
@@ -94,3 +94,5 @@ SET
   updated_at = NOW()
 FROM provider_reversal reversal
 WHERE wallet.id = reversal.wallet_account_id;
+
+DROP TABLE IF EXISTS legacy_booking_payment_repair;

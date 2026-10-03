@@ -1,5 +1,11 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { basename } from "node:path";
+import { creditProviderEarnings } from "../payments/provider-earnings.js";
+import { allocatePayoutDebits } from "../../common/finance/payout-accounting.js";
+import {
+  approximateCoordinates as publicCoordinates,
+  operationalBooking,
+} from "./public-data.js";
 import { fileTypeFromBuffer } from "file-type";
 import {
   BookingStatus,
@@ -25,7 +31,7 @@ import {
   UserRoleType,
   UserStatus,
   VerificationStatus,
-  type Prisma,
+  Prisma,
   type VehicleType,
 } from "../../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
@@ -68,6 +74,7 @@ const DHAKA_TIME_ZONE = "Asia/Dhaka";
 const QUOTE_TTL_MS = 5 * 60 * 1000;
 const HOLD_TTL_MS = 5 * 60 * 1000;
 const PAYMENT_CALLBACK_GRACE_MS = 5 * 60 * 1000;
+const PROVIDER_DISPUTE_HOLD_MS = 24 * 60 * 60 * 1000;
 
 type JsonObject = Record<string, unknown>;
 type AuditMetadata = Record<string, string | number | boolean | null>;
@@ -84,6 +91,34 @@ function fail(
     code,
     ...(details === undefined ? {} : { details }),
   });
+}
+
+async function serializableWithRetry<T>(
+  operation: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await prisma.$transaction(operation, {
+        isolationLevel: "Serializable",
+      });
+    } catch (error) {
+      const retryable =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2034";
+      if (!retryable) throw error;
+      if (attempt === 3)
+        fail(
+          409,
+          "CONCURRENT_FINANCIAL_UPDATE",
+          "The balance changed during this request; refresh and try again",
+        );
+    }
+  }
+  fail(
+    409,
+    "CONCURRENT_FINANCIAL_UPDATE",
+    "The balance changed during this request",
+  );
 }
 
 function serialize<T>(value: T): T {
@@ -143,6 +178,9 @@ function dhakaParts(date: Date) {
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const approximate = publicCoordinates("", lat2, lon2);
+  lat2 = approximate.latitude;
+  lon2 = approximate.longitude;
   const radians = (degrees: number) => (degrees * Math.PI) / 180;
   const earthRadiusKm = 6371;
   const dLat = radians(lat2 - lat1);
@@ -151,6 +189,23 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(dLon / 2) ** 2;
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
+
+function physicalCapacity(listing: {
+  parkingResourceUnitId: string | null;
+  parkingSpot: {
+    resourceType: ParkingResourceType;
+    capacity: number;
+    units: unknown[];
+    _count?: { units: number };
+  };
+}) {
+  if (listing.parkingResourceUnitId) return 1;
+  if (listing.parkingSpot.resourceType !== ParkingResourceType.FIXED_SPACE)
+    return listing.parkingSpot.capacity;
+  return listing.parkingSpot._count?.units === 0
+    ? listing.parkingSpot.capacity
+    : listing.parkingSpot.units.length;
 }
 
 async function audit(
@@ -754,6 +809,43 @@ export async function updateResource(
           );
         }
       }
+      const isBlocking =
+        typeof input.status === "string" &&
+        input.status !== ParkingSpotStatus.ACTIVE;
+      const affectedBookings = isBlocking
+        ? await tx.booking.findMany({
+            where: {
+              parkingSpotId: resourceId,
+              status: {
+                in: [
+                  BookingStatus.PAYMENT_PENDING,
+                  BookingStatus.CONFIRMED,
+                  BookingStatus.CHECKED_IN,
+                  BookingStatus.CHECKOUT_REQUESTED,
+                ],
+              },
+              OR: [
+                { effectiveEndAt: { gt: new Date() } },
+                {
+                  status: {
+                    in: [
+                      BookingStatus.CHECKED_IN,
+                      BookingStatus.CHECKOUT_REQUESTED,
+                    ],
+                  },
+                },
+              ],
+            },
+            select: {
+              id: true,
+              bookingCode: true,
+              status: true,
+              startAt: true,
+              scheduledEndAt: true,
+            },
+            orderBy: { startAt: "asc" },
+          })
+        : [];
       const updated = await tx.parkingSpot.update({
         where: { id: resourceId },
         data: input as Prisma.ParkingSpotUpdateInput,
@@ -777,7 +869,14 @@ export async function updateResource(
           propertyId: resource.propertyId,
         });
       }
-      return serialize(updated);
+      return serialize({
+        ...updated,
+        affectedBookings,
+        warning:
+          affectedBookings.length > 0
+            ? `${affectedBookings.length} active booking(s) require manual handling because this resource is blocked.`
+            : null,
+      });
     },
     { isolationLevel: "Serializable" },
   );
@@ -3917,6 +4016,7 @@ async function loadBookableListing(listingId: string) {
       parkingSpot: {
         include: {
           property: true,
+          _count: { select: { units: true } },
           units: {
             where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE },
             orderBy: { normalizedSpotCode: "asc" },
@@ -3945,14 +4045,9 @@ async function availableListingUnits(
   startAt: Date,
   endAt: Date,
 ) {
-  const physicalCapacity =
-    listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
-      ? listing.parkingResourceUnitId
-        ? 1
-        : listing.parkingSpot.units.length
-      : listing.parkingSpot.capacity;
+  const listingCapacity = physicalCapacity(listing);
   const rightCapacity = Math.min(
-    physicalCapacity,
+    listingCapacity,
     listing.parkingRight.quantity,
   );
   const [rightAllocations, resourceAllocations] = await Promise.all([
@@ -4034,12 +4129,9 @@ async function availableUnitsForListings(
           allocatedUnitIds.has(listing.parkingResourceUnitId) ? 0 : 1,
         ];
       }
-      const physicalCapacity =
-        listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
-          ? listing.parkingSpot.units.length
-          : listing.parkingSpot.capacity;
+      const listingCapacity = physicalCapacity(listing);
       const rightCapacity = Math.min(
-        physicalCapacity,
+        listingCapacity,
         listing.parkingRight.quantity,
       );
       const rightCount =
@@ -4050,10 +4142,7 @@ async function availableUnitsForListings(
         listing.id,
         Math.max(
           0,
-          Math.min(
-            rightCapacity - rightCount,
-            physicalCapacity - resourceCount,
-          ),
+          Math.min(rightCapacity - rightCount, listingCapacity - resourceCount),
         ),
       ];
     }),
@@ -4097,6 +4186,7 @@ export async function browseParking(input: {
           property: {
             include: { images: { where: { isCover: true }, take: 1 } },
           },
+          _count: { select: { units: true } },
           units: {
             where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE },
           },
@@ -4104,7 +4194,6 @@ export async function browseParking(input: {
         },
       },
     },
-    take: 500,
   });
   const groups = new Map<
     string,
@@ -4127,19 +4216,20 @@ export async function browseParking(input: {
 
   for (const listing of listings) {
     const property = listing.parkingSpot.property;
-    const physicalCapacity = listing.parkingResourceUnitId
-      ? 1
-      : listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
-        ? listing.parkingSpot.units.length
-        : listing.parkingSpot.capacity;
+    const listingCapacity = physicalCapacity(listing);
     const availableUnits = Math.max(
       0,
-      Math.min(physicalCapacity, listing.parkingRight.quantity),
+      Math.min(listingCapacity, listing.parkingRight.quantity),
     );
     if (availableUnits === 0) continue;
     const distanceKm = haversineKm(
       input.latitude,
       input.longitude,
+      Number(property.latitude),
+      Number(property.longitude),
+    );
+    const approximate = publicCoordinates(
+      property.id,
       Number(property.latitude),
       Number(property.longitude),
     );
@@ -4149,8 +4239,7 @@ export async function browseParking(input: {
         name: property.name,
         publicArea: property.publicArea,
         approximateAddress: property.approximateAddress,
-        latitude: Number(property.latitude),
-        longitude: Number(property.longitude),
+        ...approximate,
         coverImageUrl: property.images[0]?.url ?? null,
       },
       offers: [],
@@ -4216,6 +4305,9 @@ export async function searchParking(input: {
   resourceType?: ParkingResourceType;
   facilityCodes?: string[];
   minAvailableUnits?: number;
+  sort?: "distance" | "price";
+  page?: number;
+  limit?: number;
 }) {
   const startAt = new Date(input.startAt);
   const endAt = new Date(input.endAt);
@@ -4283,6 +4375,7 @@ export async function searchParking(input: {
           property: {
             include: { images: { where: { isCover: true }, take: 1 } },
           },
+          _count: { select: { units: true } },
           units: {
             where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE },
             orderBy: { normalizedSpotCode: "asc" },
@@ -4293,7 +4386,6 @@ export async function searchParking(input: {
         },
       },
     },
-    take: 500,
   });
   const groups = new Map<
     string,
@@ -4342,14 +4434,18 @@ export async function searchParking(input: {
         availableUnits < input.minAvailableUnits)
     )
       continue;
+    const approximate = publicCoordinates(
+      property.id,
+      Number(property.latitude),
+      Number(property.longitude),
+    );
     const group = groups.get(property.id) ?? {
       property: {
         id: property.id,
         name: property.name,
         publicArea: property.publicArea,
         approximateAddress: property.approximateAddress,
-        latitude: Number(property.latitude),
-        longitude: Number(property.longitude),
+        ...approximate,
         coverImageUrl: property.images[0]?.url ?? null,
       },
       offers: [],
@@ -4382,7 +4478,7 @@ export async function searchParking(input: {
     );
     groups.set(property.id, group);
   }
-  return [...groups.values()]
+  const results = [...groups.values()]
     .map((group) => {
       const prices = group.offers.map((offer) =>
         BigInt(String(offer.pricePerHourPaisa)),
@@ -4396,7 +4492,14 @@ export async function searchParking(input: {
         offers: group.offers,
       };
     })
-    .sort((a, b) => a.distanceKm - b.distanceKm);
+    .sort((a, b) =>
+      (input.sort ?? "distance") === "price"
+        ? Number(BigInt(a.minimumPricePaisa) - BigInt(b.minimumPricePaisa))
+        : a.distanceKm - b.distanceKm,
+    );
+  const page = input.page ?? 1;
+  const limit = input.limit ?? 20;
+  return results.slice((page - 1) * limit, page * limit);
 }
 
 export async function getPublicPropertyDetail(
@@ -4482,6 +4585,7 @@ export async function getPublicPropertyDetail(
           parkingSpot: {
             include: {
               property: true,
+              _count: { select: { units: true } },
               units: {
                 where: { deletedAt: null, status: ParkingSpotStatus.ACTIVE },
                 orderBy: { normalizedSpotCode: "asc" },
@@ -4506,6 +4610,9 @@ export async function getPublicPropertyDetail(
         select: {
           id: true,
           rating: true,
+          securityRating: true,
+          locationAccuracyRating: true,
+          cleanlinessRating: true,
           comment: true,
           providerReply: true,
           providerRepliedAt: true,
@@ -4602,10 +4709,14 @@ export async function getPublicPropertyDetail(
     });
   }
 
+  const approximate = publicCoordinates(
+    property.id,
+    Number(property.latitude),
+    Number(property.longitude),
+  );
   return serialize({
     ...property,
-    latitude: Number(property.latitude),
-    longitude: Number(property.longitude),
+    ...approximate,
     rating: reviewSummary._avg.rating,
     reviewCount: reviewSummary._count._all,
     ratingDistribution: Object.fromEntries(
@@ -4620,6 +4731,9 @@ export async function getPublicPropertyDetail(
       return {
         id: review.id,
         rating: review.rating,
+        securityRating: review.securityRating,
+        locationAccuracyRating: review.locationAccuracyRating,
+        cleanlinessRating: review.cleanlinessRating,
         comment: review.comment,
         reviewerName,
         providerReply: review.providerReply,
@@ -4674,8 +4788,11 @@ export async function listDriverFavorites(driverUserId: string) {
       ...favorite,
       property: {
         ...details,
-        latitude: Number(property.latitude),
-        longitude: Number(property.longitude),
+        ...publicCoordinates(
+          property.id,
+          Number(property.latitude),
+          Number(property.longitude),
+        ),
         coverImageUrl: images[0]?.url ?? null,
       },
     };
@@ -4895,6 +5012,28 @@ export async function createQuote(
       409,
       "VEHICLE_NOT_COMPATIBLE",
       "Vehicle is not compatible with this listing",
+    );
+  const heightLimit = Math.min(
+    ...[
+      listing.parkingSpot.maxHeightCm,
+      listing.parkingSpot.property.vehicleHeightLimitCm,
+    ].filter((value): value is number => value !== null),
+  );
+  const exceedsDimensions =
+    (Number.isFinite(heightLimit) &&
+      vehicle.heightCm !== null &&
+      vehicle.heightCm > heightLimit) ||
+    (listing.parkingSpot.maxWidthCm !== null &&
+      vehicle.widthCm !== null &&
+      vehicle.widthCm > listing.parkingSpot.maxWidthCm) ||
+    (listing.parkingSpot.maxLengthCm !== null &&
+      vehicle.lengthCm !== null &&
+      vehicle.lengthCm > listing.parkingSpot.maxLengthCm);
+  if (exceedsDimensions)
+    fail(
+      409,
+      "VEHICLE_DIMENSIONS_EXCEED_LIMIT",
+      "Vehicle dimensions exceed this parking space's limits",
     );
   const durationMinutes = Math.ceil(
     (endAt.getTime() - startAt.getTime()) / 60_000,
@@ -5731,15 +5870,12 @@ async function settleNoShowBooking(bookingId: string, now: Date) {
         },
       });
       if (settlementValue.providerNetPaisa > 0n)
-        await tx.walletAccount.update({
-          where: { id: booking.settlementWalletAccountId },
-          data: {
-            availableBalancePaisa: {
-              increment: settlementValue.providerNetPaisa,
-            },
-            balanceVersion: { increment: 1 },
-          },
-        });
+        await creditProviderEarnings(
+          tx,
+          booking.id,
+          booking.settlementWalletAccountId,
+          settlementValue.providerNetPaisa,
+        );
       if (settlementValue.driverRefundCreditPaisa > 0n)
         await tx.walletAccount.update({
           where: { id: driverWallet.id },
@@ -5779,7 +5915,7 @@ async function settleNoShowBooking(bookingId: string, now: Date) {
         userId: booking.providerUserId,
         type: "PAYOUT_UPDATED",
         title: "No-show booking settled",
-        message: `Booking ${booking.bookingCode} ended without check-in. Parking earnings are now available.`,
+        message: `Booking ${booking.bookingCode} ended without check-in. Parking earnings are pending until the dispute window closes.`,
         entityType: "Booking",
         entityId: booking.id,
         idempotencyKey: `booking-no-show-provider:${booking.id}`,
@@ -5930,24 +6066,108 @@ export async function reconcileExpiredPendingBookings(
   return { candidates: candidates.length, processed };
 }
 
+async function releaseMatureProviderEarnings(now: Date) {
+  const cutoff = new Date(now.getTime() - PROVIDER_DISPUTE_HOLD_MS);
+  const candidates = await prisma.bookingSettlement.findMany({
+    where: {
+      status: "COMPLETED",
+      completedAt: { lte: cutoff },
+      providerReleasedAt: null,
+      booking: {
+        OR: [
+          { dispute: { is: null } },
+          {
+            dispute: {
+              status: { in: [DisputeStatus.RESOLVED, DisputeStatus.REJECTED] },
+            },
+          },
+        ],
+      },
+    },
+    select: { id: true, bookingId: true },
+    take: 100,
+  });
+  let released = 0;
+  for (const candidate of candidates) {
+    await prisma.$transaction(async (tx) => {
+      await lockEntity(tx, "booking", candidate.bookingId);
+      const settlement = await tx.bookingSettlement.findFirst({
+        where: {
+          id: candidate.id,
+          status: "COMPLETED",
+          completedAt: { lte: cutoff },
+          providerReleasedAt: null,
+          booking: {
+            OR: [
+              { dispute: { is: null } },
+              {
+                dispute: {
+                  status: {
+                    in: [DisputeStatus.RESOLVED, DisputeStatus.REJECTED],
+                  },
+                },
+              },
+            ],
+          },
+        },
+        include: { booking: true },
+      });
+      if (!settlement) return;
+      await lockEntity(
+        tx,
+        "wallet",
+        settlement.booking.settlementWalletAccountId,
+      );
+      const wallet = await tx.walletAccount.findUniqueOrThrow({
+        where: { id: settlement.booking.settlementWalletAccountId },
+      });
+      const amount = settlement.providerNetPaisa;
+      if (wallet.pendingBalancePaisa < amount) return;
+      if (amount > 0n) {
+        await tx.walletAccount.update({
+          where: { id: wallet.id },
+          data: {
+            pendingBalancePaisa: { decrement: amount },
+            availableBalancePaisa: { increment: amount },
+            balanceVersion: { increment: 1 },
+          },
+        });
+      }
+      await tx.bookingSettlement.update({
+        where: { id: settlement.id },
+        data: { providerReleasedAt: now },
+      });
+      released += 1;
+    });
+  }
+  return released;
+}
+
 export async function reconcileMarketplaceLifecycle() {
   const now = new Date();
   const expiredHolds = await prisma.$transaction((tx) =>
     releaseExpiredHolds(tx, now),
   );
-  const [expiredBookings, noShows, expiredCredentials] = await Promise.all([
+  const [
+    expiredBookings,
+    noShows,
+    expiredCredentials,
+    releasedProviderEarnings,
+  ] = await Promise.all([
     reconcileExpiredPendingBookings(),
     reconcilePastDueConfirmedBookings(),
     prisma.accessCredential.updateMany({
       where: { status: "ACTIVE", expiresAt: { lte: now } },
       data: { status: "EXPIRED" },
     }),
+    releaseMatureProviderEarnings(now),
   ]);
   return {
     expiredHolds,
     expiredBookings,
     noShows,
     expiredCredentials: expiredCredentials.count,
+    releasedProviderEarnings,
   };
 }
 
@@ -6076,15 +6296,30 @@ export async function listProviderBookings(
   const scopeByMembership = new Map(
     scopes.map((scope) => [scope.providerMembershipId, scope]),
   );
+  const directMembershipIds = new Set(
+    (
+      await prisma.propertyProvider.findMany({
+        where: { providerUserId: actorUserId },
+        select: { id: true },
+      })
+    ).map((membership) => membership.id),
+  );
+  const redactMoney = operationalBooking;
   return serialize(
-    bookings.filter((booking) => {
-      const resourceIds = scopeByMembership.get(
-        booking.listing.providerMembershipId,
-      )?.resourceIds;
-      return (
-        resourceIds === null || resourceIds?.includes(booking.parkingSpotId)
-      );
-    }),
+    bookings
+      .filter((booking) => {
+        const resourceIds = scopeByMembership.get(
+          booking.listing.providerMembershipId,
+        )?.resourceIds;
+        return (
+          resourceIds === null || resourceIds?.includes(booking.parkingSpotId)
+        );
+      })
+      .map((booking) =>
+        directMembershipIds.has(booking.listing.providerMembershipId)
+          ? booking
+          : redactMoney(booking),
+      ),
   );
 }
 
@@ -6125,7 +6360,16 @@ export async function getProviderBooking(
   if (resourceIds !== null && !resourceIds?.includes(booking.parkingSpotId)) {
     fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
   }
-  return serialize(booking);
+  const directMembership = await prisma.propertyProvider.findFirst({
+    where: {
+      id: booking.listing.providerMembershipId,
+      providerUserId: actorUserId,
+    },
+    select: { id: true },
+  });
+  if (directMembership) return serialize(booking);
+  const redactMoney = operationalBooking;
+  return serialize(redactMoney(booking));
 }
 
 const guardBookingSelect = {
@@ -6322,8 +6566,15 @@ export async function cancelBooking(
       include: { cancellation: true, payments: true },
     });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
-    if (booking.cancellation)
+    if (booking.cancellation) {
+      if (booking.cancellation.idempotencyKey !== input.idempotencyKey)
+        fail(
+          409,
+          "BOOKING_ALREADY_CANCELLED",
+          "Booking has already been cancelled",
+        );
       return serialize({ booking, cancellation: booking.cancellation });
+    }
     if (
       booking.status !== BookingStatus.PAYMENT_PENDING &&
       booking.status !== BookingStatus.CONFIRMED
@@ -6688,6 +6939,25 @@ export async function verifyAccessCredential(
   credential: string,
 ) {
   const tokenHash = createHash("sha256").update(credential).digest("hex");
+  if (credential.startsWith("EXIT-")) {
+    const booking = await prisma.booking.findFirst({
+      where: {
+        exitCredentialHash: tokenHash,
+        exitCredentialExpiresAt: { gt: new Date() },
+        status: BookingStatus.CHECKOUT_REQUESTED,
+      },
+      select: guardBookingSelect,
+    });
+    if (!booking)
+      fail(404, "EXIT_CREDENTIAL_INVALID", "Exit pass is invalid or expired");
+    if (!(await isGuardAuthorizedForBooking(guardUserId, booking.id)))
+      fail(
+        403,
+        "GUARD_BOOKING_FORBIDDEN",
+        "Guard is not assigned to this booking",
+      );
+    return serialize({ valid: true, purpose: "EXIT", booking });
+  }
   const record = await prisma.accessCredential.findUnique({
     where: credentialLookup(credential, tokenHash),
     select: {
@@ -6724,7 +6994,7 @@ export async function verifyAccessCredential(
       "Booking is outside the allowed check-in window",
     );
   }
-  return serialize({ valid: true, booking: record.booking });
+  return serialize({ valid: true, purpose: "ENTRY", booking: record.booking });
 }
 
 export async function checkInBooking(
@@ -6803,17 +7073,28 @@ export async function requestCheckout(driverUserId: string, bookingId: string) {
       where: { id: bookingId, driverUserId },
     });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
-    if (booking.status === BookingStatus.CHECKOUT_REQUESTED)
-      return serialize(booking);
-    if (booking.status !== BookingStatus.CHECKED_IN)
+    if (
+      booking.status !== BookingStatus.CHECKED_IN &&
+      booking.status !== BookingStatus.CHECKOUT_REQUESTED
+    )
       fail(
         409,
         "BOOKING_TRANSITION_INVALID",
         "Only checked-in bookings can request checkout",
       );
+    const exitCredential = `EXIT-${randomBytes(24).toString("base64url")}`;
+    const exitCredentialHash = createHash("sha256")
+      .update(exitCredential)
+      .digest("hex");
+    const exitCredentialExpiresAt = new Date(Date.now() + 30 * 60_000);
     const updated = await tx.booking.update({
       where: { id: booking.id },
-      data: { status: "CHECKOUT_REQUESTED", checkoutRequestedAt: new Date() },
+      data: {
+        status: "CHECKOUT_REQUESTED",
+        checkoutRequestedAt: booking.checkoutRequestedAt ?? new Date(),
+        exitCredentialHash,
+        exitCredentialExpiresAt,
+      },
     });
     await audit(
       tx,
@@ -6823,11 +7104,20 @@ export async function requestCheckout(driverUserId: string, bookingId: string) {
       "Booking",
       booking.id,
     );
-    return serialize(updated);
+    return serialize({
+      ...updated,
+      exitCredential,
+      exitQr: exitCredential,
+      exitCredentialExpiresAt,
+    });
   });
 }
 
-export async function checkOutBooking(guardUserId: string, bookingId: string) {
+export async function checkOutBooking(
+  guardUserId: string,
+  bookingId: string,
+  credential?: string,
+) {
   const result = await prisma.$transaction(async (tx) => {
     await lockEntity(tx, "booking", bookingId);
     const booking = await tx.booking.findUnique({
@@ -6854,6 +7144,20 @@ export async function checkOutBooking(guardUserId: string, bookingId: string) {
       );
     }
     const now = new Date();
+    if (
+      booking.status === BookingStatus.CHECKOUT_REQUESTED &&
+      (!credential ||
+        !booking.exitCredentialHash ||
+        !booking.exitCredentialExpiresAt ||
+        booking.exitCredentialExpiresAt <= now ||
+        createHash("sha256").update(credential).digest("hex") !==
+          booking.exitCredentialHash)
+    )
+      fail(
+        400,
+        "EXIT_CREDENTIAL_INVALID",
+        "Ask the driver for a current exit pass",
+      );
     const effectiveEndAt =
       now > booking.startAt ? now : new Date(booking.startAt.getTime() + 1);
     const overtime = calculateOvertime({
@@ -6982,15 +7286,12 @@ export async function checkOutBooking(guardUserId: string, bookingId: string) {
           entries: { create: entries.filter((e) => e.amountPaisa > 0n) },
         },
       });
-      await tx.walletAccount.update({
-        where: { id: booking.settlementWalletAccountId },
-        data: {
-          availableBalancePaisa: {
-            increment: settlementValue.providerNetPaisa,
-          },
-          balanceVersion: { increment: 1 },
-        },
-      });
+      await creditProviderEarnings(
+        tx,
+        booking.id,
+        booking.settlementWalletAccountId,
+        settlementValue.providerNetPaisa,
+      );
       if (
         settlementValue.driverWalletChargedPaisa > 0n ||
         settlementValue.driverRefundCreditPaisa > 0n
@@ -7165,7 +7466,16 @@ export async function getProviderBookingSettlement(
   actorUserId: string,
   bookingId: string,
 ) {
-  await getProviderBooking(actorUserId, bookingId);
+  const booking = await prisma.booking.findFirst({
+    where: { id: bookingId, providerUserId: actorUserId },
+    select: { id: true },
+  });
+  if (!booking)
+    fail(
+      403,
+      "PROVIDER_FINANCE_FORBIDDEN",
+      "Only the Provider can view settlement amounts",
+    );
   const settlement = await prisma.bookingSettlement.findUnique({
     where: { bookingId },
   });
@@ -7217,15 +7527,21 @@ export async function listWalletTransactions(userId: string) {
 }
 
 export async function getEarningsSummary(actorUserId: string) {
-  const scopes = await listProviderAccessScopes(
-    actorUserId,
-    ManagerDelegationPermission.EARNINGS_VIEW,
-  );
-  const providerIds = new Set(
-    scopes
-      .filter((scope) => scope.resourceIds === null)
-      .map((scope) => scope.providerUserId),
-  );
+  const memberships = await prisma.propertyProvider.findMany({
+    where: {
+      providerUserId: actorUserId,
+      status: "ACTIVE",
+      verificationStatus: "VERIFIED",
+    },
+    select: { id: true },
+  });
+  if (memberships.length === 0)
+    fail(
+      403,
+      "PROVIDER_EARNINGS_FORBIDDEN",
+      "Delegated Managers cannot view Provider earnings",
+    );
+  const providerIds = new Set([actorUserId]);
   const providerUserIds = [...providerIds];
   const [wallets, unsettled] = await Promise.all([
     prisma.walletAccount.findMany({
@@ -7261,13 +7577,21 @@ export async function getEarningsSummary(actorUserId: string) {
 }
 
 export async function listEarningsTransactions(actorUserId: string) {
-  const scopes = await listProviderAccessScopes(
-    actorUserId,
-    ManagerDelegationPermission.EARNINGS_VIEW,
-  );
-  const providerIds = scopes
-    .filter((scope) => scope.resourceIds === null)
-    .map((scope) => scope.providerUserId);
+  const membership = await prisma.propertyProvider.findFirst({
+    where: {
+      providerUserId: actorUserId,
+      status: "ACTIVE",
+      verificationStatus: "VERIFIED",
+    },
+    select: { id: true },
+  });
+  if (!membership)
+    fail(
+      403,
+      "PROVIDER_EARNINGS_FORBIDDEN",
+      "Delegated Managers cannot view Provider earnings",
+    );
+  const providerIds = [actorUserId];
   const wallets = await prisma.walletAccount.findMany({
     where: { userId: { in: providerIds }, currency: "BDT" },
     select: { id: true },
@@ -7309,18 +7633,66 @@ export async function createRefund(
   paymentId: string,
   input: { amountPaisa: bigint; reason: string; idempotencyKey: string },
 ) {
+  const admin = await prisma.userRole.findUnique({
+    where: {
+      userId_role: { userId: requestedByUserId, role: UserRoleType.ADMIN },
+    },
+  });
+  if (!admin)
+    fail(
+      403,
+      "REFUND_FORBIDDEN",
+      "Use booking cancellation or open a dispute; arbitrary refunds require Admin review",
+    );
   const previous = await prisma.refund.findUnique({
     where: { idempotencyKey: input.idempotencyKey },
   });
-  if (previous) return serialize(previous);
+  if (previous) {
+    if (
+      previous.requestedByUserId !== requestedByUserId ||
+      previous.paymentId !== paymentId ||
+      previous.amountPaisa !== input.amountPaisa
+    )
+      fail(
+        409,
+        "IDEMPOTENCY_CONFLICT",
+        "This request key belongs to another refund",
+      );
+    return serialize(previous);
+  }
+  const targetPayment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { bookingId: true },
+  });
+  if (!targetPayment) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
   return prisma.$transaction(
     async (tx) => {
+      await lockEntity(tx, "booking", targetPayment.bookingId);
       await lockEntity(tx, "payment", paymentId);
       const payment = await tx.payment.findUnique({
         where: { id: paymentId },
         include: { booking: true, refunds: { where: { status: "SUCCEEDED" } } },
       });
       if (!payment) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
+      const alreadyDistributed = await tx.booking.findUnique({
+        where: { id: payment.bookingId },
+        select: {
+          cancellation: { select: { id: true } },
+          settlement: { select: { id: true } },
+        },
+      });
+      if (payment.provider !== "SIMULATED")
+        fail(
+          409,
+          "GATEWAY_REFUND_REQUIRED",
+          "Use the gateway refund workflow for this payment",
+        );
+      if (alreadyDistributed?.cancellation || alreadyDistributed?.settlement)
+        fail(
+          409,
+          "PAYMENT_ALREADY_DISTRIBUTED",
+          "Booking funds have already been settled or returned to Refund Balance",
+        );
       const requesterAdminRole = await tx.userRole.findUnique({
         where: {
           userId_role: { userId: requestedByUserId, role: UserRoleType.ADMIN },
@@ -7641,6 +8013,125 @@ const driverRefundInclude = {
   },
 } satisfies Prisma.RefundInclude;
 
+const driverBookingRefundSelect = {
+  id: true,
+  bookingCode: true,
+  status: true,
+  totalAmountPaisa: true,
+  confirmedAt: true,
+  driverUserId: true,
+  property: { select: { id: true, name: true, publicArea: true } },
+  payments: {
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+    select: {
+      id: true,
+      amountPaisa: true,
+      currency: true,
+      status: true,
+      capturedAt: true,
+    },
+  },
+} satisfies Prisma.BookingSelect;
+
+function mapCancellationToRefundRecord(cancellation: {
+  id: string;
+  bookingId: string;
+  driverUserId: string;
+  bookingRefundBps: number;
+  bookingRefundPaisa: bigint;
+  depositReturnPaisa: bigint;
+  driverWalletCreditPaisa: bigint;
+  reason: string | null;
+  createdAt: Date;
+  booking: Prisma.BookingGetPayload<{
+    select: typeof driverBookingRefundSelect;
+  }>;
+}) {
+  const latestPayment = cancellation.booking.payments[0];
+  const pct = Math.round(cancellation.bookingRefundBps / 100);
+  return {
+    id: cancellation.id,
+    paymentId: latestPayment?.id ?? cancellation.bookingId,
+    requestedByUserId: cancellation.driverUserId,
+    amountPaisa: cancellation.driverWalletCreditPaisa,
+    reason: cancellation.reason
+      ? `Booking cancellation (${pct}% parking refund + deposit return) — ${cancellation.reason}`
+      : `Booking cancellation (${pct}% parking refund + security deposit returned to Wallet Balance)`,
+    status: RefundStatus.SUCCEEDED,
+    processedAt: cancellation.createdAt,
+    createdAt: cancellation.createdAt,
+    refundType: "CANCELLATION_REFUND" as const,
+    bookingRefundPaisa: cancellation.bookingRefundPaisa,
+    depositReturnPaisa: cancellation.depositReturnPaisa,
+    payment: {
+      id: latestPayment?.id ?? cancellation.bookingId,
+      amountPaisa:
+        latestPayment?.amountPaisa ?? cancellation.booking.totalAmountPaisa,
+      currency: latestPayment?.currency ?? "BDT",
+      status: latestPayment?.status ?? PaymentStatus.REFUNDED,
+      capturedAt: latestPayment?.capturedAt ?? cancellation.booking.confirmedAt,
+      booking: {
+        id: cancellation.booking.id,
+        bookingCode: cancellation.booking.bookingCode,
+        status: cancellation.booking.status,
+        property: cancellation.booking.property,
+      },
+    },
+  };
+}
+
+function mapSettlementToRefundRecord(settlement: {
+  id: string;
+  bookingId: string;
+  depositReturnedPaisa: bigint;
+  driverRefundCreditPaisa: bigint;
+  overtimeMinutes: number;
+  overtimeChargePaisa: bigint;
+  depositUsedPaisa: bigint;
+  createdAt: Date;
+  completedAt: Date | null;
+  booking: Prisma.BookingGetPayload<{
+    select: typeof driverBookingRefundSelect;
+  }>;
+}) {
+  const latestPayment = settlement.booking.payments[0];
+  const timestamp = settlement.completedAt ?? settlement.createdAt;
+  const isNoShow = settlement.booking.status === BookingStatus.NO_SHOW;
+  const reason = isNoShow
+    ? "Refundable security deposit returned automatically (no-show settlement)"
+    : settlement.depositUsedPaisa > 0n
+      ? "Remaining security deposit returned after overtime deduction at checkout"
+      : "Full refundable security deposit returned at checkout";
+  return {
+    id: settlement.id,
+    paymentId: latestPayment?.id ?? settlement.bookingId,
+    requestedByUserId: settlement.booking.driverUserId,
+    amountPaisa: settlement.driverRefundCreditPaisa,
+    reason,
+    status: RefundStatus.SUCCEEDED,
+    processedAt: timestamp,
+    createdAt: timestamp,
+    refundType: "DEPOSIT_RETURN" as const,
+    bookingRefundPaisa: 0n,
+    depositReturnPaisa: settlement.depositReturnedPaisa,
+    payment: {
+      id: latestPayment?.id ?? settlement.bookingId,
+      amountPaisa:
+        latestPayment?.amountPaisa ?? settlement.booking.totalAmountPaisa,
+      currency: latestPayment?.currency ?? "BDT",
+      status: latestPayment?.status ?? PaymentStatus.CAPTURED,
+      capturedAt: latestPayment?.capturedAt ?? settlement.booking.confirmedAt,
+      booking: {
+        id: settlement.booking.id,
+        bookingCode: settlement.booking.bookingCode,
+        status: settlement.booking.status,
+        property: settlement.booking.property,
+      },
+    },
+  };
+}
+
 export async function listDriverRefunds(
   driverUserId: string,
   input: {
@@ -7649,20 +8140,57 @@ export async function listDriverRefunds(
     status?: RefundStatus;
   },
 ) {
+  const includeWalletCredits =
+    !input.status || input.status === RefundStatus.SUCCEEDED;
   const where: Prisma.RefundWhereInput = {
     payment: { payerUserId: driverUserId },
     ...(input.status ? { status: input.status } : {}),
   };
-  const [refunds, total] = await Promise.all([
+
+  const [directRefunds, cancellations, settlements] = await Promise.all([
     prisma.refund.findMany({
       where,
       include: driverRefundInclude,
       orderBy: { createdAt: "desc" },
-      skip: (input.page - 1) * input.limit,
-      take: input.limit,
     }),
-    prisma.refund.count({ where }),
+    includeWalletCredits
+      ? prisma.bookingCancellation.findMany({
+          where: {
+            driverUserId,
+            driverWalletCreditPaisa: { gt: 0n },
+          },
+          include: { booking: { select: driverBookingRefundSelect } },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    includeWalletCredits
+      ? prisma.bookingSettlement.findMany({
+          where: {
+            booking: { driverUserId },
+            status: "COMPLETED",
+            driverRefundCreditPaisa: { gt: 0n },
+          },
+          include: { booking: { select: driverBookingRefundSelect } },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
+
+  const combined = [
+    ...directRefunds.map((r) => ({
+      ...r,
+      refundType: "PAYMENT_REFUND" as const,
+      bookingRefundPaisa: r.amountPaisa,
+      depositReturnPaisa: 0n,
+    })),
+    ...cancellations.map(mapCancellationToRefundRecord),
+    ...settlements.map(mapSettlementToRefundRecord),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const total = combined.length;
+  const start = (input.page - 1) * input.limit;
+  const refunds = combined.slice(start, start + input.limit);
+
   return serialize({
     refunds,
     pagination: pagination(input.page, input.limit, total),
@@ -7674,8 +8202,41 @@ export async function getDriverRefund(driverUserId: string, refundId: string) {
     where: { id: refundId, payment: { payerUserId: driverUserId } },
     include: driverRefundInclude,
   });
-  if (!refund) fail(404, "REFUND_NOT_FOUND", "Refund was not found");
-  return serialize(refund);
+  if (refund) {
+    return serialize({
+      ...refund,
+      refundType: "PAYMENT_REFUND" as const,
+      bookingRefundPaisa: refund.amountPaisa,
+      depositReturnPaisa: 0n,
+    });
+  }
+
+  const cancellation = await prisma.bookingCancellation.findFirst({
+    where: {
+      id: refundId,
+      driverUserId,
+      driverWalletCreditPaisa: { gt: 0n },
+    },
+    include: { booking: { select: driverBookingRefundSelect } },
+  });
+  if (cancellation) {
+    return serialize(mapCancellationToRefundRecord(cancellation));
+  }
+
+  const settlement = await prisma.bookingSettlement.findFirst({
+    where: {
+      id: refundId,
+      booking: { driverUserId },
+      status: "COMPLETED",
+      driverRefundCreditPaisa: { gt: 0n },
+    },
+    include: { booking: { select: driverBookingRefundSelect } },
+  });
+  if (settlement) {
+    return serialize(mapSettlementToRefundRecord(settlement));
+  }
+
+  fail(404, "REFUND_NOT_FOUND", "Refund was not found");
 }
 
 const payoutMethodPublicSelect = {
@@ -7722,16 +8283,6 @@ export async function createProviderPayoutMethod(
   return prisma.$transaction(
     async (tx) => {
       await lockEntity(tx, "provider-payout-method", providerUserId);
-      const activeCount = await tx.providerPayoutMethod.count({
-        where: { providerUserId, status: PayoutMethodStatus.ACTIVE },
-      });
-      const makeDefault = input.isDefault || activeCount === 0;
-      if (makeDefault) {
-        await tx.providerPayoutMethod.updateMany({
-          where: { providerUserId, isDefault: true },
-          data: { isDefault: false },
-        });
-      }
       const method = await tx.providerPayoutMethod.create({
         data: {
           providerUserId,
@@ -7746,7 +8297,8 @@ export async function createProviderPayoutMethod(
           bankName: input.bankName ?? null,
           branchName: input.branchName ?? null,
           routingNumber: input.routingNumber ?? null,
-          isDefault: makeDefault,
+          isDefault: false,
+          status: PayoutMethodStatus.PENDING_VERIFICATION,
         },
         select: payoutMethodPublicSelect,
       });
@@ -7757,7 +8309,7 @@ export async function createProviderPayoutMethod(
         undefined,
         "ProviderPayoutMethod",
         method.id,
-        { type: method.type, isDefault: method.isDefault },
+        { type: method.type, isDefault: false },
       );
       return method;
     },
@@ -7864,6 +8416,87 @@ export async function deactivateProviderPayoutMethod(
   );
 }
 
+export async function listPendingPayoutMethods() {
+  return prisma.providerPayoutMethod.findMany({
+    where: { status: PayoutMethodStatus.PENDING_VERIFICATION },
+    select: {
+      ...payoutMethodPublicSelect,
+      provider: {
+        select: { id: true, fullName: true, email: true, phone: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function reviewPayoutMethod(
+  adminUserId: string,
+  payoutMethodId: string,
+  input: { decision: "APPROVED" | "REJECTED"; note: string },
+) {
+  return prisma.$transaction(async (tx) => {
+    const method = await tx.providerPayoutMethod.findUnique({
+      where: { id: payoutMethodId },
+    });
+    if (!method)
+      fail(404, "PAYOUT_METHOD_NOT_FOUND", "Payout method was not found");
+    await lockEntity(tx, "provider-payout-method", method.providerUserId);
+    const current = await tx.providerPayoutMethod.findUniqueOrThrow({
+      where: { id: method.id },
+    });
+    if (current.status !== PayoutMethodStatus.PENDING_VERIFICATION)
+      fail(
+        409,
+        "PAYOUT_METHOD_ALREADY_REVIEWED",
+        "Payout method was already reviewed",
+      );
+    const approved = input.decision === "APPROVED";
+    const hasDefault = approved
+      ? await tx.providerPayoutMethod.findFirst({
+          where: {
+            providerUserId: method.providerUserId,
+            status: PayoutMethodStatus.ACTIVE,
+            isDefault: true,
+          },
+          select: { id: true },
+        })
+      : null;
+    const updated = await tx.providerPayoutMethod.update({
+      where: { id: method.id },
+      data: {
+        status: approved
+          ? PayoutMethodStatus.ACTIVE
+          : PayoutMethodStatus.INACTIVE,
+        isDefault: approved && !hasDefault,
+      },
+      select: payoutMethodPublicSelect,
+    });
+    await notification(tx, {
+      userId: method.providerUserId,
+      type: "PAYOUT_UPDATED",
+      title: approved ? "Payout method verified" : "Payout method rejected",
+      message: approved
+        ? "Your payout destination is verified and ready to use."
+        : `Your payout destination was rejected: ${input.note}`,
+      entityType: "ProviderPayoutMethod",
+      entityId: method.id,
+      idempotencyKey: `payout-method:${method.id}:${input.decision}`,
+    });
+    await audit(
+      tx,
+      approved
+        ? DomainAuditEventType.PAYOUT_METHOD_DEFAULTED
+        : DomainAuditEventType.PAYOUT_METHOD_DEACTIVATED,
+      adminUserId,
+      undefined,
+      "ProviderPayoutMethod",
+      method.id,
+      { decision: input.decision, note: input.note },
+    );
+    return updated;
+  });
+}
+
 export async function createPayout(
   providerUserId: string,
   input: {
@@ -7872,84 +8505,94 @@ export async function createPayout(
     idempotencyKey: string;
   },
 ) {
-  const previous = await prisma.payoutRequest.findUnique({
-    where: { idempotencyKey: input.idempotencyKey },
-  });
-  if (previous) return serialize(previous);
-  const payout = await prisma.$transaction(
-    async (tx) => {
-      const payoutMethod = await tx.providerPayoutMethod.findFirst({
-        where: {
-          id: input.payoutMethodId,
-          providerUserId,
-          status: PayoutMethodStatus.ACTIVE,
-        },
-      });
-      if (!payoutMethod)
-        fail(409, "PAYOUT_METHOD_INACTIVE", "Select an active payout method");
-      const wallet = await tx.walletAccount.findUnique({
-        where: { userId_currency: { userId: providerUserId, currency: "BDT" } },
-      });
-      if (!wallet) fail(404, "WALLET_NOT_FOUND", "Wallet was not found");
-      await lockEntity(tx, "wallet", wallet.id);
-      const current = await tx.walletAccount.findUniqueOrThrow({
-        where: { id: wallet.id },
-      });
+  const payout = await serializableWithRetry(async (tx) => {
+    await lockEntity(tx, "payout-idempotency", input.idempotencyKey);
+    const previous = await tx.payoutRequest.findUnique({
+      where: { idempotencyKey: input.idempotencyKey },
+    });
+    if (previous) {
       if (
-        current.status !== "ACTIVE" ||
-        current.availableBalancePaisa < input.amountPaisa
-      ) {
+        previous.providerUserId !== providerUserId ||
+        previous.amountPaisa !== input.amountPaisa ||
+        previous.payoutMethodId !== input.payoutMethodId
+      )
         fail(
           409,
-          "PAYOUT_BALANCE_INSUFFICIENT",
-          "Available balance is insufficient for payout",
+          "IDEMPOTENCY_CONFLICT",
+          "This request key was already used for another payout",
         );
-      }
-      const payout = await tx.payoutRequest.create({
-        data: {
-          providerUserId,
-          walletAccountId: wallet.id,
-          payoutMethodId: payoutMethod.id,
-          amountPaisa: input.amountPaisa,
-          status: PayoutStatus.REQUESTED,
-          idempotencyKey: input.idempotencyKey,
-          destinationSnapshot: {
-            type: payoutMethod.type,
-            accountHolderName: payoutMethod.accountHolderName,
-            maskedAccountIdentifier: payoutMethod.maskedAccountIdentifier,
-            bankName: payoutMethod.bankName,
-            branchName: payoutMethod.branchName,
-            routingNumber: payoutMethod.routingNumber,
-          },
-          destinationCiphertext: payoutMethod.accountIdentifierCiphertext,
-          destinationIv: payoutMethod.accountIdentifierIv,
-          destinationTag: payoutMethod.accountIdentifierTag,
-        },
-      });
-      await tx.walletAccount.update({
-        where: { id: wallet.id },
-        data: {
-          availableBalancePaisa: { decrement: input.amountPaisa },
-          heldBalancePaisa: { increment: input.amountPaisa },
-          balanceVersion: { increment: 1 },
-        },
-      });
-      const membership = await tx.propertyProvider.findFirst({
-        where: { providerUserId },
-        select: { propertyId: true },
-      });
-      await audit(
-        tx,
-        DomainAuditEventType.PAYOUT_REQUESTED,
+      return serialize(previous);
+    }
+    const payoutMethod = await tx.providerPayoutMethod.findFirst({
+      where: {
+        id: input.payoutMethodId,
         providerUserId,
-        membership?.propertyId,
-        "PayoutRequest",
-        payout.id,
+        status: PayoutMethodStatus.ACTIVE,
+      },
+    });
+    if (!payoutMethod)
+      fail(409, "PAYOUT_METHOD_INACTIVE", "Select an active payout method");
+    const wallet = await tx.walletAccount.findUnique({
+      where: { userId_currency: { userId: providerUserId, currency: "BDT" } },
+    });
+    if (!wallet) fail(404, "WALLET_NOT_FOUND", "Wallet was not found");
+    await lockEntity(tx, "wallet", wallet.id);
+    const current = await tx.walletAccount.findUniqueOrThrow({
+      where: { id: wallet.id },
+    });
+    if (
+      current.status !== "ACTIVE" ||
+      current.availableBalancePaisa < input.amountPaisa
+    ) {
+      fail(
+        409,
+        "PAYOUT_BALANCE_INSUFFICIENT",
+        "Available balance is insufficient for payout",
       );
-      return serialize(payout);
-    },
-    { isolationLevel: "Serializable" },
-  );
+    }
+    const payout = await tx.payoutRequest.create({
+      data: {
+        providerUserId,
+        walletAccountId: wallet.id,
+        payoutMethodId: payoutMethod.id,
+        amountPaisa: input.amountPaisa,
+        status: PayoutStatus.REQUESTED,
+        idempotencyKey: input.idempotencyKey,
+        destinationSnapshot: {
+          type: payoutMethod.type,
+          accountHolderName: payoutMethod.accountHolderName,
+          maskedAccountIdentifier: payoutMethod.maskedAccountIdentifier,
+          bankName: payoutMethod.bankName,
+          branchName: payoutMethod.branchName,
+          routingNumber: payoutMethod.routingNumber,
+        },
+        destinationCiphertext: payoutMethod.accountIdentifierCiphertext,
+        destinationIv: payoutMethod.accountIdentifierIv,
+        destinationTag: payoutMethod.accountIdentifierTag,
+      },
+    });
+    await tx.walletAccount.update({
+      where: { id: wallet.id },
+      data: {
+        availableBalancePaisa: { decrement: input.amountPaisa },
+        heldBalancePaisa: { increment: input.amountPaisa },
+        balanceVersion: { increment: 1 },
+      },
+    });
+    const membership = await tx.propertyProvider.findFirst({
+      where: { providerUserId },
+      select: { propertyId: true },
+    });
+    await audit(
+      tx,
+      DomainAuditEventType.PAYOUT_REQUESTED,
+      providerUserId,
+      membership?.propertyId,
+      "PayoutRequest",
+      payout.id,
+    );
+    return serialize(payout);
+  });
   notifyUser(providerUserId, "payout:status_changed", { payoutId: payout.id });
   notifyUser(providerUserId, "wallet:balance_changed", { payoutId: payout.id });
   return payout;
@@ -8094,6 +8737,39 @@ export async function reviewPayout(
         });
       }
       if (input.decision === "PAID") {
+        const sources = await tx.ledgerEntry.groupBy({
+          by: ["accountCode", "entrySide"],
+          where: {
+            walletAccountId: wallet.id,
+            accountCode: {
+              in: ["PROVIDER_PAYABLE", "DRIVER_REFUND_LIABILITY"],
+            },
+          },
+          _sum: { amountPaisa: true },
+        });
+        const net = (code: string) =>
+          sources
+            .filter((row) => row.accountCode === code)
+            .reduce(
+              (total, row) =>
+                total +
+                (row.entrySide === "CREDIT" ? 1n : -1n) *
+                  (row._sum.amountPaisa ?? 0n),
+              0n,
+            );
+        let payoutDebits;
+        try {
+          payoutDebits = allocatePayoutDebits(payout.amountPaisa, {
+            providerPaisa: net("PROVIDER_PAYABLE"),
+            driverPaisa: net("DRIVER_REFUND_LIABILITY"),
+          });
+        } catch {
+          fail(
+            409,
+            "PAYOUT_LEDGER_SOURCE_INVALID",
+            "Reserved funds do not match wallet liabilities. Reconcile the wallet before paying.",
+          );
+        }
         await tx.ledgerTransaction.create({
           data: {
             referenceType: "PAYOUT",
@@ -8102,12 +8778,12 @@ export async function reviewPayout(
             actorUserId: adminUserId,
             entries: {
               create: [
-                {
-                  accountCode: "PROVIDER_PAYABLE",
+                ...payoutDebits.map((entry) => ({
+                  accountCode: entry.accountCode,
                   walletAccountId: wallet.id,
-                  entrySide: "DEBIT",
-                  amountPaisa: payout.amountPaisa,
-                },
+                  entrySide: "DEBIT" as const,
+                  amountPaisa: entry.amountPaisa,
+                })),
                 {
                   accountCode: "EXTERNAL_PAYOUT_CLEARING",
                   entrySide: "CREDIT",
@@ -8204,7 +8880,13 @@ export async function markAllNotificationsRead(userId: string) {
 export async function createReview(
   driverUserId: string,
   bookingId: string,
-  input: { rating: number; comment?: string },
+  input: {
+    rating: number;
+    comment?: string;
+    securityRating?: number;
+    locationAccuracyRating?: number;
+    cleanlinessRating?: number;
+  },
 ) {
   const booking = await prisma.booking.findFirst({
     where: { id: bookingId, driverUserId },
@@ -8223,6 +8905,9 @@ export async function createReview(
         driverUserId,
         rating: input.rating,
         comment: input.comment ?? null,
+        securityRating: input.securityRating ?? null,
+        locationAccuracyRating: input.locationAccuracyRating ?? null,
+        cleanlinessRating: input.cleanlinessRating ?? null,
       },
     });
   } catch {
@@ -8324,7 +9009,10 @@ export async function createDispute(
 ) {
   return prisma.$transaction(async (tx) => {
     await lockEntity(tx, "booking", bookingId);
-    const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      include: { settlement: true },
+    });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
     if (
       booking.driverUserId !== openedByUserId &&
@@ -8345,15 +9033,51 @@ export async function createDispute(
         openedByUserId,
         category: input.category,
         description: input.description,
+        previousBookingStatus: booking.status,
         ...(input.evidence
           ? { evidence: input.evidence as Prisma.InputJsonValue }
           : {}),
       },
     });
-    await tx.booking.update({
-      where: { id: booking.id },
-      data: { status: "DISPUTED" },
-    });
+    if (
+      booking.settlement?.status === "COMPLETED" &&
+      booking.settlement.providerNetPaisa > 0n
+    ) {
+      await lockEntity(tx, "wallet", booking.settlementWalletAccountId);
+      const wallet = await tx.walletAccount.findUniqueOrThrow({
+        where: { id: booking.settlementWalletAccountId },
+      });
+      const amount = booking.settlement.providerNetPaisa;
+      const fromPending = booking.settlement.providerReleasedAt ? 0n : amount;
+      const fromAvailable = amount - fromPending;
+      if (
+        fromAvailable > wallet.availableBalancePaisa ||
+        fromPending > wallet.pendingBalancePaisa
+      )
+        fail(
+          409,
+          "DISPUTE_FUNDS_UNAVAILABLE",
+          "Provider funds are already reserved for another operation",
+        );
+      await tx.walletAccount.update({
+        where: { id: wallet.id },
+        data: {
+          pendingBalancePaisa: { decrement: fromPending },
+          availableBalancePaisa: { decrement: fromAvailable },
+          heldBalancePaisa: { increment: amount },
+          balanceVersion: { increment: 1 },
+        },
+      });
+      await tx.dispute.update({
+        where: { id: dispute.id },
+        data: { providerHeldPaisa: amount },
+      });
+    }
+    if (booking.settlement?.status === "COMPLETED")
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { status: "DISPUTED" },
+      });
     await audit(
       tx,
       DomainAuditEventType.DISPUTE_CREATED,
@@ -8378,6 +9102,7 @@ export async function resolveDispute(
       include: { booking: true },
     });
     if (!dispute) fail(404, "DISPUTE_NOT_FOUND", "Dispute was not found");
+    await lockEntity(tx, "booking", dispute.bookingId);
     const resolvableStatuses: DisputeStatus[] = [
       DisputeStatus.OPEN,
       DisputeStatus.UNDER_REVIEW,
@@ -8393,6 +9118,63 @@ export async function resolveDispute(
         resolvedAt: new Date(),
       },
     });
+    if (dispute.providerHeldPaisa > 0n) {
+      const settlement = await tx.bookingSettlement.findUnique({
+        where: { bookingId: dispute.bookingId },
+      });
+      if (settlement) {
+        await lockEntity(
+          tx,
+          "wallet",
+          dispute.booking.settlementWalletAccountId,
+        );
+        const wallet = await tx.walletAccount.findUniqueOrThrow({
+          where: { id: dispute.booking.settlementWalletAccountId },
+        });
+        const releasable = dispute.providerHeldPaisa;
+        if (wallet.heldBalancePaisa < releasable)
+          fail(
+            409,
+            "DISPUTE_HOLD_MISMATCH",
+            "Dispute funds require financial reconciliation",
+          );
+        const matured =
+          Boolean(settlement.providerReleasedAt) ||
+          Boolean(
+            settlement.completedAt &&
+            settlement.completedAt.getTime() <=
+              Date.now() - PROVIDER_DISPUTE_HOLD_MS,
+          );
+        if (releasable > 0n) {
+          await tx.walletAccount.update({
+            where: { id: wallet.id },
+            data: {
+              heldBalancePaisa: { decrement: releasable },
+              ...(matured
+                ? { availableBalancePaisa: { increment: releasable } }
+                : { pendingBalancePaisa: { increment: releasable } }),
+              balanceVersion: { increment: 1 },
+            },
+          });
+        }
+        await tx.bookingSettlement.update({
+          where: { id: settlement.id },
+          data: { providerReleasedAt: matured ? new Date() : null },
+        });
+      }
+    }
+    await tx.dispute.update({
+      where: { id: dispute.id },
+      data: { providerHeldPaisa: 0n },
+    });
+    if (
+      dispute.booking.status === BookingStatus.DISPUTED &&
+      dispute.previousBookingStatus
+    )
+      await tx.booking.update({
+        where: { id: dispute.bookingId },
+        data: { status: dispute.previousBookingStatus },
+      });
     await notification(tx, {
       userId: dispute.openedByUserId,
       type: "DISPUTE_UPDATE",

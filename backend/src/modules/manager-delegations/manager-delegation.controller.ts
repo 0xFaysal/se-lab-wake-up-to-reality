@@ -189,3 +189,24 @@ export const endManagerDelegationController: RequestHandler = async (
     next(error);
   }
 };
+
+const delegationStateController =
+  (suspended: boolean): RequestHandler =>
+  async (req, res, next) => {
+    try {
+      respond(req, res, {
+        delegation: await service.setManagerDelegationSuspended(
+          userId(req),
+          delegationId(req),
+          suspended,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+export const suspendManagerDelegationController =
+  delegationStateController(true);
+export const resumeManagerDelegationController =
+  delegationStateController(false);

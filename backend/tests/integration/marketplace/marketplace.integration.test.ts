@@ -168,6 +168,18 @@ integration("marketplace end-to-end and concurrency", () => {
       },
     );
     payoutMethodId = payoutMethod.id;
+    assert.equal(payoutMethod.status, "PENDING_VERIFICATION");
+    await assert.rejects(() =>
+      marketplace.createPayout(providerId, {
+        amountPaisa: 100n,
+        payoutMethodId: payoutMethod.id,
+        idempotencyKey: `unverified-${randomUUID()}`,
+      }),
+    );
+    await marketplace.reviewPayoutMethod(adminId, payoutMethod.id, {
+      decision: "APPROVED",
+      note: "Integration destination verified",
+    });
   });
 
   after(async () => {
@@ -468,15 +480,45 @@ integration("marketplace end-to-end and concurrency", () => {
       paid.accessCredential!,
     );
     assert.equal(checkedIn.status, "CHECKED_IN");
-    await marketplace.requestCheckout(driverIds[winnerIndex]!, booking.id);
-    const completed = await marketplace.checkOutBooking(guardId, booking.id);
+    const exit = await marketplace.requestCheckout(
+      driverIds[winnerIndex]!,
+      booking.id,
+    );
+    await assert.rejects(() =>
+      marketplace.checkOutBooking(guardId, booking.id, "EXIT-invalid"),
+    );
+    const exitVerification = await marketplace.verifyAccessCredential(
+      guardId,
+      exit.exitCredential,
+    );
+    assert.equal(exitVerification.purpose, "EXIT");
+    const completed = await marketplace.checkOutBooking(
+      guardId,
+      booking.id,
+      exit.exitCredential,
+    );
     assert.equal(completed.status, "COMPLETED");
+    const providerBeforeDispute = await prisma.walletAccount.findUniqueOrThrow({
+      where: { userId_currency: { userId: providerId, currency: "BDT" } },
+    });
+    assert.equal(providerBeforeDispute.availableBalancePaisa, 0n);
+    assert.equal(
+      providerBeforeDispute.pendingBalancePaisa,
+      BigInt(completed.baseAmountPaisa),
+    );
     const review = await marketplace.createReview(
       driverIds[winnerIndex]!,
       booking.id,
-      { rating: 5, comment: "Smooth entry" },
+      {
+        rating: 5,
+        securityRating: 4,
+        locationAccuracyRating: 5,
+        cleanlinessRating: 3,
+        comment: "Smooth entry",
+      },
     );
     assert.equal(review.rating, 5);
+    assert.equal(review.securityRating, 4);
     const dispute = await marketplace.createDispute(
       driverIds[winnerIndex]!,
       booking.id,
@@ -485,6 +527,32 @@ integration("marketplace end-to-end and concurrency", () => {
         description: "Integration test dispute description",
       },
     );
+    const providerHeld = await prisma.walletAccount.findUniqueOrThrow({
+      where: { id: providerBeforeDispute.id },
+    });
+    assert.equal(providerHeld.pendingBalancePaisa, 0n);
+    assert.equal(
+      providerHeld.heldBalancePaisa,
+      BigInt(completed.baseAmountPaisa),
+    );
+    await marketplace.resolveDispute(adminId, dispute.id, {
+      decision: "RESOLVED",
+      resolution: "Integration hold reviewed without a monetary adjustment",
+    });
+    const providerAfterDispute = await prisma.walletAccount.findUniqueOrThrow({
+      where: { id: providerBeforeDispute.id },
+    });
+    assert.equal(
+      providerAfterDispute.pendingBalancePaisa,
+      BigInt(completed.baseAmountPaisa),
+    );
+    assert.equal(providerAfterDispute.heldBalancePaisa, 0n);
+    await prisma.bookingSettlement.update({
+      where: { bookingId: booking.id },
+      data: { completedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) },
+    });
+    await marketplace.reconcileMarketplaceLifecycle();
+    await marketplace.reconcileMarketplaceLifecycle();
     const driverDisputes = await marketplace.listDriverDisputes(
       driverIds[winnerIndex]!,
       { page: 1, limit: 20 },
@@ -551,23 +619,19 @@ integration("marketplace end-to-end and concurrency", () => {
       wallet.availableBalancePaisa,
       BigInt(completed.baseAmountPaisa),
     );
-    const refund = await marketplace.createRefund(
-      driverIds[winnerIndex]!,
-      paid.payment.id,
-      {
+    await assert.rejects(() =>
+      marketplace.createRefund(driverIds[winnerIndex]!, paid.payment.id, {
         amountPaisa: 100n,
-        reason: "Integration partial refund",
+        reason: "Driver cannot issue arbitrary refunds",
         idempotencyKey: `refund-${randomUUID()}`,
-      },
+      }),
     );
-    assert.equal(refund.status, "SUCCEEDED");
     const refunds = await marketplace.listDriverRefunds(
       driverIds[winnerIndex]!,
       { page: 1, limit: 20 },
     );
-    assert.ok(refunds.refunds.some((item) => item.id === refund.id));
-    await assert.rejects(() =>
-      marketplace.getDriverRefund(driverIds[(winnerIndex + 1) % 2]!, refund.id),
+    assert.ok(
+      refunds.refunds.some((item) => item.payment.booking.id === booking.id),
     );
     await assert.rejects(() =>
       marketplace.createRefund(driverIds[winnerIndex]!, paid.payment.id, {
@@ -586,11 +650,52 @@ integration("marketplace end-to-end and concurrency", () => {
         idempotencyKey: `payout-over-${randomUUID()}`,
       }),
     );
+    const concurrentAmount =
+      (walletAfterRefund.availableBalancePaisa * 4n) / 10n;
+    const concurrent = await Promise.allSettled(
+      [1, 2, 3].map(() =>
+        marketplace.createPayout(providerId, {
+          amountPaisa: concurrentAmount,
+          payoutMethodId,
+          idempotencyKey: `concurrent-payout-${randomUUID()}`,
+        }),
+      ),
+    );
+    assert.equal(
+      concurrent.filter((item) => item.status === "fulfilled").length,
+      2,
+    );
+    for (const item of concurrent) {
+      if (item.status === "rejected") assert.equal(item.reason.statusCode, 409);
+      else
+        await marketplace.reviewPayout(adminId, item.value.id, {
+          decision: "REJECTED",
+          note: "Release integration reservation",
+        });
+    }
+    const payoutKey = `payout-${randomUUID()}`;
     const payout = await marketplace.createPayout(providerId, {
       amountPaisa: 1_000n,
       payoutMethodId,
-      idempotencyKey: `payout-${randomUUID()}`,
+      idempotencyKey: payoutKey,
     });
+    assert.equal(
+      (
+        await marketplace.createPayout(providerId, {
+          amountPaisa: 1_000n,
+          payoutMethodId,
+          idempotencyKey: payoutKey,
+        })
+      ).id,
+      payout.id,
+    );
+    await assert.rejects(() =>
+      marketplace.createPayout(secondProviderId, {
+        amountPaisa: 1_000n,
+        payoutMethodId,
+        idempotencyKey: payoutKey,
+      }),
+    );
     const payouts = await marketplace.listProviderPayouts(providerId, {
       page: 1,
       limit: 20,

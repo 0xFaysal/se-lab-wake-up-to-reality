@@ -3,6 +3,37 @@ import { describe, it } from "node:test";
 
 import { AppError } from "../../../src/common/errors/app-error.js";
 import { normalizeRequestError } from "../../../src/common/errors/normalize-request-error.js";
+import {
+  initializationErrorMetadata,
+  serverInitializationFailure,
+} from "../../../src/common/errors/server-init-error.js";
+
+describe("server initialization errors", () => {
+  it("returns a stable, private failure envelope", () => {
+    const result = serverInitializationFailure("test-request-id");
+    assert.equal(result.success, false);
+    assert.equal(result.error.code, "SERVICE_UNAVAILABLE");
+    assert.equal(result.meta.requestId, "test-request-id");
+    assert.ok(Number.isFinite(Date.parse(result.meta.timestamp)));
+  });
+  it("keeps connection strings, raw messages and stacks out of logs", () => {
+    const error = Object.assign(
+      new Error("postgresql://user:secret@private-host/db"),
+      { code: "ECONNREFUSED" },
+    );
+    assert.deepEqual(initializationErrorMetadata(error), {
+      name: "Error",
+      code: "ECONNREFUSED",
+    });
+    assert.doesNotMatch(
+      JSON.stringify(initializationErrorMetadata(error)),
+      /secret|private-host|stack/,
+    );
+    assert.deepEqual(initializationErrorMetadata({ code: "secret-password" }), {
+      name: "UnknownError",
+    });
+  });
+});
 
 describe("request error normalization", () => {
   it("converts body-parser malformed JSON errors into a safe 400 response", () => {

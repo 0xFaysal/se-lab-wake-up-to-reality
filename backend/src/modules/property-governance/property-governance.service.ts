@@ -396,7 +396,12 @@ export async function nominateBuildingManager(
         select: { id: true },
       });
     if (pendingNomination) throw governanceErrors.conflict();
-    const activateImmediately = providerCount === 1;
+    const property = await tx.property.findUniqueOrThrow({
+      where: { id: propertyId },
+      select: { isSharedBuilding: true },
+    });
+    const activateImmediately =
+      providerCount === 1 && !property.isSharedBuilding;
     if (activateImmediately) {
       await endActiveBuildingManager(propertyId, nominatorUserId, tx);
     }

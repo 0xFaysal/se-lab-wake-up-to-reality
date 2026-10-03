@@ -19,7 +19,7 @@ export default function DriverPaymentMethodsPage() {
   const [adding, setAdding] = useState(false);
   const methods = useQuery({ queryKey, queryFn: financeApi.driverPayoutMethods });
   const refresh = () => client.invalidateQueries({ queryKey });
-  const create = useMutation({ mutationFn: financeApi.createDriverPayoutMethod, onSuccess: async () => { toast.success("Transfer destination added securely"); setAdding(false); await refresh(); }, onError: (error) => toast.error(getApiErrorMessage(error)) });
+  const create = useMutation({ mutationFn: financeApi.createDriverPayoutMethod, onSuccess: async () => { toast.success("Transfer destination submitted for Admin verification"); setAdding(false); await refresh(); }, onError: (error) => toast.error(getApiErrorMessage(error)) });
   const makeDefault = useMutation({ mutationFn: financeApi.setDefaultDriverPayoutMethod, onSuccess: async () => { toast.success("Default destination updated"); await refresh(); }, onError: (error) => toast.error(getApiErrorMessage(error)) });
   const deactivate = useMutation({ mutationFn: financeApi.deactivateDriverPayoutMethod, onSuccess: async () => { toast.success("Transfer destination deactivated"); await refresh(); }, onError: (error) => toast.error(getApiErrorMessage(error)) });
 

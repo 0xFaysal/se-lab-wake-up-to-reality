@@ -153,8 +153,9 @@ export function ManagerResourcesSection({
         zone: input.zone,
         status: input.status,
       }),
-    onSuccess: () => {
-      toast.success("Parking resource updated");
+    onSuccess: (result) => {
+      if (result.warning) toast.warning(result.warning, { description: result.affectedBookings?.map((item) => item.bookingCode).join(", "), duration: 12000 });
+      else toast.success("Parking resource updated");
       void client.invalidateQueries({
         queryKey: queryKeys.parkingResources.byProperty(propertyId),
       });

@@ -98,6 +98,11 @@ export default function ManagerDetailPage({
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });
+  const changeStatus = useMutation({
+    mutationFn: (action: "SUSPEND" | "RESUME") => action === "SUSPEND" ? managerApi.suspend(id) : managerApi.resume(id),
+    onSuccess: async () => { toast.success("Delegation updated"); await client.invalidateQueries({ queryKey: queryKeys.managerDelegations.provider }); },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
 
   if (query.isPending) {
     return (
@@ -145,6 +150,7 @@ export default function ManagerDetailPage({
         ]}
         actions={
           <div className="flex gap-2">
+            {(item.status === "ACTIVE" || item.status === "SUSPENDED") && <Button variant="outline" disabled={changeStatus.isPending} onClick={() => changeStatus.mutate(item.status === "ACTIVE" ? "SUSPEND" : "RESUME")}>{item.status === "ACTIVE" ? "Suspend" : "Resume"}</Button>}
             {canEnd && (
               <Link href={`/provider/managers/${id}/permissions`}>
                 <Button variant="outline">Edit permissions</Button>
