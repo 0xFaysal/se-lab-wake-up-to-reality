@@ -32,7 +32,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out complete Git history
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -69,7 +69,7 @@ jobs:
       SIMULATED_PAYMENTS_ENABLED: "true"
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -114,7 +114,7 @@ jobs:
       NEXT_PUBLIC_API_BASE_URL: https://parkease-api.vercel.app/api/v1
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
