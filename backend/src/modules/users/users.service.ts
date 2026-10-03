@@ -23,6 +23,27 @@ import { logger } from "../../config/logger.js";
 import { prisma } from "../../config/prisma.js";
 import { authUserSelect } from "../auth/auth.repository.js";
 
+export async function updateOwnProfile(userId: string, fullName: string) {
+  const updated = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      deletedAt: null,
+      status: UserStatus.ACTIVE,
+      mustChangePassword: false,
+      emailVerifiedAt: { not: null },
+    },
+    data: { fullName },
+  });
+  if (updated.count !== 1) {
+    throw new AppError({
+      statusCode: 403,
+      code: "PROFILE_UPDATE_FORBIDDEN",
+      message: "An active, verified account is required",
+    });
+  }
+  return { id: userId, fullName };
+}
+
 type CreatedWorkforceAccount = {
   user: Prisma.UserGetPayload<{ select: typeof authUserSelect }>;
   tokenId: string;

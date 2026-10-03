@@ -679,7 +679,7 @@ marketplaceRouter.post(
 );
 marketplaceRouter.post(
   "/payments/:paymentId/refunds",
-  requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER),
+  requireRole(UserRoleType.ADMIN),
   sensitiveAccountRateLimit,
   validate(schema.refundSchema),
   controller.createRefund,

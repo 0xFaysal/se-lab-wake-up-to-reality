@@ -100,6 +100,11 @@ export interface PropertyInput {
   isSharedBuilding?: boolean;
 }
 
+export type PropertyClearableField = "entranceLatitude" | "entranceLongitude" | "accessInstructions" | "vehicleHeightLimitCm" | "entryCutoffLocalTime" | "generalParkingRules" | "commonSafetyRules";
+export type PropertyUpdateInput = Partial<Omit<PropertyInput, PropertyClearableField>> & {
+  [K in PropertyClearableField]?: PropertyInput[K] | null;
+} & { version: number };
+
 export interface PropertyImageDto {
   id: string;
   url: string;

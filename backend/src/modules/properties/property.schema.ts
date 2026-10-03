@@ -1,19 +1,28 @@
 import { z } from "zod";
 
 const noControlCharacters = /^[^\x00-\x1F\x7F]+$/;
+const noUnsafeMultilineCharacters = /^[^\x00-\x09\x0B\x0C\x0E-\x1F\x7F]+$/;
 const latitudeSchema = z.number().min(-90).max(90);
 const longitudeSchema = z.number().min(-180).max(180);
 const timeSchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Time must use HH:mm format");
 
-const textField = (label: string, minimum: number, maximum: number) =>
+const textField = (
+  label: string,
+  minimum: number,
+  maximum: number,
+  multiline = false,
+) =>
   z
     .string()
     .trim()
     .min(minimum, `${label} must contain at least ${minimum} characters`)
     .max(maximum, `${label} must contain at most ${maximum} characters`)
-    .regex(noControlCharacters, `${label} must not contain control characters`);
+    .regex(
+      multiline ? noUnsafeMultilineCharacters : noControlCharacters,
+      `${label} must not contain control characters`,
+    );
 
 function validateEntrancePair(
   data: {
@@ -57,7 +66,12 @@ export const createPropertySchema = z.object({
       longitude: longitudeSchema,
       entranceLatitude: latitudeSchema.optional(),
       entranceLongitude: longitudeSchema.optional(),
-      accessInstructions: textField("Access instructions", 1, 1000).optional(),
+      accessInstructions: textField(
+        "Access instructions",
+        1,
+        1000,
+        true,
+      ).optional(),
       visitorIdentificationRequired: z.boolean().optional(),
       vehicleHeightLimitCm: z.number().int().positive().max(1000).optional(),
       entryCutoffLocalTime: timeSchema.optional(),
@@ -65,8 +79,14 @@ export const createPropertySchema = z.object({
         "General parking rules",
         1,
         2000,
+        true,
       ).optional(),
-      commonSafetyRules: textField("Common safety rules", 1, 2000).optional(),
+      commonSafetyRules: textField(
+        "Common safety rules",
+        1,
+        2000,
+        true,
+      ).optional(),
       isSharedBuilding: z.boolean().optional(),
     })
     .strict()
@@ -85,7 +105,7 @@ export const updatePropertySchema = z.object({
       longitude: longitudeSchema.optional(),
       entranceLatitude: latitudeSchema.nullable().optional(),
       entranceLongitude: longitudeSchema.nullable().optional(),
-      accessInstructions: textField("Access instructions", 1, 1000)
+      accessInstructions: textField("Access instructions", 1, 1000, true)
         .nullable()
         .optional(),
       visitorIdentificationRequired: z.boolean().optional(),
@@ -97,10 +117,10 @@ export const updatePropertySchema = z.object({
         .nullable()
         .optional(),
       entryCutoffLocalTime: timeSchema.nullable().optional(),
-      generalParkingRules: textField("General parking rules", 1, 2000)
+      generalParkingRules: textField("General parking rules", 1, 2000, true)
         .nullable()
         .optional(),
-      commonSafetyRules: textField("Common safety rules", 1, 2000)
+      commonSafetyRules: textField("Common safety rules", 1, 2000, true)
         .nullable()
         .optional(),
       isSharedBuilding: z.boolean().optional(),

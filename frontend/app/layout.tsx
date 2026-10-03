@@ -8,11 +8,11 @@ export const metadata: Metadata = {
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
   ),
   title: {
-    default: "ParkEase BD — Parking Provider Portal",
+    default: "ParkEase BD - Smart Shared Parking",
     template: "%s | ParkEase BD",
   },
   description:
-    "Manage your residential and commercial parking portfolio, track active bookings, monitor assigned guards and managers, and view real-time revenue across Dhaka.",
+    "Find, book, and manage verified residential and commercial parking spaces across Dhaka.",
   applicationName: "ParkEase BD",
   manifest: "/favicon/site.webmanifest",
   icons: {

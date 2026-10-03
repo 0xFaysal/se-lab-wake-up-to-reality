@@ -2059,23 +2059,23 @@ model Review {
 }
 
 model Dispute {
-  providerHeldPaisa BigInt @default(0) @map("provider_held_paisa")
-  previousBookingStatus BookingStatus? @map("previous_booking_status")
-  id               String          @id @default(uuid()) @db.Uuid
-  bookingId        String          @unique @map("booking_id") @db.Uuid
-  openedByUserId   String          @map("opened_by_user_id") @db.Uuid
-  category         DisputeCategory
-  description      String          @db.VarChar(3000)
-  evidence         Json?
-  status           DisputeStatus   @default(OPEN)
-  resolution       String?         @db.VarChar(3000)
-  resolvedByUserId String?         @map("resolved_by_user_id") @db.Uuid
-  resolvedAt       DateTime?       @map("resolved_at") @db.Timestamptz(6)
-  reviewStartedAt  DateTime?       @map("review_started_at") @db.Timestamptz(6)
-  slaDueAt         DateTime?       @map("sla_due_at") @db.Timestamptz(6)
-  escalatedAt      DateTime?       @map("escalated_at") @db.Timestamptz(6)
-  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerHeldPaisa     BigInt          @default(0) @map("provider_held_paisa")
+  previousBookingStatus BookingStatus?  @map("previous_booking_status")
+  id                    String          @id @default(uuid()) @db.Uuid
+  bookingId             String          @unique @map("booking_id") @db.Uuid
+  openedByUserId        String          @map("opened_by_user_id") @db.Uuid
+  category              DisputeCategory
+  description           String          @db.VarChar(3000)
+  evidence              Json?
+  status                DisputeStatus   @default(OPEN)
+  resolution            String?         @db.VarChar(3000)
+  resolvedByUserId      String?         @map("resolved_by_user_id") @db.Uuid
+  resolvedAt            DateTime?       @map("resolved_at") @db.Timestamptz(6)
+  reviewStartedAt       DateTime?       @map("review_started_at") @db.Timestamptz(6)
+  slaDueAt              DateTime?       @map("sla_due_at") @db.Timestamptz(6)
+  escalatedAt           DateTime?       @map("escalated_at") @db.Timestamptz(6)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Restrict)
   openedBy   User    @relation("DisputeOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)

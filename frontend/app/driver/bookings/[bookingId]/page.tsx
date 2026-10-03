@@ -2,6 +2,7 @@
 
 import { use, useRef, useState } from "react";
 import Link from "next/link";
+import QRCode from "react-qr-code";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarClock, CheckCircle2, CircleDollarSign, Flag, Loader2, ShieldCheck, Wallet } from "lucide-react";
@@ -109,7 +110,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
         <div className="flex flex-wrap gap-2">
           {booking.canPay && <Button nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}/payment`} />}>Complete payment</Button>}
           {booking.canCancel && <Button variant="destructive" onClick={() => setConfirmCancel(true)}>Cancel booking</Button>}
-          {booking.status === "CHECKED_IN" && <Button disabled={checkout.isPending} onClick={() => checkout.mutate()}>{checkout.isPending && <Loader2 className="size-4 animate-spin" />}Request checkout</Button>}
+          {["CHECKED_IN", "CHECKOUT_REQUESTED"].includes(booking.status) && <Button disabled={checkout.isPending} onClick={() => checkout.mutate()}>{checkout.isPending && <Loader2 className="size-4 animate-spin" />}{booking.status === "CHECKOUT_REQUESTED" ? "Refresh exit pass" : "Request checkout"}</Button>}
           {booking.status === "COMPLETED" && <><Button variant="outline" nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}/review`} />}>Write review</Button><Button variant="outline" nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}/dispute`} />}>Open dispute</Button></>}
           {booking.listingId && <Button variant="outline" size="sm" onClick={() => setReportOpen(true)}><Flag className="size-4" />Report listing</Button>}
         </div>
@@ -137,6 +138,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
             </dl>
           </section>
           {booking.accessCredential && <DigitalAccessPass accessCredential={booking.accessCredential} propertyTitle={booking.property?.name} />}
+          {booking.status === "CHECKOUT_REQUESTED" && checkout.data && <section className="border bg-white p-6"><h2 className="font-bold">Exit pass</h2><p className="mt-2 text-sm text-slate-600">Valid until {formatDateTime(checkout.data.exitCredentialExpiresAt)}</p><div className="mt-4 flex flex-col items-center gap-4"><QRCode value={checkout.data.exitCredential} size={180} /><code className="max-w-full break-all text-sm">{checkout.data.exitCredential}</code></div></section>}
           {isSettlementEligible && (settlement.isLoading || settlement.data) && (
             <SettlementSummary
               settlement={settlement.data}

@@ -23,6 +23,22 @@ export const commonOperationFields = new Set([
   "commonSafetyRules",
 ]);
 
+export function actualPropertyChanges(
+  previous: Record<string, unknown>,
+  input: Record<string, unknown>,
+) {
+  return new Set(
+    Object.entries(input)
+      .filter(
+        ([key, value]) =>
+          key !== "version" &&
+          value !== undefined &&
+          (value ?? null) !== (previous[key] ?? null),
+      )
+      .map(([key]) => key),
+  );
+}
+
 export function canOwnerEditProperty(
   property: Pick<Property, "verificationStatus">,
 ): boolean {

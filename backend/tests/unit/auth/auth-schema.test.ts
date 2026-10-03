@@ -1,6 +1,54 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { registerSchema } from "../../../src/modules/auth/auth.schema.js";
+import { updateOwnProfileSchema } from "../../../src/modules/users/users.schema.js";
+
+describe("updateOwnProfileSchema", () => {
+  it("trims a valid display name", () => {
+    assert.deepEqual(
+      updateOwnProfileSchema.parse({ body: { fullName: "  Test Manager  " } })
+        .body,
+      { fullName: "Test Manager" },
+    );
+  });
+  it("rejects blank, short, oversized and control-character names", () => {
+    for (const fullName of [
+      "",
+      " ",
+      "A",
+      "A".repeat(121),
+      "Test\nManager",
+      "Test\u007fManager",
+    ]) {
+      assert.equal(
+        updateOwnProfileSchema.safeParse({ body: { fullName } }).success,
+        false,
+      );
+    }
+  });
+  it("rejects identity, verification, authorization and other-user changes", () => {
+    for (const field of [
+      "id",
+      "userId",
+      "email",
+      "phone",
+      "status",
+      "roles",
+      "password",
+      "emailVerifiedAt",
+      "phoneVerifiedAt",
+      "mustChangePassword",
+    ]) {
+      assert.equal(
+        updateOwnProfileSchema.safeParse({
+          body: { fullName: "Test Manager", [field]: "changed" },
+        }).success,
+        false,
+      );
+    }
+    assert.equal(updateOwnProfileSchema.safeParse({ body: {} }).success, false);
+  });
+});
 
 const validBody = {
   fullName: "Test Driver",

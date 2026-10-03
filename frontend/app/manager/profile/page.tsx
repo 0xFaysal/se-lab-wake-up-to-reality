@@ -2,23 +2,23 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Building2,
-  Camera,
+  Loader2,
   CheckCircle2,
   Lock,
-  LogOut,
   Save,
   ShieldCheck,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { authApi } from "@/lib/api/auth-api";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { managerApi } from "@/lib/api/manager-api";
+import { authApi } from "@/lib/api/auth-api";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 
@@ -29,8 +29,9 @@ function getInitials(name: string): string {
 }
 
 export default function ManagerProfilePage() {
-  const router = useRouter();
-  const { data: user } = useCurrentUser();
+  const currentUser = useCurrentUser();
+  const user = currentUser.data;
+  const queryClient = useQueryClient();
 
   const delegationsQuery = useQuery({
     queryKey: queryKeys.managerDelegations.manager,
@@ -41,29 +42,34 @@ export default function ManagerProfilePage() {
   const primaryOwner = activeDelegations[0]?.provider?.fullName || "Property Owner";
 
   const [customFullName, setFullName] = useState<string | null>(null);
-  const [customPhone, setPhone] = useState<string | null>(null);
-  const [city, setCity] = useState("Dhaka, Bangladesh");
 
   const fullName = customFullName ?? user?.fullName ?? "";
   const email = user?.email ?? "";
-  const phone = customPhone ?? user?.phone ?? "";
+  const phone = user?.phone ?? "";
+
+  const saveProfile = useMutation({
+    mutationFn: authApi.updateProfile,
+    onSuccess: ({ user: saved }) => {
+      queryClient.setQueryData(queryKeys.auth.me, { ...user, fullName: saved.fullName });
+      setFullName(null);
+      toast.success("Personal information saved");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
+    },
+  });
 
   const handleSaveInfo = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Profile preferences saved locally");
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await authApi.logout();
-      toast.success("Signed out successfully");
-      router.push("/sign-in");
-    } catch {
-      router.push("/sign-in");
-    }
+    saveProfile.mutate({ fullName: fullName.trim() });
   };
 
   const initials = getInitials(fullName || user?.fullName || "Manager");
+
+  if (currentUser.isPending || delegationsQuery.isPending) {
+    return <div role="status" className="p-8 text-center"><Loader2 className="mx-auto size-5 animate-spin" aria-hidden="true" /><p className="mt-2">Loading account...</p></div>;
+  }
+  if (currentUser.isError || delegationsQuery.isError) {
+    return <div role="alert" className="p-8 text-center"><p>{getApiErrorMessage(currentUser.error ?? delegationsQuery.error)}</p><Button variant="outline" className="mt-4" onClick={() => { void currentUser.refetch(); void delegationsQuery.refetch(); }}>Try again</Button></div>;
+  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -134,15 +140,6 @@ export default function ManagerProfilePage() {
                   </div>
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toast.info("Profile photo upload ready")}
-                  className="text-xs font-semibold gap-1.5 h-8 text-slate-700"
-                >
-                  <Camera className="size-3.5" />
-                  Change Photo
-                </Button>
               </div>
 
               {/* Form */}
@@ -158,13 +155,19 @@ export default function ManagerProfilePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label htmlFor="manager-full-name" className="block text-xs font-bold text-slate-700 mb-1">
                       Full Name
                     </label>
                     <input
                       type="text"
+                      id="manager-full-name"
+                      required
+                      minLength={2}
+                      maxLength={120}
+                      autoComplete="name"
+                      disabled={saveProfile.isPending}
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => { setFullName(e.target.value); saveProfile.reset(); }}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-[#064E3B] focus:outline-hidden"
                     />
                   </div>
@@ -187,11 +190,12 @@ export default function ManagerProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label htmlFor="manager-email" className="block text-xs font-bold text-slate-700 mb-1">
                       Email Address
                     </label>
                     <input
                       type="email"
+                      id="manager-email"
                       value={email}
                       disabled
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 focus:outline-hidden cursor-not-allowed"
@@ -199,38 +203,30 @@ export default function ManagerProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label htmlFor="manager-phone" className="block text-xs font-bold text-slate-700 mb-1">
                       Phone Number
                     </label>
                     <input
                       type="tel"
+                      id="manager-phone"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      readOnly
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-[#064E3B] focus:outline-hidden"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Operational City / Address
-                  </label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 focus:border-[#064E3B] focus:outline-hidden"
-                  />
-                </div>
+                {saveProfile.isError && <p role="alert" className="text-sm text-red-700">{getApiErrorMessage(saveProfile.error)}</p>}
 
                 <div className="pt-2 flex justify-end">
                   <Button
                     type="submit"
                     size="sm"
+                    disabled={saveProfile.isPending || fullName.trim().length < 2 || fullName.trim() === user?.fullName}
                     className="bg-[#064E3B] text-white hover:bg-emerald-900 text-xs font-semibold gap-1.5 h-9 px-4"
                   >
-                    <Save className="size-3.5" />
-                    Save Personal Information
+                    {saveProfile.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                    {saveProfile.isPending ? "Saving..." : "Save Personal Information"}
                   </Button>
                 </div>
               </form>
@@ -327,14 +323,9 @@ export default function ManagerProfilePage() {
                     <span className="font-bold text-slate-900 block">Password</span>
                     <span className="text-slate-500">Managed via secure hashed credentials</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toast.info("Password change flow ready")}
-                    className="h-8 text-xs font-semibold"
-                  >
+                  <Link href="/manager/account/security" className="inline-flex h-8 items-center rounded-md border border-slate-200 px-3 text-xs font-semibold hover:bg-slate-50">
                     Change Password
-                  </Button>
+                  </Link>
                 </div>
 
                 <div className="flex items-center justify-between pt-3">
@@ -351,6 +342,7 @@ export default function ManagerProfilePage() {
                   </div>
                 </div>
               </div>
+              <Link href="/manager/account/sessions" className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-800">Review active sessions <ArrowRight className="size-3.5" /></Link>
             </div>
           </div>
 
@@ -412,15 +404,9 @@ export default function ManagerProfilePage() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-900">Session Actions</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSignOut}
+                <LogoutButton
                   className="h-8 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-200 gap-1.5"
-                >
-                  <LogOut className="size-3.5" />
-                  Sign Out
-                </Button>
+                />
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
                 To deactivate or transfer this manager profile, coordinate with Property Owner {primaryOwner} or ParkEase Operations Support.

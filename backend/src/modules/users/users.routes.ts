@@ -11,12 +11,14 @@ import {
   createManagerController,
   listSessionsController,
   revokeSessionController,
+  updateOwnProfileController,
 } from "./users.controller.js";
 import {
   changePasswordSchema,
   createGuardSchema,
   createManagerSchema,
   revokeSessionSchema,
+  updateOwnProfileSchema,
 } from "./users.schema.js";
 import { UserRoleType } from "../../../generated/prisma/client.js";
 
@@ -27,6 +29,47 @@ usersRouter.use((_req, res, next) => {
   next();
 });
 usersRouter.use(authenticate);
+
+/**
+ * @openapi
+ * /api/v1/users/me/profile:
+ *   patch:
+ *     tags: [User Account]
+ *     summary: Update the authenticated user's display name
+ *     security:
+ *       - accessCookie: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             additionalProperties: false
+ *             required: [fullName]
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 120
+ *     responses:
+ *       200:
+ *         description: Display name saved for the authenticated user only.
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       429:
+ *         $ref: '#/components/responses/RateLimited'
+ */
+usersRouter.patch(
+  "/me/profile",
+  requireAccountReady,
+  sensitiveAccountRateLimit,
+  validate(updateOwnProfileSchema),
+  updateOwnProfileController,
+);
 
 /**
  * @openapi

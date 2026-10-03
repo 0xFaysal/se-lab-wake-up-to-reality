@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandIcon } from "@/components/common/app-logo";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 type NavItem = {
   label: string;
@@ -124,10 +125,11 @@ export function OwnerSidebar({ onCloseMobile }: { onCloseMobile?: () => void }) 
         ))}
       </nav>
 
-      <div className="border-t p-4">
+      <div className="space-y-2 border-t p-4">
         <Link href="/provider/properties/new" onClick={onCloseMobile} className="flex h-10 items-center justify-center gap-2 rounded-md bg-[#064E3B] px-4 text-sm font-semibold text-white hover:bg-emerald-900">
           <Plus className="size-4" /> Add Property
         </Link>
+        <LogoutButton className="h-10 w-full justify-start border-0 px-3 text-slate-600 hover:bg-slate-50" />
       </div>
     </aside>
   );

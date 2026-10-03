@@ -1,5 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { basename } from "node:path";
+import { creditProviderEarnings } from "../payments/provider-earnings.js";
+import { allocatePayoutDebits } from "../../common/finance/payout-accounting.js";
 import {
   approximateCoordinates as publicCoordinates,
   operationalBooking,
@@ -176,6 +178,9 @@ function dhakaParts(date: Date) {
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const approximate = publicCoordinates("", lat2, lon2);
+  lat2 = approximate.latitude;
+  lon2 = approximate.longitude;
   const radians = (degrees: number) => (degrees * Math.PI) / 180;
   const earthRadiusKm = 6371;
   const dLat = radians(lat2 - lat1);
@@ -819,7 +824,17 @@ export async function updateResource(
                   BookingStatus.CHECKOUT_REQUESTED,
                 ],
               },
-              effectiveEndAt: { gt: new Date() },
+              OR: [
+                { effectiveEndAt: { gt: new Date() } },
+                {
+                  status: {
+                    in: [
+                      BookingStatus.CHECKED_IN,
+                      BookingStatus.CHECKOUT_REQUESTED,
+                    ],
+                  },
+                },
+              ],
             },
             select: {
               id: true,
@@ -4179,7 +4194,6 @@ export async function browseParking(input: {
         },
       },
     },
-    take: 500,
   });
   const groups = new Map<
     string,
@@ -4372,7 +4386,6 @@ export async function searchParking(input: {
         },
       },
     },
-    take: 500,
   });
   const groups = new Map<
     string,
@@ -5857,15 +5870,12 @@ async function settleNoShowBooking(bookingId: string, now: Date) {
         },
       });
       if (settlementValue.providerNetPaisa > 0n)
-        await tx.walletAccount.update({
-          where: { id: booking.settlementWalletAccountId },
-          data: {
-            pendingBalancePaisa: {
-              increment: settlementValue.providerNetPaisa,
-            },
-            balanceVersion: { increment: 1 },
-          },
-        });
+        await creditProviderEarnings(
+          tx,
+          booking.id,
+          booking.settlementWalletAccountId,
+          settlementValue.providerNetPaisa,
+        );
       if (settlementValue.driverRefundCreditPaisa > 0n)
         await tx.walletAccount.update({
           where: { id: driverWallet.id },
@@ -6556,8 +6566,15 @@ export async function cancelBooking(
       include: { cancellation: true, payments: true },
     });
     if (!booking) fail(404, "BOOKING_NOT_FOUND", "Booking was not found");
-    if (booking.cancellation)
+    if (booking.cancellation) {
+      if (booking.cancellation.idempotencyKey !== input.idempotencyKey)
+        fail(
+          409,
+          "BOOKING_ALREADY_CANCELLED",
+          "Booking has already been cancelled",
+        );
       return serialize({ booking, cancellation: booking.cancellation });
+    }
     if (
       booking.status !== BookingStatus.PAYMENT_PENDING &&
       booking.status !== BookingStatus.CONFIRMED
@@ -6922,6 +6939,25 @@ export async function verifyAccessCredential(
   credential: string,
 ) {
   const tokenHash = createHash("sha256").update(credential).digest("hex");
+  if (credential.startsWith("EXIT-")) {
+    const booking = await prisma.booking.findFirst({
+      where: {
+        exitCredentialHash: tokenHash,
+        exitCredentialExpiresAt: { gt: new Date() },
+        status: BookingStatus.CHECKOUT_REQUESTED,
+      },
+      select: guardBookingSelect,
+    });
+    if (!booking)
+      fail(404, "EXIT_CREDENTIAL_INVALID", "Exit pass is invalid or expired");
+    if (!(await isGuardAuthorizedForBooking(guardUserId, booking.id)))
+      fail(
+        403,
+        "GUARD_BOOKING_FORBIDDEN",
+        "Guard is not assigned to this booking",
+      );
+    return serialize({ valid: true, purpose: "EXIT", booking });
+  }
   const record = await prisma.accessCredential.findUnique({
     where: credentialLookup(credential, tokenHash),
     select: {
@@ -6958,7 +6994,7 @@ export async function verifyAccessCredential(
       "Booking is outside the allowed check-in window",
     );
   }
-  return serialize({ valid: true, booking: record.booking });
+  return serialize({ valid: true, purpose: "ENTRY", booking: record.booking });
 }
 
 export async function checkInBooking(
@@ -7250,15 +7286,12 @@ export async function checkOutBooking(
           entries: { create: entries.filter((e) => e.amountPaisa > 0n) },
         },
       });
-      await tx.walletAccount.update({
-        where: { id: booking.settlementWalletAccountId },
-        data: {
-          pendingBalancePaisa: {
-            increment: settlementValue.providerNetPaisa,
-          },
-          balanceVersion: { increment: 1 },
-        },
-      });
+      await creditProviderEarnings(
+        tx,
+        booking.id,
+        booking.settlementWalletAccountId,
+        settlementValue.providerNetPaisa,
+      );
       if (
         settlementValue.driverWalletChargedPaisa > 0n ||
         settlementValue.driverRefundCreditPaisa > 0n
@@ -7600,18 +7633,66 @@ export async function createRefund(
   paymentId: string,
   input: { amountPaisa: bigint; reason: string; idempotencyKey: string },
 ) {
+  const admin = await prisma.userRole.findUnique({
+    where: {
+      userId_role: { userId: requestedByUserId, role: UserRoleType.ADMIN },
+    },
+  });
+  if (!admin)
+    fail(
+      403,
+      "REFUND_FORBIDDEN",
+      "Use booking cancellation or open a dispute; arbitrary refunds require Admin review",
+    );
   const previous = await prisma.refund.findUnique({
     where: { idempotencyKey: input.idempotencyKey },
   });
-  if (previous) return serialize(previous);
+  if (previous) {
+    if (
+      previous.requestedByUserId !== requestedByUserId ||
+      previous.paymentId !== paymentId ||
+      previous.amountPaisa !== input.amountPaisa
+    )
+      fail(
+        409,
+        "IDEMPOTENCY_CONFLICT",
+        "This request key belongs to another refund",
+      );
+    return serialize(previous);
+  }
+  const targetPayment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { bookingId: true },
+  });
+  if (!targetPayment) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
   return prisma.$transaction(
     async (tx) => {
+      await lockEntity(tx, "booking", targetPayment.bookingId);
       await lockEntity(tx, "payment", paymentId);
       const payment = await tx.payment.findUnique({
         where: { id: paymentId },
         include: { booking: true, refunds: { where: { status: "SUCCEEDED" } } },
       });
       if (!payment) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
+      const alreadyDistributed = await tx.booking.findUnique({
+        where: { id: payment.bookingId },
+        select: {
+          cancellation: { select: { id: true } },
+          settlement: { select: { id: true } },
+        },
+      });
+      if (payment.provider !== "SIMULATED")
+        fail(
+          409,
+          "GATEWAY_REFUND_REQUIRED",
+          "Use the gateway refund workflow for this payment",
+        );
+      if (alreadyDistributed?.cancellation || alreadyDistributed?.settlement)
+        fail(
+          409,
+          "PAYMENT_ALREADY_DISTRIBUTED",
+          "Booking funds have already been settled or returned to Refund Balance",
+        );
       const requesterAdminRole = await tx.userRole.findUnique({
         where: {
           userId_role: { userId: requestedByUserId, role: UserRoleType.ADMIN },
@@ -8656,6 +8737,39 @@ export async function reviewPayout(
         });
       }
       if (input.decision === "PAID") {
+        const sources = await tx.ledgerEntry.groupBy({
+          by: ["accountCode", "entrySide"],
+          where: {
+            walletAccountId: wallet.id,
+            accountCode: {
+              in: ["PROVIDER_PAYABLE", "DRIVER_REFUND_LIABILITY"],
+            },
+          },
+          _sum: { amountPaisa: true },
+        });
+        const net = (code: string) =>
+          sources
+            .filter((row) => row.accountCode === code)
+            .reduce(
+              (total, row) =>
+                total +
+                (row.entrySide === "CREDIT" ? 1n : -1n) *
+                  (row._sum.amountPaisa ?? 0n),
+              0n,
+            );
+        let payoutDebits;
+        try {
+          payoutDebits = allocatePayoutDebits(payout.amountPaisa, {
+            providerPaisa: net("PROVIDER_PAYABLE"),
+            driverPaisa: net("DRIVER_REFUND_LIABILITY"),
+          });
+        } catch {
+          fail(
+            409,
+            "PAYOUT_LEDGER_SOURCE_INVALID",
+            "Reserved funds do not match wallet liabilities. Reconcile the wallet before paying.",
+          );
+        }
         await tx.ledgerTransaction.create({
           data: {
             referenceType: "PAYOUT",
@@ -8664,12 +8778,12 @@ export async function reviewPayout(
             actorUserId: adminUserId,
             entries: {
               create: [
-                {
-                  accountCode: "PROVIDER_PAYABLE",
+                ...payoutDebits.map((entry) => ({
+                  accountCode: entry.accountCode,
                   walletAccountId: wallet.id,
-                  entrySide: "DEBIT",
-                  amountPaisa: payout.amountPaisa,
-                },
+                  entrySide: "DEBIT" as const,
+                  amountPaisa: entry.amountPaisa,
+                })),
                 {
                   accountCode: "EXTERNAL_PAYOUT_CLEARING",
                   entrySide: "CREDIT",
@@ -8913,12 +9027,6 @@ export async function createDispute(
         "DISPUTE_ALREADY_EXISTS",
         "A dispute already exists for this booking",
       );
-    if (!booking.settlement || booking.settlement.status !== "COMPLETED")
-      fail(
-        409,
-        "DISPUTE_SETTLEMENT_PENDING",
-        "A financial dispute can be opened after final settlement",
-      );
     const dispute = await tx.dispute.create({
       data: {
         bookingId,
@@ -8931,7 +9039,10 @@ export async function createDispute(
           : {}),
       },
     });
-    if (booking.settlement && booking.settlement.providerNetPaisa > 0n) {
+    if (
+      booking.settlement?.status === "COMPLETED" &&
+      booking.settlement.providerNetPaisa > 0n
+    ) {
       await lockEntity(tx, "wallet", booking.settlementWalletAccountId);
       const wallet = await tx.walletAccount.findUniqueOrThrow({
         where: { id: booking.settlementWalletAccountId },
@@ -8962,10 +9073,11 @@ export async function createDispute(
         data: { providerHeldPaisa: amount },
       });
     }
-    await tx.booking.update({
-      where: { id: booking.id },
-      data: { status: "DISPUTED" },
-    });
+    if (booking.settlement?.status === "COMPLETED")
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { status: "DISPUTED" },
+      });
     await audit(
       tx,
       DomainAuditEventType.DISPUTE_CREATED,
@@ -9055,7 +9167,10 @@ export async function resolveDispute(
       where: { id: dispute.id },
       data: { providerHeldPaisa: 0n },
     });
-    if (dispute.previousBookingStatus)
+    if (
+      dispute.booking.status === BookingStatus.DISPUTED &&
+      dispute.previousBookingStatus
+    )
       await tx.booking.update({
         where: { id: dispute.bookingId },
         data: { status: dispute.previousBookingStatus },

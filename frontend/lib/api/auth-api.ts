@@ -12,6 +12,7 @@ export interface VerificationRequestResult { alreadyVerified: boolean; developme
 
 export const authApi = {
   me: (options?: { skipAuthRefresh?: boolean }) => apiClient.get<{ user: AuthUser }>("/auth/me", options),
+  updateProfile: (input: { fullName: string }) => apiClient.patch<{ user: Pick<AuthUser, "id" | "fullName"> }>("/users/me/profile", input),
   login: async (input: { identifier: string; password: string; rememberDevice: boolean }) => {
     const result = await apiClient.post<AuthResult>("/auth/login", input, { skipAuthRefresh: true });
     if (result.accessToken) {

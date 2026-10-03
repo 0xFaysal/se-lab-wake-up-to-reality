@@ -25,6 +25,7 @@ describe("Property governance invariants", () => {
     providerCount: number;
     managerUserId?: string;
     admin?: boolean;
+    shared?: boolean;
   }) {
     const provisional = input.provisionalMembership ?? input.activeMembership;
     return {
@@ -41,7 +42,10 @@ describe("Property governance invariants", () => {
         },
         count: async () => input.providerCount,
       },
-      property: { findFirst: async () => null },
+      property: {
+        findFirst: async () => null,
+        findUnique: async () => ({ isSharedBuilding: input.shared ?? false }),
+      },
       propertyBuildingManagerAssignment: {
         findFirst: async () =>
           input.managerUserId ? { candidateUserId: input.managerUserId } : null,
@@ -55,6 +59,7 @@ describe("Property governance invariants", () => {
     assert.equal(governanceModeFromCount(0), "SINGLE_PROVIDER");
     assert.equal(governanceModeFromCount(1), "SINGLE_PROVIDER");
     assert.equal(governanceModeFromCount(2), "MULTI_PROVIDER");
+    assert.equal(governanceModeFromCount(1, true), "MULTI_PROVIDER");
   });
 
   it("requires optimistic versions for direct shared changes", () => {

@@ -766,3 +766,145 @@ node scripts/qa/run-postman-tests.mjs --with-slow
 ```
 
 The run writes `postman-run.log` (full console output) and `postman-results.json` (one row per assertion) to `docs/testing/evidence/postman/`. The automated suites are reproduced with `npm test`, `npm run test:integration`, `npm run format:check`, `npm run typecheck`, `npm run build`, `npm run lint` and `npm audit --audit-level=high`; their logs are in `docs/testing/evidence/`.
+
+## 3.5 TS-3 through TS-9 remediation (2026-10-03)
+
+The results above describe the original test run, not a fresh acceptance run. TS-1 is outside this remediation scope. The fixes below address D2-D22, including hardening of earlier patches.
+
+| Scope | Implemented changes |
+|---|---|
+| Properties and listings (D11, D13, D17) | Shared-building governance, name-only edits without re-verification, and restoration of listings suspended specifically by a property suspension. Independently suspended listings stay suspended. |
+| Search and vehicles (D6, D7, D12, D20) | Physical-unit creation/backfill, height validation, approximate public coordinates and distances, sorting and pagination without premature query truncation. |
+| Booking and payment (D2, D3, D5) | Policy-based cancellation credits and refund history, confirmed-booking access details, and positive-only ledger entries for zero-deposit payments. Arbitrary refunds require Admin authorization; already-distributed funds cannot be refunded twice. Real gateway payments cannot use simulated refunds. |
+| Managers (D4, D16, D18, D19) | Operational booking responses strip financial data while preserving dates. Resource/guard creation requires explicit delegated permissions. Delegation notifications and suspend/resume controls are connected. |
+| Guard and blocking (D14, D15, D21) | Expiring exit credentials, server verification and checkout validation, driver pass refresh, guard scanner/manual checkout, shift re-acceptance, and affected-booking warnings, including overdue live sessions. |
+| Finance and reviews (D8-D10, D22) | Provider earnings remain pending during the dispute window. Disputes hold the exact booking earnings, including disputes opened before checkout. Resolution/rejection releases the tracked amount safely. Payout methods require review; payout retries and concurrency are protected. Category ratings are supported. |
+
+### Verification completed
+
+- Backend unit suite: **117 tests passed**.
+- Backend TypeScript checks and production compilation: passed.
+- Frontend TypeScript, full lint and production build: passed; 123 routes generated.
+- Prisma schema validation and client generation: passed.
+- Integration fixtures and Postman collection updated for explicit manager permissions, payout verification, exit credentials, wallet cancellation credits and dispute-window behavior.
+
+### Acceptance checks still required
+
+Database integration tests and the full TS-3 through TS-9 Postman run were **not executed**: Docker Desktop was stopped and no isolated local test database/API was running. Browser-level interaction checks were also not performed. No hosted database was used or changed for verification. These fixes must not be interpreted as a new 100% system-test pass rate.
+
+Apply the migrations and generate the client before starting the updated API. Then run the integration/Postman suites against an isolated test database, not the hosted production database. Review historical open disputes and legacy independently/property-suspended listings during rollout; new tracking fields cannot reliably infer every previous financial hold or suspension reason.
+
+## 3.6 Live Supabase and Vercel audit (2026-10-03)
+
+This audit used the configured Supabase project `bebycrnbtkstwzwnlrur` in Singapore and the live Vercel API. Docker was not used. SQL inspection was read-only; no live user, booking, payment, wallet, or migration data was changed. Counts are a point-in-time snapshot, not an end-to-end acceptance run.
+
+### Checks passed
+
+| Check | Live result |
+|---|---|
+| Supabase project | ACTIVE_HEALTHY |
+| API liveness/readiness | Both HTTP 200; PostgreSQL and Redis ready |
+| Parking browse | HTTP 200; 3 properties |
+| Future-period parking search | HTTP 200; 1 matching property for the sampled Sedan query |
+| Anonymous Admin payments access | HTTP 401 AUTH_REQUIRED |
+| Ledger transactions | No unbalanced transactions or nonpositive entries |
+| Wallet balances | No negative available, pending, or held balances |
+| Booking totals | No component-total mismatches across 12 bookings |
+| Cancellation/deposit arithmetic | No cancellation-credit or deposit-settlement component mismatches |
+| Booking lifecycle snapshot | No overdue CONFIRMED bookings, expired PAYMENT_PENDING bookings, or COMPLETED bookings missing settlements |
+| Listing eligibility | 3 active listings; no invalid property/resource/right parent status in the sampled SQL check |
+| Fixed resources | No undeleted fixed resource missing physical units |
+| Payments/email records | 11 SUCCEEDED payment records; 3 SENT email-delivery records. Records do not prove inbox delivery or a fresh gateway transaction. |
+| Public database roles | No public tables readable by `anon` or `authenticated` |
+
+### Outstanding live findings
+
+1. **Public coordinate privacy is not deployed.** All 3 properties returned by live browse exposed coordinates identical to stored coordinates. Stored coordinates are not aligned to the neighbourhood grid used by the local privacy helper. Redeploy the corrected API and repeat the comparison; healthy probes alone do not establish that current source is deployed.
+2. **One wallet projection differs by BDT 400.** Its stored balance is BDT 398 while wallet-linked ledger entries net to BDT -2. The visible entries are a BDT 72 booking debit and BDT 70 cancellation credit. The origin of the BDT 400 opening difference needs transaction-history reconciliation. Do not remove the balance or invent a credit merely to make the totals match.
+3. **Eight historical completed settlements have no provider release marker.** Their provider wallets currently have zero pending balance, so these are not automatically evidence of unpaid earnings. Available balances are already present. The new release guard correctly refuses to credit them again without pending funds. Confirm historical credits, then repair metadata with an audited forward migration rather than transferring money again.
+4. **Migration history differs from local files.** `20261003120100_backfill_missing_fixed_units` is pending, although live resources already have units. Applied migrations `20260919090000_restrict_supabase_data_api` and `20261003090100_resolve_system_test_t2_findings` have actual content differences. Another 13 checksum differences are explained by LF/CRLF conversion. There are no unfinished migrations. Do not reset the live database or rewrite stored migration checksums to hide drift.
+5. **Four financial tables lack RLS:** `payment_attempts`, `wallet_holds`, `booking_settlements`, and `booking_cancellations`. Public SELECT grants are absent, so this audit did not find current direct public table access. Add reviewed defense-in-depth RLS before granting Data API access. Existing no-policy RLS notices on backend-only tables do not justify opening them to clients.
+6. **Advisor maintenance findings remain.** Two extensions are in `public`; performance advisors report 45 unindexed foreign keys, 46 unused-index notices, and two policy warnings. These require workload-specific review, not blanket index deletion or extension moves.
+
+### Coverage limits and next verification
+
+No new live booking, payment, cancellation, withdrawal, email, property approval, or guard checkout was triggered. Full role-based UI and payment acceptance testing needs explicitly designated test accounts and sandbox transactions; production integration suites must not be pointed at this live database because their fixture cleanup can delete records. Fix/deploy privacy first, reconcile the financial history, and use an isolated Supabase test project for destructive acceptance tests. Docker is not required for that setup.
+
+Advisor references: [RLS guidance](https://supabase.com/docs/guides/database/postgres/row-level-security), [extension placement](https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public), [foreign-key indexing](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys).
+
+## 3.7 Live remediation and further verification (2026-10-03)
+
+The findings in section 3.6 are retained as the original audit snapshot. Subsequent owner-authorized remediation applied reviewed forward migrations and deployed both Vercel projects; Docker was not used.
+
+- The owner confirmed the BDT 400 opening difference was demo/test money. A balanced, explicitly labelled opening ledger transaction reconciled it without changing the wallet's BDT 398 stored balance or claiming gateway funds/platform revenue.
+- Eight legacy provider release markers were repaired only where matching posted provider earnings, zero pending funds and no open dispute were verified. No second earnings credit was created.
+- Original applied migration contents were restored against their recorded checksums; LF normalization resolved line-ending drift. All 43 migrations were applied without rewriting stored migration checksums or resetting the database.
+- RLS and public-role restrictions were applied to the four financial tables. Relocatable extensions moved to the extensions schema; role policies were hardened without granting public table access.
+- Post-remediation SQL checks found zero wallet projection mismatches, unbalanced ledger transactions, unmarked historical completed settlements and public tables without RLS. Security/performance advisor warnings were cleared; informational no-policy notices and workload-dependent index advice remain.
+- Production API readiness returned HTTP 200 with PostgreSQL and Redis healthy. Browse returned three properties with neighbourhood-grid coordinates and zero exact stored-coordinate matches. Anonymous Admin payments access returned HTTP 401.
+- Backend unit tests passed (117); frontend/backend production builds passed. These checks do not replace financial acceptance tests.
+
+### Additional frontend findings and regression coverage
+
+Public View offers navigation was observed to reach Green View House's detail page with the requested period preserved; the initial immediate observation preceded navigation completion. This was not a confirmed broken navigation link.
+
+Further source review found that changing a period during an existing quote/hold could leave checkout using the previous quote. The selector now locks during quote creation and while a quote, hold or booking exists; discarding a quote or releasing a hold unlocks it. Quoting is disabled while availability refreshes. Guest vehicle fetching is now gated by an authenticated Driver account to avoid triggering auth-expiry/cache-clear cycles from optional public checkout data. Invalid/reversed date parameters are rejected before rendering date formatting controls. The incorrect Provider Portal default browser title was replaced with a platform-wide title.
+
+The former frontend test command only printed a success message. It now executes three real regression tests for invalid periods, timezone comparisons and checkout locking, and CI runs them. All three passed; frontend lint, type checks and production compilation passed during this remediation. These are helper-level tests, not browser or financial acceptance coverage.
+
+Frontend deployment `dpl_3JRCock4ZdzgNPc5y7WwaFuAPjkD` reached READY and was aliased to `https://parkease-bd.vercel.app`. Browser checks on that deployment confirmed the guest Driver sign-in prompt, gallery open/next/close interactions, a date change updating the detail URL, and malformed date parameters showing a return-to-search state without a date-formatting crash. No console errors or warnings were captured in the sampled valid-detail run. Authenticated quote/hold locking still needs account-based browser acceptance tests.
+
+### Remaining acceptance scope
+
+Fresh sandbox payment, split wallet/gateway retry, cancellation, checkout/overtime settlement, withdrawal approval, and complete Provider/Manager/Guard/Admin interaction runs are still unverified end to end. Designated test accounts and an isolated Supabase test project are required before running destructive fixture suites. No claim of a fully bug-free project or a new 100% system-test pass rate is made.
+
+### Authorized role-based follow-up and additional defects
+
+The owner supplied existing Admin, Provider, Driver, Guard and Manager test accounts. Passwords are not recorded here. All five logins were exercised successfully; one Manager login initially failed with a generic error and succeeded on retry. An Admin earnings request also timed out once and succeeded after reload. The underlying intermittent latency has not been established, so these remain reliability observations rather than resolved findings.
+
+- Driver checkout produced the expected BDT 36 parking charge, BDT 3.60 platform fee and BDT 400 deposit. Date/time controls locked after quoting. A temporary parking hold was created and explicitly released; controls unlocked afterward. No booking payment or withdrawal was executed.
+- Provider earnings displayed BDT 108 available, zero awaiting settlement, and individual settlement activity without a second pending credit. Provider mobile sign-out worked. A desktop sign-out control was added using the existing logout component.
+- Guard overview and its assigned Green View House scope loaded. A fabricated credential was rejected as invalid, used or expired. No physical check-in or checkout was recorded.
+- Manager dashboard and resources loaded one delegated property and its ten physical units. Manager profile sign-out incorrectly navigated to nonexistent `/sign-in` and showed 404; it now uses the shared logout component. Other Manager profile controls still contain placeholder behavior: personal-information saving does not persist to the API, and photo/password actions require a separate completion pass.
+- Admin earnings exposed a financial classification defect: Driver withdrawals had debited Provider payable. New payout accounting chooses the wallet's actual Provider/Driver liability sources and rejects insufficient ledger-backed amounts. Three allocation regression cases were added.
+- Forward migration `20261003140000_reclassify_driver_withdrawal_liabilities` applied guarded, balanced reclassification entries for two verified historical Driver withdrawals totalling BDT 500. Original entries, wallet balances and external transfers were not modified. All 44 migrations were applied; SQL found zero wallet projection mismatches and zero unbalanced transactions.
+- After the correction, the live Admin earnings UI showed BDT 343 Provider payable matching Provider wallets, BDT 847 Driver refund liability matching Driver wallets, and BDT 38.30 platform revenue. Captured gateway total was BDT 1,400.30 and booking funds held BDT 72 at observation time.
+- Production logs exposed Vercel internal OIDC/signature headers. Redaction now covers OIDC, proxy signatures, deployment-protection bypass headers and the signed forwarded header. The logger regression test verifies that these secrets are absent. API deployment `dpl_2Mp9WPCJJB9fskBFeKCyhVcGavRW` reached READY.
+
+Backend `npm test` passed 120 tests; frontend type checking and lint passed after the Manager logout change. Frontend helper tests passed three cases earlier in this run. Authenticated smoke checks are not substitutes for isolated integration tests, concurrent financial operations, actual sandbox gateway callbacks or inbox delivery verification. The project is not certified bug-free.
+
+Frontend deployment `dpl_98wSKjCV9TBGwJ7RwxajN2FyNufq` reached READY with 123 routes built and includes the Manager logout fix. Both production aliases were updated without a Git push.
+
+Post-deployment Manager browser verification confirmed Sign Out reaches `/login` with the sign-in form, not 404. The temporary viewport override was cleared, and test accounts were signed out.
+
+### Profile completion and bounded serverless startup
+
+The Manager profile placeholder finding above prompted a scoped self-profile endpoint. `PATCH /users/me/profile` accepts only a trimmed, validated full name for the authenticated active, verified account. Protected identity, verification and authorization fields are rejected. Manager and Driver name forms now save through that endpoint with pending, error and unchanged-value states. Unsupported Manager photo/city controls were removed; password and active-session links use the existing account-security views rather than success-message placeholders.
+
+Server startup now bounds PostgreSQL connection acquisition and Redis connection attempts, shares in-flight Redis connection work, and initializes the independent dependencies concurrently. Database initialization failures return a generic HTTP 503 envelope with a request ID; initialization logs exclude raw connection error messages and credentials. These changes harden failure handling but do not establish the root cause or resolution of the earlier intermittent timeouts. Redis-dependent security checks remain fail-closed.
+
+Backend `npm test` passed 130 tests, including profile validation, protected-field rejection, initialization error privacy, public-data privacy and provider-earnings coverage. Frontend lint and frontend/backend type checks passed. API deployment `dpl_Cp27ASfcRw5UZ7PGSJJhw3fU1C8Z` reached READY. A production readiness probe returned HTTP 200 with both dependencies healthy in approximately 1.34 seconds; this is one sample, not a reliability benchmark.
+
+Frontend deployment `dpl_46brqCB3djcZJ4JhBjc5mhUzvmLf` reached READY after production compilation, type checking and static page generation. On the production alias, the authorized Manager signed in, saved a temporary name, and saw that name after reload. The original name was then saved back and verified after another reload. The real account-security page loaded through Change Password; no password was changed and no financial transaction was triggered.
+
+The Manager active-session page also returned signed-in devices and identified the current session. No other device was revoked. Full fresh sandbox payment, cancellation, overtime checkout and withdrawal acceptance coverage remains outstanding.
+
+### Gateway session and callback race review
+
+Source review found that a different request key could reset a still-preparing booking payment immediately, and asynchronous session-creation responses/error cleanup could overwrite a concurrently cancelled or replaced attempt. Failure/cancel callbacks checked terminal status before acquiring their lock, allowing a payment captured during that wait to be overwritten.
+
+Booking preparation now waits for the existing preparation TTL rather than treating a new request key as expiration. Session completion/error cleanup for booking and overtime payment re-read the merchant attempt and CREATED status after booking/payment locks. Session completion also verifies the booking is still awaiting that payment. Exit callbacks use the locked current attempt and leave succeeded, refunded, terminal or replaced attempts untouched.
+
+Seven isolated regression cases cover lock-before-read ordering, terminal states, stale merchant attempts, session ownership and missing/mismatched payments. Two exercise the actual exit handler with database test doubles: capture during lock wait and attempt replacement both cause no update or wallet release. No live financial transaction or destructive database fixture was used. Backend `npm test` passed 137 tests and type checking passed. This is targeted concurrency regression coverage, not proof of the full gateway lifecycle under real concurrent PostgreSQL transactions.
+
+API production deployment `dpl_5Q4qeeH69X3eu1g2iQAT8XugdBwP` reached READY with production compilation passing and was aliased to `https://parkease-api.vercel.app`. The post-deployment readiness probe returned HTTP 200 with PostgreSQL and Redis healthy. No frontend changes or database migration were required for this race-condition fix. Real sandbox lifecycle and database concurrency acceptance tests remain outstanding.
+
+### Successful capture identity and wallet-only confirmation
+
+Further review found gateway success validation compared amount/currency before locking, but did not repeat identity/funding checks against the locked payment. A concurrent retry could therefore replace the attempt between validation and capture. Booking and overtime settlement capture now verify merchant transaction ID, gateway provider, exact integer-paisa amount and currency against the locked record before idempotent return or posting funds.
+
+Wallet-only booking confirmation now takes the booking lock before the payment lock and requires a CREATED payment, a PAYMENT_PENDING booking and a future start time. Failure cleanup only owns the matching still-CREATED internal-wallet attempt; it cannot downgrade a concurrently completed/cancelled/replaced payment. Overtime finalization uses the same booking-before-payment lock order and verifies the booking identity and wallet-only funding source.
+
+Eight additional regression cases passed: exact identity/funding validation; actual booking and overtime success handlers with replaced merchant attempts or changed amounts; and actual wallet-only confirmation with cancelled booking, cancelled payment or past start time. Gateway responses, database transactions and credentials were test doubles; no network payment or live balance mutation occurred. All 145 backend unit tests and type checking passed. These tests prove the sampled rejection paths, not a complete real gateway/checkout acceptance run.
+
+Production API deployment `dpl_GTQ6xG22gSyncJhiGJX1aTY7gj2o` reached READY after compilation and updated the production alias. Its readiness probe returned HTTP 200 with PostgreSQL and Redis healthy. No schema migration or frontend deployment was needed for this capture-integrity change.

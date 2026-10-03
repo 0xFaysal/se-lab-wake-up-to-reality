@@ -31,6 +31,7 @@ import {
 import type { ProviderPropertyRelationshipContext } from "./property.mapper.js";
 import {
   canDeleteProperty,
+  actualPropertyChanges,
   canOwnerEditProperty,
   containsCriticalPropertyChange,
   shouldResetVerification,
@@ -142,6 +143,14 @@ async function loadProviderPropertyRelationshipContexts(
       managerByProperty.set(assignment.propertyId, assignment);
     }
   }
+  const sharedProperties = new Set(
+    (
+      await prisma.property.findMany({
+        where: { id: { in: propertyIds }, isSharedBuilding: true },
+        select: { id: true },
+      })
+    ).map((property) => property.id),
+  );
 
   return new Map(
     propertyIds.map((propertyId) => {
@@ -150,7 +159,10 @@ async function loadProviderPropertyRelationshipContexts(
       return [
         propertyId,
         {
-          governanceMode: governanceModeFromCount(providerCount),
+          governanceMode: governanceModeFromCount(
+            providerCount,
+            sharedProperties.has(propertyId),
+          ),
           relationship: {
             providerMembership: membership
               ? {
@@ -341,8 +353,25 @@ export async function updateProperty(
       if (!existing) throw propertyErrors.notFound();
       if (!canOwnerEditProperty(existing)) throw propertyErrors.invalidState();
 
-      const changedFields = new Set(Object.keys(input));
-      changedFields.delete("version");
+      const changedFields = actualPropertyChanges(
+        {
+          ...existing,
+          ...decryptPropertySensitiveData(existing),
+          latitude: Number(existing.latitude),
+          longitude: Number(existing.longitude),
+          entranceLatitude:
+            existing.entranceLatitude === null
+              ? null
+              : Number(existing.entranceLatitude),
+          entranceLongitude:
+            existing.entranceLongitude === null
+              ? null
+              : Number(existing.entranceLongitude),
+          entryCutoffLocalTime:
+            existing.entryCutoffLocalTime?.toISOString().slice(11, 16) ?? null,
+        },
+        input,
+      );
       const providerCount =
         await governanceRepository.getActiveVerifiedProviderCount(
           propertyId,
@@ -450,7 +479,10 @@ export async function updateProperty(
           });
         }
       }
-      if (shouldResetVerification(existing.verificationStatus, changedFields)) {
+      if (
+        changedFields.size > 0 &&
+        shouldResetVerification(existing.verificationStatus, changedFields)
+      ) {
         Object.assign(updateData, {
           verificationStatus: VerificationStatus.PENDING,
           status: PropertyStatus.INACTIVE,
