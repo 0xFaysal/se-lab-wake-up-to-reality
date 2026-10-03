@@ -26,7 +26,7 @@ export function GuardScanView() {
     onSuccess: (result) => setVerified(result),
   });
   const checkin = useMutation({
-    mutationFn: () => guardMarketplaceApi.checkIn(verified!.booking.id, credential.trim()),
+    mutationFn: () => verified?.purpose === "EXIT" ? guardMarketplaceApi.checkOut(verified.booking.id, credential.trim()) : guardMarketplaceApi.checkIn(verified!.booking.id, credential.trim()),
     onSuccess: async (booking) => {
       setConfirmOpen(false);
       await client.invalidateQueries({ queryKey: queryKeys.bookings.root });
@@ -60,7 +60,7 @@ export function GuardScanView() {
             <span className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-200 text-emerald-950"><CheckCircle2 className="size-8" aria-hidden="true" /></span>
             <p className="mt-4 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-emerald-800">Server verified</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-emerald-950">Booking is valid</h1>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">Match the driver, registration plate and assigned parking space before allowing entry.</p>
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">{verified.purpose === "EXIT" ? "Match the registration plate and confirm the vehicle has left before completing checkout." : "Match the driver, registration plate and assigned parking space before allowing entry."}</p>
           </div>
 
           <div className="grid gap-6 p-5 sm:p-8 lg:grid-cols-[1fr_1.1fr]">
@@ -79,7 +79,7 @@ export function GuardScanView() {
 
           <div className="border-t border-[var(--guard-line)] p-5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-6">
             <button type="button" onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800"><RotateCcw className="size-4" aria-hidden="true" />Scan another code</button>
-            <Button type="button" size="lg" onClick={() => setConfirmOpen(true)} className="mt-3 min-h-12 w-full px-5 sm:mt-0 sm:w-auto"><ShieldCheck className="size-5" />Continue to check-in <ArrowRight className="size-4" /></Button>
+            <Button type="button" size="lg" onClick={() => setConfirmOpen(true)} className="mt-3 min-h-12 w-full px-5 sm:mt-0 sm:w-auto"><ShieldCheck className="size-5" />{verified.purpose === "EXIT" ? "Continue to checkout" : "Continue to check-in"} <ArrowRight className="size-4" /></Button>
           </div>
         </section>
 
@@ -87,18 +87,18 @@ export function GuardScanView() {
           <AlertDialogContent className="max-w-md p-5">
             <AlertDialogHeader>
               <AlertDialogMedia className="bg-emerald-100 text-emerald-900"><ShieldCheck className="size-6" /></AlertDialogMedia>
-              <AlertDialogTitle>Confirm vehicle entry</AlertDialogTitle>
-              <AlertDialogDescription>Confirm only after the vehicle and driver are physically present at {booking.property.name}. This records the server check-in time.</AlertDialogDescription>
+              <AlertDialogTitle>{verified.purpose === "EXIT" ? "Confirm vehicle exit" : "Confirm vehicle entry"}</AlertDialogTitle>
+              <AlertDialogDescription>{verified.purpose === "EXIT" ? "Confirm only after checking the registration and physical vehicle exit." : `Confirm only after the vehicle and driver are physically present at ${booking.property.name}. This records the server check-in time.`}</AlertDialogDescription>
             </AlertDialogHeader>
             <ul className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
               <CheckItem>Registration plate matches {booking.vehicle.registrationNumber}</CheckItem>
               <CheckItem>Driver identity and booking details match</CheckItem>
-              <CheckItem>Assigned space {booking.parkingSpot.spotCode ?? parking} is ready</CheckItem>
+              <CheckItem>{verified.purpose === "EXIT" ? "Vehicle has left the parking space" : `Assigned space ${booking.parkingSpot.spotCode ?? parking} is ready`}</CheckItem>
             </ul>
             {checkin.isError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{getApiErrorMessage(checkin.error)}</p>}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={checkin.isPending}>Review again</AlertDialogCancel>
-              <AlertDialogAction disabled={checkin.isPending} onClick={() => checkin.mutate()} className="min-h-10 bg-emerald-900 text-white hover:bg-emerald-800">{checkin.isPending ? <><Loader2 className="size-4 animate-spin" />Checking in…</> : <><Check className="size-4" />Confirm check-in</>}</AlertDialogAction>
+              <AlertDialogAction disabled={checkin.isPending} onClick={() => checkin.mutate()} className="min-h-10 bg-emerald-900 text-white hover:bg-emerald-800">{checkin.isPending ? <><Loader2 className="size-4 animate-spin" />{verified.purpose === "EXIT" ? "Checking out…" : "Checking in…"}</> : <><Check className="size-4" />{verified.purpose === "EXIT" ? "Confirm checkout" : "Confirm check-in"}</>}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

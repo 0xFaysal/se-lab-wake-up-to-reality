@@ -134,6 +134,9 @@ jobs:
       - name: Check TypeScript types
         run: npm run typecheck
 
+      - name: Run frontend regression tests
+        run: npm test
+
       - name: Build Next.js application
         env:
           NODE_ENV: production

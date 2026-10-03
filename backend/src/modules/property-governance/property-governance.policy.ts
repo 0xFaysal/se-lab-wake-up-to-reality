@@ -8,16 +8,24 @@ import * as repository from "./property-governance.repository.js";
 
 export type PropertyGovernanceMode = "SINGLE_PROVIDER" | "MULTI_PROVIDER";
 
-export function governanceModeFromCount(count: number): PropertyGovernanceMode {
-  return count <= 1 ? "SINGLE_PROVIDER" : "MULTI_PROVIDER";
+export function governanceModeFromCount(
+  count: number,
+  isSharedBuilding = false,
+): PropertyGovernanceMode {
+  return count <= 1 && !isSharedBuilding ? "SINGLE_PROVIDER" : "MULTI_PROVIDER";
 }
 
 export async function getPropertyGovernanceMode(
   propertyId: string,
   db?: GovernanceClient,
 ): Promise<PropertyGovernanceMode> {
+  const property = await (db ?? prisma).property.findUnique({
+    where: { id: propertyId },
+    select: { isSharedBuilding: true },
+  });
   return governanceModeFromCount(
     await repository.getActiveVerifiedProviderCount(propertyId, db),
+    property?.isSharedBuilding,
   );
 }
 
@@ -26,24 +34,36 @@ export async function canManagePropertyCommonRules(
   propertyId: string,
   db?: GovernanceClient,
 ): Promise<boolean> {
-  const [verifiedMembership, provisionalMembership, count, manager, admin] =
-    await Promise.all([
-      repository.findActiveVerifiedProviderMembership(userId, propertyId, db),
-      repository.findProvisionalProviderMembership(userId, propertyId, db),
-      repository.getActiveVerifiedProviderCount(propertyId, db),
-      repository.findActiveBuildingManager(propertyId, db),
-      (db ?? prisma).user.findFirst({
-        where: {
-          id: userId,
-          deletedAt: null,
-          roles: { some: { role: UserRoleType.ADMIN } },
-        },
-        select: { id: true },
-      }),
-    ]);
+  const [
+    verifiedMembership,
+    provisionalMembership,
+    count,
+    manager,
+    admin,
+    property,
+  ] = await Promise.all([
+    repository.findActiveVerifiedProviderMembership(userId, propertyId, db),
+    repository.findProvisionalProviderMembership(userId, propertyId, db),
+    repository.getActiveVerifiedProviderCount(propertyId, db),
+    repository.findActiveBuildingManager(propertyId, db),
+    (db ?? prisma).user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null,
+        roles: { some: { role: UserRoleType.ADMIN } },
+      },
+      select: { id: true },
+    }),
+    (db ?? prisma).property.findUnique({
+      where: { id: propertyId },
+      select: { isSharedBuilding: true },
+    }),
+  ]);
   return (
     (count === 0 && Boolean(provisionalMembership)) ||
-    (count === 1 && Boolean(verifiedMembership)) ||
+    (count === 1 &&
+      !property?.isSharedBuilding &&
+      Boolean(verifiedMembership)) ||
     manager?.candidateUserId === userId ||
     Boolean(admin)
   );

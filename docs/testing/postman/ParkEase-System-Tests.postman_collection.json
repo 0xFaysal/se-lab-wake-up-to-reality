@@ -14470,7 +14470,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "eval(pm.collectionVariables.get(\"qaLib\"));",
-                  "pm.request.body.update(JSON.stringify(({ propertyId: qa.get(\"p1\"), managerIdentifier: qa.get(\"email_manager\"), permissions: [\"RESOURCE_VIEW\", \"LISTING_VIEW\", \"AVAILABILITY_MANAGE\", \"BOOKING_VIEW\"] }), null, 2));"
+                  "pm.request.body.update(JSON.stringify(({ propertyId: qa.get(\"p1\"), managerIdentifier: qa.get(\"email_manager\"), permissions: [\"RESOURCE_VIEW\", \"RESOURCE_MANAGE\", \"GUARD_ADD_TO_PROPERTY\", \"LISTING_VIEW\", \"AVAILABILITY_MANAGE\", \"BOOKING_VIEW\"] }), null, 2));"
                 ]
               }
             },
@@ -16976,6 +16976,7 @@
                   "eval(pm.collectionVariables.get(\"qaLib\"));",
                   "",
                   "qa.status(\"G24\", \"Checkout request\", 200);",
+                  "qa.set(\"exitCredential\", qa.data().exitCredential);",
                   "qa.test(\"G25\", \"Booking is CHECKOUT_REQUESTED, not yet completed\", function () { pm.expect(qa.data().status).to.eql(\"CHECKOUT_REQUESTED\"); });",
                   "qa.test(\"G27\", \"An EXIT QR code / OTP is issued (FR-VER-04)\", function () { pm.expect(qa.text()).to.match(/exit(Credential|Code|Otp|Qr)|EXIT/i); });",
                   ""
@@ -17047,7 +17048,8 @@
                 "value": "access_token={{tok_guard}}"
               }
             ],
-            "url": "{{api}}/guard/bookings/{{bNow}}/check-out"
+            "url": "{{api}}/guard/bookings/{{bNow}}/check-out",
+            "body": { "mode": "raw", "raw": "{\"credential\": \"{{exitCredential}}\"}", "options": { "raw": { "language": "json" } } }
           },
           "protocolProfileBehavior": {
             "disableCookies": true
@@ -18388,6 +18390,20 @@
           "protocolProfileBehavior": {
             "disableCookies": true
           }
+        },
+        {
+          "name": "PO05a Admin verifies the payout destination",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "eval(pm.collectionVariables.get(\"qaLib\"));",
+            "qa.status(\"PO05a\", \"Admin verification\", 200);"
+          ] } }],
+          "request": { "method": "POST", "header": [
+            { "key": "Cookie", "value": "access_token={{tok_admin}}" },
+            { "key": "Content-Type", "value": "application/json" }
+          ], "url": "{{api}}/admin/payout-methods/{{payoutMethod}}/review",
+            "body": { "mode": "raw", "raw": "{\"decision\":\"APPROVED\",\"note\":\"QA destination ownership verified\"}", "options": { "raw": { "language": "json" } } }
+          },
+          "protocolProfileBehavior": { "disableCookies": true }
         },
         {
           "name": "PO06 Payout larger than the available balance",

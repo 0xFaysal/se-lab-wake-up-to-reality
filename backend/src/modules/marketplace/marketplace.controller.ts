@@ -356,7 +356,11 @@ export const requestCheckout = action((req) =>
   service.requestCheckout(userId(req), param(req, "bookingId")),
 );
 export const checkOut = action((req) =>
-  service.checkOutBooking(userId(req), param(req, "bookingId")),
+  service.checkOutBooking(
+    userId(req),
+    param(req, "bookingId"),
+    req.body.credential,
+  ),
 );
 export const getDriverBookingSettlement = action((req) =>
   service.getDriverBookingSettlement(userId(req), param(req, "bookingId")),
@@ -392,6 +396,16 @@ export const deactivatePayoutMethod = action((req) =>
   service.deactivateProviderPayoutMethod(
     userId(req),
     param(req, "payoutMethodId"),
+  ),
+);
+export const listPendingPayoutMethods = action(() =>
+  service.listPendingPayoutMethods(),
+);
+export const reviewPayoutMethod = action((req) =>
+  service.reviewPayoutMethod(
+    userId(req),
+    param(req, "payoutMethodId"),
+    req.body,
   ),
 );
 export const createRefund = action(

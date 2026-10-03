@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import "./provider-earnings.test.js";
+import "./payment-attempt-state.test.js";
 import test from "node:test";
+import { allocatePayoutDebits } from "../../../src/common/finance/payout-accounting.js";
 import {
   calculateCancellation,
   calculateOvertime,
@@ -7,6 +10,42 @@ import {
   calculateWalletSplit,
   cancellationRefundBps,
 } from "../../../src/common/finance/booking-finance.js";
+
+test("driver withdrawals debit refund liability, not provider earnings", () => {
+  assert.deepEqual(
+    allocatePayoutDebits(40000n, { providerPaisa: 0n, driverPaisa: 50000n }),
+    [{ accountCode: "DRIVER_REFUND_LIABILITY", amountPaisa: 40000n }],
+  );
+});
+
+test("provider and mixed-source withdrawals preserve liability totals", () => {
+  assert.deepEqual(
+    allocatePayoutDebits(10000n, { providerPaisa: 12000n, driverPaisa: 0n }),
+    [{ accountCode: "PROVIDER_PAYABLE", amountPaisa: 10000n }],
+  );
+  assert.deepEqual(
+    allocatePayoutDebits(15000n, { providerPaisa: 10000n, driverPaisa: 5000n }),
+    [
+      { accountCode: "PROVIDER_PAYABLE", amountPaisa: 10000n },
+      { accountCode: "DRIVER_REFUND_LIABILITY", amountPaisa: 5000n },
+    ],
+  );
+});
+
+test("payout allocation rejects unbacked amounts and ignores negative sources", () => {
+  assert.throws(
+    () => allocatePayoutDebits(1n, { providerPaisa: 0n, driverPaisa: 0n }),
+    RangeError,
+  );
+  assert.throws(
+    () => allocatePayoutDebits(0n, { providerPaisa: 100n, driverPaisa: 0n }),
+    RangeError,
+  );
+  assert.deepEqual(
+    allocatePayoutDebits(100n, { providerPaisa: -100n, driverPaisa: 100n }),
+    [{ accountCode: "DRIVER_REFUND_LIABILITY", amountPaisa: 100n }],
+  );
+});
 
 test("cancellation policy uses exact tier boundaries", () => {
   assert.deepEqual(

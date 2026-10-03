@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import {
   AccountOrigin,
+  ManagerDelegationPermission,
+  ManagerDelegationStatus,
+  PropertyProviderStatus,
+  VerificationStatus,
   Prisma,
   UserRoleType,
   UserStatus,
@@ -19,6 +23,27 @@ import { logger } from "../../config/logger.js";
 import { prisma } from "../../config/prisma.js";
 import { authUserSelect } from "../auth/auth.repository.js";
 
+export async function updateOwnProfile(userId: string, fullName: string) {
+  const updated = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      deletedAt: null,
+      status: UserStatus.ACTIVE,
+      mustChangePassword: false,
+      emailVerifiedAt: { not: null },
+    },
+    data: { fullName },
+  });
+  if (updated.count !== 1) {
+    throw new AppError({
+      statusCode: 403,
+      code: "PROFILE_UPDATE_FORBIDDEN",
+      message: "An active, verified account is required",
+    });
+  }
+  return { id: userId, fullName };
+}
+
 type CreatedWorkforceAccount = {
   user: Prisma.UserGetPayload<{ select: typeof authUserSelect }>;
   tokenId: string;
@@ -36,6 +61,41 @@ async function createWorkforceAccount(input: {
   email: string;
   phone: string;
 }) {
+  if (
+    input.targetRole === UserRoleType.GUARD &&
+    input.actorRoles.includes(UserRoleType.MANAGER) &&
+    !input.actorRoles.some(
+      (role) => role === UserRoleType.PROVIDER || role === UserRoleType.ADMIN,
+    )
+  ) {
+    const authorized = await prisma.providerManagerDelegation.findFirst({
+      where: {
+        managerUserId: input.actorUserId,
+        status: ManagerDelegationStatus.ACTIVE,
+        AND: [
+          { OR: [{ validFrom: null }, { validFrom: { lte: new Date() } }] },
+          { OR: [{ validUntil: null }, { validUntil: { gt: new Date() } }] },
+        ],
+        grantorProviderMembership: {
+          status: PropertyProviderStatus.ACTIVE,
+          verificationStatus: VerificationStatus.VERIFIED,
+        },
+        property: { deletedAt: null, canonicalPropertyId: null },
+        permissions: {
+          some: {
+            permission: ManagerDelegationPermission.GUARD_ADD_TO_PROPERTY,
+          },
+        },
+      },
+      select: { id: true },
+    });
+    if (!authorized)
+      throw new AppError({
+        statusCode: 403,
+        code: "MANAGER_GUARD_CREATE_FORBIDDEN",
+        message: "An active Guard-management delegation is required",
+      });
+  }
   const createdByAdmin = input.actorRoles.includes(UserRoleType.ADMIN);
   const accountOrigin =
     createdByAdmin &&

@@ -128,6 +128,22 @@ managerDelegationRouter.delete(
   validate(managerDelegationIdSchema),
   controller.endManagerDelegationController,
 );
+managerDelegationRouter.post(
+  "/provider/manager-delegations/:delegationId/suspend",
+  authenticate,
+  requireAccountReady,
+  requireRole(UserRoleType.PROVIDER),
+  validate(managerDelegationIdSchema),
+  controller.suspendManagerDelegationController,
+);
+managerDelegationRouter.post(
+  "/provider/manager-delegations/:delegationId/resume",
+  authenticate,
+  requireAccountReady,
+  requireRole(UserRoleType.PROVIDER),
+  validate(managerDelegationIdSchema),
+  controller.resumeManagerDelegationController,
+);
 managerDelegationRouter.get(
   "/manager/delegations",
   authenticate,

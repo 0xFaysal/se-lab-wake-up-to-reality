@@ -247,6 +247,21 @@ async function ensureOffer(input: {
         hasGuard: true,
       },
     });
+  if (input.type === "FIXED_SPACE") {
+    await prisma.parkingResourceUnit.createMany({
+      data: Array.from({ length: input.capacity }, (_, index) => ({
+        parkingSpotId: spot!.id,
+        spotCode:
+          input.capacity === 1 ? input.code : `${input.code}-${index + 1}`,
+        normalizedSpotCode: (input.capacity === 1
+          ? input.code
+          : `${input.code}-${index + 1}`
+        ).replaceAll("-", ""),
+        status: "ACTIVE" as const,
+      })),
+      skipDuplicates: true,
+    });
+  }
   await prisma.parkingSpotFacility.createMany({
     data: input.facilityIds.map((facilityId) => ({
       parkingSpotId: spot!.id,

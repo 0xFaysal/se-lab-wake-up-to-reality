@@ -614,7 +614,7 @@ marketplaceRouter.post(
 marketplaceRouter.post(
   "/guard/bookings/:bookingId/check-out",
   requireRole(UserRoleType.GUARD),
-  validate(schema.bookingParamsSchema),
+  validate(schema.bookingParamsSchema.merge(schema.checkoutCredentialSchema)),
   controller.checkOut,
 );
 
@@ -666,9 +666,20 @@ marketplaceRouter.post(
   validate(schema.payoutMethodParamsSchema),
   controller.deactivatePayoutMethod,
 );
+marketplaceRouter.get(
+  "/admin/payout-methods/pending",
+  requireRole(UserRoleType.ADMIN),
+  controller.listPendingPayoutMethods,
+);
+marketplaceRouter.post(
+  "/admin/payout-methods/:payoutMethodId/review",
+  requireRole(UserRoleType.ADMIN),
+  validate(schema.adminPayoutMethodReviewSchema),
+  controller.reviewPayoutMethod,
+);
 marketplaceRouter.post(
   "/payments/:paymentId/refunds",
-  requireRole(UserRoleType.DRIVER, UserRoleType.PROVIDER),
+  requireRole(UserRoleType.ADMIN),
   sensitiveAccountRateLimit,
   validate(schema.refundSchema),
   controller.createRefund,

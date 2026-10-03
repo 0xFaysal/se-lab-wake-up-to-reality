@@ -44,3 +44,4 @@ bandit-report.json
 trivy-report.json
 zap-report.html
 sbom.json
+.vercel

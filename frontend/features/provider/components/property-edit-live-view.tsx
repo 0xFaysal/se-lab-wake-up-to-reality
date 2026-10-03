@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { propertyApi } from "@/lib/api/property-api";
-import type { PropertyInput } from "@/lib/api/api-types";
+import type { PropertyDetailDto, PropertyInput } from "@/lib/api/api-types";
+import { buildPropertyUpdate, propertyEditValues } from "@/lib/property-edit";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
 import { PropertyLocationPicker } from "./property-location-picker";
@@ -20,7 +21,13 @@ type Values = PropertyInput & { entranceLatitude?: number; entranceLongitude?: n
 export function PropertyEditLiveView({ propertyId }: { propertyId: string }) {
   const router = useRouter();
   const client = useQueryClient();
-  const [values, setValues] = useState<Values | null>(null);
+  const [draft, setDraft] = useState<{ original: PropertyDetailDto; values: Values } | null>(null);
+  const values = draft?.values ?? null;
+  const setValues = (update: (current: Values | null) => Values | null) => setDraft((current) => {
+    if (!current) return current;
+    const values = update(current.values);
+    return values ? { ...current, values } : current;
+  });
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState("");
   const query = useQuery({ queryKey: queryKeys.properties.detail(propertyId), queryFn: () => propertyApi.detail(propertyId) });
@@ -29,28 +36,31 @@ export function PropertyEditLiveView({ propertyId }: { propertyId: string }) {
     if (!query.data) return;
 
     const item = query.data;
-    // The local editable draft is reset only when a fresh Property record is loaded.
+    // Keep the original version and unsaved edits across background refreshes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setValues({ name: item.name, publicArea: item.publicArea, approximateAddress: item.approximateAddress, exactAddress: item.exactAddress, latitude: item.latitude, longitude: item.longitude, ...(item.entranceLatitude !== null ? { entranceLatitude: item.entranceLatitude } : {}), ...(item.entranceLongitude !== null ? { entranceLongitude: item.entranceLongitude } : {}), ...(item.accessInstructions ? { accessInstructions: item.accessInstructions } : {}), visitorIdentificationRequired: item.visitorIdentificationRequired, ...(item.vehicleHeightLimitCm ? { vehicleHeightLimitCm: item.vehicleHeightLimitCm } : {}), ...(item.entryCutoffLocalTime ? { entryCutoffLocalTime: item.entryCutoffLocalTime } : {}), ...(item.generalParkingRules ? { generalParkingRules: item.generalParkingRules } : {}), ...(item.commonSafetyRules ? { commonSafetyRules: item.commonSafetyRules } : {}) });
+    setDraft((current) => current?.original.id === item.id ? current : { original: item, values: propertyEditValues(item) });
   }, [query.data]);
 
   const update = useMutation({
-    mutationFn: () => propertyApi.update(propertyId, { ...values!, version: query.data!.version }),
+    mutationFn: () => propertyApi.update(propertyId, buildPropertyUpdate(draft!.original, draft!.values)),
     onSuccess: async (property) => {
       client.setQueryData(queryKeys.properties.detail(propertyId), property);
+      setDraft({ original: property, values: propertyEditValues(property) });
       await client.invalidateQueries({ queryKey: queryKeys.properties.root });
       setConfirming(false);
       setMessage(property.verificationStatus === "PENDING" ? "Property updated and returned to pending verification." : "Property updated successfully.");
     },
   });
   if (query.isError) return <div className="m-6 rounded-2xl border bg-white p-8 text-center"><p role="alert" className="text-red-700">{getApiErrorMessage(query.error)}</p><Button className="mt-4" variant="outline" onClick={() => query.refetch()}><RefreshCw className="size-4" />Retry</Button></div>;
-  if (query.isPending || !values) return <div className="py-24 text-center" aria-busy="true"><Loader2 className="mx-auto size-7 animate-spin" /></div>;
+  if (query.isPending || !values || draft?.original.id !== propertyId) return <div className="py-24 text-center" aria-busy="true"><Loader2 className="mx-auto size-7 animate-spin" /></div>;
   const set = <K extends keyof Values>(key: K, value: Values[K]) => setValues((current) => current ? { ...current, [key]: value } : current);
+  const hasChanges = draft && Object.keys(buildPropertyUpdate(draft.original, values)).length > 1;
 
   return <main className="mx-auto max-w-4xl space-y-6 p-6 sm:p-8">
     <div><h1 className="text-3xl font-extrabold">Edit Property</h1><p className="mt-2 text-sm text-muted-foreground">Update public details, operating rules, and the map location used for verification.</p></div>
     {message && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">{message}</p>}
-    <form onSubmit={(event) => { event.preventDefault(); setConfirming(true); }} className="grid gap-5 rounded-2xl border bg-white p-6 sm:grid-cols-2">
+    <form onSubmit={(event) => { event.preventDefault(); if (hasChanges && !update.isPending) setConfirming(true); }} className="grid gap-5 rounded-2xl border bg-white p-6 sm:grid-cols-2">
+      <fieldset disabled={update.isPending} className="contents">
       <Field label="Property name" value={values.name} onChange={(value) => set("name", value)} />
       <Field label="Public area" value={values.publicArea} onChange={(value) => set("publicArea", value)} />
       <Field label="Approximate address" value={values.approximateAddress} onChange={(value) => set("approximateAddress", value)} />
@@ -62,8 +72,10 @@ export function PropertyEditLiveView({ propertyId }: { propertyId: string }) {
       <TextField label="Parking rules" value={values.generalParkingRules ?? ""} onChange={(value) => set("generalParkingRules", value || undefined)} />
       <TextField label="Safety rules" value={values.commonSafetyRules ?? ""} onChange={(value) => set("commonSafetyRules", value || undefined)} />
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={values.visitorIdentificationRequired ?? false} onChange={(event) => set("visitorIdentificationRequired", event.target.checked)} />Visitor identification required</label>
+      <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={values.isSharedBuilding ?? false} onChange={(event) => set("isSharedBuilding", event.target.checked)} />This Property is part of a shared building</label>
       {update.isError && <p role="alert" className="text-sm font-semibold text-red-700 sm:col-span-2">{getApiErrorMessage(update.error)}</p>}
-      <div className="flex flex-wrap justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button><Button type="submit" className="bg-[#064E3B]" disabled={update.isPending}><Save className="size-4" />Save changes</Button></div>
+      <div className="flex flex-wrap justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button><Button type="submit" className="bg-[#064E3B]" disabled={update.isPending || !hasChanges}><Save className="size-4" />Save changes</Button></div>
+      </fieldset>
     </form>
     <AlertDialog open={confirming} onOpenChange={(open) => { if (!open && !update.isPending) setConfirming(false); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Save Property changes?</AlertDialogTitle><AlertDialogDescription>This change may require Property verification again. Critical identity or location changes return a verified Property to pending and inactive.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Review changes</AlertDialogCancel><AlertDialogAction disabled={update.isPending} onClick={() => update.mutate()}>{update.isPending ? <Loader2 className="size-4 animate-spin" /> : "Save changes"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </main>;

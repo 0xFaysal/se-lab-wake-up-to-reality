@@ -83,6 +83,7 @@ export function toOwnerPropertyDetail(
       : null,
     generalParkingRules: property.generalParkingRules,
     commonSafetyRules: property.commonSafetyRules,
+    isSharedBuilding: property.isSharedBuilding,
     temporaryClosureReason: property.temporaryClosureReason,
     temporaryClosedAt: property.temporaryClosedAt,
     temporaryClosedUntil: property.temporaryClosedUntil,

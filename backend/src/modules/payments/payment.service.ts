@@ -1,4 +1,9 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { creditProviderEarnings } from "./provider-earnings.js";
+import {
+  assertGatewayPaymentIdentity,
+  lockPendingPaymentAttempt,
+} from "./payment-attempt-state.js";
 import {
   BookingStatus,
   DomainAuditEventType,
@@ -153,11 +158,9 @@ export async function initiateSslCommerzSession(
       const abandonedAttempt =
         payment?.status === PaymentStatus.SESSION_CREATED ||
         (payment?.status === PaymentStatus.CREATED &&
-          (!byKey ||
-            !useWallet ||
-            (payment.initiatedAt &&
-              payment.initiatedAt.getTime() + PAYMENT_SESSION_TTL_MS <=
-                now.getTime())));
+          payment.initiatedAt &&
+          payment.initiatedAt.getTime() + PAYMENT_SESSION_TTL_MS <=
+            now.getTime());
       let resetForRetry = false;
       if (
         payment &&
@@ -318,7 +321,10 @@ export async function initiateSslCommerzSession(
 
   if (prepared.walletOnly) {
     try {
-      const payment = await captureWalletOnlyPayment(prepared.payment.id);
+      const payment = await captureWalletOnlyPayment(
+        prepared.payment.id,
+        bookingId,
+      );
       notifyUser(driverUserId, "booking:confirmed", { bookingId });
       notifyUser(prepared.booking.providerUserId, "booking:confirmed", {
         bookingId,
@@ -336,6 +342,18 @@ export async function initiateSslCommerzSession(
     } catch (error) {
       await prisma
         .$transaction(async (tx) => {
+          await lockEntity(tx, "booking", bookingId);
+          await lockEntity(tx, "payment", prepared.payment.id);
+          const current = await tx.payment.findUnique({
+            where: { id: prepared.payment.id },
+          });
+          if (
+            !current ||
+            current.status !== PaymentStatus.CREATED ||
+            current.provider !== "INTERNAL_WALLET" ||
+            current.idempotencyKey !== prepared.payment.idempotencyKey
+          )
+            return;
           await releasePaymentWalletHolds(
             tx,
             prepared.payment.id,
@@ -371,6 +389,26 @@ export async function initiateSslCommerzSession(
     });
     const expiresAt = new Date(Date.now() + PAYMENT_SESSION_TTL_MS);
     const payment = await prisma.$transaction(async (tx) => {
+      const current = await lockPendingPaymentAttempt(
+        tx,
+        {
+          paymentId: prepared.payment.id,
+          bookingId,
+          merchantTransactionId: prepared.payment.merchantTransactionId!,
+        },
+        [PaymentStatus.CREATED],
+      );
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (
+        !current ||
+        booking?.status !== BookingStatus.PAYMENT_PENDING ||
+        booking.startAt <= new Date()
+      )
+        fail(
+          409,
+          "PAYMENT_ATTEMPT_SUPERSEDED",
+          "This checkout attempt is no longer active",
+        );
       await tx.paymentAttempt.update({
         where: { id: prepared.attempt.id },
         data: {
@@ -400,6 +438,16 @@ export async function initiateSslCommerzSession(
   } catch (error) {
     await prisma
       .$transaction(async (tx) => {
+        const current = await lockPendingPaymentAttempt(
+          tx,
+          {
+            paymentId: prepared.payment.id,
+            bookingId,
+            merchantTransactionId: prepared.payment.merchantTransactionId!,
+          },
+          [PaymentStatus.CREATED],
+        );
+        if (!current) return;
         await releasePaymentWalletHolds(tx, prepared.payment.id, driverUserId);
         await tx.paymentAttempt.update({
           where: { id: prepared.attempt.id },
@@ -628,7 +676,10 @@ export async function initiateSettlementSession(
       expiresAt: prepared.payment.sessionExpiresAt,
     });
   if (prepared.walletOnly) {
-    const payment = await finalizeSettlementPayment(prepared.payment.id);
+    const payment = await finalizeSettlementPayment(
+      prepared.payment.id,
+      bookingId,
+    );
     return serialize({
       paymentId: payment.id,
       status: payment.status,
@@ -656,6 +707,22 @@ export async function initiateSettlementSession(
     });
     const expiresAt = new Date(Date.now() + PAYMENT_SESSION_TTL_MS);
     const payment = await prisma.$transaction(async (tx) => {
+      const current = await lockPendingPaymentAttempt(
+        tx,
+        {
+          paymentId: prepared.payment.id,
+          bookingId,
+          merchantTransactionId: prepared.payment.merchantTransactionId!,
+        },
+        [PaymentStatus.CREATED],
+      );
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!current || booking?.status !== BookingStatus.PAYMENT_DUE)
+        fail(
+          409,
+          "PAYMENT_ATTEMPT_SUPERSEDED",
+          "This settlement checkout attempt is no longer active",
+        );
       await tx.paymentAttempt.update({
         where: { id: prepared.attempt.id },
         data: {
@@ -685,6 +752,16 @@ export async function initiateSettlementSession(
   } catch (error) {
     await prisma
       .$transaction(async (tx) => {
+        const current = await lockPendingPaymentAttempt(
+          tx,
+          {
+            paymentId: prepared.payment.id,
+            bookingId,
+            merchantTransactionId: prepared.payment.merchantTransactionId!,
+          },
+          [PaymentStatus.CREATED],
+        );
+        if (!current) return;
         await releasePaymentWalletHolds(tx, prepared.payment.id, driverUserId);
         await tx.paymentAttempt.update({
           where: { id: prepared.attempt.id },
@@ -700,9 +777,10 @@ export async function initiateSettlementSession(
   }
 }
 
-async function captureWalletOnlyPayment(paymentId: string) {
+async function captureWalletOnlyPayment(paymentId: string, bookingId: string) {
   const result = await prisma.$transaction(
     async (tx) => {
+      await lockEntity(tx, "booking", bookingId);
       await lockEntity(tx, "payment", paymentId);
       const current = await tx.payment.findUnique({
         where: { id: paymentId },
@@ -725,6 +803,17 @@ async function captureWalletOnlyPayment(paymentId: string) {
         );
       }
       const now = new Date();
+      if (
+        current.booking.id !== bookingId ||
+        current.status !== PaymentStatus.CREATED ||
+        current.booking.status !== BookingStatus.PAYMENT_PENDING ||
+        current.booking.startAt <= now
+      )
+        fail(
+          409,
+          "BOOKING_PAYMENT_WINDOW_CLOSED",
+          "This booking is no longer awaiting payment before its start time",
+        );
       const credentialId = randomUUID();
       const rawCredential = `parkease-access:${credentialId}`;
       const funding = await postSuccessfulBookingPayment(tx, {
@@ -817,7 +906,11 @@ async function captureWalletOnlyPayment(paymentId: string) {
 
 async function finalizeSettlementPayment(
   paymentId: string,
+  bookingId: string,
   gateway?: {
+    merchantTransactionId: string;
+    amountPaisa: bigint;
+    currency: string;
     validationId: string;
     bankTransactionId?: string;
     status: string;
@@ -830,6 +923,7 @@ async function finalizeSettlementPayment(
 ) {
   const result = await prisma.$transaction(
     async (tx) => {
+      await lockEntity(tx, "booking", bookingId);
       await lockEntity(tx, "payment", paymentId);
       const current = await tx.payment.findUnique({
         where: { id: paymentId },
@@ -840,6 +934,21 @@ async function finalizeSettlementPayment(
           404,
           "BOOKING_SETTLEMENT_NOT_FOUND",
           "Booking settlement was not found",
+        );
+      if (current.bookingId !== bookingId)
+        fail(409, "PAYMENT_IDENTITY_MISMATCH", "Payment booking did not match");
+      if (gateway) assertGatewayPaymentIdentity(current, gateway);
+      else if (
+        current.provider !== "INTERNAL_WALLET" ||
+        current.amountPaisa !== 0n ||
+        ![PaymentStatus.CREATED, PaymentStatus.SUCCEEDED].includes(
+          current.status as never,
+        )
+      )
+        fail(
+          409,
+          "PAYMENT_GATEWAY_REQUIRED",
+          "This payment requires gateway validation",
         );
       if (current.status === PaymentStatus.SUCCEEDED)
         return {
@@ -946,13 +1055,12 @@ async function finalizeSettlementPayment(
           },
         },
       });
-      await tx.walletAccount.update({
-        where: { id: current.booking.settlementWalletAccountId },
-        data: {
-          availableBalancePaisa: { increment: providerNetPaisa },
-          balanceVersion: { increment: 1 },
-        },
-      });
+      await creditProviderEarnings(
+        tx,
+        current.bookingId,
+        current.booking.settlementWalletAccountId,
+        providerNetPaisa,
+      );
       if (settlement.depositReturnedPaisa > 0n)
         await tx.walletAccount.update({
           where: { id: driverWallet.id },
@@ -1107,7 +1215,10 @@ export async function validateAndCaptureSslCommerz(
 
   if (payment.purpose === PaymentPurpose.SETTLEMENT) {
     return serialize(
-      await finalizeSettlementPayment(payment.id, {
+      await finalizeSettlementPayment(payment.id, payment.bookingId, {
+        merchantTransactionId: transactionIdValue,
+        amountPaisa: gatewayAmountToPaisa(gateway.amount),
+        currency: gateway.currency,
         validationId: gateway.val_id,
         ...(gateway.bank_tran_id
           ? { bankTransactionId: gateway.bank_tran_id }
@@ -1141,6 +1252,11 @@ export async function validateAndCaptureSslCommerz(
         include: { booking: true },
       });
       if (!current) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
+      assertGatewayPaymentIdentity(current, {
+        merchantTransactionId: transactionIdValue,
+        amountPaisa: gatewayAmountToPaisa(gateway.amount),
+        currency: gateway.currency,
+      });
       const completedStatuses: PaymentStatus[] = [
         PaymentStatus.SUCCEEDED,
         PaymentStatus.CAPTURED,
@@ -1298,7 +1414,12 @@ export async function recordGatewayExit(
   if (finalStatuses.includes(payment.status)) return payment.id;
   const now = new Date();
   await prisma.$transaction(async (tx) => {
-    await lockEntity(tx, "payment", payment.id);
+    const current = await lockPendingPaymentAttempt(tx, {
+      paymentId: payment.id,
+      bookingId: payment.bookingId,
+      merchantTransactionId: transactionIdValue,
+    });
+    if (!current) return;
     await releasePaymentWalletHolds(tx, payment.id, payment.payerUserId);
     await tx.payment.update({
       where: { id: payment.id },
@@ -1659,18 +1780,49 @@ export async function requestAdminRefund(
   const previous = await prisma.refund.findUnique({
     where: { idempotencyKey: input.idempotencyKey },
   });
-  if (previous) return serialize(previous);
   const admin = await prisma.userRole.findUnique({
     where: { userId_role: { userId: adminUserId, role: "ADMIN" } },
     select: { userId: true },
   });
   if (!admin) fail(403, "REFUND_FORBIDDEN", "Admin access is required");
+  if (previous) {
+    if (
+      previous.requestedByUserId !== adminUserId ||
+      previous.paymentId !== paymentId ||
+      previous.amountPaisa !== input.amountPaisa
+    )
+      fail(
+        409,
+        "IDEMPOTENCY_CONFLICT",
+        "This request key belongs to another refund",
+      );
+    return serialize(previous);
+  }
+  const target = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { bookingId: true },
+  });
+  if (!target) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
   const refundTransactionId = transactionId("RF");
   const refund = await prisma.$transaction(
     async (tx) => {
+      await lockEntity(tx, "booking", target.bookingId);
       await lockEntity(tx, "payment", paymentId);
       const payment = await tx.payment.findUnique({ where: { id: paymentId } });
       if (!payment) fail(404, "PAYMENT_NOT_FOUND", "Payment was not found");
+      const booking = await tx.booking.findUnique({
+        where: { id: payment.bookingId },
+        select: {
+          cancellation: { select: { id: true } },
+          settlement: { select: { id: true } },
+        },
+      });
+      if (booking?.cancellation || booking?.settlement)
+        fail(
+          409,
+          "PAYMENT_ALREADY_DISTRIBUTED",
+          "Booking funds have already been settled or returned to Refund Balance",
+        );
       const refundableStatuses: PaymentStatus[] = [
         PaymentStatus.SUCCEEDED,
         PaymentStatus.CAPTURED,
