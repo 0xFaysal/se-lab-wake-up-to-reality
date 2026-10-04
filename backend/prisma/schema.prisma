@@ -1475,6 +1475,7 @@ model ParkingListing {
   maxDurationMinutes         Int                  @default(720) @map("max_duration_minutes")
   allowedVehicleTypes        VehicleType[]        @map("allowed_vehicle_types")
   securityDepositPaisa       BigInt               @default(0) @map("security_deposit_paisa")
+  discloseLocationBeforePayment Boolean           @default(false) @map("disclose_location_before_payment")
   overtimeBillingMode        OvertimeBillingMode  @default(MULTIPLIER) @map("overtime_billing_mode")
   overtimeMultiplierBps      Int?                 @default(15000) @map("overtime_multiplier_bps")
   overtimeRatePerHourPaisa   BigInt?              @map("overtime_rate_per_hour_paisa")
@@ -1607,6 +1608,7 @@ model WalletAccount {
 }
 
 model BookingQuote {
+  overtimePolicyVersion      Int                 @default(1) @map("overtime_policy_version")
   id                         String              @id @default(uuid()) @db.Uuid
   driverUserId               String              @map("driver_user_id") @db.Uuid
   listingId                  String              @map("listing_id") @db.Uuid
@@ -1699,6 +1701,7 @@ model ReservationHold {
 }
 
 model Booking {
+  overtimePolicyVersion      Int                 @default(1) @map("overtime_policy_version")
   id                         String                 @id @default(uuid()) @db.Uuid
   bookingCode                String                 @unique @map("booking_code") @db.VarChar(20)
   holdId                     String                 @unique @map("hold_id") @db.Uuid
