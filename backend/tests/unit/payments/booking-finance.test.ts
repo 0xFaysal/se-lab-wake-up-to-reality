@@ -1,7 +1,63 @@
 import assert from "node:assert/strict";
-import "./provider-earnings.test.js";
-import "./payment-attempt-state.test.js";
 import test from "node:test";
+
+test("new overtime includes initial grace after the threshold and grants two checkout minutes", () => {
+  const scheduledEndAt = new Date("2026-10-04T15:00:00Z");
+  for (const [elapsed, minutes] of [
+    [-1, 0],
+    [0, 0],
+    [5 * 60000, 0],
+    [5 * 60000 + 1, 4],
+    [6 * 60000, 4],
+    [7 * 60000, 5],
+    [10 * 60000, 8],
+  ]) {
+    const result = calculateOvertime({
+      scheduledEndAt,
+      actualCheckOutAt: new Date(+scheduledEndAt + elapsed!),
+      baseRatePerHourPaisa: 6000n,
+      policyVersion: 2,
+      policy: {
+        mode: "FIXED_PER_HOUR",
+        fixedRatePerHourPaisa: 12000n,
+        graceMinutes: 5,
+      },
+    });
+    assert.equal(result.overtimeMinutes, minutes);
+    assert.equal(result.overtimeChargePaisa, BigInt(minutes!) * 200n);
+  }
+  const input = {
+    scheduledEndAt,
+    actualCheckOutAt: new Date(+scheduledEndAt + 10 * 60000),
+    baseRatePerHourPaisa: 6000n,
+    policy: {
+      mode: "MULTIPLIER" as const,
+      multiplierBps: 15000,
+      graceMinutes: 5,
+    },
+  };
+  assert.deepEqual(calculateOvertime({ ...input, policyVersion: 2 }), {
+    overtimeMinutes: 8,
+    overtimeChargePaisa: 1200n,
+  });
+  assert.equal(
+    calculateOvertime({ ...input, policyVersion: 1 }).overtimeMinutes,
+    5,
+  );
+  assert.throws(
+    () => calculateOvertime({ ...input, policyVersion: 3 }),
+    RangeError,
+  );
+  assert.throws(
+    () =>
+      calculateOvertime({
+        ...input,
+        policyVersion: 2,
+        policy: { ...input.policy, graceMinutes: 15 },
+      }),
+    RangeError,
+  );
+});
 import { allocatePayoutDebits } from "../../../src/common/finance/payout-accounting.js";
 import {
   calculateCancellation,
@@ -10,6 +66,100 @@ import {
   calculateWalletSplit,
   cancellationRefundBps,
 } from "../../../src/common/finance/booking-finance.js";
+
+test("financial calculations reject negative money and invalid dates", () => {
+  const cancellation = {
+    startAt: new Date("2026-10-04T10:00:00Z"),
+    cancelledAt: new Date("2026-10-03T10:00:00Z"),
+    bookingChargePaisa: 100n,
+    platformFeePaisa: 10n,
+    depositPaisa: 200n,
+  };
+  for (const key of ["bookingChargePaisa", "platformFeePaisa", "depositPaisa"])
+    assert.throws(
+      () => calculateCancellation({ ...cancellation, [key]: -1n }),
+      RangeError,
+    );
+  assert.throws(
+    () => calculateCancellation({ ...cancellation, startAt: new Date(NaN) }),
+    RangeError,
+  );
+  const settlement = {
+    baseChargePaisa: 100n,
+    platformFeePaisa: 10n,
+    depositPaisa: 200n,
+    overtimeChargePaisa: 50n,
+    driverAvailablePaisa: 0n,
+  };
+  for (const key of Object.keys(settlement))
+    assert.throws(
+      () => calculateSettlement({ ...settlement, [key]: -1n }),
+      RangeError,
+    );
+});
+
+test("overtime validates policy even when checkout is inside grace", () => {
+  const input = {
+    scheduledEndAt: new Date("2026-10-04T10:00:00Z"),
+    actualCheckOutAt: new Date("2026-10-04T10:00:00Z"),
+    baseRatePerHourPaisa: 100n,
+    policy: {
+      mode: "MULTIPLIER" as const,
+      multiplierBps: 15000,
+      graceMinutes: 15,
+    },
+  };
+  for (const policy of [
+    { ...input.policy, graceMinutes: -1 },
+    { ...input.policy, graceMinutes: NaN },
+    { ...input.policy, multiplierBps: -1 },
+    { ...input.policy, multiplierBps: 1.5 },
+    {
+      mode: "FIXED_PER_HOUR" as const,
+      fixedRatePerHourPaisa: -1n,
+      graceMinutes: 15,
+    },
+  ])
+    assert.throws(() => calculateOvertime({ ...input, policy }), RangeError);
+  assert.throws(
+    () => calculateOvertime({ ...input, actualCheckOutAt: new Date(NaN) }),
+    RangeError,
+  );
+});
+
+test("settlement preserves all funds across deposit and wallet boundaries", () => {
+  for (const depositPaisa of [0n, 1n, 99n, 40000n]) {
+    for (const overtimeChargePaisa of [0n, 1n, 100n, 40000n, 40001n, 80000n]) {
+      for (const driverAvailablePaisa of [0n, 1n, 100n, 40000n]) {
+        const result = calculateSettlement({
+          baseChargePaisa: 2400n,
+          platformFeePaisa: 240n,
+          depositPaisa,
+          overtimeChargePaisa,
+          driverAvailablePaisa,
+        });
+        assert.equal(
+          result.depositUsedPaisa + result.depositReturnedPaisa,
+          depositPaisa,
+        );
+        assert.equal(
+          result.depositUsedPaisa +
+            result.driverWalletChargedPaisa +
+            result.outstandingPaisa,
+          overtimeChargePaisa,
+        );
+        assert.equal(
+          result.providerNetPaisa +
+            result.driverRefundCreditPaisa +
+            result.platformRevenuePaisa,
+          2400n + 240n + depositPaisa + result.driverWalletChargedPaisa,
+        );
+        assert.ok(result.driverWalletChargedPaisa <= driverAvailablePaisa);
+        for (const amount of Object.values(result)) assert.ok(amount >= 0n);
+      }
+    }
+  }
+});
 
 test("driver withdrawals debit refund liability, not provider earnings", () => {
   assert.deepEqual(

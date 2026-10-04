@@ -1,6 +1,20 @@
+import {
+  BOOKING_GRACE_MINUTES,
+  CHECKOUT_GRACE_MINUTES,
+} from "../booking-grace.js";
 export const CANCELLATION_POLICY_VERSION = 1;
 export const BASIS_POINTS = 10_000n;
 export const MIN_GATEWAY_AMOUNT_PAISA = 1_000n;
+
+function assertNonNegativeMoney(...amounts: bigint[]) {
+  if (amounts.some((amount) => amount < 0n))
+    throw new RangeError("Money cannot be negative");
+}
+
+function assertValidDates(...dates: Date[]) {
+  if (dates.some((date) => !Number.isFinite(date.getTime())))
+    throw new RangeError("Invalid financial date");
+}
 
 export type OvertimePolicy =
   | {
@@ -78,6 +92,12 @@ export function calculateCancellation(input: {
   platformFeePaisa: bigint;
   depositPaisa: bigint;
 }) {
+  assertValidDates(input.startAt, input.cancelledAt);
+  assertNonNegativeMoney(
+    input.bookingChargePaisa,
+    input.platformFeePaisa,
+    input.depositPaisa,
+  );
   const minutesBeforeStart = Math.floor(
     (input.startAt.getTime() - input.cancelledAt.getTime()) / 60_000,
   );
@@ -104,13 +124,42 @@ export function calculateOvertime(input: {
   actualCheckOutAt: Date;
   baseRatePerHourPaisa: bigint;
   policy: OvertimePolicy;
+  policyVersion?: number;
 }) {
+  assertValidDates(input.scheduledEndAt, input.actualCheckOutAt);
+  assertNonNegativeMoney(input.baseRatePerHourPaisa);
+  if (
+    input.policyVersion !== undefined &&
+    input.policyVersion !== 1 &&
+    input.policyVersion !== 2
+  )
+    throw new RangeError("Unsupported overtime policy version");
+  if (
+    !Number.isSafeInteger(input.policy.graceMinutes) ||
+    input.policy.graceMinutes < 0
+  )
+    throw new RangeError("Invalid overtime grace period");
+  if (
+    input.policyVersion === 2 &&
+    input.policy.graceMinutes !== BOOKING_GRACE_MINUTES
+  )
+    throw new RangeError("Policy 2 requires five-minute exit grace");
+  if (input.policy.mode === "FIXED_PER_HOUR") {
+    assertNonNegativeMoney(input.policy.fixedRatePerHourPaisa);
+  } else if (
+    !Number.isSafeInteger(input.policy.multiplierBps) ||
+    input.policy.multiplierBps < 0
+  ) {
+    throw new RangeError("Invalid overtime multiplier");
+  }
   const elapsedAfterEndMs =
     input.actualCheckOutAt.getTime() - input.scheduledEndAt.getTime();
-  const chargeableMs = Math.max(
-    0,
-    elapsedAfterEndMs - input.policy.graceMinutes * 60_000,
-  );
+  const chargeableMs =
+    input.policyVersion === 2
+      ? elapsedAfterEndMs <= input.policy.graceMinutes * 60_000
+        ? 0
+        : Math.max(0, elapsedAfterEndMs - CHECKOUT_GRACE_MINUTES * 60_000)
+      : Math.max(0, elapsedAfterEndMs - input.policy.graceMinutes * 60_000);
   const overtimeMinutes =
     chargeableMs === 0 ? 0 : Math.ceil(chargeableMs / 60_000);
   if (overtimeMinutes === 0)
@@ -142,6 +191,13 @@ export function calculateSettlement(input: {
   overtimeChargePaisa: bigint;
   driverAvailablePaisa: bigint;
 }) {
+  assertNonNegativeMoney(
+    input.baseChargePaisa,
+    input.platformFeePaisa,
+    input.depositPaisa,
+    input.overtimeChargePaisa,
+    input.driverAvailablePaisa,
+  );
   const depositUsedPaisa =
     input.overtimeChargePaisa < input.depositPaisa
       ? input.overtimeChargePaisa
