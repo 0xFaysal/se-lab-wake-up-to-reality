@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Banknote, Loader2 } from "lucide-react";
@@ -17,6 +17,7 @@ import { getApiErrorMessage } from "@/lib/api/api-error";
 import { financeApi } from "@/lib/api/finance-api";
 import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
+import { parseBDTToPaisa, validatePayoutAmount } from "@/lib/payout-amount";
 
 export default function PayoutPage() {
   const client = useQueryClient();
@@ -33,15 +34,17 @@ export default function PayoutPage() {
   const methods = useQuery({ queryKey: ["provider", "payout-methods"], queryFn: financeApi.payoutMethods });
   const [payoutMethodId, setPayoutMethodId] = useState("");
   const activeMethods = (methods.data ?? []).filter((method) => method.status === "ACTIVE");
-  const selectedMethodId = payoutMethodId || activeMethods.find((method) => method.isDefault)?.id || activeMethods[0]?.id || "";
+  const selectedMethodId = activeMethods.find((method) => method.id === payoutMethodId)?.id || activeMethods.find((method) => method.isDefault)?.id || activeMethods[0]?.id || "";
   const availablePaisa = BigInt(earnings.data?.availableBalancePaisa ?? "0");
-  const requestedPaisa = useMemo(
-    () => Number.isFinite(Number(amount)) ? BigInt(Math.max(0, Math.round(Number(amount) * 100))) : BigInt(0),
-    [amount],
-  );
-  const exceedsBalance = requestedPaisa > availablePaisa;
+  const amountError = validatePayoutAmount(amount, availablePaisa);
   const payout = useMutation({
-    mutationFn: () => financeApi.requestPayout(requestedPaisa.toString(), selectedMethodId, key.current),
+    mutationFn: () => {
+      const error = validatePayoutAmount(amount, availablePaisa);
+      const paisa = parseBDTToPaisa(amount);
+      if (error || paisa === null) throw new Error(error ?? "Enter a valid amount.");
+      if (!activeMethods.some((method) => method.id === selectedMethodId)) throw new Error("Select an active payout destination.");
+      return financeApi.requestPayout(paisa.toString(), selectedMethodId, key.current);
+    },
     onSuccess: async () => {
       toast.success("Payout request submitted for review");
       setAmount("");
@@ -80,16 +83,16 @@ export default function PayoutPage() {
           </p>
           <label className="mt-6 block space-y-2 text-sm font-semibold">
             <span>Amount in BDT</span>
-            <Input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={availablePaisa === BigInt(0)} />
+            <Input type="number" inputMode="decimal" min="0.01" step="0.01" value={amount} aria-invalid={amount !== "" && Boolean(amountError)} aria-describedby={amount !== "" && amountError ? "payout-amount-error" : undefined} onChange={(event) => setAmount(event.target.value)} disabled={availablePaisa === BigInt(0)} />
           </label>
           <label className="mt-4 block space-y-2 text-sm font-semibold"><span>Payout destination</span><select className="h-10 w-full border bg-white px-3 text-sm" value={selectedMethodId} onChange={(event) => setPayoutMethodId(event.target.value)} disabled={activeMethods.length === 0}><option value="">Select payout method</option>{activeMethods.map((method) => <option key={method.id} value={method.id}>{method.type.replaceAll("_", " ")} · {method.maskedAccountIdentifier}</option>)}</select></label>
           {activeMethods.length === 0 && <p className="mt-2 text-xs text-amber-800">Add an active payout method before requesting a payout. <Link className="font-bold underline" href="/provider/settings/payout-methods">Manage payout methods</Link></p>}
           {availablePaisa === BigInt(0) && <p className="mt-2 text-xs text-amber-800">A completed, settled booking is required before you can request a payout.</p>}
-          {exceedsBalance && <p role="alert" className="mt-2 text-xs text-red-700">The payout amount cannot exceed your available balance.</p>}
+          {amount !== "" && amountError && <p id="payout-amount-error" role="alert" className="mt-2 text-xs text-red-700">{amountError}</p>}
           <Button
             className="mt-5"
-            disabled={requestedPaisa <= BigInt(0) || exceedsBalance || payout.isPending || availablePaisa === BigInt(0) || !selectedMethodId}
-            onClick={() => payout.mutate()}
+            disabled={Boolean(amountError) || payout.isPending || availablePaisa === BigInt(0) || !selectedMethodId}
+            onClick={() => { if (!amountError && selectedMethodId && !payout.isPending) payout.mutate(); }}
           >
             {payout.isPending && <Loader2 className="size-4 animate-spin" />}
             Request payout review
