@@ -475,12 +475,31 @@ export const createListingSchema = z.object({
 
 export const vehicleListingRatesSchema = z.object({
   params: z.object({ listingId: uuid }),
-  body: z.object({
-    expectedUpdatedAt: isoDate,
-    settings: listingBodyBaseSchema.omit({ parkingRightId: true, parkingResourceUnitId: true }).partial(),
-    rates: z.array(z.object({ vehicleType, pricePerHourPaisa: positivePaisa.max(9223372036854775807n) }).strict()).min(1).max(4)
-      .refine((rates) => new Set(rates.map((rate) => rate.vehicleType)).size === rates.length, "Each vehicle must have one rate"),
-  }).strict(),
+  body: z
+    .object({
+      expectedUpdatedAt: isoDate,
+      settings: listingBodyBaseSchema
+        .omit({ parkingRightId: true, parkingResourceUnitId: true })
+        .partial(),
+      rates: z
+        .array(
+          z
+            .object({
+              vehicleType,
+              pricePerHourPaisa: positivePaisa.max(9223372036854775807n),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(4)
+        .refine(
+          (rates) =>
+            new Set(rates.map((rate) => rate.vehicleType)).size ===
+            rates.length,
+          "Each vehicle must have one rate",
+        ),
+    })
+    .strict(),
 });
 
 export const updateListingSchema = z.object({

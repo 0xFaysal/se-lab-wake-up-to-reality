@@ -26,14 +26,27 @@ const rightId = "3ec149eb-1c2f-45d7-84fa-4a1df93a402f";
 
 describe("Marketplace validation invariants", () => {
   it("requires an explicit boolean for Provider location disclosure", () => {
-    const body = { parkingRightId: rightId, title: "QA Parking", pricePerHourPaisa: "1000", allowedVehicleTypes: ["SEDAN"] };
+    const body = {
+      parkingRightId: rightId,
+      title: "QA Parking",
+      pricePerHourPaisa: "1000",
+      allowedVehicleTypes: ["SEDAN"],
+    };
     assert.equal(createListingSchema.safeParse({ body }).success, true);
     for (const consent of [true, false]) {
-      const parsed = createListingSchema.safeParse({ body: { ...body, discloseLocationBeforePayment: consent } });
+      const parsed = createListingSchema.safeParse({
+        body: { ...body, discloseLocationBeforePayment: consent },
+      });
       assert.equal(parsed.success, true);
-      if (parsed.success) assert.equal(parsed.data.body.discloseLocationBeforePayment, consent);
+      if (parsed.success)
+        assert.equal(parsed.data.body.discloseLocationBeforePayment, consent);
     }
-    assert.equal(createListingSchema.safeParse({ body: { ...body, discloseLocationBeforePayment: "true" } }).success, false);
+    assert.equal(
+      createListingSchema.safeParse({
+        body: { ...body, discloseLocationBeforePayment: "true" },
+      }).success,
+      false,
+    );
   });
   it("requires date-only schedule boundaries and rejects reversed validity ranges", () => {
     const rule = {

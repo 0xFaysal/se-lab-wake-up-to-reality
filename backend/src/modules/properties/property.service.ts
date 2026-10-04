@@ -189,7 +189,11 @@ export async function findPossiblePropertyMatches(
   const matches = await propertyRepository.findPossiblePropertyMatches(
     duplicateMatchInput(input),
   );
-  return matches.map((match) => ({ ...toPublicPropertySummary(match), distanceMeters: Math.round(match.distanceMeters), matchBasis: "NEARBY_LOCATION" as const }));
+  return matches.map((match) => ({
+    ...toPublicPropertySummary(match),
+    distanceMeters: Math.round(match.distanceMeters),
+    matchBasis: "NEARBY_LOCATION" as const,
+  }));
 }
 
 export async function createProperty(

@@ -30,12 +30,29 @@ export const createResource = action(
     service.createResource(userId(req), param(req, "propertyId"), req.body),
   201,
 );
-export const sessionTimeline = action((req) => getSessionTimeline(userId(req), String(req.query.propertyId), String(req.query.date)));
-export const driverListingLocation = async (req: Request, res: Response, next: NextFunction) => {
+export const sessionTimeline = action((req) =>
+  getSessionTimeline(
+    userId(req),
+    String(req.query.propertyId),
+    String(req.query.date),
+  ),
+);
+export const driverListingLocation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("Vary", "Cookie, Authorization");
-  try { respond(req, res, await service.getDriverListingLocation(param(req, "listingId"))); }
-  catch (error) { next(error); }
+  try {
+    respond(
+      req,
+      res,
+      await service.getDriverListingLocation(param(req, "listingId")),
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 export const createBulkResources = action(
   (req) =>
@@ -332,11 +349,22 @@ export const createBooking = action(
 export const listDriverBookings = action((req) =>
   service.listDriverBookings(userId(req)),
 );
-export const getDriverBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const getDriverBooking = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   res.setHeader("Cache-Control", "private, no-store");
   res.setHeader("Vary", "Cookie, Authorization");
-  try { respond(req, res, await service.getDriverBooking(userId(req), param(req, "bookingId"))); }
-  catch (error) { next(error); }
+  try {
+    respond(
+      req,
+      res,
+      await service.getDriverBooking(userId(req), param(req, "bookingId")),
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 export const listProviderBookings = action((req) =>
   service.listProviderBookings(userId(req), req.query as never),

@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { listingScopesOverlap } from "../../common/listing-scope.js";
+import { vehicleHasReservationConflict } from "./vehicle-reservation.js";
 import { validateVehicleTariffs } from "../../common/vehicle-tariffs.js";
 import {
   BOOKING_GRACE_MINUTES,
@@ -2919,7 +2920,8 @@ export async function createListing(
           maxDurationMinutes: input.maxDurationMinutes,
           allowedVehicleTypes: input.allowedVehicleTypes,
           securityDepositPaisa: input.securityDepositPaisa,
-          discloseLocationBeforePayment: input.discloseLocationBeforePayment ?? false,
+          discloseLocationBeforePayment:
+            input.discloseLocationBeforePayment ?? false,
           overtimeBillingMode:
             input.overtimeBillingMode ?? OvertimeBillingMode.MULTIPLIER,
           overtimeMultiplierBps:
@@ -3061,18 +3063,44 @@ export async function updateListing(
         tx,
       );
     }
-    const requestedVehicles = input.allowedVehicleTypes ?? (input.vehicleRates ? listing.allowedVehicleTypes : undefined);
+    const requestedVehicles =
+      input.allowedVehicleTypes ??
+      (input.vehicleRates ? listing.allowedVehicleTypes : undefined);
     if (requestedVehicles !== undefined) {
       const vehicles = requestedVehicles as VehicleType[];
       const supported = listing.parkingSpot.supportedVehicleTypes.length
         ? listing.parkingSpot.supportedVehicleTypes
         : [listing.parkingSpot.supportedVehicleType];
       if (vehicles.some((type) => !supported.includes(type)))
-        fail(400, "LISTING_VEHICLE_TYPE_UNSUPPORTED", "Select only vehicle types supported by this parking space");
-      if (listing.status === ParkingListingStatus.ACTIVE && listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE) {
-        const others = await tx.parkingListing.findMany({ where: { parkingSpotId: listing.parkingSpotId, id: { not: listing.id }, status: ParkingListingStatus.ACTIVE } });
-        if (others.some((other) => listingScopesOverlap({ ...listing, allowedVehicleTypes: vehicles }, other)))
-          fail(409, "PARKING_LISTING_CONFLICT", "An active offer already covers these vehicle types and spaces");
+        fail(
+          400,
+          "LISTING_VEHICLE_TYPE_UNSUPPORTED",
+          "Select only vehicle types supported by this parking space",
+        );
+      if (
+        listing.status === ParkingListingStatus.ACTIVE &&
+        listing.parkingSpot.resourceType === ParkingResourceType.FIXED_SPACE
+      ) {
+        const others = await tx.parkingListing.findMany({
+          where: {
+            parkingSpotId: listing.parkingSpotId,
+            id: { not: listing.id },
+            status: ParkingListingStatus.ACTIVE,
+          },
+        });
+        if (
+          others.some((other) =>
+            listingScopesOverlap(
+              { ...listing, allowedVehicleTypes: vehicles },
+              other,
+            ),
+          )
+        )
+          fail(
+            409,
+            "PARKING_LISTING_CONFLICT",
+            "An active offer already covers these vehicle types and spaces",
+          );
       }
     }
     if (
@@ -3102,34 +3130,113 @@ export async function updateListing(
           "Maximum duration must be at least the minimum duration",
         );
     }
-    const rates = input.vehicleRates as Array<{ vehicleType: VehicleType; pricePerHourPaisa: bigint }> | undefined;
-    if (input.expectedUpdatedAt !== undefined && new Date(String(input.expectedUpdatedAt)).getTime() !== listing.updatedAt.getTime())
-      fail(409, "LISTING_CHANGED", "This offer changed. Reload it before saving booking settings.");
+    const rates = input.vehicleRates as
+      | Array<{ vehicleType: VehicleType; pricePerHourPaisa: bigint }>
+      | undefined;
+    if (
+      input.expectedUpdatedAt !== undefined &&
+      new Date(String(input.expectedUpdatedAt)).getTime() !==
+        listing.updatedAt.getTime()
+    )
+      fail(
+        409,
+        "LISTING_CHANGED",
+        "This offer changed. Reload it before saving booking settings.",
+      );
     if (rates) {
-      const vehicles = (input.allowedVehicleTypes ?? listing.allowedVehicleTypes) as VehicleType[];
+      const vehicles = (input.allowedVehicleTypes ??
+        listing.allowedVehicleTypes) as VehicleType[];
       if (!validateVehicleTariffs(vehicles, rates))
-        fail(400, "VEHICLE_RATES_INVALID", "Provide one rate for every selected vehicle");
+        fail(
+          400,
+          "VEHICLE_RATES_INVALID",
+          "Provide one rate for every selected vehicle",
+        );
       if (rates.length > 1) {
-        await requireAuthority(actorUserId, listing.parkingSpot.propertyId, ManagerDelegationPermission.LISTING_MANAGE, listing.parkingSpotId, tx);
-        const right = await tx.parkingRight.findUnique({ where: { id: listing.parkingRightId }, include: { parkingSpot: { include: { property: true, availabilityRules: true } } } });
+        await requireAuthority(
+          actorUserId,
+          listing.parkingSpot.propertyId,
+          ManagerDelegationPermission.LISTING_MANAGE,
+          listing.parkingSpotId,
+          tx,
+        );
+        const right = await tx.parkingRight.findUnique({
+          where: { id: listing.parkingRightId },
+          include: {
+            parkingSpot: {
+              include: { property: true, availabilityRules: true },
+            },
+          },
+        });
         const now = new Date();
-        if (!right || right.providerMembershipId !== authority.membership.id || right.status !== ParkingRightStatus.VERIFIED || right.validFrom > now || (right.validUntil && right.validUntil <= now) || !right.canList || !right.canSetPrice || right.rightType === ParkingRightType.USE_ONLY || right.parkingSpot.deletedAt || right.parkingSpot.status !== ParkingSpotStatus.ACTIVE || right.parkingSpot.property.status !== PropertyStatus.ACTIVE || right.parkingSpot.property.verificationStatus !== VerificationStatus.VERIFIED)
-          fail(409, "PARKING_RIGHT_NOT_LISTABLE", "Active property and commercial authority are required for separate vehicle pricing");
-        const wallet = await tx.walletAccount.findUnique({ where: { id: listing.settlementWalletAccountId } });
-        if (!wallet || wallet.status !== "ACTIVE") fail(409, "SETTLEMENT_WALLET_UNAVAILABLE", "Provider settlement wallet is unavailable");
+        if (
+          !right ||
+          right.providerMembershipId !== authority.membership.id ||
+          right.status !== ParkingRightStatus.VERIFIED ||
+          right.validFrom > now ||
+          (right.validUntil && right.validUntil <= now) ||
+          !right.canList ||
+          !right.canSetPrice ||
+          right.rightType === ParkingRightType.USE_ONLY ||
+          right.parkingSpot.deletedAt ||
+          right.parkingSpot.status !== ParkingSpotStatus.ACTIVE ||
+          right.parkingSpot.property.status !== PropertyStatus.ACTIVE ||
+          right.parkingSpot.property.verificationStatus !==
+            VerificationStatus.VERIFIED
+        )
+          fail(
+            409,
+            "PARKING_RIGHT_NOT_LISTABLE",
+            "Active property and commercial authority are required for separate vehicle pricing",
+          );
+        const wallet = await tx.walletAccount.findUnique({
+          where: { id: listing.settlementWalletAccountId },
+        });
+        if (!wallet || wallet.status !== "ACTIVE")
+          fail(
+            409,
+            "SETTLEMENT_WALLET_UNAVAILABLE",
+            "Provider settlement wallet is unavailable",
+          );
         if (listing.status === ParkingListingStatus.ACTIVE) {
-          if (!right.parkingSpot.availabilityRules.some((rule) => rule.isActive && rule.validFrom <= now && (!rule.validUntil || rule.validUntil >= now)))
-            fail(409, "PARKING_LISTING_AVAILABILITY_REQUIRED", "Configure current opening hours before saving separate vehicle rates");
+          if (
+            !right.parkingSpot.availabilityRules.some(
+              (rule) =>
+                rule.isActive &&
+                rule.validFrom <= now &&
+                (!rule.validUntil || rule.validUntil >= now),
+            )
+          )
+            fail(
+              409,
+              "PARKING_LISTING_AVAILABILITY_REQUIRED",
+              "Configure current opening hours before saving separate vehicle rates",
+            );
           if (listing.parkingResourceUnitId) {
-            const unit = await tx.parkingResourceUnit.findUnique({ where: { id: listing.parkingResourceUnitId } });
-            if (!unit || unit.deletedAt || unit.status !== ParkingSpotStatus.ACTIVE)
-              fail(409, "PARKING_LISTING_NOT_ELIGIBLE", "The parking spot must be active before saving separate vehicle rates");
+            const unit = await tx.parkingResourceUnit.findUnique({
+              where: { id: listing.parkingResourceUnitId },
+            });
+            if (
+              !unit ||
+              unit.deletedAt ||
+              unit.status !== ParkingSpotStatus.ACTIVE
+            )
+              fail(
+                409,
+                "PARKING_LISTING_NOT_ELIGIBLE",
+                "The parking spot must be active before saving separate vehicle rates",
+              );
           }
         }
       }
     }
-    const { vehicleRates: _rates, expectedUpdatedAt: _expected, ...fields } = input;
-    void _rates; void _expected;
+    const {
+      vehicleRates: _rates,
+      expectedUpdatedAt: _expected,
+      ...fields
+    } = input;
+    void _rates;
+    void _expected;
     const updateData: JsonObject = { ...fields };
     if (rates) {
       updateData.allowedVehicleTypes = [rates[0]!.vehicleType];
@@ -3177,20 +3284,40 @@ export async function updateListing(
     if (rates && rates.length > 1) {
       // Split tariffs atomically; all offers retain the same inventory and booking snapshots remain untouched.
       for (const rate of rates.slice(1)) {
-        const copy = await tx.parkingListing.create({ data: {
-          parkingSpotId: updated.parkingSpotId, providerUserId: updated.providerUserId,
-          providerMembershipId: updated.providerMembershipId, parkingRightId: updated.parkingRightId,
-          parkingResourceUnitId: updated.parkingResourceUnitId, status: updated.status,
-          title: updated.title, description: updated.description, pricePerHourPaisa: rate.pricePerHourPaisa,
-          minDurationMinutes: updated.minDurationMinutes, maxDurationMinutes: updated.maxDurationMinutes,
-          allowedVehicleTypes: [rate.vehicleType], securityDepositPaisa: updated.securityDepositPaisa,
-          discloseLocationBeforePayment: updated.discloseLocationBeforePayment,
-          overtimeBillingMode: updated.overtimeBillingMode, overtimeMultiplierBps: updated.overtimeMultiplierBps,
-          overtimeRatePerHourPaisa: updated.overtimeRatePerHourPaisa, overtimeGracePeriodMinutes: updated.overtimeGracePeriodMinutes,
-          settlementRecipientUserId: updated.settlementRecipientUserId, settlementWalletAccountId: updated.settlementWalletAccountId,
-          publishedAt: updated.publishedAt, deactivatedAt: updated.deactivatedAt,
-        } });
-        await tx.parkingListingPriceHistory.create({ data: { parkingListingId: copy.id, pricePerHourPaisa: copy.pricePerHourPaisa, changedByUserId: actorUserId } });
+        const copy = await tx.parkingListing.create({
+          data: {
+            parkingSpotId: updated.parkingSpotId,
+            providerUserId: updated.providerUserId,
+            providerMembershipId: updated.providerMembershipId,
+            parkingRightId: updated.parkingRightId,
+            parkingResourceUnitId: updated.parkingResourceUnitId,
+            status: updated.status,
+            title: updated.title,
+            description: updated.description,
+            pricePerHourPaisa: rate.pricePerHourPaisa,
+            minDurationMinutes: updated.minDurationMinutes,
+            maxDurationMinutes: updated.maxDurationMinutes,
+            allowedVehicleTypes: [rate.vehicleType],
+            securityDepositPaisa: updated.securityDepositPaisa,
+            discloseLocationBeforePayment:
+              updated.discloseLocationBeforePayment,
+            overtimeBillingMode: updated.overtimeBillingMode,
+            overtimeMultiplierBps: updated.overtimeMultiplierBps,
+            overtimeRatePerHourPaisa: updated.overtimeRatePerHourPaisa,
+            overtimeGracePeriodMinutes: updated.overtimeGracePeriodMinutes,
+            settlementRecipientUserId: updated.settlementRecipientUserId,
+            settlementWalletAccountId: updated.settlementWalletAccountId,
+            publishedAt: updated.publishedAt,
+            deactivatedAt: updated.deactivatedAt,
+          },
+        });
+        await tx.parkingListingPriceHistory.create({
+          data: {
+            parkingListingId: copy.id,
+            pricePerHourPaisa: copy.pricePerHourPaisa,
+            changedByUserId: actorUserId,
+          },
+        });
       }
     }
     notifyUser(authority.membership.providerUserId, "listing:updated", {
@@ -3317,7 +3444,9 @@ async function changeListingStatus(
               status: ParkingListingStatus.ACTIVE,
             },
           });
-          const conflict = offers.some((offer) => listingScopesOverlap(listing, offer));
+          const conflict = offers.some((offer) =>
+            listingScopesOverlap(listing, offer),
+          );
           if (conflict)
             fail(
               409,
@@ -4603,16 +4732,56 @@ export async function getDriverListingLocation(listingId: string) {
   const now = new Date();
   const listing = await prisma.parkingListing.findFirst({
     where: {
-      id: listingId, status: ParkingListingStatus.ACTIVE,
-      OR: [{ parkingResourceUnitId: null }, { parkingResourceUnit: { status: ParkingSpotStatus.ACTIVE, deletedAt: null } }],
+      id: listingId,
+      status: ParkingListingStatus.ACTIVE,
+      OR: [
+        { parkingResourceUnitId: null },
+        {
+          parkingResourceUnit: {
+            status: ParkingSpotStatus.ACTIVE,
+            deletedAt: null,
+          },
+        },
+      ],
       provider: { status: UserStatus.ACTIVE, deletedAt: null },
-      parkingRight: { ...activeRightWhere(now), canList: true, canSetPrice: true },
-      parkingSpot: { deletedAt: null, status: ParkingSpotStatus.ACTIVE, property: { deletedAt: null, archivedAt: null, canonicalPropertyId: null, status: PropertyStatus.ACTIVE, verificationStatus: VerificationStatus.VERIFIED } },
+      parkingRight: {
+        ...activeRightWhere(now),
+        canList: true,
+        canSetPrice: true,
+      },
+      parkingSpot: {
+        deletedAt: null,
+        status: ParkingSpotStatus.ACTIVE,
+        property: {
+          deletedAt: null,
+          archivedAt: null,
+          canonicalPropertyId: null,
+          status: PropertyStatus.ACTIVE,
+          verificationStatus: VerificationStatus.VERIFIED,
+        },
+      },
     },
-    select: { discloseLocationBeforePayment: true, parkingSpot: { select: { property: { select: { id: true, name: true, latitude: true, longitude: true } } } } },
+    select: {
+      discloseLocationBeforePayment: true,
+      parkingSpot: {
+        select: {
+          property: {
+            select: { id: true, name: true, latitude: true, longitude: true },
+          },
+        },
+      },
+    },
   });
-  if (!listing) throw new AppError({ statusCode: 404, code: "LISTING_NOT_AVAILABLE", message: "This parking offer is no longer available" });
-  return driverLocationDisclosure(listing.discloseLocationBeforePayment, listing.parkingSpot.property);
+  if (!listing)
+    throw new AppError({
+      statusCode: 404,
+      code: "LISTING_NOT_AVAILABLE",
+      message: "This parking offer is no longer available",
+    });
+  return driverLocationDisclosure(
+    listing.discloseLocationBeforePayment,
+    listing.parkingSpot.property,
+  );
 }
 
 export async function getPublicPropertyDetail(
@@ -5084,6 +5253,31 @@ export async function deleteDriverSearchHistoryItem(
   return { deleted: true };
 }
 
+async function ensureVehicleReservationAvailable(
+  db: MarketplaceDb,
+  vehicleId: string,
+  startAt: Date,
+  endAt: Date,
+  excludeHoldId?: string,
+) {
+  if (
+    await vehicleHasReservationConflict(
+      db,
+      vehicleId,
+      startAt,
+      endAt,
+      new Date(),
+      excludeHoldId,
+    )
+  ) {
+    fail(
+      409,
+      "VEHICLE_RESERVATION_CONFLICT",
+      "This vehicle already has a booking or temporary reservation during these times. Choose a different vehicle or time.",
+    );
+  }
+}
+
 export async function createQuote(
   driverUserId: string,
   input: {
@@ -5120,6 +5314,7 @@ export async function createQuote(
       "Parking listing is unavailable",
     );
   if (!vehicle) fail(404, "VEHICLE_NOT_FOUND", "Vehicle was not found");
+  await ensureVehicleReservationAvailable(prisma, vehicle.id, startAt, endAt);
   if (!listing.allowedVehicleTypes.includes(vehicle.vehicleType))
     fail(
       409,
@@ -5296,6 +5491,22 @@ export async function createHold(
           if (quote.expiresAt <= new Date())
             fail(409, "BOOKING_QUOTE_EXPIRED", "Booking quote has expired");
           const listing = quote.listing;
+          await lockEntity(tx, "vehicle-reservation", quote.vehicleId);
+          const repeatedHold = await tx.reservationHold.findUnique({
+            where: {
+              driverUserId_idempotencyKey: {
+                driverUserId,
+                idempotencyKey: input.idempotencyKey,
+              },
+            },
+          });
+          if (repeatedHold) return serialize(repeatedHold);
+          await ensureVehicleReservationAvailable(
+            tx,
+            quote.vehicleId,
+            quote.startAt,
+            quote.endAt,
+          );
           const reservedWindow = bookingGraceWindow(
             quote.startAt,
             quote.endAt,
@@ -5594,6 +5805,14 @@ export async function createBooking(
         );
       }
       const listing = hold.listing;
+      await lockEntity(tx, "vehicle-reservation", hold.quote.vehicleId);
+      await ensureVehicleReservationAvailable(
+        tx,
+        hold.quote.vehicleId,
+        hold.quote.startAt,
+        hold.quote.endAt,
+        hold.id,
+      );
       const booking = await tx.booking.create({
         data: {
           bookingCode: bookingCode(),
@@ -6364,7 +6583,10 @@ export async function getDriverBooking(
         },
       });
       if (propertySensitive) {
-        exactLocation = confirmedBookingCoordinates(isPaidOrActive, propertySensitive);
+        exactLocation = confirmedBookingCoordinates(
+          isPaidOrActive,
+          propertySensitive,
+        );
         const decrypted = decryptPropertySensitiveData(
           propertySensitive as any,
         );

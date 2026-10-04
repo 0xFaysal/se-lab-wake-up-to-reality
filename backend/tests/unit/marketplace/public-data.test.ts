@@ -11,16 +11,45 @@ it("exact booking coordinates require confirmation and validate real coordinates
   const property = { latitude: "23.795896", longitude: "90.437249" };
   assert.equal(confirmedBookingCoordinates(false, property), null);
   assert.equal(confirmedBookingCoordinates(true, null), null);
-  assert.equal(confirmedBookingCoordinates(true, { latitude: null, longitude: 90 }), null);
-  assert.equal(confirmedBookingCoordinates(true, { latitude: "invalid", longitude: 90 }), null);
-  assert.equal(confirmedBookingCoordinates(true, { latitude: 23, longitude: 181 }), null);
-  assert.deepEqual(confirmedBookingCoordinates(true, property), { latitude: 23.795896, longitude: 90.437249 });
+  assert.equal(
+    confirmedBookingCoordinates(true, { latitude: null, longitude: 90 }),
+    null,
+  );
+  assert.equal(
+    confirmedBookingCoordinates(true, { latitude: "invalid", longitude: 90 }),
+    null,
+  );
+  assert.equal(
+    confirmedBookingCoordinates(true, { latitude: 23, longitude: 181 }),
+    null,
+  );
+  assert.deepEqual(confirmedBookingCoordinates(true, property), {
+    latitude: 23.795896,
+    longitude: 90.437249,
+  });
 });
 
 it("Driver location disclosure requires consent and never includes private access details", () => {
-  const property = { id: "test-property", name: "QA Parking", latitude: "23.800112", longitude: "90.439890", exactAddress: "private", accessInstructions: "private", otp: "private" };
-  assert.deepEqual(driverLocationDisclosure(false, property), { available: false, reason: "PROVIDER_CONSENT_REQUIRED" });
-  assert.deepEqual(driverLocationDisclosure(true, property), { available: true, propertyId: "test-property", name: "QA Parking", latitude: 23.800112, longitude: 90.43989 });
+  const property = {
+    id: "test-property",
+    name: "QA Parking",
+    latitude: "23.800112",
+    longitude: "90.439890",
+    exactAddress: "private",
+    accessInstructions: "private",
+    otp: "private",
+  };
+  assert.deepEqual(driverLocationDisclosure(false, property), {
+    available: false,
+    reason: "PROVIDER_CONSENT_REQUIRED",
+  });
+  assert.deepEqual(driverLocationDisclosure(true, property), {
+    available: true,
+    propertyId: "test-property",
+    name: "QA Parking",
+    latitude: 23.800112,
+    longitude: 90.43989,
+  });
 });
 
 it("public coordinates use a small grid rather than an invertible entrance offset", () => {
@@ -32,15 +61,23 @@ it("public coordinates use a small grid rather than an invertible entrance offse
 });
 
 it("public locations stay inside the 40-metre area throughout Bangladesh", () => {
-  const radians = (degrees: number) => degrees * Math.PI / 180;
-  for (const latitude of [20.74, 21.43, 23.74651, 23.795896, 23.800112, 26.64]) {
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  for (const latitude of [
+    20.74, 21.43, 23.74651, 23.795896, 23.800112, 26.64,
+  ]) {
     for (const longitude of [88.01, 90.37602, 90.43989, 92.67]) {
       const approximate = approximateCoordinates("test", latitude, longitude);
-      const haversine = Math.sin(radians(approximate.latitude - latitude) / 2) ** 2
-        + Math.cos(radians(latitude)) * Math.cos(radians(approximate.latitude)) * Math.sin(radians(approximate.longitude - longitude) / 2) ** 2;
+      const haversine =
+        Math.sin(radians(approximate.latitude - latitude) / 2) ** 2 +
+        Math.cos(radians(latitude)) *
+          Math.cos(radians(approximate.latitude)) *
+          Math.sin(radians(approximate.longitude - longitude) / 2) ** 2;
       const distance = 2 * 6_371_000 * Math.asin(Math.sqrt(haversine));
       assert.ok(distance < 40, `Location displaced by ${distance} metres`);
-      assert.deepEqual(approximate, approximateCoordinates("different-id", latitude, longitude));
+      assert.deepEqual(
+        approximate,
+        approximateCoordinates("different-id", latitude, longitude),
+      );
     }
   }
 });
