@@ -141,9 +141,9 @@ export const propertyIdParamSchema = z.object({
 export const propertyDuplicateMatchSchema = z.object({
   body: z
     .object({
-      name: textField("Name", 3, 120),
-      publicArea: textField("Public area", 2, 120),
-      exactAddress: textField("Exact address", 5, 500),
+      name: textField("Name", 3, 120).optional(),
+      publicArea: textField("Public area", 2, 120).optional(),
+      exactAddress: textField("Exact address", 5, 500).optional(),
       latitude: latitudeSchema,
       longitude: longitudeSchema,
     })

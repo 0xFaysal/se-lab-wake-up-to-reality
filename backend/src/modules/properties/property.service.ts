@@ -61,9 +61,6 @@ function timeToDate(value: string): Date {
 
 function duplicateMatchInput(input: PropertyDuplicateMatchInput) {
   return {
-    normalizedName: normalizePropertyName(input.name),
-    publicArea: input.publicArea,
-    addressFingerprint: fingerprintPropertyAddress(input.exactAddress),
     latitude: input.latitude,
     longitude: input.longitude,
   };
@@ -72,6 +69,7 @@ function duplicateMatchInput(input: PropertyDuplicateMatchInput) {
 async function loadProviderPropertyRelationshipContexts(
   providerUserId: string,
   propertyIds: string[],
+  db: Prisma.TransactionClient | typeof prisma = prisma,
 ): Promise<
   Map<
     string,
@@ -92,7 +90,7 @@ async function loadProviderPropertyRelationshipContexts(
   }
 
   const [counts, memberships, managerAssignments] = await Promise.all([
-    prisma.propertyProvider.groupBy({
+    db.propertyProvider.groupBy({
       by: ["propertyId"],
       where: {
         propertyId: { in: propertyIds },
@@ -100,14 +98,14 @@ async function loadProviderPropertyRelationshipContexts(
       },
       _count: { _all: true },
     }),
-    prisma.propertyProvider.findMany({
+    db.propertyProvider.findMany({
       where: {
         propertyId: { in: propertyIds },
         providerUserId,
         status: { not: PropertyProviderStatus.ENDED },
       },
     }),
-    prisma.propertyBuildingManagerAssignment.findMany({
+    db.propertyBuildingManagerAssignment.findMany({
       where: {
         propertyId: { in: propertyIds },
         status: {
@@ -191,7 +189,7 @@ export async function findPossiblePropertyMatches(
   const matches = await propertyRepository.findPossiblePropertyMatches(
     duplicateMatchInput(input),
   );
-  return matches.map(toPublicPropertySummary);
+  return matches.map((match) => ({ ...toPublicPropertySummary(match), distanceMeters: Math.round(match.distanceMeters), matchBasis: "NEARBY_LOCATION" as const }));
 }
 
 export async function createProperty(
@@ -343,7 +341,7 @@ export async function updateProperty(
   input: UpdatePropertyInput,
 ) {
   try {
-    const property = await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
       await propertyRepository.lockPropertyForMutation(propertyId, tx);
       const existing = await propertyRepository.findPropertyByIdForProvider(
         propertyId,
@@ -505,20 +503,19 @@ export async function updateProperty(
         tx,
       );
       if (!result) throw propertyErrors.invalidState();
-      return result;
+      const contexts = await loadProviderPropertyRelationshipContexts(
+        providerUserId,
+        [propertyId],
+        tx,
+      );
+      const context = contexts.get(propertyId);
+      return toOwnerPropertyDetail(
+        result,
+        decryptPropertySensitiveData(result),
+        context?.governanceMode,
+        context?.relationship,
+      );
     });
-
-    const contexts = await loadProviderPropertyRelationshipContexts(
-      providerUserId,
-      [propertyId],
-    );
-    const context = contexts.get(propertyId);
-    return toOwnerPropertyDetail(
-      property,
-      decryptPropertySensitiveData(property),
-      context?.governanceMode,
-      context?.relationship,
-    );
   } catch (error) {
     throwEncryptionFailure(error, propertyId);
   }
