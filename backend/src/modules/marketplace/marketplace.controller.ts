@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import * as service from "./marketplace.service.js";
+import { getSessionTimeline } from "./session-timeline.service.js";
 
 const userId = (req: Request) => req.auth!.userId;
 const param = (req: Request, name: string) => {
@@ -29,6 +30,13 @@ export const createResource = action(
     service.createResource(userId(req), param(req, "propertyId"), req.body),
   201,
 );
+export const sessionTimeline = action((req) => getSessionTimeline(userId(req), String(req.query.propertyId), String(req.query.date)));
+export const driverListingLocation = async (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Vary", "Cookie, Authorization");
+  try { respond(req, res, await service.getDriverListingLocation(param(req, "listingId"))); }
+  catch (error) { next(error); }
+};
 export const createBulkResources = action(
   (req) =>
     service.createBulkFixedResources(
@@ -189,6 +197,13 @@ export const getListing = action((req) =>
 export const updateListing = action((req) =>
   service.updateListing(userId(req), param(req, "listingId"), req.body),
 );
+export const updateVehicleListingRates = action((req) =>
+  service.updateListing(userId(req), param(req, "listingId"), {
+    ...req.body.settings,
+    vehicleRates: req.body.rates,
+    expectedUpdatedAt: req.body.expectedUpdatedAt,
+  }),
+);
 export const activateListing = action((req) =>
   service.activateListing(userId(req), param(req, "listingId")),
 );
@@ -317,9 +332,12 @@ export const createBooking = action(
 export const listDriverBookings = action((req) =>
   service.listDriverBookings(userId(req)),
 );
-export const getDriverBooking = action((req) =>
-  service.getDriverBooking(userId(req), param(req, "bookingId")),
-);
+export const getDriverBooking = async (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Vary", "Cookie, Authorization");
+  try { respond(req, res, await service.getDriverBooking(userId(req), param(req, "bookingId"))); }
+  catch (error) { next(error); }
+};
 export const listProviderBookings = action((req) =>
   service.listProviderBookings(userId(req), req.query as never),
 );

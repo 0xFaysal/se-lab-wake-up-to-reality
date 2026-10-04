@@ -47,6 +47,8 @@ marketplaceRouter.get(
 );
 
 marketplaceRouter.use(authenticate, requireAccountReady);
+marketplaceRouter.get("/driver/listings/:listingId/location", requireRole(UserRoleType.DRIVER), sensitiveAccountRateLimit, validate(schema.listingParamsSchema), controller.driverListingLocation);
+marketplaceRouter.get("/provider/session-timeline", providerOrManager, validate(schema.sessionTimelineSchema), controller.sessionTimeline);
 
 /**
  * @openapi
@@ -375,6 +377,12 @@ marketplaceRouter.get(
   providerOrManager,
   validate(schema.listingParamsSchema),
   controller.getListing,
+);
+marketplaceRouter.post(
+  "/provider/listings/:listingId/vehicle-rates",
+  providerOrManager,
+  validate(schema.vehicleListingRatesSchema),
+  controller.updateVehicleListingRates,
 );
 marketplaceRouter.patch(
   "/provider/listings/:listingId",

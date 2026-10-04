@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 const uuid = z.uuid();
+export const sessionTimelineSchema = z.object({
+  query: z.object({ propertyId: uuid, date: z.iso.date() }),
+});
 const isoDate = z.iso.datetime({ offset: true });
 const vehicleType = z.enum(["MOTORCYCLE", "SEDAN", "SUV", "MICROBUS"]);
 const positivePaisa = z.coerce.bigint().positive();
@@ -413,6 +416,7 @@ const listingBodyBaseSchema = z
     maxDurationMinutes: z.number().int().min(15).max(10080).default(720),
     allowedVehicleTypes: z.array(vehicleType).min(1).max(4),
     securityDepositPaisa: z.coerce.bigint().min(0n).default(0n),
+    discloseLocationBeforePayment: z.boolean().optional(),
     overtimeBillingMode: z
       .enum(["MULTIPLIER", "FIXED_PER_HOUR"])
       .default("MULTIPLIER"),
@@ -429,7 +433,7 @@ const listingBodyBaseSchema = z
       .max(10_000_000n)
       .nullable()
       .optional(),
-    overtimeGracePeriodMinutes: z.number().int().min(0).max(180).default(15),
+    overtimeGracePeriodMinutes: z.literal(5).default(5),
   })
   .strict();
 
@@ -469,13 +473,24 @@ export const createListingSchema = z.object({
   ),
 });
 
+export const vehicleListingRatesSchema = z.object({
+  params: z.object({ listingId: uuid }),
+  body: z.object({
+    expectedUpdatedAt: isoDate,
+    settings: listingBodyBaseSchema.omit({ parkingRightId: true, parkingResourceUnitId: true }).partial(),
+    rates: z.array(z.object({ vehicleType, pricePerHourPaisa: positivePaisa.max(9223372036854775807n) }).strict()).min(1).max(4)
+      .refine((rates) => new Set(rates.map((rate) => rate.vehicleType)).size === rates.length, "Each vehicle must have one rate"),
+  }).strict(),
+});
+
 export const updateListingSchema = z.object({
   params: z.object({ listingId: uuid }),
   body: listingBodyBaseSchema
     .omit({ parkingRightId: true, parkingResourceUnitId: true })
     .partial()
+    .extend({ expectedUpdatedAt: isoDate.optional() })
     .refine(
-      (value) => Object.keys(value).length > 0,
+      (value) => Object.keys(value).some((key) => key !== "expectedUpdatedAt"),
       "At least one field is required",
     )
     .refine(
@@ -524,6 +539,10 @@ const availabilityRule = z
   .refine((value) => value.endLocalTime > value.startLocalTime, {
     path: ["endLocalTime"],
     message: "End time must be later than start time",
+  })
+  .refine((value) => !value.validUntil || value.validUntil >= value.validFrom, {
+    path: ["validUntil"],
+    message: "End date cannot be earlier than start date",
   });
 
 export const replaceAvailabilitySchema = z.object({
