@@ -1,4 +1,4 @@
-import { ApiError, type ApiErrorPayload } from "./api-error";
+import { ApiError, isAuthenticationFailure, type ApiErrorPayload } from "./api-error";
 import type { ApiSuccess } from "./api-types";
 import { publicEnv } from "@/lib/config/public-env";
 
@@ -9,10 +9,60 @@ export const AUTH_EXPIRED_EVENT = "parkease:auth-expired";
 
 const ACCESS_TOKEN_KEY = "parkease_access_token";
 const REFRESH_TOKEN_KEY = "parkease_refresh_token";
+const SESSION_VERSION_KEY = "parkease_session_version";
 let inMemoryAccessToken: string | null = null;
 let inMemoryRefreshToken: string | null = null;
+let inMemorySessionVersion: string | null = null;
+let sessionGeneration = 0;
+
+function sessionVersion(): string | null {
+  if (typeof window !== "undefined") {
+    try { return localStorage.getItem(SESSION_VERSION_KEY); } catch { /* Storage may be unavailable. */ }
+  }
+  return inMemorySessionVersion;
+}
+
+function rotateSessionVersion() {
+  inMemorySessionVersion = crypto.randomUUID();
+  if (typeof window !== "undefined") {
+    try { localStorage.setItem(SESSION_VERSION_KEY, inMemorySessionVersion); } catch { /* Keep in-memory session guards. */ }
+  }
+}
+
+function sessionStamp() {
+  return { generation: sessionGeneration, version: sessionVersion() };
+}
+
+export function subscribeClientSessionChanges(onChange: () => void) {
+  let previousVersion = sessionVersion();
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== null && event.key !== SESSION_VERSION_KEY) return;
+    try { if (event.storageArea !== localStorage) return; } catch { return; }
+    const nextVersion = sessionVersion();
+    if (nextVersion === previousVersion) return;
+    previousVersion = nextVersion;
+    sessionGeneration += 1;
+    inMemoryAccessToken = null;
+    inMemoryRefreshToken = null;
+    onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}
 
 export function setClientTokens(tokens: { accessToken?: string | null; refreshToken?: string | null }) {
+  sessionGeneration += 1;
+  writeClientTokens(tokens);
+  rotateSessionVersion();
+}
+
+function assertCurrentSession(stamp: ReturnType<typeof sessionStamp>) {
+  if (stamp.generation !== sessionGeneration || stamp.version !== sessionVersion()) {
+    throw new ApiError("Your session changed. Please retry.", 409, "AUTH_SESSION_CHANGED");
+  }
+}
+
+function writeClientTokens(tokens: { accessToken?: string | null; refreshToken?: string | null }) {
   if (tokens.accessToken) {
     inMemoryAccessToken = tokens.accessToken;
     if (typeof window !== "undefined") {
@@ -28,6 +78,7 @@ export function setClientTokens(tokens: { accessToken?: string | null; refreshTo
 }
 
 export function clearClientTokens() {
+  sessionGeneration += 1;
   inMemoryAccessToken = null;
   inMemoryRefreshToken = null;
   if (typeof window !== "undefined") {
@@ -36,10 +87,10 @@ export function clearClientTokens() {
       localStorage.removeItem(REFRESH_TOKEN_KEY);
     } catch { /* ignore */ }
   }
+  rotateSessionVersion();
 }
 
 export function getClientAccessToken(): string | null {
-  if (inMemoryAccessToken) return inMemoryAccessToken;
   if (typeof window !== "undefined") {
     try {
       inMemoryAccessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -49,7 +100,6 @@ export function getClientAccessToken(): string | null {
 }
 
 export function getClientRefreshToken(): string | null {
-  if (inMemoryRefreshToken) return inMemoryRefreshToken;
   if (typeof window !== "undefined") {
     try {
       inMemoryRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -64,39 +114,69 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   skipAuthRefresh?: boolean;
 }
 
-async function refreshSession(): Promise<boolean> {
+async function refreshSession(failedAccessToken: string | null): Promise<boolean> {
   if (!refreshPromise) {
-    const refreshToken = getClientRefreshToken();
-    const headers = new Headers({
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    });
-    if (refreshToken) {
-      headers.set("x-refresh-token", refreshToken);
-    }
-    refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-      headers,
-      body: JSON.stringify({ refreshToken: refreshToken ?? undefined }),
-    }).then(async (response) => {
-      if (!response.ok) return false;
+    const generation = sessionStamp();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const performRefresh = async () => {
+      assertCurrentSession(generation);
+      // Another tab may have rotated the tokens while this request waited for the lock.
+      const currentAccessToken = getClientAccessToken();
+      if (currentAccessToken && currentAccessToken !== failedAccessToken) return true;
+      const refreshToken = getClientRefreshToken();
+      const headers = new Headers({
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      });
+      if (refreshToken) {
+        headers.set("x-refresh-token", refreshToken);
+      }
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        signal: controller.signal,
+        headers,
+        body: JSON.stringify({ refreshToken: refreshToken ?? undefined }),
+      });
+      assertCurrentSession(generation);
+      if (!response.ok) {
+        const error = await parseError(response);
+        assertCurrentSession(generation);
+        if (isAuthenticationFailure(error)) return false;
+        throw error;
+      }
       try {
         const payload = (await response.json()) as ApiSuccess<{
           accessToken?: string;
           refreshToken?: string;
         }>;
+        assertCurrentSession(generation);
+        if (payload.success !== true || !payload.data) {
+          throw new ApiError("Unable to renew your session. Please retry.", 502, "AUTH_REFRESH_RESPONSE_INVALID");
+        }
         if (payload.data?.accessToken) {
-          setClientTokens({
+          writeClientTokens({
             accessToken: payload.data.accessToken,
             refreshToken: payload.data.refreshToken,
           });
         }
         return true;
-      } catch {
-        return response.ok;
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Unable to renew your session. Please retry.", 502, "AUTH_REFRESH_RESPONSE_INVALID");
       }
-    }).catch(() => false).finally(() => { refreshPromise = null; });
+    };
+    const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+    const coordinatedRefresh = async (): Promise<boolean> => locks
+      ? await locks.request(`parkease:auth-refresh:${API_BASE_URL}`, { signal: controller.signal }, performRefresh)
+      : performRefresh();
+    refreshPromise = coordinatedRefresh().catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new ApiError("Session check timed out. Please retry.", 408, "REQUEST_TIMEOUT");
+      }
+      throw error;
+    }).finally(() => { clearTimeout(timeout); refreshPromise = null; });
   }
   return refreshPromise;
 }
@@ -123,6 +203,7 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
   if (options.body !== undefined && !isFormData) headers.set("Content-Type", "application/json");
 
   const accessToken = getClientAccessToken();
+  const generation = sessionStamp();
   if (accessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
@@ -138,8 +219,11 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
       headers,
       body: requestBody,
     });
+    assertCurrentSession(generation);
     if (response.status === 401 && !didRefresh && !options.skipAuthRefresh && path !== "/auth/refresh") {
-      if (await refreshSession()) return request<T>(path, options, true);
+      const refreshed = await refreshSession(accessToken);
+      assertCurrentSession(generation);
+      if (refreshed) return request<T>(path, options, true);
       clearClientTokens();
       if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
@@ -150,6 +234,7 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
     if (!response.ok) throw await parseError(response);
     if (response.status === 204) return undefined as T;
     const payload = await response.json() as ApiSuccess<T>;
+    assertCurrentSession(generation);
     return payload.data;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
