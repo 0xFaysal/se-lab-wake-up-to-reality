@@ -1,0 +1,37 @@
+.parking-result-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgb(15 23 42 / 16%);
+}
+
+.parking-result-popup .leaflet-popup-content {
+  margin: 16px;
+  width: min(280px, calc(100vw - 88px)) !important;
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.parking-result-popup .leaflet-popup-content p {
+  margin: 0;
+}
+
+.parking-result-popup a.parking-popup-action {
+  background: #064e3b;
+  color: #fff;
+  text-decoration: none;
+}
+
+.parking-result-popup a.parking-popup-action:hover {
+  background: #065f46;
+  color: #fff;
+}
+
+.parking-result-popup a.parking-popup-action:focus-visible {
+  outline: 2px solid #064e3b;
+  outline-offset: 3px;
+}
+
+.parking-result-popup a.leaflet-popup-close-button {
+  width: 32px;
+  height: 32px;
+  color: #64748b;
+}

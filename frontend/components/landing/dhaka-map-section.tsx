@@ -128,7 +128,7 @@ export function DhakaMapSection() {
               </div>
               <div className="flex items-start gap-3 text-xs sm:text-sm text-foreground">
                 <CheckCircle2 className="size-4 text-primary shrink-0 mt-0.5" />
-                <span>15-minute traffic buffer protection for unpredictable Dhaka delays</span>
+                <span>Offer-specific overtime rates and traffic grace periods</span>
               </div>
             </div>
 

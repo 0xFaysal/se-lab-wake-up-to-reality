@@ -1,3 +1,4 @@
-import { redirect } from "next/navigation";
-
-export default function OwnerSupportPage() { redirect("/support"); }
+import { ProviderPage, ProviderPageHeader } from "@/components/provider/provider-page";
+import { SupportTicketForm } from "@/features/support/components/support-ticket-form";
+import Link from "next/link";
+export default function OwnerSupportPage() { return <ProviderPage><ProviderPageHeader title="Support" description="Account, parking and payment assistance." breadcrumbs={[{label:"Updates & support"},{label:"Support"}]} /><div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px]"><div className="divide-y border-y">{[{title:"Property verification",text:"Property and parking authority approval are required before a listing can be published.",href:"/provider/approvals",label:"View approvals"},{title:"Booking and settlement",text:"Review booking status, checkout and the server settlement breakdown from the booking details.",href:"/provider/bookings",label:"View bookings"},{title:"Earnings and payouts",text:"Only settled available earnings can be requested for payout. Pending and reserved balances are shown separately.",href:"/provider/earnings",label:"View earnings"}].map(item=><section key={item.title} className="py-5"><h2 className="font-semibold">{item.title}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p><Link href={item.href} className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-emerald-800">{item.label}</Link></section>)}</div><SupportTicketForm /></div></ProviderPage>; }

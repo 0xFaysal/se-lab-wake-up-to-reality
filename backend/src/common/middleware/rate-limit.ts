@@ -2,6 +2,10 @@ import type { Request, RequestHandler } from "express";
 import { hashToken } from "../auth/token-hash.js";
 import { AppError } from "../errors/app-error.js";
 import { redis } from "../../config/redis.js";
+import {
+  locationReadPolicy,
+  profileUpdatePolicy,
+} from "./regular-rate-limit-policy.js";
 
 type RateLimitOptions = {
   windowMs: number;
@@ -104,6 +108,10 @@ const accountAndIpLimits = (req: Request) => [
   { value: `account:${req.auth?.userId ?? "anonymous"}`, limit: 5 },
   { value: `ip:${req.ip ?? "unknown"}`, limit: 30 },
 ];
+
+// Separate browsing and routine profile edits from security/financial quotas.
+export const locationReadRateLimit = createRateLimit(locationReadPolicy);
+export const profileUpdateRateLimit = createRateLimit(profileUpdatePolicy);
 
 const identifierAndIpLimits = (req: Request) => {
   const identifier =

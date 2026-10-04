@@ -22,7 +22,7 @@ const THREE_STEPS = [
     step: "03",
     title: "Park",
     subtitle: "Gate verification via QR or OTP",
-    desc: "Arrive at the gate and present your single-use entry QR or 4-digit OTP to the on-duty building security guard.",
+    desc: "Arrive at the gate and present your entry QR or access credential to the assigned building security guard.",
     icon: QrCode,
     mockupType: "park",
   },
@@ -105,7 +105,7 @@ export function ThreeStepsOverview() {
                     <div className="space-y-2 text-xs">
                       <div className="bg-card p-2.5 rounded-lg border border-dashed border-primary/40 text-center">
                         <span className="text-xs font-mono font-bold text-primary tracking-wider">
-                          OTP: 7492 • Gate B3
+                          Access pass • Assigned gate
                         </span>
                       </div>
                       <div className="bg-emerald-600/10 p-2 rounded text-center text-xs font-semibold text-emerald-800">

@@ -3,7 +3,10 @@ import { authenticate } from "../../common/middleware/auth.js";
 import { requireAccountReady } from "../../common/middleware/require-account-ready.js";
 import { requirePasswordChangeComplete } from "../../common/middleware/require-password-change-complete.js";
 import { requireRole } from "../../common/middleware/require-role.js";
-import { sensitiveAccountRateLimit } from "../../common/middleware/rate-limit.js";
+import {
+  profileUpdateRateLimit,
+  sensitiveAccountRateLimit,
+} from "../../common/middleware/rate-limit.js";
 import { validate } from "../../common/middleware/validate.js";
 import {
   changePasswordController,
@@ -66,7 +69,7 @@ usersRouter.use(authenticate);
 usersRouter.patch(
   "/me/profile",
   requireAccountReady,
-  sensitiveAccountRateLimit,
+  profileUpdateRateLimit,
   validate(updateOwnProfileSchema),
   updateOwnProfileController,
 );

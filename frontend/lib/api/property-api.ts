@@ -7,6 +7,6 @@ export const propertyApi = {
   create: async (input: PropertyInput) => (await apiClient.post<{ property: PropertyDetailDto }>("/provider/properties", input)).property,
   update: async (id: string, input: PropertyUpdateInput) => (await apiClient.patch<{ property: PropertyDetailDto }>(`/provider/properties/${id}`, input)).property,
   remove: (id: string) => apiClient.delete<void>(`/provider/properties/${id}`),
-  possibleMatches: async (input: Pick<PropertyInput, "name" | "publicArea" | "exactAddress" | "latitude" | "longitude">) => (await apiClient.post<{ possibleMatches: PropertySummaryDto[] }>("/provider/properties/possible-matches", input)).possibleMatches,
+  possibleMatches: async (input: Pick<PropertyInput, "latitude" | "longitude">) => (await apiClient.post<{ possibleMatches: Array<PropertySummaryDto & { distanceMeters: number; matchBasis: "NEARBY_LOCATION" }> }>("/provider/properties/possible-matches", input)).possibleMatches,
   requestMembership: (propertyId: string) => apiClient.post(`/provider/properties/${propertyId}/membership`, {}),
 };

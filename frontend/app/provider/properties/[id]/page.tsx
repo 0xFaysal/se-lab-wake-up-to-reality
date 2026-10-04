@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { OwnerPropertyLiveDetail } from "@/features/provider/components/provider-property-live-detail";
 
 export const metadata: Metadata = {
-  title: "Residential Building, Gulshan | Property Details | ParkEase BD",
+  title: "Property Details",
   description: "Manage parking spaces inventory, availability, rates, security standards, and assigned staff for your property.",
 };
 

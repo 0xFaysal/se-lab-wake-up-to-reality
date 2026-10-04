@@ -17,7 +17,7 @@ export const queryKeys = {
   quotes: { detail: (quoteId: string) => ["quotes", quoteId] as const },
   holds: { detail: (holdId: string) => ["holds", holdId] as const },
   bookings: { root: ["bookings"] as const, driver: (filters: object = {}) => ["bookings", "driver", filters] as const, provider: (filters: object = {}) => ["bookings", "provider", filters] as const, providerDetail: (id: string) => ["bookings", "provider", "detail", id] as const, guard: (filters: object = {}) => ["bookings", "guard", filters] as const, detail: (id: string) => ["bookings", "detail", id] as const, guardDetail: (id: string) => ["bookings", "guard", "detail", id] as const },
-  wallet: { current: ["wallet", "current"] as const, transactions: (filters: object = {}) => ["wallet", "transactions", filters] as const },
+  wallet: { root: ["wallet"] as const, current: ["wallet", "current"] as const, transactions: (filters: object = {}) => ["wallet", "transactions", filters] as const },
   earnings: { root: ["earnings"] as const, summary: (filters: object = {}) => ["earnings", "summary", filters] as const, transactions: (filters: object = {}) => ["earnings", "transactions", filters] as const },
   payouts: { root: ["payouts"] as const, provider: (filters: object = {}) => ["payouts", "provider", filters] as const, driver: (filters: object = {}) => ["payouts", "driver", filters] as const, detail: (id: string) => ["payouts", id] as const },
   refunds: { root: ["refunds"] as const, driver: (filters: object = {}) => ["refunds", "driver", filters] as const, detail: (id: string) => ["refunds", id] as const },

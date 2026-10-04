@@ -2,86 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Banknote,
-  Bell,
-  Building2,
-  CalendarClock,
-  CalendarDays,
-  CircleParking,
-  Clock3,
-  CreditCard,
-  LayoutGrid,
-  ListChecks,
-  LockKeyhole,
-  MessageSquareQuote,
-  MonitorSmartphone,
-  Plus,
-  Radio,
-  Scale,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { Plus } from "lucide-react";
+import { providerGroups as NAV_GROUPS, providerRouteActive } from "./provider-navigation";
 import { cn } from "@/lib/utils";
 import { BrandIcon } from "@/components/common/app-logo";
 import { LogoutButton } from "@/components/auth/logout-button";
 
-type NavItem = {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
-  { label: "Overview", items: [{ label: "Dashboard", href: "/provider/dashboard", icon: LayoutGrid }] },
-  {
-    label: "Properties",
-    items: [
-      { label: "My Properties", href: "/provider/properties", icon: Building2 },
-      { label: "Add Property", href: "/provider/properties/new", icon: Plus },
-    ],
-  },
-  {
-    label: "Parking",
-    items: [
-      { label: "Resources", href: "/provider/parking", icon: CircleParking },
-      { label: "Listings", href: "/provider/listings", icon: ListChecks },
-      { label: "Availability", href: "/provider/availability", icon: CalendarClock },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { label: "Bookings", href: "/provider/bookings", icon: CalendarDays },
-      { label: "Live Sessions", href: "/provider/sessions", icon: Radio },
-      { label: "Guards", href: "/provider/guards", icon: ShieldCheck },
-      { label: "Managers", href: "/provider/managers", icon: Users },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      { label: "Earnings", href: "/provider/earnings", icon: Banknote },
-      { label: "Payouts", href: "/provider/payouts", icon: Clock3 },
-      { label: "Payout methods", href: "/provider/settings/payout-methods", icon: CreditCard },
-    ],
-  },
-  {
-    label: "Reputation",
-    items: [
-      { label: "Reviews", href: "/provider/reviews", icon: MessageSquareQuote },
-      { label: "Disputes", href: "/provider/disputes", icon: Scale },
-      { label: "Notifications", href: "/provider/notifications", icon: Bell },
-    ],
-  },
-  {
-    label: "Account",
-    items: [
-      { label: "Security", href: "/provider/account/security", icon: LockKeyhole },
-      { label: "Sessions", href: "/provider/account/sessions", icon: MonitorSmartphone },
-    ],
-  },
-];
 
 export function OwnerSidebar({ onCloseMobile }: { onCloseMobile?: () => void }) {
   const pathname = usePathname();
@@ -102,7 +28,7 @@ export function OwnerSidebar({ onCloseMobile }: { onCloseMobile?: () => void }) 
             <p className="mb-1.5 px-3 text-[10px] font-bold uppercase text-slate-400">{group.label}</p>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = pathname === item.href || (item.href !== "/provider/dashboard" && pathname.startsWith(`${item.href}/`));
+                const active = providerRouteActive(pathname, item.href);
                 const Icon = item.icon;
                 return (
                   <Link

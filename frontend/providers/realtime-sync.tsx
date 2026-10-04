@@ -18,8 +18,9 @@ export function RealtimeSync() {
       const pollTimer = window.setInterval(() => {
         if (typeof document !== "undefined" && document.hidden) return;
         void client.invalidateQueries({ queryKey: queryKeys.bookings.root });
-        void client.invalidateQueries({ queryKey: queryKeys.wallet.current });
+        void client.invalidateQueries({ queryKey: queryKeys.wallet.root });
         void client.invalidateQueries({ queryKey: queryKeys.earnings.root });
+        void client.invalidateQueries({ queryKey: queryKeys.payouts.root });
       }, 30_000);
       return () => {
         window.clearInterval(pollTimer);
@@ -29,13 +30,12 @@ export function RealtimeSync() {
     const socket = io(realtimeUrl, { withCredentials: true, auth: { token: getClientAccessToken() ?? undefined } });
     const refreshBookings = () => {
       void client.invalidateQueries({ queryKey: queryKeys.bookings.root });
-      void client.invalidateQueries({ queryKey: queryKeys.wallet.current });
-      void client.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
+      void client.invalidateQueries({ queryKey: queryKeys.wallet.root });
       void client.invalidateQueries({ queryKey: queryKeys.earnings.root });
     };
     const refreshPayouts = () => {
       void client.invalidateQueries({ queryKey: queryKeys.payouts.root });
-      void client.invalidateQueries({ queryKey: queryKeys.wallet.current });
+      void client.invalidateQueries({ queryKey: queryKeys.wallet.root });
       void client.invalidateQueries({ queryKey: queryKeys.earnings.root });
     };
     for (const event of bookingEvents) socket.on(event, refreshBookings);

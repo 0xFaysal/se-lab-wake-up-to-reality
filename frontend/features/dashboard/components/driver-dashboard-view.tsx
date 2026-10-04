@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Bell, CalendarDays, Car, CheckCircle2, Clock3, Heart, MapPin, Search, ShieldCheck } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -11,24 +11,24 @@ import { driverDiscoveryApi } from "@/lib/api/driver-discovery-api";
 import { notificationsApi } from "@/lib/api/notifications-api";
 import { formatBDTFromPaisa, formatDateTime, vehicleLabels } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
+import { driverSessionBookings } from "@/lib/driver-session";
 
 export function DriverDashboardView() {
   const user = useCurrentUser();
   const vehicles = useVehicles().query;
-  const bookings = useQuery({ queryKey: queryKeys.bookings.driver(), queryFn: bookingsApi.driverList });
+  const bookings = useQuery({ queryKey: queryKeys.bookings.driver(), queryFn: bookingsApi.driverList, refetchInterval: 30_000 });
   const notifications = useQuery({ queryKey: queryKeys.notifications.all(), queryFn: notificationsApi.list });
   const favorites = useQuery({ queryKey: queryKeys.driverDiscovery.favorites, queryFn: driverDiscoveryApi.favorites });
   const recent = useQuery({ queryKey: queryKeys.driverDiscovery.recentSearches, queryFn: driverDiscoveryApi.recentSearches });
   const firstName = user.data?.fullName.trim().split(/\s+/)[0] ?? "Driver";
   const savedVehicles = vehicles.data ?? [];
   const defaultVehicle = savedVehicles.find((vehicle) => vehicle.isDefault) ?? savedVehicles[0];
-  const [now] = useState(Date.now);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 30_000); return () => window.clearInterval(timer); }, []);
   const allBookings = bookings.data ?? [];
-  const activeBooking = allBookings.find((booking) =>
-    ["CHECKED_IN", "CHECKOUT_REQUESTED"].includes(booking.status)
-    || (booking.status === "CONFIRMED" && new Date(booking.scheduledEndAt).getTime() >= now),
-  );
-  const upcoming = allBookings.filter((booking) => booking.status === "CONFIRMED" && new Date(booking.startAt).getTime() > now).slice(0, 3);
+  const sessions = driverSessionBookings(allBookings, now);
+  const activeBooking = sessions[0];
+  const upcoming = sessions.filter((booking) => booking.status === "CONFIRMED" && new Date(booking.startAt).getTime() > now);
   const unread = notifications.data?.filter((item) => !item.readAt).length ?? 0;
 
   return <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
@@ -43,7 +43,7 @@ export function DriverDashboardView() {
 
     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
       <div className="space-y-6">
-        {activeBooking ? <section className="border-l-4 border-emerald-700 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">Active parking</p><h2 className="mt-1 text-xl font-bold">{activeBooking.property?.name ?? activeBooking.listing?.title}</h2><p className="mt-1 text-sm text-muted-foreground"><MapPin className="mr-1 inline size-4" />{activeBooking.property?.publicArea} · {activeBooking.vehicle?.registrationNumber}</p><p className="mt-2 text-xs text-muted-foreground">{formatDateTime(activeBooking.startAt)} to {formatDateTime(activeBooking.scheduledEndAt)}</p></div><Link href={`/driver/bookings/${activeBooking.id}`} className="inline-flex items-center gap-1 text-sm font-bold text-emerald-800">Open session<ArrowRight className="size-4" /></Link></div></section> : <section className="border bg-white p-6"><MapPin className="size-6 text-emerald-700" /><h2 className="mt-3 font-bold">No active parking session</h2><p className="mt-1 text-sm text-muted-foreground">Search verified spaces and reserve one with a server-backed hold.</p><Link href="/driver/parking" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-emerald-800">Search parking<ArrowRight className="size-4" /></Link></section>}
+        {activeBooking ? <section className="border-l-4 border-emerald-700 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase text-emerald-700">{activeBooking.status === "CONFIRMED" ? "Next reservation" : "Active parking"}</p><h2 className="mt-1 text-xl font-bold">{activeBooking.property?.name ?? activeBooking.listing?.title}</h2><p className="mt-1 text-sm text-muted-foreground"><MapPin className="mr-1 inline size-4" />{activeBooking.property?.publicArea} · {activeBooking.vehicle?.registrationNumber}</p><p className="mt-2 text-xs text-muted-foreground">{formatDateTime(activeBooking.startAt)} to {formatDateTime(activeBooking.scheduledEndAt)}</p></div><Link href={`/driver/bookings/${activeBooking.id}`} className="inline-flex items-center gap-1 text-sm font-bold text-emerald-800">Open session<ArrowRight className="size-4" /></Link></div></section> : <section className="border bg-white p-6"><MapPin className="size-6 text-emerald-700" /><h2 className="mt-3 font-bold">No active parking session</h2><p className="mt-1 text-sm text-muted-foreground">Search verified spaces and reserve one with a server-backed hold.</p><Link href="/driver/parking" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-emerald-800">Search parking<ArrowRight className="size-4" /></Link></section>}
 
         <section><div className="mb-3 flex items-center justify-between"><h2 className="font-bold">Upcoming bookings</h2><Link href="/driver/bookings" className="text-xs font-semibold text-emerald-800">View all</Link></div><div className="divide-y border bg-white">{bookings.isPending ? <p className="p-5 text-sm text-muted-foreground">Loading bookings...</p> : upcoming.length === 0 ? <p className="p-5 text-sm text-muted-foreground">No upcoming bookings. Your next confirmed reservation will appear here.</p> : upcoming.map((booking) => <Link key={booking.id} href={`/driver/bookings/${booking.id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-slate-50"><div><p className="font-semibold">{booking.property?.name}</p><p className="mt-1 text-xs text-muted-foreground">{formatDateTime(booking.startAt)} · {booking.vehicle?.registrationNumber}</p></div><span className="text-sm font-bold">{formatBDTFromPaisa(booking.totalAmountPaisa)}</span></Link>)}</div></section>
 

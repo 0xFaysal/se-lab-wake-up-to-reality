@@ -106,8 +106,9 @@ export interface ParkingListingDto {
   status: ListingStatus; title: string; description: string | null; pricePerHourPaisa: string;
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[];
   securityDepositPaisa: string; publishedAt: string | null; deactivatedAt: string | null;
+  discloseLocationBeforePayment?: boolean;
   overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null;
-  overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number;
+  overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number; overtimePolicyVersion?: number;
   createdAt: string; updatedAt: string; parkingSpot?: ParkingResourceDto; parkingRight?: ParkingRightDto;
 }
 export interface AdminListingDto extends ParkingListingDto {
@@ -126,6 +127,7 @@ export interface ListingInput {
   minDurationMinutes: number; maxDurationMinutes: number; allowedVehicleTypes: VehicleType[]; securityDepositPaisa: string;
   overtimeBillingMode?: OvertimeBillingMode; overtimeMultiplierBps?: number | null;
   overtimeRatePerHourPaisa?: string | null; overtimeGracePeriodMinutes?: number;
+  discloseLocationBeforePayment?: boolean;
 }
 
 export interface AvailabilityRuleDto {
@@ -163,7 +165,7 @@ export interface PublicPropertyDetailDto {
   offers: PublicPropertyOfferDto[];
 }
 
-export interface BookingQuoteDto { id: string; driverUserId: string; listingId: string; vehicleId: string; parkingSpotId: string; startAt: string; endAt: string; durationMinutes: number; baseRatePerHourPaisa: string; baseAmountPaisa: string; platformFeePaisa: string; depositPaisa: string; subtotalPaisa: string; totalAmountPaisa: string; driverWalletAvailablePaisa: string; driverWalletAppliedPaisa: string; gatewayAmountPaisa: string; overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null; overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number; expiresAt: string; createdAt: string; expired?: boolean }
+export interface BookingQuoteDto { id: string; driverUserId: string; listingId: string; vehicleId: string; parkingSpotId: string; startAt: string; endAt: string; durationMinutes: number; baseRatePerHourPaisa: string; baseAmountPaisa: string; platformFeePaisa: string; depositPaisa: string; subtotalPaisa: string; totalAmountPaisa: string; driverWalletAvailablePaisa: string; driverWalletAppliedPaisa: string; gatewayAmountPaisa: string; overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null; overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number; overtimePolicyVersion?: number; expiresAt: string; createdAt: string; expired?: boolean }
 export interface ReservationHoldDto { id: string; quoteId: string; driverUserId: string; listingId: string; parkingSpotId: string; allocationId: string; status: HoldStatus; expiresAt: string; createdAt: string; updatedAt: string; expired?: boolean; quote?: BookingQuoteDto }
 export interface PaymentDto { id: string; bookingId: string; payerUserId: string; amountPaisa: string; grossAmountPaisa: string; walletAppliedPaisa: string; currency: string; status: PaymentStatus; purpose: "BOOKING" | "SETTLEMENT"; providerReference: string | null; capturedAt: string | null; createdAt: string; updatedAt: string }
 export interface BookingDto {
@@ -174,7 +176,7 @@ export interface BookingDto {
   depositPaisa: string; totalAmountPaisa: string; confirmedAt: string | null; checkedInAt: string | null;
   subtotalPaisa: string; driverWalletAppliedPaisa: string; gatewayAmountPaisa: string;
   overtimeBillingMode: OvertimeBillingMode; overtimeMultiplierBps: number | null;
-  overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number;
+  overtimeRatePerHourPaisa: string | null; overtimeGracePeriodMinutes: number; overtimePolicyVersion?: number;
   financialStatus: "UNPAID" | "HELD" | "SETTLEMENT_PENDING" | "SETTLED" | "CANCELLED";
   checkoutRequestedAt: string | null; checkedOutAt: string | null; cancelledAt: string | null; createdAt: string; updatedAt: string;
   vehicle?: { id: string; vehicleType: VehicleType; registrationNumber: string };
@@ -184,11 +186,12 @@ export interface BookingDto {
   listing?: { id: string; title: string; providerMembershipId?: string }; payments?: PaymentDto[];
   driver?: { id: string; fullName: string; phone?: string; email?: string };
   accessCredential?: string | null;
+  exactLocation?: { latitude: number; longitude: number } | null;
   canCancel: boolean;
   canPay: boolean;
 }
 export interface GuardBookingDto {
-  id: string; bookingCode: string; status: "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED";
+  id: string; bookingCode: string; status: "CONFIRMED" | "CHECKED_IN" | "CHECKOUT_REQUESTED"; overtimeGracePeriodMinutes: number; overtimePolicyVersion?: number;
   startAt: string; scheduledEndAt: string; effectiveEndAt: string; confirmedAt: string | null;
   checkedInAt: string | null; checkoutRequestedAt: string | null; checkedOutAt: string | null; createdAt: string;
   driver: { id: string; fullName: string };

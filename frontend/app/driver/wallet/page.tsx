@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Clock3, Landmark, Loader2, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
@@ -13,6 +13,8 @@ import { financeApi } from "@/lib/api/finance-api";
 import { formatBDTFromPaisa, formatDateTime } from "@/lib/formatters";
 import { payoutStatus } from "@/lib/marketplace-status";
 import { queryKeys } from "@/lib/query-keys";
+import { walletActivity } from "@/lib/wallet-activity";
+import { parseBDTToPaisa, validatePayoutAmount } from "@/lib/payout-amount";
 
 export default function WalletPage() {
   const client = useQueryClient();
@@ -24,15 +26,17 @@ export default function WalletPage() {
   const methods = useQuery({ queryKey: ["driver", "payout-methods"], queryFn: financeApi.driverPayoutMethods });
   const payouts = useQuery({ queryKey: queryKeys.payouts.driver(), queryFn: () => financeApi.driverPayouts() });
   const activeMethods = (methods.data ?? []).filter((method) => method.status === "ACTIVE");
-  const payoutMethodId = selectedMethod || activeMethods.find((method) => method.isDefault)?.id || activeMethods[0]?.id || "";
+  const payoutMethodId = activeMethods.find((method) => method.id === selectedMethod)?.id || activeMethods.find((method) => method.isDefault)?.id || activeMethods[0]?.id || "";
   const availablePaisa = BigInt(wallet.data?.availableBalancePaisa ?? "0");
-  const requestedPaisa = useMemo(() => {
-    const value = Number(amount);
-    return Number.isFinite(value) ? BigInt(Math.max(0, Math.round(value * 100))) : BigInt(0);
-  }, [amount]);
-  const exceedsBalance = requestedPaisa > availablePaisa;
+  const amountError = validatePayoutAmount(amount, availablePaisa);
   const payout = useMutation({
-    mutationFn: () => financeApi.requestDriverPayout(requestedPaisa.toString(), payoutMethodId, payoutKey.current),
+    mutationFn: () => {
+      const error = validatePayoutAmount(amount, availablePaisa);
+      const paisa = parseBDTToPaisa(amount);
+      if (error || paisa === null) throw new Error(error ?? "Enter a valid amount.");
+      if (!activeMethods.some((method) => method.id === payoutMethodId)) throw new Error("Select an active transfer destination.");
+      return financeApi.requestDriverPayout(paisa.toString(), payoutMethodId, payoutKey.current);
+    },
     onSuccess: async () => {
       toast.success("Withdrawal request submitted for review");
       setAmount("");
@@ -81,7 +85,7 @@ export default function WalletPage() {
               <p className="mt-1 text-sm text-slate-600">Request a transfer to your saved bank or mobile financial service account.</p>
             </div>
           </div>
-          <form noValidate className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); payout.mutate(); }}>
+          <form noValidate className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); if (!amountError && payoutMethodId && !payout.isPending) payout.mutate(); }}>
             <label className="space-y-2 text-sm font-semibold">
               <span>Amount in BDT</span>
               <Input
@@ -90,6 +94,8 @@ export default function WalletPage() {
                 min="0.01"
                 step="0.01"
                 value={amount}
+                aria-invalid={amount !== "" && Boolean(amountError)}
+                aria-describedby={amount !== "" && amountError ? "withdrawal-amount-error" : undefined}
                 onChange={(event) => setAmount(event.target.value)}
                 placeholder="0.00"
                 disabled={availablePaisa === BigInt(0)}
@@ -121,7 +127,7 @@ export default function WalletPage() {
                 </SelectContent>
               </Select>
             </label>
-            {exceedsBalance && <p role="alert" className="text-sm text-red-700 sm:col-span-2">Enter an amount within your available balance.</p>}
+            {amount !== "" && amountError && <p id="withdrawal-amount-error" role="alert" className="text-sm text-red-700 sm:col-span-2">{amountError}</p>}
             {activeMethods.length === 0 && (
               <p className="text-sm text-amber-800 sm:col-span-2">
                 Add a bank or mobile wallet destination before requesting a withdrawal.{" "}
@@ -131,7 +137,7 @@ export default function WalletPage() {
             <div className="sm:col-span-2">
               <Button
                 type="submit"
-                disabled={requestedPaisa <= BigInt(0) || exceedsBalance || !payoutMethodId || payout.isPending || availablePaisa === BigInt(0)}
+                disabled={Boolean(amountError) || !payoutMethodId || payout.isPending || availablePaisa === BigInt(0)}
               >
                 {payout.isPending && <Loader2 className="size-4 animate-spin" />}Request withdrawal
               </Button>
@@ -175,14 +181,14 @@ export default function WalletPage() {
           <Empty text="Refunds, booking use, and withdrawals will appear here." />
         ) : (
           <div className="divide-y border bg-white">
-            {entries.data.map((entry) => (
+            {walletActivity(entries.data).map((entry) => (
               <article key={entry.id} className="flex items-start justify-between gap-4 p-4">
                 <div>
-                  <strong className="text-sm">{entry.ledgerTransaction.description}</strong>
+                  <strong className="text-sm">{entry.netPaisa === BigInt(0) ? "Balance allocation updated" : entry.description}</strong>
                   <p className="mt-1 text-xs text-slate-500">{formatDateTime(entry.createdAt)}</p>
                 </div>
-                <span className={`shrink-0 font-semibold ${entry.entrySide === "CREDIT" ? "text-emerald-800" : "text-slate-900"}`}>
-                  {entry.entrySide === "CREDIT" ? "+" : "-"}{formatBDTFromPaisa(entry.amountPaisa)}
+                <span className={`shrink-0 font-semibold ${entry.netPaisa > BigInt(0) ? "text-emerald-800" : "text-slate-900"}`}>
+                  {entry.netPaisa === BigInt(0) ? "No net change" : `${entry.netPaisa > BigInt(0) ? "+" : ""}${formatBDTFromPaisa(entry.netPaisa)}`}
                 </span>
               </article>
             ))}

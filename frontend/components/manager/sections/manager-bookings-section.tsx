@@ -12,6 +12,7 @@ import { bookingsApi } from "@/lib/api/bookings-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
+import { operationalAmount } from "@/lib/operational-display";
 import type { BookingDto, MarketplaceBookingStatus } from "@/lib/api/marketplace-types";
 
 const STATUS_CONFIG: Record<
@@ -29,10 +30,6 @@ const STATUS_CONFIG: Record<
   NO_SHOW: { label: "No Show", color: "bg-slate-100 text-slate-400" },
   DISPUTED: { label: "Disputed", color: "bg-red-100 text-red-700" },
 };
-
-function paisaToTaka(paisa: string): string {
-  return (Number(paisa) / 100).toFixed(0);
-}
 
 export function ManagerBookingsSection({
   propertyId,
@@ -161,7 +158,7 @@ export function ManagerBookingsSection({
                       Until {formatDateTime(booking.scheduledEndAt)}
                     </span>
                     <span className="font-semibold text-slate-700">
-                      ৳{paisaToTaka(booking.totalAmountPaisa)}
+                      {operationalAmount(booking.totalAmountPaisa)}
                     </span>
                     {booking.parkingSpot && (
                       <span>
@@ -210,7 +207,7 @@ export function ManagerBookingsSection({
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-semibold text-slate-600">
-                      ৳{paisaToTaka(booking.totalAmountPaisa)}
+                      {operationalAmount(booking.totalAmountPaisa)}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusInfo.color}`}

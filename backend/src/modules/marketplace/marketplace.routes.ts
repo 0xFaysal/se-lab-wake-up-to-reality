@@ -3,7 +3,10 @@ import { UserRoleType } from "../../../generated/prisma/client.js";
 import { authenticate } from "../../common/middleware/auth.js";
 import { requireAccountReady } from "../../common/middleware/require-account-ready.js";
 import { requireRole } from "../../common/middleware/require-role.js";
-import { sensitiveAccountRateLimit } from "../../common/middleware/rate-limit.js";
+import {
+  locationReadRateLimit,
+  sensitiveAccountRateLimit,
+} from "../../common/middleware/rate-limit.js";
 import { rightDocumentUpload } from "../../common/uploads/right-document-upload.middleware.js";
 import { validate } from "../../common/middleware/validate.js";
 import * as controller from "./marketplace.controller.js";
@@ -47,6 +50,19 @@ marketplaceRouter.get(
 );
 
 marketplaceRouter.use(authenticate, requireAccountReady);
+marketplaceRouter.get(
+  "/driver/listings/:listingId/location",
+  requireRole(UserRoleType.DRIVER),
+  locationReadRateLimit,
+  validate(schema.listingParamsSchema),
+  controller.driverListingLocation,
+);
+marketplaceRouter.get(
+  "/provider/session-timeline",
+  providerOrManager,
+  validate(schema.sessionTimelineSchema),
+  controller.sessionTimeline,
+);
 
 /**
  * @openapi
@@ -375,6 +391,12 @@ marketplaceRouter.get(
   providerOrManager,
   validate(schema.listingParamsSchema),
   controller.getListing,
+);
+marketplaceRouter.post(
+  "/provider/listings/:listingId/vehicle-rates",
+  providerOrManager,
+  validate(schema.vehicleListingRatesSchema),
+  controller.updateVehicleListingRates,
 );
 marketplaceRouter.patch(
   "/provider/listings/:listingId",

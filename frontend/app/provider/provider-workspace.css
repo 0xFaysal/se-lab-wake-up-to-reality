@@ -1,0 +1,30 @@
+.provider-workspace {
+  --provider-canvas: #f6f8fa;
+  --provider-action: #064e3b;
+  --background: var(--provider-canvas);
+  --foreground: #20272e;
+  --primary: var(--provider-action);
+  --secondary: #edf4f1;
+  --muted: #f1f4f6;
+  --accent: #edf4f1;
+  --border: #dce3e8;
+  background: var(--provider-canvas);
+  color: #20272e;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.provider-workspace * { letter-spacing: 0; }
+.provider-workspace main { min-width: 0; }
+.provider-workspace main h1 { font-size: 28px; line-height: 1.25; font-weight: 700; overflow-wrap: anywhere; }
+.provider-workspace main h2 { font-size: 20px; line-height: 1.4; }
+.provider-workspace main h3 { font-size: 16px; line-height: 1.4; }
+.provider-workspace main :is(.rounded-xl,.rounded-2xl,.rounded-3xl) { border-radius: 8px; }
+.provider-workspace main :is(.shadow-sm,.shadow-lg) { box-shadow: none; }
+.provider-workspace :is(button,a,input,textarea,[role="combobox"]):focus-visible { outline: 2px solid #047857; outline-offset: 3px; }
+.provider-workspace main :is(input,textarea) { background: white; }
+.provider-workspace main table { width: 100%; font-size: 14px; }
+.provider-workspace main th { font-weight: 600; background: #f6f8fa; }
+.provider-workspace main :is(td,th) { padding: 14px 16px; }
+.provider-workspace main p { overflow-wrap: anywhere; }
+@media(max-width:640px) { .provider-workspace main h1 { font-size: 24px; } }
+@media(prefers-reduced-motion:reduce) { .provider-workspace * { scroll-behavior: auto; transition: none; } }

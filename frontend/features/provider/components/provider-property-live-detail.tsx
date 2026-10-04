@@ -40,6 +40,9 @@ import { PropertyImageManager } from "@/features/provider/components/property-im
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import type { PropertyDetailDto } from "@/lib/api/api-types";
 import { propertyApi } from "@/lib/api/property-api";
+import { parkingResourcesApi } from "@/lib/api/parking-resources-api";
+import { listingsApi } from "@/lib/api/listings-api";
+import { propertyJourneyProgress } from "@/lib/property-journey";
 import { formatDateTime } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -49,7 +52,11 @@ const workspaceLinks = [
   { label: "Parking setup", href: "#parking-workspace", icon: ParkingSquare },
 ] as const;
 
-export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) {
+export function OwnerPropertyLiveDetail({
+  propertyId,
+}: {
+  propertyId: string;
+}) {
   const client = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const property = useQuery({
@@ -59,14 +66,20 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
   const remove = useMutation({
     mutationFn: () => propertyApi.remove(propertyId),
     onSuccess: async () => {
-      client.removeQueries({ queryKey: queryKeys.properties.detail(propertyId) });
+      client.removeQueries({
+        queryKey: queryKeys.properties.detail(propertyId),
+      });
       await client.invalidateQueries({ queryKey: queryKeys.properties.root });
       window.location.assign("/provider/properties");
     },
   });
 
   if (property.isPending) {
-    return <ProviderPage><PageSkeleton label="Loading property workspace" /></ProviderPage>;
+    return (
+      <ProviderPage>
+        <PageSkeleton label="Loading property workspace" />
+      </ProviderPage>
+    );
   }
   if (property.isError || !property.data) {
     return (
@@ -94,14 +107,27 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
         ]}
         actions={
           <>
+            {isMarketplaceReady && (
+              <Link href="#parking-workspace">
+                <Button>
+                  <ParkingSquare className="size-4" />
+                  Manage parking
+                </Button>
+              </Link>
+            )}
             <Link
               href={`/provider/properties/${item.id}/edit`}
               className="inline-flex h-10 items-center gap-2 rounded-md border bg-white px-4 text-sm font-semibold"
             >
-              <Edit3 className="size-4" />Edit
+              <Edit3 className="size-4" />
+              Edit
             </Link>
-            <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-              <Trash2 className="size-4" />Delete
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete
             </Button>
           </>
         }
@@ -130,8 +156,9 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
         <section className="border-l-4 border-amber-500 bg-amber-50 px-5 py-4 text-sm text-amber-950">
           <h2 className="font-bold">Property verification is pending</h2>
           <p className="mt-1 leading-6">
-            You can upload clear property and entrance photos now. Parking resources,
-            rights, and public listings become available after an Admin verifies the Property.
+            You can upload clear property and entrance photos now. Parking
+            resources, rights, and public listings become available after an
+            Admin verifies the Property.
           </p>
         </section>
       )}
@@ -142,27 +169,33 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
         </section>
       )}
 
-      <nav aria-label="Property workspace" className="flex flex-wrap gap-2 border-b pb-4">
+      <nav
+        aria-label="Property workspace"
+        className="flex flex-wrap gap-2 border-b pb-4"
+      >
         {workspaceLinks.map(({ label, href, icon: Icon }) => (
           <a
             key={href}
             href={href}
             className="inline-flex h-9 items-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-700 hover:border-emerald-700 hover:text-emerald-800"
           >
-            <Icon className="size-4" />{label}
+            <Icon className="size-4" />
+            {label}
           </a>
         ))}
         <Link
           href={`/provider/guards?propertyId=${item.id}`}
           className="inline-flex h-9 items-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-700"
         >
-          <Users className="size-4" />Guards
+          <Users className="size-4" />
+          Guards
         </Link>
         <Link
           href="/provider/managers"
           className="inline-flex h-9 items-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-700"
         >
-          <UserCog className="size-4" />Managers
+          <UserCog className="size-4" />
+          Managers
         </Link>
       </nav>
 
@@ -171,21 +204,37 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
         <div className="mt-4 grid gap-x-10 gap-y-5 md:grid-cols-2 lg:grid-cols-3">
           <Info label="Public area" value={item.publicArea} />
           <Info label="Exact address (private)" value={item.exactAddress} />
-          <Info label="Coordinates" value={`${item.latitude}, ${item.longitude}`} />
-          <Info label="Access instructions" value={item.accessInstructions ?? "Not provided"} />
-          <Info label="Parking rules" value={item.generalParkingRules ?? "Not provided"} />
-          <Info label="Safety rules" value={item.commonSafetyRules ?? "Not provided"} />
+          <Info
+            label="Coordinates"
+            value={`${item.latitude}, ${item.longitude}`}
+          />
+          <Info
+            label="Access instructions"
+            value={item.accessInstructions ?? "Not provided"}
+          />
+          <Info
+            label="Parking rules"
+            value={item.generalParkingRules ?? "Not provided"}
+          />
+          <Info
+            label="Safety rules"
+            value={item.commonSafetyRules ?? "Not provided"}
+          />
         </div>
         <div className="mt-6 flex flex-wrap gap-5 border-t pt-5 text-xs text-slate-600">
           <span className="inline-flex items-center gap-2">
-            <CalendarClock className="size-4" />Created {formatDateTime(item.createdAt)}
+            <CalendarClock className="size-4" />
+            Created {formatDateTime(item.createdAt)}
           </span>
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="size-4" />
-            {item.verifiedAt ? `Verified ${formatDateTime(item.verifiedAt)}` : "Not yet verified"}
+            {item.verifiedAt
+              ? `Verified ${formatDateTime(item.verifiedAt)}`
+              : "Not yet verified"}
           </span>
           <span className="inline-flex items-center gap-2">
-            <MapPin className="size-4" />Location changes may require reverification
+            <MapPin className="size-4" />
+            Location changes may require reverification
           </span>
         </div>
       </section>
@@ -196,7 +245,9 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
 
       <section id="parking-workspace" className="scroll-mt-24">
         {isMarketplaceReady ? (
-          <ProviderMarketplacePanel propertyId={propertyId} />
+            <div id="parking-advanced" className="scroll-mt-24">
+              <ProviderMarketplacePanel propertyId={propertyId} />
+          </div>
         ) : (
           <div className="border border-dashed bg-white px-6 py-10 text-center">
             <ParkingSquare className="mx-auto size-8 text-slate-400" />
@@ -224,8 +275,8 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this Property?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deletion is blocked while images, parking resources, or active Guard
-              assignments exist. This action cannot be undone.
+              Deletion is blocked while images, parking resources, or active
+              Guard assignments exist. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,22 +296,86 @@ export function OwnerPropertyLiveDetail({ propertyId }: { propertyId: string }) 
 }
 
 function PropertyJourney({ item }: { item: PropertyDetailDto }) {
-  const verified = item.verificationStatus === "VERIFIED" && item.status === "ACTIVE";
+  const verified =
+    item.verificationStatus === "VERIFIED" && item.status === "ACTIVE";
   const rejected = item.verificationStatus === "REJECTED";
-  const steps = [
-    { label: "Details submitted", detail: "Property and location saved", complete: true },
-    { label: "Admin verification", detail: verified ? "Property approved" : rejected ? "Changes requested" : "Security review in progress", complete: verified, current: !verified },
-    { label: "Parking setup", detail: verified ? "Add spaces and confirm authority" : "Available after approval", complete: false, current: verified },
-    { label: "Publish", detail: "Set availability and pricing", complete: false, current: false },
-  ];
-  return <section aria-labelledby="property-journey-title" className="border-y bg-slate-50 px-4 py-4 sm:px-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold uppercase text-emerald-800">Onboarding</p><h2 id="property-journey-title" className="mt-1 font-bold">From property to live parking</h2></div><span className="text-xs font-semibold text-slate-500">{verified ? "Next: add parking" : rejected ? "Action required" : "Verification in progress"}</span></div><ol className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{steps.map((step) => { const Icon = step.complete ? CheckCircle2 : step.current ? Clock3 : Circle; return <li key={step.label} className="flex items-start gap-2 border-l-2 border-slate-200 pl-3"><Icon className={`mt-0.5 size-4 shrink-0 ${step.complete ? "text-emerald-700" : step.current ? rejected ? "text-red-600" : "text-amber-600" : "text-slate-400"}`} /><div><p className="text-xs font-bold text-slate-900">{step.label}</p><p className="mt-0.5 text-xs text-slate-500">{step.detail}</p></div></li>; })}</ol></section>;
+  const resources = useQuery({
+    queryKey: queryKeys.parkingResources.byProperty(item.id),
+    queryFn: () => parkingResourcesApi.list(item.id),
+    enabled: verified,
+  });
+  const listings = useQuery({
+    queryKey: queryKeys.listings.all({ propertyId: item.id }),
+    queryFn: listingsApi.list,
+    enabled: verified,
+  });
+  const resourceIds = new Set(
+    (resources.data ?? []).map((resource) => resource.id),
+  );
+  const { status, steps } = propertyJourneyProgress({
+    verified,
+    rejected,
+    resourceCount: resources.isSuccess ? resources.data.length : null,
+    activeListingCount:
+      listings.isSuccess && resources.isSuccess
+        ? listings.data.filter(
+            (listing) =>
+              resourceIds.has(listing.parkingSpotId) &&
+              listing.status === "ACTIVE",
+          ).length
+        : null,
+    failed: resources.isError || listings.isError,
+  });
+  return (
+    <section
+      aria-labelledby="property-journey-title"
+      className="border-y bg-slate-50 px-4 py-4 sm:px-5"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase text-emerald-800">
+            Onboarding
+          </p>
+          <h2 id="property-journey-title" className="mt-1 font-bold">
+            From property to live parking
+          </h2>
+        </div>
+        <span className="text-xs font-semibold text-slate-500">{status}</span>
+      </div>
+      <ol className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {steps.map((step) => {
+          const Icon = step.complete
+            ? CheckCircle2
+            : step.current
+              ? Clock3
+              : Circle;
+          return (
+            <li
+              key={step.label}
+              className="flex items-start gap-2 border-l-2 border-slate-200 pl-3"
+            >
+              <Icon
+                className={`mt-0.5 size-4 shrink-0 ${step.complete ? "text-emerald-700" : step.current ? (rejected ? "text-red-600" : "text-amber-600") : "text-slate-400"}`}
+              />
+              <div>
+                <p className="text-xs font-bold text-slate-900">{step.label}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{step.detail}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <dl>
       <dt className="text-xs font-bold uppercase text-slate-500">{label}</dt>
-      <dd className="mt-1 break-words text-sm leading-6 text-slate-900">{value}</dd>
+      <dd className="mt-1 break-words text-sm leading-6 text-slate-900">
+        {value}
+      </dd>
     </dl>
   );
 }
@@ -278,5 +393,11 @@ function StatusBadge({
     danger: "bg-red-100 text-red-800",
     neutral: "bg-slate-100 text-slate-700",
   };
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${tones[tone]}`}>{label}</span>;
+  return (
+    <span
+      className={`rounded-full px-2.5 py-1 text-xs font-bold ${tones[tone]}`}
+    >
+      {label}
+    </span>
+  );
 }

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import "./public-data.test.js";
+import "./listing-scope.test.js";
+import "./vehicle-tariffs.test.js";
 import {
   claimRightSchema,
   createBulkResourcesSchema,
@@ -12,6 +14,7 @@ import {
   createSearchHistorySchema,
   guardBookingQuerySchema,
   publicPropertyDetailSchema,
+  replaceAvailabilitySchema,
   reviewRightClaimBatchSchema,
   searchParkingSchema,
   updateAvailabilityExceptionSchema,
@@ -22,6 +25,61 @@ const resourceId = "65bb81d0-90ca-49bb-a918-bb1db912d352";
 const rightId = "3ec149eb-1c2f-45d7-84fa-4a1df93a402f";
 
 describe("Marketplace validation invariants", () => {
+  it("requires an explicit boolean for Provider location disclosure", () => {
+    const body = {
+      parkingRightId: rightId,
+      title: "QA Parking",
+      pricePerHourPaisa: "1000",
+      allowedVehicleTypes: ["SEDAN"],
+    };
+    assert.equal(createListingSchema.safeParse({ body }).success, true);
+    for (const consent of [true, false]) {
+      const parsed = createListingSchema.safeParse({
+        body: { ...body, discloseLocationBeforePayment: consent },
+      });
+      assert.equal(parsed.success, true);
+      if (parsed.success)
+        assert.equal(parsed.data.body.discloseLocationBeforePayment, consent);
+    }
+    assert.equal(
+      createListingSchema.safeParse({
+        body: { ...body, discloseLocationBeforePayment: "true" },
+      }).success,
+      false,
+    );
+  });
+  it("requires date-only schedule boundaries and rejects reversed validity ranges", () => {
+    const rule = {
+      dayOfWeek: 0,
+      startLocalTime: "08:00",
+      endLocalTime: "12:00",
+      validFrom: "2026-10-04",
+    };
+    const valid = (rules: unknown[]) =>
+      replaceAvailabilitySchema.safeParse({
+        params: { resourceId },
+        body: { rules },
+      }).success;
+    assert.equal(
+      valid([
+        rule,
+        {
+          ...rule,
+          startLocalTime: "14:00",
+          endLocalTime: "22:00",
+          validUntil: "2026-10-31",
+        },
+      ]),
+      true,
+    );
+    assert.equal(valid([{ ...rule, validUntil: "2026-10-04" }]), true);
+    assert.equal(valid([{ ...rule, validUntil: "2026-10-03" }]), false);
+    assert.equal(
+      valid([{ ...rule, validFrom: "2026-10-04T00:00:00.000Z" }]),
+      false,
+    );
+    assert.equal(valid([{ ...rule, endLocalTime: "08:00" }]), false);
+  });
   it("requires real codes only for fixed spaces", () => {
     assert.equal(
       createResourceSchema.safeParse({
