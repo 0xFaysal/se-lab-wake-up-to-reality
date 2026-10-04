@@ -13,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DigitalAccessPass } from "@/features/bookings/components/digital-access-pass";
+import { BookingLocation } from "@/features/bookings/components/booking-location";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import { parkingSearchApi } from "@/lib/api/parking-search-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import { bookingGraceTimes, overtimePolicyText } from "@/lib/booking-grace";
 import type { BookingDto, BookingSettlementDto } from "@/lib/api/marketplace-types";
 import { formatBDTFromPaisa, formatDateTime, vehicleLabels } from "@/lib/formatters";
 import { bookingStatus, paymentStatus } from "@/lib/marketplace-status";
@@ -133,10 +135,14 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
               <Info label="Vehicle" value={`${booking.vehicle?.registrationNumber ?? ""} · ${booking.vehicle ? vehicleLabels[booking.vehicle.vehicleType] : ""}`} />
               <Info label="Starts" value={formatDateTime(booking.startAt)} />
               <Info label="Scheduled end" value={formatDateTime(booking.scheduledEndAt)} />
+              <Info label="Entry opens" value={formatDateTime(bookingGraceTimes(booking.startAt, booking.scheduledEndAt, booking.overtimeGracePeriodMinutes).entryOpensAt)} />
+              <Info label="Free exit until" value={formatDateTime(bookingGraceTimes(booking.startAt, booking.scheduledEndAt, booking.overtimeGracePeriodMinutes).freeExitUntil)} />
+              <Info label="Overtime policy" value={overtimePolicyText(booking.overtimePolicyVersion, booking.overtimeGracePeriodMinutes)} />
               {booking.checkedInAt && <Info label="Checked in" value={formatDateTime(booking.checkedInAt)} />}
               {booking.checkedOutAt && <Info label="Checked out" value={formatDateTime(booking.checkedOutAt)} />}
             </dl>
           </section>
+          <BookingLocation booking={booking} />
           {booking.accessCredential && <DigitalAccessPass accessCredential={booking.accessCredential} propertyTitle={booking.property?.name} />}
           {booking.status === "CHECKOUT_REQUESTED" && checkout.data && <section className="border bg-white p-6"><h2 className="font-bold">Exit pass</h2><p className="mt-2 text-sm text-slate-600">Valid until {formatDateTime(checkout.data.exitCredentialExpiresAt)}</p><div className="mt-4 flex flex-col items-center gap-4"><QRCode value={checkout.data.exitCredential} size={180} /><code className="max-w-full break-all text-sm">{checkout.data.exitCredential}</code></div></section>}
           {isSettlementEligible && (settlement.isLoading || settlement.data) && (
@@ -168,7 +174,7 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ booki
           </div>
           {payment && <span className={`mt-5 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${paymentStatus[payment.status].className}`}>{paymentStatus[payment.status].label}</span>}
           {payment && ["FAILED", "CANCELLED", "EXPIRED"].includes(payment.status) && <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">The previous gateway attempt did not complete. Your Refund Balance was released and will be applied automatically again when you retry. Only the remaining amount will be sent to SSLCOMMERZ.</p>}
-          <div className="mt-5 flex gap-3 bg-emerald-50 p-4 text-sm text-emerald-950"><ShieldCheck className="mt-0.5 size-5 shrink-0" /><p>Your payment remains protected by ParkEase until the parking session is settled.</p></div>
+          <div className="mt-5 flex gap-3 bg-emerald-50 p-4 text-sm text-emerald-950"><ShieldCheck className="mt-0.5 size-5 shrink-0" /><p>{settlement.data?.status === "COMPLETED" ? "Settlement is complete. Any returned deposit or refund is recorded in your Refund Balance." : booking.status === "CANCELLED" ? "This reservation is cancelled. Check your Refund Balance for any credit due under the cancellation policy." : booking.status === "PAYMENT_PENDING" || booking.status === "EXPIRED" ? "Only a successfully confirmed payment funds this reservation." : "Your payment remains protected by ParkEase until the parking session is settled."}</p></div>
         </aside>
       </div>
 
