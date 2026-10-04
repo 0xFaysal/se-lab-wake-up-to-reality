@@ -218,6 +218,8 @@ Parking workspace creation and editing open in shared accessible dialogs, never 
 
 ### Parking Location Disclosure
 
+Parking map popups use a compact white 8px surface with the property name, real availability and hourly price ahead of a neutral location note. Approximate-pin information is informational slate, not amber error styling. The scoped popup action overrides Leaflet link colors with white text on emerald, including hover and keyboard focus. No verification or exact-location promise is inferred from the visual treatment.
+
 Public coordinates use a 50-metre metric grid; its rounded centre remains within the displayed 40-metre approximate area of the actual location in Bangladesh. Public maps label price markers as area markers, not building entrances. This replaces the earlier coarse neighbourhood grid at the user's request; it offers less location privacy than that earlier policy. New-property duplicate discovery still checks actual coordinates within 75 metres across eligible platform properties; an empty result does not mean there are no properties in the wider neighbourhood.
 
 Providers may opt each offer into pre-booking location disclosure from its booking settings or offer creation form. Consent defaults to false and follows an offer when its vehicle rates are split. An authenticated, email-verified, active Driver may obtain actual coordinates for an active, authorized offer through a private, non-cacheable endpoint. Private address text, access instructions and credentials remain confirmed-booking-only. Offers without consent retain their existing booking flow with explicit location-availability warnings; no consent is inferred or enabled for existing records.
