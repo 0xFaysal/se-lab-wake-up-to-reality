@@ -40,6 +40,11 @@ import { listingsApi } from "@/lib/api/listings-api";
 import { parkingRightsApi } from "@/lib/api/parking-rights-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
+import { parseBDTToPaisa } from "@/lib/payout-amount";
+import { listingOvertimeSettings } from "@/lib/listing-overtime";
+import { listingDetailsError, listingDetailsPatch } from "@/lib/listing-details";
+import { listingPayload } from "@/lib/listing-payload";
+import { listingsInPropertyScope, managerListingControls } from "@/lib/manager-listing-scope";
 import type { ParkingListingDto, OvertimeBillingMode } from "@/lib/api/marketplace-types";
 import type { VehicleType } from "@/lib/api/api-types";
 
@@ -59,11 +64,14 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function paisaToTaka(paisa: string | number): string {
-  return (Number(paisa) / 100).toFixed(2);
+  const value = BigInt(paisa);
+  return `${value / BigInt(100)}.${(value % BigInt(100)).toString().padStart(2, "0")}`;
 }
 
 function takaToPaisa(taka: string | number): string {
-  return String(Math.round(Number(taka) * 100));
+  const paisa = parseBDTToPaisa(String(taka));
+  if (paisa === null || paisa <= BigInt(0)) throw new Error("Enter a positive BDT rate with no more than two decimal places.");
+  return paisa.toString();
 }
 
 // ---------------------------------------------------------
@@ -82,26 +90,23 @@ function EditPriceForm({
     listing.overtimeBillingMode ?? "MULTIPLIER",
   );
   const [multiplier, setMultiplier] = useState(
-    listing.overtimeMultiplierBps ? (listing.overtimeMultiplierBps / 10000).toFixed(1) : "1.5",
+    String((listing.overtimeMultiplierBps ?? 15000) / 10000),
   );
   const [fixedRateTaka, setFixedRateTaka] = useState(
     listing.overtimeRatePerHourPaisa ? paisaToTaka(listing.overtimeRatePerHourPaisa) : "150",
   );
-  const [gracePeriod, setGracePeriod] = useState(
-    String(listing.overtimeGracePeriodMinutes ?? 15),
-  );
+  const gracePeriod = "5";
+
+  const pricingPatch = () => ({
+    pricePerHourPaisa: takaToPaisa(hourlyTaka),
+    overtimeBillingMode: mode,
+    ...listingOvertimeSettings(mode, multiplier, mode === "FIXED_PER_HOUR" ? takaToPaisa(fixedRateTaka) : null, gracePeriod),
+  });
+  let pricingError: string | null = null;
+  try { pricingPatch(); } catch (error) { pricingError = error instanceof Error ? error.message : "Enter valid pricing settings."; }
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      listingsApi.update(listing.id, {
-        pricePerHourPaisa: takaToPaisa(hourlyTaka),
-        overtimeBillingMode: mode,
-        overtimeMultiplierBps:
-          mode === "MULTIPLIER" ? Math.round(parseFloat(multiplier) * 10000) : null,
-        overtimeRatePerHourPaisa:
-          mode === "FIXED_PER_HOUR" ? takaToPaisa(fixedRateTaka) : null,
-        overtimeGracePeriodMinutes: Number(gracePeriod) || 15,
-      }),
+    mutationFn: () => listingsApi.update(listing.id, pricingPatch()),
     onSuccess: () => {
       toast.success("Pricing and overtime settings updated");
       void client.invalidateQueries({ queryKey: queryKeys.listings.root });
@@ -124,11 +129,12 @@ function EditPriceForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="text-xs font-semibold text-slate-700">Hourly Price (৳ / hour)</label>
+          <label htmlFor={`hourly-${listing.id}`} className="text-xs font-semibold text-slate-700">Hourly Price (৳ / hour)</label>
           <Input
+            id={`hourly-${listing.id}`}
             type="number"
-            min="1"
-            step="1"
+            min="0.01"
+            step="0.01"
             value={hourlyTaka}
             onChange={(e) => setHourlyTaka(e.target.value)}
             className="mt-1 h-9 bg-white"
@@ -136,13 +142,12 @@ function EditPriceForm({
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-slate-700">Overtime Grace Period (Minutes)</label>
+          <label htmlFor={`grace-${listing.id}`} className="text-xs font-semibold text-slate-700">Overtime Grace Period (Minutes)</label>
           <Input
+            id={`grace-${listing.id}`}
             type="number"
-            min="0"
-            max="120"
             value={gracePeriod}
-            onChange={(e) => setGracePeriod(e.target.value)}
+            readOnly
             className="mt-1 h-9 bg-white"
           />
         </div>
@@ -163,12 +168,13 @@ function EditPriceForm({
         <div>
           {mode === "MULTIPLIER" ? (
             <div>
-              <label className="text-xs font-semibold text-slate-700">Overtime Multiplier</label>
+              <label htmlFor={`multiplier-${listing.id}`} className="text-xs font-semibold text-slate-700">Overtime Multiplier</label>
               <Input
+                id={`multiplier-${listing.id}`}
                 type="number"
                 min="1"
                 max="5"
-                step="0.1"
+                step="0.0001"
                 value={multiplier}
                 onChange={(e) => setMultiplier(e.target.value)}
                 placeholder="1.5"
@@ -177,11 +183,13 @@ function EditPriceForm({
             </div>
           ) : (
             <div>
-              <label className="text-xs font-semibold text-slate-700">Overtime Rate (৳ / hour)</label>
+              <label htmlFor={`fixed-rate-${listing.id}`} className="text-xs font-semibold text-slate-700">Overtime Rate (৳ / hour)</label>
               <Input
+                id={`fixed-rate-${listing.id}`}
                 type="number"
                 min="1"
-                step="1"
+                max="100000"
+                step="0.01"
                 value={fixedRateTaka}
                 onChange={(e) => setFixedRateTaka(e.target.value)}
                 placeholder="150"
@@ -205,19 +213,20 @@ function EditPriceForm({
               {mode === "MULTIPLIER"
                 ? `${multiplier}× (৳${(Number(hourlyTaka || 0) * Number(multiplier || 1)).toFixed(0)}/hr)`
                 : `৳${fixedRateTaka}/hr`}{" "}
-              after {gracePeriod}-minute grace
+              after {gracePeriod}-minute free exit; includes initial grace, less 2 checkout minutes
             </strong>
           </span>
         </div>
       </div>
 
+      {pricingError && <p role="alert" className="text-sm text-red-700">{pricingError}</p>}
       <div className="flex items-center justify-end gap-2 pt-1">
         <Button size="sm" variant="outline" onClick={onClose}>
           Cancel
         </Button>
         <Button
           size="sm"
-          disabled={!hourlyTaka || updateMutation.isPending}
+          disabled={Boolean(pricingError) || updateMutation.isPending}
           onClick={() => updateMutation.mutate()}
           className="bg-[#064E3B] text-white hover:bg-[#064E3B]/90"
         >
@@ -245,16 +254,12 @@ function EditDetailsForm({
   const [minDuration, setMinDuration] = useState(String(listing.minDurationMinutes ?? 60));
   const [maxDuration, setMaxDuration] = useState(String(listing.maxDurationMinutes ?? 1440));
   const [vehicles, setVehicles] = useState<VehicleType[]>(listing.allowedVehicleTypes ?? ["SEDAN"]);
+  const details = { title, description, minimum: minDuration, maximum: maxDuration, vehicles };
+  const detailsError = listingDetailsError(details);
 
   const updateMutation = useMutation({
     mutationFn: () =>
-      listingsApi.update(listing.id, {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        minDurationMinutes: Number(minDuration) || 60,
-        maxDurationMinutes: Number(maxDuration) || 1440,
-        allowedVehicleTypes: vehicles,
-      }),
+      listingsApi.update(listing.id, listingDetailsPatch(details)),
     onSuccess: () => {
       toast.success("Listing updated successfully");
       void client.invalidateQueries({ queryKey: queryKeys.listings.root });
@@ -276,13 +281,16 @@ function EditDetailsForm({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            updateMutation.mutate();
+            if (!detailsError && !updateMutation.isPending) updateMutation.mutate();
           }}
           className="space-y-3 py-2"
         >
           <div>
-            <label className="text-xs font-semibold text-slate-700">Listing Title</label>
+            <label htmlFor={`title-${listing.id}`} className="text-xs font-semibold text-slate-700">Listing Title</label>
             <Input
+              id={`title-${listing.id}`}
+              minLength={3}
+              maxLength={150}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -291,8 +299,10 @@ function EditDetailsForm({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700">Description (Optional)</label>
+            <label htmlFor={`description-${listing.id}`} className="text-xs font-semibold text-slate-700">Description (Optional)</label>
             <Input
+              id={`description-${listing.id}`}
+              maxLength={3000}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="mt-1"
@@ -301,20 +311,26 @@ function EditDetailsForm({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-700">Min Duration (Mins)</label>
+              <label htmlFor={`minimum-${listing.id}`} className="text-xs font-semibold text-slate-700">Min Duration (Mins)</label>
               <Input
+                id={`minimum-${listing.id}`}
                 type="number"
                 min="15"
+                max="1440"
+                required
                 value={minDuration}
                 onChange={(e) => setMinDuration(e.target.value)}
                 className="mt-1"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-700">Max Duration (Mins)</label>
+              <label htmlFor={`maximum-${listing.id}`} className="text-xs font-semibold text-slate-700">Max Duration (Mins)</label>
               <Input
+                id={`maximum-${listing.id}`}
                 type="number"
-                min="30"
+                min="15"
+                max="10080"
+                required
                 value={maxDuration}
                 onChange={(e) => setMaxDuration(e.target.value)}
                 className="mt-1"
@@ -343,13 +359,14 @@ function EditDetailsForm({
             </div>
           </div>
 
+          {detailsError && <p role="alert" className="text-sm text-red-700">{detailsError}</p>}
           <DialogFooter className="pt-3">
             <Button variant="outline" type="button" onClick={onClose}>
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={!title.trim() || vehicles.length === 0 || updateMutation.isPending}
+              disabled={Boolean(detailsError) || updateMutation.isPending}
               className="bg-[#064E3B] text-white hover:bg-[#064E3B]/90"
             >
               {updateMutation.isPending && <Loader2 className="size-4 animate-spin mr-1" />}
@@ -369,12 +386,10 @@ function ListingCard({
   listing,
   canManage,
   canPrice,
-  resourceIds,
 }: {
   listing: ParkingListingDto;
   canManage: boolean;
   canPrice: boolean;
-  resourceIds: string[];
 }) {
   const client = useQueryClient();
   const [editingPrice, setEditingPrice] = useState(false);
@@ -397,12 +412,7 @@ function ListingCard({
     },
   });
 
-  const inScope =
-    resourceIds.length === 0 ||
-    (listing.parkingSpotId ? resourceIds.includes(listing.parkingSpotId) : true);
-
-  if (!inScope) return null;
-
+  const controls = managerListingControls(listing.status, canManage, canPrice);
   const statusColor = STATUS_COLORS[listing.status] ?? "bg-slate-100 text-slate-600";
 
   return (
@@ -418,7 +428,7 @@ function ListingCard({
           <p className="mt-1 text-xs text-slate-500">
             ৳{paisaToTaka(listing.pricePerHourPaisa)}/hr
             {listing.overtimeMultiplierBps && (
-              <span> · Overtime: {(listing.overtimeMultiplierBps / 10000).toFixed(1)}×</span>
+              <span> · Overtime: {listing.overtimeMultiplierBps / 10000}×</span>
             )}
             {" · "}
             {listing.allowedVehicleTypes.join(", ")}
@@ -427,7 +437,7 @@ function ListingCard({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {canManage && (
+          {controls.editDetails && (
             <Button
               size="sm"
               variant="outline"
@@ -439,7 +449,7 @@ function ListingCard({
             </Button>
           )}
 
-          {canPrice && (
+          {controls.editPrice && (
             <Button
               size="sm"
               variant="outline"
@@ -451,7 +461,7 @@ function ListingCard({
             </Button>
           )}
 
-          {canManage && listing.status === "ACTIVE" && (
+          {controls.pause && (
             <Button
               size="sm"
               variant="outline"
@@ -463,7 +473,7 @@ function ListingCard({
             </Button>
           )}
 
-          {canManage && listing.status === "PAUSED" && (
+          {controls.activate && (
             <Button
               size="sm"
               variant="outline"
@@ -549,9 +559,9 @@ export function ManagerListingsSection({
   const [overtimeMode, setOvertimeMode] = useState<OvertimeBillingMode>("MULTIPLIER");
   const [overtimeMultiplier, setOvertimeMultiplier] = useState("1.5");
   const [overtimeFixedTaka, setOvertimeFixedTaka] = useState("150");
-  const [gracePeriodMinutes, setGracePeriodMinutes] = useState(15);
-  const [minDurationMinutes, setMinDurationMinutes] = useState(60);
-  const [maxDurationMinutes, setMaxDurationMinutes] = useState(1440);
+  const gracePeriodMinutes = "5";
+  const [minDurationMinutes, setMinDurationMinutes] = useState("60");
+  const [maxDurationMinutes, setMaxDurationMinutes] = useState("1440");
   const [vehicles, setVehicles] = useState<VehicleType[]>(["SEDAN", "SUV"]);
 
   // Queries
@@ -577,26 +587,25 @@ export function ManagerListingsSection({
     });
   }, [rightsQuery.data, propertyId, resourceIds]);
 
+  const createPayload = () => {
+    if (!eligibleRights.some((right) => right.id === selectedRightId)) {
+      throw new Error("Choose an eligible parking right in your assigned scope.");
+    }
+    const data = new FormData();
+    for (const [name, value] of Object.entries({
+      title, description, hourlyRate: hourlyTaka, deposit: "0",
+      minimum: minDurationMinutes, maximum: maxDurationMinutes,
+      overtimeMultiplier, overtimeRate: overtimeFixedTaka, overtimeGrace: gracePeriodMinutes,
+    })) data.set(name, value);
+    return { parkingRightId: selectedRightId, ...listingPayload(data, overtimeMode, vehicles) };
+  };
+  let createError: string | null = null;
+  try { createPayload(); } catch (error) {
+    createError = error instanceof Error ? error.message : "Review the listing settings.";
+  }
+
   const createMutation = useMutation({
-    mutationFn: () =>
-      listingsApi.create({
-        parkingRightId: selectedRightId,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        pricePerHourPaisa: takaToPaisa(hourlyTaka),
-        securityDepositPaisa: "0",
-        minDurationMinutes,
-        maxDurationMinutes,
-        allowedVehicleTypes: vehicles,
-        overtimeBillingMode: overtimeMode,
-        overtimeMultiplierBps:
-          overtimeMode === "MULTIPLIER"
-            ? Math.round(parseFloat(overtimeMultiplier) * 10000)
-            : null,
-        overtimeRatePerHourPaisa:
-          overtimeMode === "FIXED_PER_HOUR" ? takaToPaisa(overtimeFixedTaka) : null,
-        overtimeGracePeriodMinutes: gracePeriodMinutes,
-      }),
+    mutationFn: () => listingsApi.create(createPayload()),
     onSuccess: () => {
       toast.success("Listing created on behalf of Provider");
       void client.invalidateQueries({ queryKey: queryKeys.listings.root });
@@ -621,9 +630,7 @@ export function ManagerListingsSection({
     return <p className="text-sm text-red-700">{getApiErrorMessage(listingsQuery.error)}</p>;
   }
 
-  const listings = (listingsQuery.data ?? []).filter(
-    (l) => resourceIds.length === 0 || resourceIds.includes(l.parkingSpotId),
-  );
+  const listings = listingsInPropertyScope(listingsQuery.data ?? [], propertyId, resourceIds);
 
   return (
     <div className="space-y-4">
@@ -665,7 +672,6 @@ export function ManagerListingsSection({
               listing={listing}
               canManage={canManage}
               canPrice={canPrice}
-              resourceIds={resourceIds}
             />
           ))}
         </div>
@@ -683,7 +689,7 @@ export function ManagerListingsSection({
 
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-semibold text-slate-700">
+              <label htmlFor="manager-create-right" className="text-xs font-semibold text-slate-700">
                 Select Verified Parking Resource / Right
               </label>
               {rightsQuery.isPending ? (
@@ -698,7 +704,7 @@ export function ManagerListingsSection({
                 </div>
               ) : (
                 <Select value={selectedRightId} onValueChange={(v) => v && setSelectedRightId(v)}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger id="manager-create-right" className="mt-1">
                     <SelectValue placeholder="Choose a verified parking space…">
                       {(v: string) => {
                         const right = eligibleRights.find((r) => r.id === v);
@@ -721,8 +727,11 @@ export function ManagerListingsSection({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700">Listing Title</label>
+              <label htmlFor="manager-create-title" className="text-xs font-semibold text-slate-700">Listing Title</label>
               <Input
+                minLength={3}
+                maxLength={150}
+                id="manager-create-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Daytime Parking - Secure Basement Slot"
@@ -731,8 +740,10 @@ export function ManagerListingsSection({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700">Description (Optional)</label>
+              <label htmlFor="manager-create-description" className="text-xs font-semibold text-slate-700">Description (Optional)</label>
               <Input
+                maxLength={3000}
+                id="manager-create-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Easy elevator access, 24/7 security guard"
@@ -742,23 +753,24 @@ export function ManagerListingsSection({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700">Hourly Price (৳ / hr)</label>
+                <label htmlFor="manager-create-hourly" className="text-xs font-semibold text-slate-700">Hourly Price (৳ / hr)</label>
                 <Input
                   type="number"
-                  min="1"
+                  min="0.01"
+                  step="0.01"
+                  id="manager-create-hourly"
                   value={hourlyTaka}
                   onChange={(e) => setHourlyTaka(e.target.value)}
                   className="mt-1"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-700">Grace Period (Minutes)</label>
+                <label htmlFor="manager-create-grace" className="text-xs font-semibold text-slate-700">Grace Period (Minutes)</label>
                 <Input
                   type="number"
-                  min="0"
-                  max="120"
+                  id="manager-create-grace"
                   value={gracePeriodMinutes}
-                  onChange={(e) => setGracePeriodMinutes(Number(e.target.value))}
+                  readOnly
                   className="mt-1"
                 />
               </div>
@@ -766,12 +778,12 @@ export function ManagerListingsSection({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700">Overtime Mode</label>
+                <label htmlFor="manager-create-mode" className="text-xs font-semibold text-slate-700">Overtime Mode</label>
                 <Select
                   value={overtimeMode}
                   onValueChange={(v) => v && setOvertimeMode(v as OvertimeBillingMode)}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger id="manager-create-mode" className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -783,12 +795,13 @@ export function ManagerListingsSection({
               <div>
                 {overtimeMode === "MULTIPLIER" ? (
                   <div>
-                    <label className="text-xs font-semibold text-slate-700">Multiplier</label>
+                    <label htmlFor="manager-create-multiplier" className="text-xs font-semibold text-slate-700">Multiplier</label>
                     <Input
                       type="number"
                       min="1"
                       max="5"
-                      step="0.1"
+                      step="0.0001"
+                      id="manager-create-multiplier"
                       value={overtimeMultiplier}
                       onChange={(e) => setOvertimeMultiplier(e.target.value)}
                       className="mt-1"
@@ -796,10 +809,13 @@ export function ManagerListingsSection({
                   </div>
                 ) : (
                   <div>
-                    <label className="text-xs font-semibold text-slate-700">Overtime Rate (৳/hr)</label>
+                    <label htmlFor="manager-create-fixed" className="text-xs font-semibold text-slate-700">Overtime Rate (৳/hr)</label>
                     <Input
                       type="number"
                       min="1"
+                      max="100000"
+                      step="0.01"
+                      id="manager-create-fixed"
                       value={overtimeFixedTaka}
                       onChange={(e) => setOvertimeFixedTaka(e.target.value)}
                       className="mt-1"
@@ -816,27 +832,31 @@ export function ManagerListingsSection({
               {overtimeMode === "MULTIPLIER"
                 ? `${overtimeMultiplier}×`
                 : `৳${overtimeFixedTaka}/hr`}{" "}
-              after {gracePeriodMinutes}-min grace.
+              after {gracePeriodMinutes}-min free exit; includes initial grace, less 2 checkout minutes.
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700">Min Duration (Minutes)</label>
+                <label htmlFor="manager-create-minimum" className="text-xs font-semibold text-slate-700">Min Duration (Minutes)</label>
                 <Input
                   type="number"
                   min="15"
+                  max="1440"
+                  id="manager-create-minimum"
                   value={minDurationMinutes}
-                  onChange={(e) => setMinDurationMinutes(Number(e.target.value))}
+                  onChange={(e) => setMinDurationMinutes(e.target.value)}
                   className="mt-1"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-700">Max Duration (Minutes)</label>
+                <label htmlFor="manager-create-maximum" className="text-xs font-semibold text-slate-700">Max Duration (Minutes)</label>
                 <Input
                   type="number"
-                  min="30"
+                  min="15"
+                  max="10080"
+                  id="manager-create-maximum"
                   value={maxDurationMinutes}
-                  onChange={(e) => setMaxDurationMinutes(Number(e.target.value))}
+                  onChange={(e) => setMaxDurationMinutes(e.target.value)}
                   className="mt-1"
                 />
               </div>
@@ -864,19 +884,17 @@ export function ManagerListingsSection({
             </div>
           </div>
 
+          {createError && <p role="alert" className="text-sm text-red-700">{createError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               disabled={
-                !selectedRightId ||
-                !title.trim() ||
-                !hourlyTaka ||
-                vehicles.length === 0 ||
+                Boolean(createError) ||
                 createMutation.isPending
               }
-              onClick={() => createMutation.mutate()}
+              onClick={() => { if (!createError && !createMutation.isPending) createMutation.mutate(); }}
               className="bg-[#064E3B] text-white hover:bg-[#064E3B]/90"
             >
               {createMutation.isPending && <Loader2 className="size-4 animate-spin mr-1" />}

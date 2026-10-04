@@ -22,12 +22,11 @@ import { managerApi } from "@/lib/api/manager-api";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import type { BookingDto, MarketplaceBookingStatus } from "@/lib/api/marketplace-types";
 import { queryKeys } from "@/lib/query-keys";
+import { operationalAmount } from "@/lib/operational-display";
 import { toast } from "sonner";
 
 function formatPaisa(paisa: string | number | undefined | null): string {
-  if (!paisa) return "৳0";
-  const num = typeof paisa === "string" ? Number(paisa) : paisa;
-  return `৳${(num / 100).toLocaleString()}`;
+  return operationalAmount(paisa);
 }
 
 function formatTime(isoString: string | null | undefined): string {
