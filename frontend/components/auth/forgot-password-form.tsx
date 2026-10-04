@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api/auth-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import { forgotPasswordSchema } from "@/lib/validations/auth";
 
 export function ForgotPasswordForm() {
   const [identifier, setIdentifier] = useState("");
@@ -18,7 +19,8 @@ export function ForgotPasswordForm() {
   async function submit(event: React.FormEvent) {
     event.preventDefault(); if (pending) return;
     const value = identifier.trim();
-    if (value.length < 3) { setError("Enter your registered email address or Bangladesh phone number."); return; }
+    const parsed = forgotPasswordSchema.shape.identifier.safeParse(value);
+    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Enter your registered email address or Bangladesh phone number."); return; }
     setPending(true); setError("");
     try { await authApi.requestPasswordReset(value); setSent(true); }
     catch (requestError) { setError(getApiErrorMessage(requestError)); }
