@@ -17,40 +17,12 @@ import type { ParkingSearchParams } from "@/lib/api/marketplace-types";
 import { parkingSearchApi } from "@/lib/api/parking-search-api";
 import { toUtcFromBangladeshLocal } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
+import { defaultSearchWindow, dhakaToday } from "@/lib/search-window";
 
 const ParkingMap = dynamic(() => import("@/components/parking/parking-map"), {
   ssr: false,
   loading: () => <div className="flex h-full min-h-[420px] items-center justify-center border bg-muted/40"><Loader2 className="size-6 animate-spin" /></div>,
 });
-function defaultSearchWindow() {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Dhaka",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  let date = `${value("year")}-${value("month")}-${value("day")}`;
-  const startHour = Number(value("hour")) + 1;
-
-  if (startHour >= 22) {
-    const nextDate = new Date(`${date}T00:00:00Z`);
-    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
-    date = nextDate.toISOString().slice(0, 10);
-    return { date, startTime: "09:00", endTime: "12:00" };
-  }
-
-  const endHour = Math.min(startHour + 3, 23);
-  return {
-    date,
-    startTime: `${String(startHour).padStart(2, "0")}:00`,
-    endTime: `${String(endHour).padStart(2, "0")}:00`,
-  };
-}
-
 function defaultFilters(params: Pick<URLSearchParams, "get">): FilterState {
   const window = defaultSearchWindow();
   const resourceType = params.get("resourceType");
@@ -60,7 +32,7 @@ function defaultFilters(params: Pick<URLSearchParams, "get">): FilterState {
     latitude: params.get("latitude") ?? "23.7465",
     longitude: params.get("longitude") ?? "90.3760",
     date: params.get("date") ?? window.date,
-    startTime: params.get("startTime") ?? window.startTime,
+    startTime: params.get("startTime") ?? params.get("time") ?? window.startTime,
     endTime: params.get("endTime") ?? window.endTime,
     vehicleType: (params.get("vehicleType") as VehicleType) || "SEDAN",
     radiusKm: params.get("radiusKm") ?? "5",
@@ -157,7 +129,7 @@ export function ParkingSearchView({ driverMode = false }: { driverMode?: boolean
   const [mobileSheet, setMobileSheet] = useState<"collapsed" | "half" | "expanded">("half");
   const isDesktop = useSyncExternalStore(subscribeMediaQuery, getDesktopSnapshot, getDesktopServerSnapshot);
 
-  const minimumDate = defaultSearchWindow().date;
+  const minimumDate = dhakaToday();
   const valid = Number.isFinite(request.latitude) && Number.isFinite(request.longitude) && new Date(request.endAt) > new Date(request.startAt) && new Date(request.startAt) > new Date();
 
   const query = useQuery({

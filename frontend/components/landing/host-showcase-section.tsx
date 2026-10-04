@@ -8,7 +8,7 @@ import ownerDashboardImg from "@/assets/provider-dashboard.jpg";
 const HOST_PERKS = [
   "Set your own schedule, operating hours & vehicle rules",
   "Automated gate guard verification with purpose-bound codes",
-  "Transparent earnings tracking with direct digital payouts",
+  "Transparent earnings tracking with reviewed withdrawal requests",
   "Dedicated dispute mediation & platform liability safeguards",
   "Real-time parking slot occupancy & utilization insights",
 ];

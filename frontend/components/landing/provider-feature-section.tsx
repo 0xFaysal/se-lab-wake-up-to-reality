@@ -8,7 +8,7 @@ import ownerDashboardImg from "@/assets/provider-dashboard.jpg";
 const OWNER_BENEFITS = [
   "Set your own schedule, hours & vehicle rules",
   "Automated gate guard verification with single-use codes",
-  "Transparent earnings tracking & direct digital payouts",
+  "Transparent earnings tracking & reviewed withdrawal requests",
   "Dedicated dispute resolution & platform safeguards",
   "Real-time parking slot occupancy & utilization insights",
 ];

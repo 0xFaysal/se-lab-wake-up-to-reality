@@ -33,8 +33,8 @@ export function GuardFeatureSection() {
                       <strong className="text-foreground font-medium">Tanvir Ahmed</strong>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Entry OTP:</span>
-                      <strong className="text-primary font-mono font-black text-sm">7492</strong>
+                      <span className="text-muted-foreground">Entry pass:</span>
+                      <strong className="text-primary font-mono font-black text-sm">Issued</strong>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Status:</span>
@@ -71,7 +71,7 @@ export function GuardFeatureSection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
               <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs sm:text-sm urban-card-shadow">
                 <QrCode className="size-5 text-primary shrink-0 mt-0.5" />
-                <span>Instant 1-tap QR scan or 4-digit OTP entry</span>
+                <span>QR scan or access credential verification</span>
               </div>
               <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs sm:text-sm urban-card-shadow">
                 <Car className="size-5 text-primary shrink-0 mt-0.5" />
@@ -79,7 +79,7 @@ export function GuardFeatureSection() {
               </div>
               <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs sm:text-sm urban-card-shadow">
                 <ShieldCheck className="size-5 text-primary shrink-0 mt-0.5" />
-                <span>15-minute traffic buffer overstay tracking</span>
+                <span>Offer-specific grace period and overstay tracking</span>
               </div>
               <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs sm:text-sm urban-card-shadow">
                 <UserCheck className="size-5 text-primary shrink-0 mt-0.5" />

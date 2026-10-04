@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { Circle, CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { LocateFixed } from "lucide-react";
 import "leaflet/dist/leaflet.css";
@@ -15,9 +15,9 @@ import { parkingDetailsHref } from "./parking-card";
 const markerIcon = (price: string, selected: boolean) =>
   L.divIcon({
     className: "custom-leaflet-marker",
-    html: `<div style="white-space:nowrap;background:${selected ? "#0f172a" : "#065f46"};color:#fff;border:2px solid ${selected ? "#38bdf8" : "#fff"};border-radius:6px;padding:5px 8px;font-weight:700;font-size:11px;box-shadow:${selected ? "0 0 0 3px rgba(56, 189, 248, 0.4), 0 4px 12px rgba(0,0,0,0.3)" : "0 3px 8px #0004"};transform:${selected ? "scale(1.15)" : "scale(1)"};transition:transform 0.2s ease;">${formatBDTFromPaisa(price)}</div>`,
-    iconSize: [64, 30],
-    iconAnchor: [32, 15],
+    html: `<div style="white-space:nowrap;background:${selected ? "#0f172a" : "#065f46"};color:#fff;border:2px solid ${selected ? "#38bdf8" : "#fff"};border-radius:6px;padding:5px 8px;font-weight:700;font-size:11px;box-shadow:${selected ? "0 0 0 3px rgba(56, 189, 248, 0.4), 0 4px 12px rgba(0,0,0,0.3)" : "0 3px 8px #0004"};transform:${selected ? "scale(1.15)" : "scale(1)"};transition:transform 0.2s ease;">${formatBDTFromPaisa(price)} · area</div>`,
+    iconSize: [90, 30],
+    iconAnchor: [45, 15],
   });
 
 const subscribe = () => () => {};
@@ -196,6 +196,7 @@ export default function ParkingMap({
         <UserLocation requestId={locationRequest} onLocation={handleMove} />
         <SelectedSpotSync selectedSpot={selectedSpot} selectionTrigger={selectionTrigger} markerRefs={markerRefs} />
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {spots.map((spot) => <Circle key={`area-${spot.id}`} center={[spot.latitude, spot.longitude]} radius={40} pathOptions={{ color: selectedSpotId === spot.id ? "#2563eb" : "#064E3B", weight: 1, dashArray: "5 5", fillOpacity: 0.08 }}><Tooltip>{spot.name} · Approximate area within 40 m, not the entrance</Tooltip></Circle>)}
         {spots.map((spot) => (
           <Marker
             key={spot.id}
@@ -214,6 +215,7 @@ export default function ParkingMap({
             <Popup autoPan={false}>
               <div className="space-y-2">
                 <strong className="text-xs">{spot.name}</strong>
+                <p className="text-[11px] text-amber-800">Approximate area only, not the building entrance. Check the actual location before booking.</p>
                 <p className="text-[11px]">
                   {spot.publicArea} · {spot.availableUnits} available
                 </p>

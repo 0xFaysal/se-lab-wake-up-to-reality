@@ -23,7 +23,7 @@ const TIMELINE_STEPS = [
   {
     num: "03",
     title: "Access credentials generated",
-    desc: "Single-use entry QR pass and 4-digit OTP issued for gate verification.",
+    desc: "Entry credentials issued for verification by the assigned guard.",
     icon: QrCode,
   },
   {
@@ -41,7 +41,7 @@ const TIMELINE_STEPS = [
   {
     num: "06",
     title: "Parking session completed",
-    desc: "Exit verified by guard with automated 15-minute traffic grace buffer.",
+    desc: "Guard-verified checkout settles parking and overtime using the booked offer's grace period.",
     icon: Flag,
   },
 ];
