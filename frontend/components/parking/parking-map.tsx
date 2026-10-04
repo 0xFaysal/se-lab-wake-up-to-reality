@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { Circle, CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { LocateFixed } from "lucide-react";
+import { ArrowRight, LocateFixed, MapPin } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import "./parking-map.css";
 import { buttonVariants } from "@/components/ui/button";
 import type { ParkingSearchParams, ParkingSearchResultDto } from "@/lib/api/marketplace-types";
 import { formatBDTFromPaisa } from "@/lib/formatters";
@@ -15,9 +16,9 @@ import { parkingDetailsHref } from "./parking-card";
 const markerIcon = (price: string, selected: boolean) =>
   L.divIcon({
     className: "custom-leaflet-marker",
-    html: `<div style="white-space:nowrap;background:${selected ? "#0f172a" : "#065f46"};color:#fff;border:2px solid ${selected ? "#38bdf8" : "#fff"};border-radius:6px;padding:5px 8px;font-weight:700;font-size:11px;box-shadow:${selected ? "0 0 0 3px rgba(56, 189, 248, 0.4), 0 4px 12px rgba(0,0,0,0.3)" : "0 3px 8px #0004"};transform:${selected ? "scale(1.15)" : "scale(1)"};transition:transform 0.2s ease;">${formatBDTFromPaisa(price)}</div>`,
-    iconSize: [64, 30],
-    iconAnchor: [32, 15],
+    html: `<div style="white-space:nowrap;background:${selected ? "#0f172a" : "#065f46"};color:#fff;border:2px solid ${selected ? "#38bdf8" : "#fff"};border-radius:6px;padding:5px 8px;font-weight:700;font-size:11px;box-shadow:${selected ? "0 0 0 3px rgba(56, 189, 248, 0.4), 0 4px 12px rgba(0,0,0,0.3)" : "0 3px 8px #0004"};transform:${selected ? "scale(1.15)" : "scale(1)"};transition:transform 0.2s ease;">${formatBDTFromPaisa(price)} · area</div>`,
+    iconSize: [90, 30],
+    iconAnchor: [45, 15],
   });
 
 const subscribe = () => () => {};
@@ -100,6 +101,8 @@ function SelectedSpotSync({
       const marker = markerRefs.current?.get(selectedSpot.id);
       if (marker && !marker.isPopupOpen()) {
         marker.openPopup();
+      } else {
+        marker?.getPopup()?.update();
       }
     };
 
@@ -196,6 +199,7 @@ export default function ParkingMap({
         <UserLocation requestId={locationRequest} onLocation={handleMove} />
         <SelectedSpotSync selectedSpot={selectedSpot} selectionTrigger={selectionTrigger} markerRefs={markerRefs} />
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {spots.map((spot) => <Circle key={`area-${spot.id}`} center={[spot.latitude, spot.longitude]} radius={40} pathOptions={{ color: selectedSpotId === spot.id ? "#2563eb" : "#064E3B", weight: 1, dashArray: "5 5", fillOpacity: 0.08 }}><Tooltip>{spot.name} · Approximate area within 40 m, not the entrance</Tooltip></Circle>)}
         {spots.map((spot) => (
           <Marker
             key={spot.id}
@@ -211,16 +215,32 @@ export default function ParkingMap({
             icon={markerIcon(spot.minimumPricePaisa, selectedSpotId === spot.id)}
             eventHandlers={{ click: () => onSpotSelect?.(spot.id) }}
           >
-            <Popup autoPan={false}>
-              <div className="space-y-2">
-                <strong className="text-xs">{spot.name}</strong>
-                <p className="text-[11px]">
-                  {spot.publicArea} · {spot.availableUnits} available
-                </p>
-                <p className="text-xs font-bold">From {formatBDTFromPaisa(spot.minimumPricePaisa)}/hour</p>
-                <Link href={parkingDetailsHref(spot, search, driverMode)} className={cn(buttonVariants({ size: "sm" }), "w-full")}>
-                  View offers
-                </Link>
+            <Popup autoPan autoPanPaddingTopLeft={[16, 64]} autoPanPaddingBottomRight={[16, 16]} className="parking-result-popup" minWidth={240} maxWidth={312}>
+              <div className="space-y-4 text-slate-800">
+                <div className="space-y-2 pr-5">
+                  <h3 className="text-base font-semibold leading-snug break-words">{spot.name}</h3>
+                  <div className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
+                    <MapPin aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                    <span className="break-words">{spot.publicArea}</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-800">
+                    <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-600" />
+                    {spot.availableUnits} {spot.availableUnits === 1 ? "space" : "spaces"} available
+                  </span>
+                </div>
+                <div className="border-y border-slate-100 py-3">
+                  <div className="mb-1 text-xs font-medium text-slate-600">Nearby area · within 40 m</div>
+                  <p className="text-xs leading-relaxed text-slate-500">This pin shows the area, not the entrance. View offers for location details.</p>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="shrink-0">
+                    <span className="text-[11px] text-slate-500">From</span>
+                    <div className="text-lg font-semibold tabular-nums leading-tight">{formatBDTFromPaisa(spot.minimumPricePaisa)}<span className="text-xs font-normal text-slate-500">/hour</span></div>
+                  </div>
+                  <Link href={parkingDetailsHref(spot, search, driverMode)} className={cn(buttonVariants({ size: "sm" }), "parking-popup-action min-h-10 shrink-0 gap-2 rounded-md px-3 text-xs")}>
+                    View offers <ArrowRight aria-hidden="true" className="size-3.5" />
+                  </Link>
+                </div>
               </div>
             </Popup>
           </Marker>

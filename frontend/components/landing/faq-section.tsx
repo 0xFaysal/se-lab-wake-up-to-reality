@@ -20,12 +20,12 @@ const FAQS = [
   {
     question: "How does gate security guard verification work?",
     answer:
-      "Once your booking is confirmed, a single-use entry QR code and 4-digit OTP are issued. Upon arrival, the building security guard matches your vehicle plate and verifies your credential on their mobile portal.",
+      "Once your booking is confirmed, entry credentials are issued. Upon arrival, the assigned security guard matches your vehicle plate and verifies your credential through their portal.",
   },
   {
     question: "What happens if I get delayed in Dhaka traffic?",
     answer:
-      "All bookings include a 15-minute grace period after scheduled expiration to exit the premises before overtime penalties apply.",
+      "Each offer has its own overtime rate and grace period, set by the parking provider and recorded with your booking. Overtime after that grace period is calculated at checkout and deducted from the refundable deposit; any uncovered amount remains payable.",
   },
 ];
 

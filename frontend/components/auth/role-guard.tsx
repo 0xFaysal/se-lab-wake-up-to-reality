@@ -2,20 +2,23 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { destinationForUser, getRequiredAccountAction } from "@/lib/auth-routing";
 import type { UserRole } from "@/lib/api/api-types";
 import { RealtimeSync } from "@/providers/realtime-sync";
+import { Button } from "@/components/ui/button";
+import { getApiErrorMessage, isAuthenticationFailure } from "@/lib/api/api-error";
 
 export function RoleGuard({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: user, isPending, isError } = useCurrentUser();
+  const { data: user, error, isPending, isError, isFetching, refetch } = useCurrentUser();
   const authorized = !!user && roles.some((role) => user.roles.includes(role));
 
   useEffect(() => {
     if (isPending) return;
+    if (isError && !isAuthenticationFailure(error)) return;
     if (isError || !user) {
       if (pathname === "/driver/parking" || pathname.startsWith("/driver/parking/")) {
         const publicPath = pathname.replace(/^\/driver/, "") || "/parking";
@@ -32,7 +35,11 @@ export function RoleGuard({ roles, children }: { roles: UserRole[]; children: Re
       return;
     }
     if (!authorized) router.replace(action.destination);
-  }, [authorized, isError, isPending, pathname, router, user]);
+  }, [authorized, error, isError, isPending, pathname, router, user]);
+
+  if (isError && !isAuthenticationFailure(error)) {
+    return <div className="flex min-h-[60vh] items-center justify-center p-6"><div className="max-w-md text-center"><ShieldAlert className="mx-auto size-8 text-amber-600" /><h1 className="mt-3 text-lg font-semibold">Unable to check your session</h1><p role="alert" className="mt-2 text-sm text-muted-foreground">{getApiErrorMessage(error)}</p><Button className="mt-4" variant="outline" disabled={isFetching} onClick={() => void refetch()}><RefreshCw className="size-4" />Retry</Button></div></div>;
+  }
 
   if (isPending || (!authorized && !isError)) {
     return <div className="flex min-h-[60vh] items-center justify-center"><div className="text-center"><Loader2 className="mx-auto size-7 animate-spin text-[#064E3B]" /><p className="mt-3 text-sm text-muted-foreground">Checking your secure session…</p></div></div>;

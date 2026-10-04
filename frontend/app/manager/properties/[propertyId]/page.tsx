@@ -19,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { ManagerHeader } from "@/components/manager/manager-header";
-import { ViewAccessDialog } from "@/components/manager/view-access-dialog";
+import { ALL_OPERATIONAL_PERMISSIONS, ViewAccessDialog } from "@/components/manager/view-access-dialog";
 import { Button } from "@/components/ui/button";
 import { ManagerResourcesSection } from "@/components/manager/sections/manager-resources-section";
 import { ManagerListingsSection } from "@/components/manager/sections/manager-listings-section";
@@ -36,6 +36,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import type { BookingDto, ParkingListingDto } from "@/lib/api/marketplace-types";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
+import { propertyOperations } from "@/lib/property-operations";
 
 export default function ManagerPropertyDetailPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -195,9 +196,12 @@ export default function ManagerPropertyDetailPage() {
   const propertyName = delegation.property.name;
   const ownerName = delegation.provider?.fullName || "Property Principal";
   const resourceCount = resourcesQuery.data?.length ?? 0;
-  const occupiedCount = occupiedSpots.size;
-  const availableCount = Math.max(0, resourceCount - occupiedCount);
-  const todayBookingsCount = propertyBookings.length;
+  const operational = propertyOperations(resourcesQuery.data ?? [], propertyBookings);
+  const occupiedCount = operational.occupied;
+  const availableCount = operational.available;
+  const totalSpaces = operational.totalSpaces;
+  const todayBookings = operational.todayBookings;
+  const todayBookingsCount = todayBookings.length;
   const rawListings: ParkingListingDto[] = Array.isArray(listingsQuery.data) ? listingsQuery.data : [];
   const activeListing = rawListings.find((l: ParkingListingDto) => l.status === "ACTIVE");
   const hourlyRateDisplay = activeListing?.pricePerHourPaisa
@@ -206,7 +210,7 @@ export default function ManagerPropertyDetailPage() {
   const canPrice = can("PRICE_MANAGE");
   const resources = resourcesQuery.data ?? [];
   const propertyGuards = guardsQuery.data?.assignments ?? [];
-  const vacancyPct = resourceCount > 0 ? Math.round((availableCount / resourceCount) * 100) : 0;
+  const vacancyPct = operational.vacancyPercent;
 
   return (
     <div className="flex flex-col min-h-full">
@@ -264,9 +268,9 @@ export default function ManagerPropertyDetailPage() {
               <span className="font-bold text-xs text-slate-400">P</span>
             </div>
             <div className="mt-2 text-2xl font-extrabold text-slate-900">
-              {resourceCount}
+              {totalSpaces}
             </div>
-            <p className="mt-1 text-[11px] text-slate-400">Dedicated Bays</p>
+            <p className="mt-1 text-[11px] text-slate-400">Capacity across {resourceCount} resources</p>
           </div>
 
           {/* Available */}
@@ -278,7 +282,7 @@ export default function ManagerPropertyDetailPage() {
             <div className="mt-2 text-2xl font-extrabold text-emerald-700">
               {availableCount}
             </div>
-            <p className="mt-1 text-[11px] text-emerald-700 font-medium">75% Vacant</p>
+            <p className="mt-1 text-[11px] text-emerald-700 font-medium">{vacancyPct}% of active capacity unoccupied</p>
           </div>
 
           {/* Occupied */}
@@ -300,7 +304,7 @@ export default function ManagerPropertyDetailPage() {
               <Calendar className="size-3.5 text-slate-400" />
             </div>
             <div className="mt-2 text-2xl font-extrabold text-slate-900">
-              {todayBookingsCount}
+              {operational.activeReservations}
             </div>
             <p className="mt-1 text-[11px] text-slate-500">Active Bookings</p>
           </div>
@@ -415,6 +419,7 @@ export default function ManagerPropertyDetailPage() {
           <Button
             size="sm"
             variant={activeOperationalTab === "reports" ? "default" : "outline"}
+            disabled={!can("REPORTS_VIEW")}
             onClick={() => setActiveOperationalTab("reports")}
             className={`h-8 text-xs font-semibold ${
               activeOperationalTab === "reports"
@@ -470,7 +475,7 @@ export default function ManagerPropertyDetailPage() {
                         TYPE
                       </span>
                       <span className="text-xs font-bold text-slate-800 mt-1 block">
-                        Covered Basement
+                        {resources.some((r) => r.resourceType === "SHARED_POOL") ? "Shared / mixed parking" : "Fixed parking spaces"}
                       </span>
                     </div>
                     <div>
@@ -478,28 +483,24 @@ export default function ManagerPropertyDetailPage() {
                         OPERATING HOURS
                       </span>
                       <span className="text-xs font-bold text-slate-800 mt-1 block">
-                        6:00 AM – 11:00 PM
+                        See resource schedules
                       </span>
                     </div>
                   </div>
 
                   <div className="mt-5 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
                     <div>
-                      <strong>Entry:</strong> Gate 2 (Main Security Post) ·{" "}
-                      <strong>Security:</strong> Guard + CCTV Monitored
+                      <strong>Location:</strong> {delegation.property.approximateAddress || delegation.property.publicArea}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                        Covered
+                        {resources.some((r) => r.isCovered) ? "Covered" : "Cover not listed"}
                       </span>
                       <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                        CCTV
+                        {resources.some((r) => r.hasCctv) ? "CCTV" : "CCTV not listed"}
                       </span>
                       <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                        Guard
-                      </span>
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                        Lighting
+                        {resources.some((r) => r.hasGuard) ? "Guard" : "Guard not listed"}
                       </span>
                     </div>
                   </div>
@@ -517,14 +518,14 @@ export default function ManagerPropertyDetailPage() {
                       </h3>
                     </div>
                     <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-[#064E3B] border border-emerald-200">
-                      Accepting
+                      {activeListing ? "Published listing" : "No active listing"}
                     </span>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between">
                     <div>
                       <span className="text-2xl font-extrabold text-slate-900">
-                        {availableCount} of {resourceCount} Available
+                        {availableCount} of {operational.activeCapacity} unoccupied
                       </span>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {vacancyPct}% Vacant · {occupiedCount} Occupied
@@ -559,7 +560,7 @@ export default function ManagerPropertyDetailPage() {
                 <div className="flex items-center gap-2">
                   <Layers className="size-4 text-[#064E3B]" />
                   <h3 className="text-base font-bold text-slate-900">
-                    Parking Spaces (Showing {Math.min(4, resources.length)} of {resourceCount})
+                    Parking Resources (Showing {Math.min(4, resources.length)} of {resourceCount})
                   </h3>
                 </div>
                 <Button
@@ -620,13 +621,13 @@ export default function ManagerPropertyDetailPage() {
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>{availableCount} bays available for immediate drive-in allocation</span>
+                <span>{availableCount} active spaces unoccupied; check schedule before booking</span>
                 <button
                   type="button"
                   onClick={() => setActiveOperationalTab("resources")}
                   className="font-bold text-[#064E3B] hover:text-emerald-950 flex items-center gap-1 cursor-pointer"
                 >
-                  View All {resourceCount} Spaces <ArrowRight className="size-3.5" />
+                  View All {resourceCount} Resources <ArrowRight className="size-3.5" />
                 </button>
               </div>
             </div>
@@ -638,7 +639,7 @@ export default function ManagerPropertyDetailPage() {
                   <Calendar className="size-4 text-[#064E3B]" />
                   <h3 className="text-base font-bold text-slate-900">Today&apos;s Bookings</h3>
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                    {todayBookingsCount} Scheduled
+                    {todayBookingsCount} Records today
                   </span>
                 </div>
                 <button
@@ -651,12 +652,12 @@ export default function ManagerPropertyDetailPage() {
               </div>
 
               <div className="mt-3 divide-y divide-slate-100">
-                {propertyBookings.length === 0 ? (
+                {todayBookings.length === 0 ? (
                   <div className="py-6 text-center text-xs text-slate-400">
-                    No reservations recorded for this property yet.
+                    No reservations scheduled today.
                   </div>
                 ) : (
-                  propertyBookings.slice(0, 5).map((b) => {
+                  todayBookings.slice(0, 5).map((b) => {
                     const driverName = b.driver?.fullName || "Guest Driver";
                     const startTime = new Date(b.startAt).toLocaleTimeString([], {
                       hour: "2-digit",
@@ -781,7 +782,7 @@ export default function ManagerPropertyDetailPage() {
                                 isOnDuty ? "text-emerald-700" : "text-slate-500"
                               }`}
                             >
-                              {isOnDuty ? "● On Duty" : g.status.replace("_", " ")}
+                              {isOnDuty ? "Active assignment" : g.status.replace("_", " ")}
                             </span>
                           </div>
                         </div>
@@ -824,20 +825,16 @@ export default function ManagerPropertyDetailPage() {
                         ✓ {delegation.permissions.length} Granted:
                       </span>
                       <ul className="space-y-1 text-slate-600 text-[11px]">
-                        <li>• View Property &amp; Spaces</li>
-                        <li>• Manage Availability</li>
-                        <li>• View &amp; Manage Bookings</li>
+                        {ALL_OPERATIONAL_PERMISSIONS.filter((permission) => can(permission.key)).map((permission) => <li key={permission.key}>{permission.label}</li>)}
                       </ul>
                     </div>
 
                     <div>
                       <span className="text-[11px] font-bold text-red-700 block mb-1">
-                        ✕ {14 - delegation.permissions.length} Restricted:
+                        ✕ {ALL_OPERATIONAL_PERMISSIONS.filter((permission) => !can(permission.key)).length} Restricted:
                       </span>
                       <ul className="space-y-1 text-slate-500 text-[11px]">
-                        <li>• Edit Property / Pricing</li>
-                        <li>• Manage Guards</li>
-                        <li>• Respond to Reviews</li>
+                        {ALL_OPERATIONAL_PERMISSIONS.filter((permission) => !can(permission.key)).map((permission) => <li key={permission.key}>{permission.label}</li>)}
                       </ul>
                     </div>
                   </div>

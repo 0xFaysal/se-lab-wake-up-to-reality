@@ -9,11 +9,11 @@ import {
   Clock,
   Edit2,
   Loader2,
+  Plus,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,9 @@ import { Input } from "@/components/ui/input";
 import { parkingResourcesApi } from "@/lib/api/parking-resources-api";
 import { getApiErrorMessage } from "@/lib/api/api-error";
 import { queryKeys } from "@/lib/query-keys";
-import type { ParkingResourceDto, AvailabilityRuleInput } from "@/lib/api/marketplace-types";
+import { localClockTime } from "@/lib/operational-display";
+import { availabilityEditorError, availabilityWindowInput, type AvailabilityWindow } from "@/lib/availability-editor";
+import type { ParkingResourceDto } from "@/lib/api/marketplace-types";
 
 const DAY_LABELS = [
   "Sunday",
@@ -54,17 +56,8 @@ function ResourceAvailability({
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
 
-  // Weekly schedule edit states (day 0 to 6)
-  const [weeklyDays, setWeeklyDays] = useState<
-    Array<{ dayOfWeek: number; active: boolean; start: string; end: string }>
-  >(() =>
-    DAY_LABELS.map((_, i) => ({
-      dayOfWeek: i,
-      active: i !== 5, // Active except Friday by default
-      start: "08:00",
-      end: "22:00",
-    })),
-  );
+  const [weeklyWindows, setWeeklyWindows] = useState<AvailabilityWindow[]>([]);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const client = useQueryClient();
 
@@ -108,18 +101,8 @@ function ResourceAvailability({
   });
 
   const saveWeeklySchedule = useMutation({
-    mutationFn: () => {
-      const activeRules: AvailabilityRuleInput[] = weeklyDays
-        .filter((d) => d.active)
-        .map((d) => ({
-          dayOfWeek: d.dayOfWeek,
-          startLocalTime: d.start,
-          endLocalTime: d.end,
-          validFrom: new Date().toISOString(),
-        }));
-
-      return parkingResourcesApi.replaceAvailability(resource.id, activeRules);
-    },
+    mutationFn: (windows: AvailabilityWindow[]) =>
+      parkingResourcesApi.replaceAvailability(resource.id, windows.map(availabilityWindowInput)),
     onSuccess: () => {
       toast.success("Weekly availability schedule updated");
       void client.invalidateQueries({
@@ -127,23 +110,32 @@ function ResourceAvailability({
       });
       setShowScheduleDialog(false);
     },
-    onError: (err) => toast.error(getApiErrorMessage(err)),
+    onError: (err) => setScheduleError(getApiErrorMessage(err)),
   });
 
   const handleOpenScheduleDialog = () => {
-    if (avQuery.data?.rules && avQuery.data.rules.length > 0) {
-      const updated = DAY_LABELS.map((_, i) => {
-        const found = avQuery.data.rules.find((r) => r.dayOfWeek === i && r.isActive);
-        return {
-          dayOfWeek: i,
-          active: Boolean(found),
-          start: found?.startLocalTime || "08:00",
-          end: found?.endLocalTime || "22:00",
-        };
-      });
-      setWeeklyDays(updated);
-    }
+    if (!avQuery.data) return;
+    setWeeklyWindows(avQuery.data.rules.filter((rule) => rule.isActive).map((rule) => availabilityWindowInput({
+      dayOfWeek: rule.dayOfWeek, startLocalTime: localClockTime(rule.startLocalTime),
+      endLocalTime: localClockTime(rule.endLocalTime), validFrom: rule.validFrom,
+      validUntil: rule.validUntil ?? undefined,
+    })));
+    setScheduleError(null);
     setShowScheduleDialog(true);
+  };
+
+  const submitSchedule = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    const windows = weeklyWindows.map((window, index) => ({ ...window,
+      startLocalTime: String(fields.get(`start-${index}`) ?? window.startLocalTime),
+      endLocalTime: String(fields.get(`end-${index}`) ?? window.endLocalTime),
+      validFrom: String(fields.get(`from-${index}`) ?? window.validFrom),
+      validUntil: String(fields.get(`until-${index}`) ?? window.validUntil ?? "") || undefined,
+    }));
+    const error = availabilityEditorError(windows);
+    setScheduleError(error);
+    if (!error) saveWeeklySchedule.mutate(windows);
   };
 
   return (
@@ -210,7 +202,7 @@ function ResourceAvailability({
                           {DAY_LABELS[rule.dayOfWeek]}
                         </span>
                         <span className="text-slate-600 font-mono">
-                          {rule.startLocalTime} – {rule.endLocalTime}
+                          {localClockTime(rule.startLocalTime)} – {localClockTime(rule.endLocalTime)}
                         </span>
                       </div>
                     ))}
@@ -328,7 +320,7 @@ function ResourceAvailability({
                       </Button>
                       <Button
                         size="sm"
-                        disabled={!startDate || !endDate || addException.isPending}
+                        disabled={!startDate || !endDate || endDate < startDate || addException.isPending}
                         onClick={() => addException.mutate()}
                         className="bg-amber-700 text-white hover:bg-amber-800"
                       >
@@ -347,8 +339,8 @@ function ResourceAvailability({
       )}
 
       {/* Configure Weekly Schedule Dialog */}
-      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <Dialog open={showScheduleDialog} onOpenChange={(open) => { if (!saveWeeklySchedule.isPending) setShowScheduleDialog(open); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configure Weekly Hours</DialogTitle>
             <DialogDescription>
@@ -356,70 +348,49 @@ function ResourceAvailability({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2.5 py-2">
-            {weeklyDays.map((d, index) => (
-              <div
-                key={d.dayOfWeek}
-                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2.5 text-xs bg-white"
-              >
-                <label className="flex items-center gap-2 font-semibold text-slate-800 w-28">
-                  <Checkbox
-                    checked={d.active}
-                    onCheckedChange={(checked) => {
-                      const copy = [...weeklyDays];
-                      copy[index]!.active = Boolean(checked);
-                      setWeeklyDays(copy);
-                    }}
-                  />
-                  {DAY_LABELS[d.dayOfWeek]}
-                </label>
-
-                {d.active ? (
-                  <div className="flex items-center gap-1.5 font-mono">
-                    <Input
-                      type="time"
-                      value={d.start}
-                      onChange={(e) => {
-                        const copy = [...weeklyDays];
-                        copy[index]!.start = e.target.value;
-                        setWeeklyDays(copy);
-                      }}
-                      className="h-7 w-24 text-xs p-1"
-                    />
-                    <span>–</span>
-                    <Input
-                      type="time"
-                      value={d.end}
-                      onChange={(e) => {
-                        const copy = [...weeklyDays];
-                        copy[index]!.end = e.target.value;
-                        setWeeklyDays(copy);
-                      }}
-                      className="h-7 w-24 text-xs p-1"
-                    />
+          <form onSubmit={submitSchedule} className="space-y-4">
+            <fieldset disabled={saveWeeklySchedule.isPending} className="min-w-0 space-y-3">
+              {DAY_LABELS.map((day, dayOfWeek) => (
+                <section key={day} className="border-b pb-3 last:border-0" aria-label={`${day} windows`}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">{day}</h4>
+                    <Button type="button" variant="ghost" size="sm" aria-label={`Add ${day} window`}
+                      disabled={weeklyWindows.length >= 50}
+                      onClick={() => setWeeklyWindows((windows) => [...windows, { dayOfWeek, startLocalTime: "08:00", endLocalTime: "22:00",
+                        validFrom: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" }) }])}>
+                      <Plus className="size-4" /> Add window
+                    </Button>
                   </div>
-                ) : (
-                  <span className="text-slate-400 italic">Closed</span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={saveWeeklySchedule.isPending}
-              onClick={() => saveWeeklySchedule.mutate()}
-              className="bg-[#064E3B] text-white hover:bg-[#064E3B]/90"
-            >
-              {saveWeeklySchedule.isPending && (
-                <Loader2 className="size-3.5 animate-spin mr-1" />
-              )}
-              Save Schedule
-            </Button>
-          </DialogFooter>
+                  {!weeklyWindows.some((window) => window.dayOfWeek === dayOfWeek) ? <p className="text-xs text-muted-foreground">Closed</p> : null}
+                  {weeklyWindows.map((window, index) => window.dayOfWeek === dayOfWeek ? (
+                    <div key={index} className="mb-2 grid grid-cols-2 gap-2 border p-2 sm:grid-cols-[1fr_1fr_auto]">
+                      <Input type="time" name={`start-${index}`} aria-label={`${day} window ${index + 1} opening`} required
+                        value={window.startLocalTime} onChange={(e) => setWeeklyWindows((windows) => windows.map((item, i) => i === index ? { ...item, startLocalTime: e.target.value } : item))} />
+                      <Input type="time" name={`end-${index}`} aria-label={`${day} window ${index + 1} closing`} required
+                        value={window.endLocalTime} onChange={(e) => setWeeklyWindows((windows) => windows.map((item, i) => i === index ? { ...item, endLocalTime: e.target.value } : item))} />
+                      <Button type="button" variant="ghost" size="icon" className="order-last col-span-2 justify-self-end text-red-600 sm:order-none sm:col-span-1" aria-label={`Remove ${day} window ${index + 1}`} title="Remove window"
+                        onClick={() => setWeeklyWindows((windows) => windows.filter((_, i) => i !== index))}><Trash2 className="size-4" /></Button>
+                      <label className="text-xs text-muted-foreground">From
+                        <Input type="date" name={`from-${index}`} aria-label={`${day} window ${index + 1} valid from`} required value={window.validFrom}
+                          onChange={(e) => setWeeklyWindows((windows) => windows.map((item, i) => i === index ? { ...item, validFrom: e.target.value } : item))} />
+                      </label>
+                      <label className="text-xs text-muted-foreground">Until (optional)
+                        <Input type="date" name={`until-${index}`} aria-label={`${day} window ${index + 1} valid until`} value={window.validUntil ?? ""}
+                          onChange={(e) => setWeeklyWindows((windows) => windows.map((item, i) => i === index ? { ...item, validUntil: e.target.value || undefined } : item))} />
+                      </label>
+                    </div>
+                  ) : null)}
+                </section>
+              ))}
+            </fieldset>
+            {scheduleError ? <p role="alert" className="text-sm text-red-700">{scheduleError}</p> : null}
+            <DialogFooter>
+              <Button type="button" variant="outline" disabled={saveWeeklySchedule.isPending} onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
+              <Button type="submit" disabled={saveWeeklySchedule.isPending} className="bg-[#064E3B] text-white hover:bg-[#064E3B]/90">
+                {saveWeeklySchedule.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null} Save Schedule
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

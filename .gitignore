@@ -45,3 +45,7 @@ trivy-report.json
 zap-report.html
 sbom.json
 .vercel
+.provider-verification/
+.timeline-test-build/
+.verification/
+**/.verification/

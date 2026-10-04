@@ -5,15 +5,24 @@ export interface ApiErrorPayload {
 }
 
 export class ApiError extends Error {
+  public readonly status: number;
+  public readonly code: string;
+  public readonly requestId?: string;
+  public readonly details?: unknown;
+
   constructor(
     message: string,
-    public readonly status: number,
-    public readonly code = "UNKNOWN_ERROR",
-    public readonly requestId?: string,
-    public readonly details?: unknown,
+    status: number,
+    code = "UNKNOWN_ERROR",
+    requestId?: string,
+    details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.requestId = requestId;
+    this.details = details;
   }
 }
 
@@ -109,7 +118,8 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
   REFUND_FORBIDDEN: "You are not allowed to refund this payment.",
   ACCESS_CREDENTIAL_INVALID: "This access credential is invalid, used, or expired.",
   GUARD_BOOKING_FORBIDDEN: "You are not assigned to this Provider at this Property.",
-  BOOKING_CHECK_IN_WINDOW_INVALID: "This booking is outside the permitted check-in window.",
+  BOOKING_CHECK_IN_WINDOW_INVALID: "Entry opens 5 minutes before your reservation starts and closes at its scheduled end.",
+  PARKING_ENTRY_OCCUPIED: "This spot is still occupied. The previous vehicle must check out before entry.",
   PAYOUT_BALANCE_INSUFFICIENT: "Available balance is insufficient for this payout request.",
   PAYOUT_TRANSITION_INVALID: "That payout action is not allowed in its current state.",
   PAYOUT_NOT_FOUND: "That payout request could not be found.",
@@ -137,6 +147,24 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
 };
 
 export function getApiErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === "VALIDATION_ERROR") {
+    const issues = getApiValidationErrors(error);
+    const messages = Object.entries(issues).slice(0, 3).map(([field, message]) =>
+      `${field.replace(/([a-z])([A-Z])/g, "$1 $2")}: ${message}`);
+    return messages.length ? messages.join(". ") : "Please check the form fields and try again.";
+  }
   if (error instanceof ApiError) return FRIENDLY_MESSAGES[error.code] ?? error.message;
   return "Something went wrong. Please try again.";
+}
+
+export function getApiValidationErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError) || error.code !== "VALIDATION_ERROR" || !error.details || typeof error.details !== "object" || Array.isArray(error.details)) return {};
+  return Object.fromEntries(Object.entries(error.details).flatMap(([path, messages]) => {
+    const message = Array.isArray(messages) ? messages.find((item) => typeof item === "string") : undefined;
+    return typeof message === "string" ? [[path.replace(/^body\./, ""), message]] : [];
+  }));
+}
+
+export function isAuthenticationFailure(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
 }

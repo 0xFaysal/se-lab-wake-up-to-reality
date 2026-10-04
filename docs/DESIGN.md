@@ -188,3 +188,38 @@ Provider Guard management uses a lifecycle-led workbench instead of treating the
 - **State language:** amber means Guard action is required, sky means the membership is accepted and Provider action is required, and emerald means an active operational shift.
 - **Recovery:** an existing-membership conflict refreshes and highlights the roster rather than presenting a dead-end error. Account creation attempts the Property invitation automatically and preserves the new account if invitation delivery must be retried.
 - **Separation:** Property membership and Provider assignment remain distinct records; the interface explains the boundary and never implies that account creation alone grants booking access.
+
+## Provider Clean Operations Register
+
+Approved for the Provider route group, not a replacement for other roles. Existing runtime Segoe UI/Arial fonts remain authoritative; earlier font examples are not a request to download fonts.
+
+| Decision | Runtime owner |
+| --- | --- |
+| Canvas `#F6F8FA`, white surfaces, charcoal `#20272E`, emerald action `#064E3B` | `frontend/app/provider/provider-workspace.css`; scoped aliases adapt the existing Tailwind theme |
+| 28px desktop / 24px mobile page headings, 14px body, zero tracking, tabular amounts | Provider workspace CSS, `ProviderPageHeader` |
+| Restrained borders, 8px repeated-item corners, no oversized promotional panels | Provider CSS and shared Provider components |
+| One navigation registry, longest-prefix active state, shared mobile modules | `provider-navigation.ts` and Provider layout/sidebar |
+| Real notification badge, accessible account menu, name-only Profile | `provider-account-menu.tsx`, existing account API and shared personal-info form |
+| Blue reserved, emerald parked, amber grace, red overtime; labels and dashed holds/blocks | `provider-session-workspace.tsx` |
+
+Live Sessions uses real fixed units and a single capacity row per shared pool. Concurrent activity occupies separate lanes; mobile defaults to a list. Date navigation is Asia/Dhaka today plus six days. Sections remain unframed; individual tools and repeated items may have borders. `UI/owner/` supplies workflow inspiration only, not mock data or financial rules.
+
+Timeline labels use Dhaka 12-hour AM/PM time. Hour-axis labels align with grid coordinates, reservation bars show their exact interval, and the unframed reservation timing table exposes entry/exit grace durations including saved legacy terms. Grace strip widths represent actual minutes without padding-based enlargement; equal durations have equal widths. The same times appear in list, drawer, tooltip and keyboard-accessible booking controls.
+
+### Provider Property Onboarding
+
+`UI/owner/add-parking-space/` informs the sequence, not its mock contact fields or business rules. New property submission has three steps: find the building on the map, property details/access, photos/review. Nearby-property discovery runs in the first step before requiring address/name input. Optional building and safety fields are collapsed. Verified properties use one resource-centric workspace for real spaces, authority, opening hours and booking settings. The former setup route redirects to this workspace; no second setup wizard or duplicate advanced inventory is rendered. Images remain in their existing section.
+
+Use compact labeled fields, the shared Select/Checkbox/Dialog primitives, restrained step navigation, and the existing Provider tokens. Show property/resource names, never IDs as selected labels. Vehicle hourly inputs are BDT; persisted prices are exact paisa. Existing specialized offers and dated/multi-window schedules are protected from simplified-form overwrites.
+
+Display actual current tariffs and vehicle scope, not disabled zero placeholders. Resource rows are unframed white bands: inventory actions at the top, authority and booking settings in two desktop columns, stacked on mobile. Spot codes expand on demand. One full booking-settings form edits price, deposit, duration, description and overtime. Separate vehicle pricing is explicit, not a silent split. Offer creation is scoped to a resource and shown only for vehicles not already covered; there is no generic second New Listing footer.
+
+Parking workspace creation and editing open in shared accessible dialogs, never append a second editor below the inventory. Dialog headers remain visible above a contained scrolling body, with an 8px radius and responsive viewport limits. Dismissal protects unsaved edits. Authority amendments show the original version, permissions, dates and evidence alongside prefilled proposed fields; verified evidence cannot be removed through an amendment.
+
+### Parking Location Disclosure
+
+Parking map popups use a compact white 8px surface with the property name, real availability and hourly price ahead of a neutral location note. Approximate-pin information is informational slate, not amber error styling. The scoped popup action overrides Leaflet link colors with white text on emerald, including hover and keyboard focus. No verification or exact-location promise is inferred from the visual treatment.
+
+Public coordinates use a 50-metre metric grid; its rounded centre remains within the displayed 40-metre approximate area of the actual location in Bangladesh. Public maps label price markers as area markers, not building entrances. This replaces the earlier coarse neighbourhood grid at the user's request; it offers less location privacy than that earlier policy. New-property duplicate discovery still checks actual coordinates within 75 metres across eligible platform properties; an empty result does not mean there are no properties in the wider neighbourhood.
+
+Providers may opt each offer into pre-booking location disclosure from its booking settings or offer creation form. Consent defaults to false and follows an offer when its vehicle rates are split. An authenticated, email-verified, active Driver may obtain actual coordinates for an active, authorized offer through a private, non-cacheable endpoint. Private address text, access instructions and credentials remain confirmed-booking-only. Offers without consent retain their existing booking flow with explicit location-availability warnings; no consent is inferred or enabled for existing records.

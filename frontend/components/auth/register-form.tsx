@@ -210,7 +210,9 @@ export function RegisterForm() {
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              tabIndex={-1}
+              aria-label={showPassword ? "Hide passwords" : "Show passwords"}
+              aria-pressed={showPassword}
+              title={showPassword ? "Hide passwords" : "Show passwords"}
             >
               {showPassword ? (
                 <EyeOff className="size-4" />

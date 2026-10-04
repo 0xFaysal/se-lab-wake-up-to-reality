@@ -14,6 +14,7 @@ import { AppError } from "../../../common/errors/app-error.js";
 import { env } from "../../../config/env.js";
 import { prisma } from "../../../config/prisma.js";
 import { redis } from "../../../config/redis.js";
+import { paymentSearchConditions } from "./payment-search.js";
 
 type Page = { page: number; limit: number };
 
@@ -950,23 +951,7 @@ export async function listAdminPayments(
   const where: Prisma.PaymentWhereInput = {
     ...(query.search
       ? {
-          OR: [
-            { id: { equals: query.search } },
-            {
-              providerReference: {
-                contains: query.search,
-                mode: "insensitive",
-              },
-            },
-            {
-              booking: {
-                bookingCode: { contains: query.search, mode: "insensitive" },
-              },
-            },
-            {
-              payer: { email: { contains: query.search, mode: "insensitive" } },
-            },
-          ],
+          OR: paymentSearchConditions(query.search),
         }
       : {}),
     ...(query.status ? { status: query.status } : {}),

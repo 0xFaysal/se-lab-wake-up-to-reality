@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import type { ManagerDelegationDto, ManagerPermission } from "@/lib/api/manager-api";
 import { formatDateTime } from "@/lib/formatters";
 
-const ALL_OPERATIONAL_PERMISSIONS: Array<{
+export const ALL_OPERATIONAL_PERMISSIONS: Array<{
   key: ManagerPermission;
   label: string;
   category: string;

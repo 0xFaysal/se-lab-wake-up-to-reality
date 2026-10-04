@@ -4,6 +4,11 @@ import {
   PropertyProviderStatus,
 } from "../../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
+import {
+  propertyDistanceMeters,
+  propertySearchBounds,
+  PROPERTY_MATCH_RADIUS_METERS,
+} from "./property-proximity.js";
 
 type PropertyClient = Pick<
   Prisma.TransactionClient,
@@ -152,40 +157,44 @@ export function softDeleteProperty(
   );
 }
 
-export function findPossiblePropertyMatches(
+export async function findPossiblePropertyMatches(
   input: {
-    normalizedName: string;
-    publicArea: string;
-    addressFingerprint: string;
     latitude: number;
     longitude: number;
   },
   db: PropertyClient = prisma,
 ) {
-  const coordinateTolerance = 0.0015;
-  return db.property.findMany({
+  const { latitudeDelta, longitudeDelta } = propertySearchBounds(
+    input.latitude,
+  );
+  const candidates = await db.property.findMany({
     where: {
       deletedAt: null,
       archivedAt: null,
-      OR: [
-        { addressFingerprint: input.addressFingerprint },
-        {
-          normalizedName: input.normalizedName,
-          publicArea: { equals: input.publicArea, mode: "insensitive" },
-        },
-        {
-          latitude: {
-            gte: input.latitude - coordinateTolerance,
-            lte: input.latitude + coordinateTolerance,
-          },
-          longitude: {
-            gte: input.longitude - coordinateTolerance,
-            lte: input.longitude + coordinateTolerance,
-          },
-        },
-      ],
+      latitude: {
+        gte: input.latitude - latitudeDelta,
+        lte: input.latitude + latitudeDelta,
+      },
+      OR:
+        input.longitude - longitudeDelta < -180
+          ? [
+              { longitude: { gte: input.longitude - longitudeDelta + 360 } },
+              { longitude: { lte: input.longitude + longitudeDelta } },
+            ]
+          : input.longitude + longitudeDelta > 180
+            ? [
+                { longitude: { gte: input.longitude - longitudeDelta } },
+                { longitude: { lte: input.longitude + longitudeDelta - 360 } },
+              ]
+            : [
+                {
+                  longitude: {
+                    gte: input.longitude - longitudeDelta,
+                    lte: input.longitude + longitudeDelta,
+                  },
+                },
+              ],
     },
-    take: 10,
     select: {
       id: true,
       name: true,
@@ -195,6 +204,21 @@ export function findPossiblePropertyMatches(
       longitude: true,
     },
   });
+  return candidates
+    .map((property) => ({
+      ...property,
+      distanceMeters: propertyDistanceMeters(input, {
+        latitude: Number(property.latitude),
+        longitude: Number(property.longitude),
+      }),
+    }))
+    .filter(
+      (property) => property.distanceMeters <= PROPERTY_MATCH_RADIUS_METERS,
+    )
+    .sort(
+      (a, b) => a.distanceMeters - b.distanceMeters || a.id.localeCompare(b.id),
+    )
+    .slice(0, 10);
 }
 
 export async function findPropertyDeleteBlockers(

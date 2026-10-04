@@ -14,7 +14,7 @@ const TRUST_ITEMS = [
   {
     icon: Clock,
     title: "Flexible Hourly Rates",
-    description: "Pay for the time you need with a 15-minute traffic grace period.",
+    description: "Hourly pricing with each offer's own overtime and grace-period policy.",
   },
   {
     icon: CircleDollarSign,

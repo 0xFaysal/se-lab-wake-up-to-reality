@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button as CanonicalButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import { bookingGraceTimes, overtimePolicyText } from "@/lib/booking-grace";
 import { guardMarketplaceApi } from "@/lib/api/guard-marketplace-api";
 import { formatDateTime, vehicleLabels } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
@@ -67,7 +68,7 @@ export function GuardActiveSessionView({ bookingId }: { bookingId: string }) {
 
         <section className="guard-panel p-5 sm:p-6">
           <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-indigo-50 text-indigo-800"><CarFront className="size-5" /></span><div><h2 className="font-bold">Vehicle at the gate</h2><p className="text-xs text-slate-500">Confirm these details before exit</p></div></div>
-          <dl className="mt-6 space-y-4"><Detail label="Registration" value={item.vehicle.registrationNumber} prominent /><Detail label="Vehicle" value={[item.vehicle.color, item.vehicle.brand, item.vehicle.model, vehicleLabels[item.vehicle.vehicleType]].filter(Boolean).join(" · ")} /><Detail label="Checked in" value={item.checkedInAt ? formatDateTime(item.checkedInAt) : "Check-in time unavailable"} /></dl>
+          <dl className="mt-6 space-y-4"><Detail label="Registration" value={item.vehicle.registrationNumber} prominent /><Detail label="Vehicle" value={[item.vehicle.color, item.vehicle.brand, item.vehicle.model, vehicleLabels[item.vehicle.vehicleType]].filter(Boolean).join(" · ")} /><Detail label="Checked in" value={item.checkedInAt ? formatDateTime(item.checkedInAt) : "Check-in time unavailable"} /><Detail label="Free exit until" value={formatDateTime(bookingGraceTimes(item.startAt, item.scheduledEndAt, item.overtimeGracePeriodMinutes).freeExitUntil)} /></dl><p className="mt-4 text-xs leading-5 text-slate-600">{overtimePolicyText(item.overtimePolicyVersion, item.overtimeGracePeriodMinutes)}</p>
         </section>
       </div>
 

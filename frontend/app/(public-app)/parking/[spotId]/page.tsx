@@ -3,11 +3,14 @@
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, BadgeCheck, CarFront, ChevronLeft, ChevronRight, Clock, ExternalLink, Flag, Images, Loader2, MapPin, RefreshCw, Ruler, ShieldCheck, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog as GalleryDialog } from "@base-ui/react/dialog";
 import { getApiErrorMessage } from "@/lib/api/api-error";
+import { bookingGraceTimes, overtimePolicyText } from "@/lib/booking-grace";
 import type { VehicleType } from "@/lib/api/api-types";
 import { bookingsApi } from "@/lib/api/bookings-api";
 import { authApi } from "@/lib/api/auth-api";
@@ -17,6 +20,7 @@ import { vehicleApi } from "@/lib/api/vehicle-api";
 import { formatBDTFromPaisa, formatDateTime, toUtcFromBangladeshLocal, vehicleLabels } from "@/lib/formatters";
 import { queryKeys } from "@/lib/query-keys";
 import { isCheckoutLocked, isValidParkingPeriod } from "@/lib/parking-period";
+const ActualLocationMap = dynamic(() => import("@/components/parking/actual-location-map"), { ssr: false, loading: () => <div className="h-56 animate-pulse rounded-lg bg-slate-100" /> });
 
 export default function ParkingDetailsPage({ params }: { params: Promise<{ spotId: string }> }) {
   const { spotId } = use(params);
@@ -43,22 +47,20 @@ export default function ParkingDetailsPage({ params }: { params: Promise<{ spotI
   const property = results.data;
 
   const handleRequestChange = useCallback((next: { startAt?: string; endAt?: string; vehicleType?: VehicleType }) => {
-    setRequest((current) => {
-      const updated = {
-        startAt: next.startAt ?? current.startAt,
-        endAt: next.endAt ?? current.endAt,
-        vehicleType: next.vehicleType ?? current.vehicleType,
-      };
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        if (updated.startAt) params.set("startAt", updated.startAt);
-        if (updated.endAt) params.set("endAt", updated.endAt);
-        if (updated.vehicleType) params.set("vehicleType", updated.vehicleType);
-        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
-      }
-      return updated;
-    });
-  }, []);
+    const updated = {
+      startAt: next.startAt ?? request.startAt,
+      endAt: next.endAt ?? request.endAt,
+      vehicleType: next.vehicleType ?? request.vehicleType,
+    };
+    setRequest(updated);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (updated.startAt) params.set("startAt", updated.startAt);
+      if (updated.endAt) params.set("endAt", updated.endAt);
+      if (updated.vehicleType) params.set("vehicleType", updated.vehicleType);
+      window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+    }
+  }, [request]);
 
   if (!valid) return <PageState title="Search context is missing" action={<Link href={searchRoot}><Button>Return to search</Button></Link>} />;
   if (results.isPending) return <PageState title="Loading live parking offers" loading />;
@@ -98,36 +100,39 @@ export default function ParkingDetailsPage({ params }: { params: Promise<{ spotI
 
 function PropertyGallery({ property }: { property: PublicPropertyDetailDto }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  useEffect(() => {
-    if (activeIndex === null) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActiveIndex(null);
-      if (event.key === "ArrowLeft") setActiveIndex((current) => current === null ? null : (current - 1 + property.images.length) % property.images.length);
-      if (event.key === "ArrowRight") setActiveIndex((current) => current === null ? null : (current + 1) % property.images.length);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [activeIndex, property.images.length]);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const visibleIndex = activeIndex === null ? null : Math.min(activeIndex, property.images.length - 1);
   if (property.images.length === 0) return <div className="grid aspect-[16/6] place-items-center bg-slate-100 text-sm text-slate-500">No property photos have been added.</div>;
   const images = property.images.slice(0, 5);
-  const open = (index: number) => setActiveIndex(index);
+  const open = (index: number, opener: HTMLButtonElement) => {
+    openerRef.current = opener;
+    setActiveIndex(index);
+  };
   const move = (direction: number) => setActiveIndex((current) => current === null ? null : (current + direction + property.images.length) % property.images.length);
   return <>
     <section className="relative grid h-72 grid-cols-4 grid-rows-2 gap-1 overflow-hidden bg-slate-100 sm:h-[420px]" aria-label={`${property.name} photos`}>
-      <button type="button" onClick={() => open(0)} className="relative col-span-4 row-span-2 overflow-hidden sm:col-span-2"><Image src={images[0]!.url} alt={`${property.name} main view`} fill unoptimized className="object-cover transition duration-300 hover:scale-[1.02]" /></button>
-      {images.slice(1).map((image, index) => <button type="button" onClick={() => open(index + 1)} key={image.id} className="relative hidden overflow-hidden sm:block"><Image src={image.url} alt={`${property.name} view ${index + 2}`} fill unoptimized className="object-cover transition duration-300 hover:scale-[1.03]" /></button>)}
-      <Button type="button" variant="secondary" className="absolute bottom-4 right-4 z-10 bg-white shadow" onClick={() => open(0)}><Images className="size-4" />Show all photos</Button>
+      <button type="button" onClick={(event) => open(0, event.currentTarget)} className="relative col-span-4 row-span-2 overflow-hidden sm:col-span-2"><Image src={images[0]!.url} alt={`${property.name} main view`} fill unoptimized className="object-cover transition duration-300 hover:scale-[1.02]" /></button>
+      {images.slice(1).map((image, index) => <button type="button" onClick={(event) => open(index + 1, event.currentTarget)} key={image.id} className="relative hidden overflow-hidden sm:block"><Image src={image.url} alt={`${property.name} view ${index + 2}`} fill unoptimized className="object-cover transition duration-300 hover:scale-[1.03]" /></button>)}
+      <Button type="button" variant="secondary" className="absolute bottom-4 right-4 z-10 bg-white shadow" onClick={(event) => open(0, event.currentTarget)}><Images className="size-4" />Show all photos</Button>
     </section>
-    {activeIndex !== null && <div className="fixed inset-0 z-[1000] flex flex-col bg-black/95 text-white" role="dialog" aria-modal="true" aria-label={`${property.name} photo viewer`}>
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6"><span className="text-sm font-semibold">{activeIndex + 1} / {property.images.length}</span><button type="button" aria-label="Close photo viewer" onClick={() => setActiveIndex(null)} className="grid size-10 place-items-center rounded-full hover:bg-white/10"><X className="size-6" /></button></div>
-      <div className="relative flex-1"><Image src={property.images[activeIndex]!.url} alt={`${property.name} full-screen view ${activeIndex + 1}`} fill unoptimized className="object-contain" /><button type="button" aria-label="Previous photo" onClick={() => move(-1)} className="absolute left-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/60 hover:bg-black/80"><ChevronLeft className="size-7" /></button><button type="button" aria-label="Next photo" onClick={() => move(1)} className="absolute right-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/60 hover:bg-black/80"><ChevronRight className="size-7" /></button></div>
-      <div className="flex h-24 gap-2 overflow-x-auto px-4 py-3 sm:px-6">{property.images.map((image, index) => <button type="button" key={image.id} onClick={() => setActiveIndex(index)} className={`relative aspect-[4/3] shrink-0 overflow-hidden border-2 ${index === activeIndex ? "border-white" : "border-transparent opacity-60"}`}><Image src={image.url} alt="" fill unoptimized className="object-cover" /></button>)}</div>
-    </div>}
+    <GalleryDialog.Root open={visibleIndex !== null} onOpenChange={(isOpen) => { if (!isOpen) setActiveIndex(null); }}>
+      <GalleryDialog.Portal>
+        <GalleryDialog.Backdrop className="fixed inset-0 z-[1000] bg-black/95" />
+        <GalleryDialog.Popup initialFocus={closeRef} finalFocus={openerRef} onKeyDownCapture={(event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          move(event.key === "ArrowLeft" ? -1 : 1);
+        }} className="fixed inset-0 z-[1001] flex min-h-0 flex-col bg-black/95 text-white outline-none">
+          <GalleryDialog.Title className="sr-only">{property.name} photo viewer</GalleryDialog.Title>
+          {visibleIndex !== null && <>
+            <div className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6"><span aria-live="polite" aria-atomic="true" className="text-sm font-semibold">{visibleIndex + 1} / {property.images.length}</span><button ref={closeRef} type="button" aria-label="Close photo viewer" onClick={() => setActiveIndex(null)} className="grid size-10 place-items-center rounded-full hover:bg-white/10"><X className="size-6" /></button></div>
+            <div className="relative min-h-0 flex-1"><Image src={property.images[visibleIndex]!.url} alt={`${property.name} full-screen view ${visibleIndex + 1}`} fill unoptimized className="object-contain" /><button type="button" aria-label="Previous photo" onClick={() => move(-1)} className="absolute left-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/60 hover:bg-black/80"><ChevronLeft className="size-7" /></button><button type="button" aria-label="Next photo" onClick={() => move(1)} className="absolute right-3 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/60 hover:bg-black/80"><ChevronRight className="size-7" /></button></div>
+            <div className="flex h-24 shrink-0 gap-2 overflow-x-auto px-4 py-3 sm:px-6">{property.images.map((image, index) => <button type="button" key={image.id} aria-label={`View photo ${index + 1}`} aria-pressed={index === visibleIndex} onClick={() => setActiveIndex(index)} className={`relative aspect-[4/3] shrink-0 overflow-hidden border-2 ${index === visibleIndex ? "border-white" : "border-transparent opacity-60"}`}><Image src={image.url} alt="" fill unoptimized className="object-cover" /></button>)}</div>
+          </>}
+        </GalleryDialog.Popup>
+      </GalleryDialog.Portal>
+    </GalleryDialog.Root>
   </>;
 }
 
@@ -590,6 +595,7 @@ function BookingCheckout({ offers, startAt, endAt, availabilityPending, onLockCh
   const [quote, setQuote] = useState<BookingQuoteDto | null>(null); const [hold, setHold] = useState<ReservationHoldDto | null>(null); const [booking, setBooking] = useState<BookingDto | null>(null);
   const auth = useQuery({ queryKey: queryKeys.auth.me, queryFn: async () => (await authApi.me({ skipAuthRefresh: true })).user, retry: false });
   const isDriver = auth.data?.roles.includes("DRIVER") === true;
+  const location = useQuery({ queryKey: ["driver-listing-location", auth.data?.id, listingId], queryFn: () => parkingSearchApi.listingLocation(listingId), enabled: isDriver && Boolean(listingId), retry: false, gcTime: 0, staleTime: 0 });
   const vehicles = useQuery({ queryKey: queryKeys.vehicles.all, queryFn: vehicleApi.list, enabled: isDriver, retry: false });
   const selectedOffer = offers.find((offer) => offer.listingId === listingId); const compatible = vehicles.data?.filter((vehicle) => selectedOffer?.allowedVehicleTypes.includes(vehicle.vehicleType)) ?? [];
   const quoteMutation = useMutation({ mutationFn: () => parkingSearchApi.createQuote({ listingId, vehicleId, startAt, endAt }), onSuccess: (data) => { setQuote(data); setHold(null); setBooking(null); } });
@@ -605,10 +611,11 @@ function BookingCheckout({ offers, startAt, endAt, availabilityPending, onLockCh
   if (!isDriver) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in with a Driver account to reserve this offer.</p><Button className="mt-4 w-full" nativeButton={false} render={<Link href={`/login?redirect=${encodeURIComponent(returnTo)}`} />}>Sign in</Button></aside>;
   if (vehicles.isError) return <aside className="h-fit rounded-lg border bg-white p-5"><h2 className="font-bold">Reserve parking</h2><p className="mt-3 text-sm text-slate-600">Sign in as a Driver to choose a registered vehicle and reserve this offer.</p><Button className="mt-4 w-full" nativeButton={false} render={<Link href={`/login?redirect=${encodeURIComponent(returnTo)}`} />}>Sign in</Button></aside>;
   return <aside className="h-fit space-y-4 rounded-lg border bg-white p-5 shadow-sm lg:sticky lg:top-24"><div><h2 className="font-bold">Reserve parking</h2><p className="mt-1 text-xs text-slate-500">{formatDateTime(startAt)} to {formatDateTime(endAt)}</p></div>
+    <section className="space-y-2 border-y py-3"><h3 className="text-sm font-semibold">Actual parking location</h3>{location.isPending ? <p className="text-xs text-slate-500">Checking location access...</p> : location.isError ? <><p role="alert" className="text-xs text-red-700">{getApiErrorMessage(location.error)}</p><Button size="sm" variant="outline" onClick={() => void location.refetch()}>Retry location check</Button></> : location.data?.available ? <><ActualLocationMap latitude={location.data.latitude} longitude={location.data.longitude} name={location.data.name} /><a className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-800" href={`https://www.openstreetmap.org/?mlat=${location.data.latitude}&mlon=${location.data.longitude}#map=18/${location.data.latitude}/${location.data.longitude}`} target="_blank" rel="noopener noreferrer">View actual location<ExternalLink className="size-3" /></a></> : <p className="text-xs text-amber-800">The Provider shares the actual location only after booking confirmation. The public marker shows an approximate area, not the building entrance. Choose a location-sharing offer if you need to confirm the building before paying.</p>}</section>
     {!booking && <><label className="block space-y-1 text-xs font-semibold">Offer<select className="h-10 w-full rounded-md border px-3 text-sm" value={listingId} disabled={!!quote} onChange={(event) => { setListingId(event.target.value); setVehicleId(""); }} >{offers.map((offer) => <option key={offer.listingId} value={offer.listingId}>{offer.title} · {formatBDTFromPaisa(offer.pricePerHourPaisa)}/hour</option>)}</select></label><label className="block space-y-1 text-xs font-semibold">Vehicle<select className="h-10 w-full rounded-md border px-3 text-sm" value={vehicleId} disabled={!!quote} onChange={(event) => setVehicleId(event.target.value)}><option value="">Select compatible vehicle</option>{compatible.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} · {vehicleLabels[vehicle.vehicleType]}</option>)}</select></label></>}
-    {!quote && <Button className="w-full" disabled={!vehicleId || !selectedOffer || availabilityPending || quoteMutation.isPending} onClick={() => quoteMutation.mutate()}>{quoteMutation.isPending && <Loader2 className="size-4 animate-spin" />}Get server quote</Button>}
+    {!quote && <Button className="w-full" disabled={!vehicleId || !selectedOffer || location.isFetching || location.isError || availabilityPending || quoteMutation.isPending} onClick={() => quoteMutation.mutate()}>{quoteMutation.isPending && <Loader2 className="size-4 animate-spin" />}Get server quote</Button>}
     {quote && !hold && !booking && <Button className="w-full" variant="ghost" disabled={holdMutation.isPending} onClick={() => { setQuote(null); keys.current.hold = crypto.randomUUID(); }}>Discard quote</Button>}
-    {quote && !hold && <div className="space-y-3 border-t pt-4"><Price label="Parking" value={quote.baseAmountPaisa} /><Price label="Platform fee" value={quote.platformFeePaisa} /><Price label="Security deposit" value={quote.depositPaisa} /><Price label="Total" value={quote.totalAmountPaisa} strong /><p className="flex items-center gap-1 text-xs text-slate-500"><Clock className="size-3" />Quote expires in <Countdown expiresAt={quote.expiresAt} now={now} /></p>{quoteExpired ? <Button className="w-full" variant="outline" onClick={() => { setQuote(null); keys.current.hold = crypto.randomUUID(); }}>Price quote expired. Refresh quote.</Button> : <Button className="w-full" disabled={holdMutation.isPending} onClick={() => holdMutation.mutate()}>{holdMutation.isPending && <Loader2 className="size-4 animate-spin" />}Hold this parking</Button>}</div>}
+    {quote && !hold && <div className="space-y-3 border-t pt-4"><Price label="Parking" value={quote.baseAmountPaisa} /><Price label="Platform fee" value={quote.platformFeePaisa} /><Price label="Security deposit" value={quote.depositPaisa} /><Price label="Total" value={quote.totalAmountPaisa} strong /><p className="text-xs leading-5 text-slate-600">Entry opens 5 minutes before arrival. Free exit until {formatDateTime(bookingGraceTimes(quote.startAt, quote.endAt, quote.overtimeGracePeriodMinutes).freeExitUntil)}. {overtimePolicyText(quote.overtimePolicyVersion, quote.overtimeGracePeriodMinutes)}</p><p className="flex items-center gap-1 text-xs text-slate-500"><Clock className="size-3" />Quote expires in <Countdown expiresAt={quote.expiresAt} now={now} /></p>{quoteExpired ? <Button className="w-full" variant="outline" onClick={() => { setQuote(null); keys.current.hold = crypto.randomUUID(); }}>Price quote expired. Refresh quote.</Button> : <Button className="w-full" disabled={holdMutation.isPending} onClick={() => holdMutation.mutate()}>{holdMutation.isPending && <Loader2 className="size-4 animate-spin" />}Hold this parking</Button>}</div>}
     {hold && !booking && <div className="space-y-3 border-t pt-4"><p className="rounded-md bg-blue-50 p-3 text-xs text-blue-800">Parking held for <Countdown expiresAt={hold.expiresAt} now={now} /></p><Button className="w-full" disabled={holdExpired || bookingMutation.isPending || releaseMutation.isPending} onClick={() => bookingMutation.mutate()}>{bookingMutation.isPending && <Loader2 className="size-4 animate-spin" />}Create booking</Button>{holdExpired ? <><p className="text-xs text-red-700">The hold expired. Refresh the quote to try again.</p><Button className="w-full" variant="outline" onClick={() => { setHold(null); setQuote(null); keys.current.hold = crypto.randomUUID(); keys.current.booking = crypto.randomUUID(); }}>Start again</Button></> : <Button className="w-full" variant="ghost" disabled={releaseMutation.isPending} onClick={() => releaseMutation.mutate()}>{releaseMutation.isPending && <Loader2 className="size-4 animate-spin" />}Release hold</Button>}</div>}
     {booking && <div className="space-y-3 border-t pt-4"><p className="font-mono text-sm font-bold">{booking.bookingCode}</p><Price label="Payment amount" value={booking.totalAmountPaisa} strong /><div className="flex gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><ShieldCheck className="size-4 shrink-0" /><p>You will continue to the secure SSLCOMMERZ hosted checkout. Payment is confirmed only after server validation.</p></div><Button className="w-full" disabled={paymentMutation.isPending} onClick={() => paymentMutation.mutate()}>{paymentMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}Pay securely with SSLCOMMERZ</Button><Button className="w-full" variant="outline" nativeButton={false} render={<Link href={`/driver/bookings/${booking.id}`} />}>View booking</Button></div>}
     {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-xs text-red-700">{getApiErrorMessage(error)}</p>}
