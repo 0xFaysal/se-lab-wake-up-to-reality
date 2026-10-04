@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PropertyEditLiveView } from "@/features/provider/components/property-edit-live-view";
 
 export const metadata: Metadata = {
-  title: "Edit Listing | Residential Building, Gulshan | ParkEase BD",
+  title: "Edit Property",
   description: "Update parking property information, location, bay inventory, pricing, amenities, and photos.",
 };
 
